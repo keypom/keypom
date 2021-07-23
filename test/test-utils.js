@@ -173,6 +173,7 @@ module.exports = {
 	getAccountBalance,
 	contract,
 	contractName,
+	networkId,
 	contractId: contractName,
 	contractMethods,
 	contractAccount,
