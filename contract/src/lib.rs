@@ -1,17 +1,15 @@
-
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
-use near_sdk::json_types::{Base58PublicKey, U128};
+use near_sdk::json_types::U128;
 use near_sdk::{
-    env, ext_contract, near_bindgen, AccountId, Balance, Promise, PanicOnDefault, PublicKey, BorshStorageKey
+    env, ext_contract, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault,
+    Promise, PublicKey,
 };
-
-near_sdk::setup_alloc!();
 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
 pub struct LinkDrop {
-	pub linkdrop_contract: AccountId,
+    pub linkdrop_contract: AccountId,
     pub accounts: LookupMap<PublicKey, Balance>,
 }
 
@@ -24,30 +22,26 @@ enum StorageKey {
 const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000;
 /// can take 0.5 of access key since gas required is 6.6 times what was actually used
 const NEW_ACCOUNT_BASIC_AMOUNT: u128 = 10_000_000_000_000_000_000_000;
-const ON_CREATE_ACCOUNT_GAS: u64 = 40_000_000_000_000;
+const ON_CREATE_ACCOUNT_GAS: Gas = Gas(40_000_000_000_000);
 
 #[ext_contract(ext_linkdrop)]
 trait ExtLinkdrop {
-    fn create_account(
-        &mut self,
-        new_account_id: AccountId,
-        new_public_key: Base58PublicKey,
-    ) -> Promise;
+    fn create_account(&mut self, new_account_id: AccountId, new_public_key: PublicKey) -> Promise;
 }
 
 #[near_bindgen]
 impl LinkDrop {
-	#[init]
+    #[init]
     pub fn new(linkdrop_contract: AccountId) -> Self {
         Self {
-			linkdrop_contract,
-			accounts: LookupMap::new(StorageKey::Accounts),
-		}
+            linkdrop_contract,
+            accounts: LookupMap::new(StorageKey::Accounts),
+        }
     }
     /// Allows given public key to claim sent balance.
     /// Takes ACCESS_KEY_ALLOWANCE as fee from deposit to cover account creation via an access key.
     #[payable]
-    pub fn send(&mut self, public_key: Base58PublicKey) -> Promise {
+    pub fn send(&mut self, public_key: PublicKey) -> Promise {
         assert!(
             env::attached_deposit() >= ACCESS_KEY_ALLOWANCE,
             "Attached deposit must be greater than or equal to ACCESS_KEY_ALLOWANCE"
@@ -89,7 +83,7 @@ impl LinkDrop {
     pub fn create_account_and_claim(
         &mut self,
         new_account_id: AccountId,
-        new_public_key: Base58PublicKey,
+        new_public_key: PublicKey,
     ) -> Promise {
         assert_eq!(
             env::predecessor_account_id(),
@@ -106,13 +100,13 @@ impl LinkDrop {
             .remove(&env::signer_account_pk())
             .expect("Unexpected public key");
 
-		Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
+        Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
 
-		if amount == 0 {
-			amount = NEW_ACCOUNT_BASIC_AMOUNT;
-		}
+        if amount == 0 {
+            amount = NEW_ACCOUNT_BASIC_AMOUNT;
+        }
 
-		ext_linkdrop::create_account(
+        ext_linkdrop::create_account(
             new_account_id,
             new_public_key,
             &self.linkdrop_contract,
@@ -122,7 +116,10 @@ impl LinkDrop {
     }
 
     /// Returns the balance associated with given key.
-    pub fn get_key_balance(&self, key: Base58PublicKey) -> U128 {
-        self.accounts.get(&key.into()).expect("Key is missing").into()
+    pub fn get_key_balance(&self, key: PublicKey) -> U128 {
+        self.accounts
+            .get(&key.into())
+            .expect("Key is missing")
+            .into()
     }
 }
