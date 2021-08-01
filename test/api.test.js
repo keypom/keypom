@@ -10,9 +10,9 @@ let {
 	contractAccount,
 } = testUtils;
 
-let linkdropAccount = contractAccount
+let linkdropAccount = contractAccount;
 /// contractAccount is the devAccount - testing against deployed contract on testnet
-const useDeployedLinkdrop = true
+const useDeployedLinkdrop = true;
 if (useDeployedLinkdrop) {
 	contractId = 'linkdrop-wrapper.testnet';
 	linkdropAccount = new Account(near.connection, contractId);
@@ -100,7 +100,7 @@ describe('Linkdrop Proxy', function () {
 			gas,
 		});
 
-		console.log(new_account_id)
+		console.log(new_account_id);
 
 		// console.log(res)
 		// true
