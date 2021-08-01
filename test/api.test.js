@@ -1,32 +1,40 @@
 const assert = require('assert');
-const { KeyPair } = require('near-api-js');
+const { KeyPair, Account } = require('near-api-js');
 const { parseNearAmount } = require('near-api-js/lib/utils/format');
 const testUtils = require('./test-utils');
 
-const {
+let {
 	near,
 	networkId,
 	contractId,
 	contractAccount,
 } = testUtils;
 
+let linkdropAccount = contractAccount
+/// contractAccount is the devAccount - testing against deployed contract on testnet
+const useDeployedLinkdrop = true
+if (useDeployedLinkdrop) {
+	contractId = 'linkdrop-wrapper.testnet';
+	linkdropAccount = new Account(near.connection, contractId);
+}
+
 // 50 Tgas is enough
 const gas = '50000000000000';
 
-describe('Linkdrop Wrapper', function () {
+describe('Linkdrop Proxy', function () {
 	this.timeout(20000);
 
 	// linkdrop keypairs
-	const keyPair1 = KeyPair.fromRandom('ed25519')
-	const keyPair2 = KeyPair.fromRandom('ed25519')
-	const public_key1 = keyPair1.publicKey.toString()
-	const public_key2 = keyPair2.publicKey.toString()
+	const keyPair1 = KeyPair.fromRandom('ed25519');
+	const keyPair2 = KeyPair.fromRandom('ed25519');
+	const public_key1 = keyPair1.publicKey.toString();
+	const public_key2 = keyPair2.publicKey.toString();
 	// the new account's keypair
-	const keyPairNewAccount = KeyPair.fromRandom('ed25519')
-	const new_public_key = keyPairNewAccount.publicKey.toString()
+	const keyPairNewAccount = KeyPair.fromRandom('ed25519');
+	const new_public_key = keyPairNewAccount.publicKey.toString();
 
 	it('contract deployed', async function() {
-		const state = await contractAccount.state()
+		const state = await linkdropAccount.state();
 		try {
 			await contractAccount.functionCall({
 				contractId,
@@ -35,10 +43,10 @@ describe('Linkdrop Wrapper', function () {
 					linkdrop_contract: 'testnet'
 				},
 				gas
-			})
+			});
 		} catch (e) {
 			if (!/contract has already been initialized/.test(e.toString())) {
-				console.warn(e)
+				console.warn(e);
 			}
 		}
 
@@ -55,11 +63,11 @@ describe('Linkdrop Wrapper', function () {
 			gas,
 			// could be 0.02 N wallet needs to reduce gas from 100 Tgas to 50 Tgas
 			attachedDeposit: parseNearAmount('0.03')
-		})
+		});
 
-		console.log(`https://wallet.testnet.near.org/linkdrop/${contractId}/${keyPair1.secretKey}?redirectUrl=https://example.com`)
+		console.log(`https://wallet.testnet.near.org/linkdrop/${contractId}/${keyPair1.secretKey}?redirectUrl=https://example.com`);
 
-		return true
+		return true;
 	});
 
 	it('creation of linkdrop', async function() {
@@ -71,7 +79,7 @@ describe('Linkdrop Wrapper', function () {
 			},
 			gas,
 			attachedDeposit: parseNearAmount('0.02')
-		})
+		});
 
 		assert.strictEqual(res.status.SuccessValue, '');
 	});
@@ -80,16 +88,19 @@ describe('Linkdrop Wrapper', function () {
 		// WARNING tests after this with contractAccount will fail - signing key lost
 		// set key for contractAccount to linkdrop keyPair
 		near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
+		const new_account_id = 'linkdrop-wrapper-' + Date.now().toString();
 
-		const res = await contractAccount.functionCall({
+		const res = await linkdropAccount.functionCall({
 			contractId,
 			methodName: 'create_account_and_claim',
 			args: {
-				new_account_id: 'test-linkdrop-wrapper-' + Date.now().toString(),
+				new_account_id,
 				new_public_key,
 			},
 			gas,
-		})
+		});
+
+		console.log(new_account_id)
 
 		// console.log(res)
 		// true
@@ -100,4 +111,4 @@ describe('Linkdrop Wrapper', function () {
 
 	
 
-})
+});

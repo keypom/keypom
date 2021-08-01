@@ -1,6 +1,6 @@
 const fs = require("fs");
 const nearAPI = require("near-api-js");
-const getConfig = require("./config");
+const getConfig = require("../test/config");
 
 // for testnet
 const network = 'testnet'

@@ -41,8 +41,8 @@ const initAccount = async(accountId, secret) => {
 	account = new nearAPI.Account(connection, accountId);
 	const newKeyPair = KeyPair.fromString(secret);
 	keyStore.setKey(networkId, accountId, newKeyPair);
-	return account
-}
+	return account;
+};
 
 const createOrInitAccount = async(accountId, secret, amount = DEFAULT_NEW_CONTRACT_AMOUNT) => {
 	let account;
@@ -52,7 +52,7 @@ const createOrInitAccount = async(accountId, secret, amount = DEFAULT_NEW_CONTRA
 		if (!/because it already exists/.test(e.toString())) {
 			throw e;
 		}
-		account = initAccount(accountId, secret)
+		account = initAccount(accountId, secret);
 	}
 	return account;
 };
@@ -159,8 +159,8 @@ const loadCredentials = (accountId) => {
 		);
 	}
 
-	return credentials
-}
+	return credentials;
+};
 
 module.exports = { 
 	TEST_HOST,
