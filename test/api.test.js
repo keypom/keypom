@@ -12,14 +12,14 @@ let {
 
 let linkdropAccount = contractAccount;
 /// contractAccount is the devAccount - testing against deployed contract on testnet
-const useDeployedLinkdrop = true;
+const useDeployedLinkdrop = false;
 if (useDeployedLinkdrop) {
 	contractId = 'linkdrop-wrapper.testnet';
 	linkdropAccount = new Account(near.connection, contractId);
 }
 
-// 50 Tgas is enough
-const gas = '50000000000000';
+// 85 Tgas is enough with callback
+const gas = '85000000000000';
 
 describe('Linkdrop Proxy', function () {
 	this.timeout(20000);
@@ -78,7 +78,7 @@ describe('Linkdrop Proxy', function () {
 				public_key: public_key2
 			},
 			gas,
-			attachedDeposit: parseNearAmount('0.02')
+			attachedDeposit: parseNearAmount('0.03')
 		});
 
 		assert.strictEqual(res.status.SuccessValue, '');
@@ -101,14 +101,40 @@ describe('Linkdrop Proxy', function () {
 		});
 
 		console.log(new_account_id);
+		console.log(Buffer.from(res.status.SuccessValue, 'base64').toString('utf-8'))
 
 		// console.log(res)
 		// true
 		assert.strictEqual(res.status.SuccessValue, 'dHJ1ZQ==');
 	});
 
-	// WARNING tests after this with contractAccount will fail - signing key lost
+	/// testing if promise fails (must edit contract->is_promise_success to return false)
+	// it('creation of account - FAIL', async function() {
+	// 	near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
+	// 	const new_account_id = 'linkdrop-wrapper-' + Date.now().toString();
 
+	// 	try {
+	// 		const res = await linkdropAccount.functionCall({
+	// 			contractId,
+	// 			methodName: 'create_account_and_claim',
+	// 			args: {
+	// 				new_account_id,
+	// 				new_public_key,
+	// 			},
+	// 			gas,
+	// 		});
 	
+	// 		console.log(new_account_id);
+	// 		console.log(Buffer.from(res.status.SuccessValue, 'base64').toString('utf-8'))
+	
+	// 		// console.log(res)
+	// 		// true
+	// 		assert.strictEqual(res.status.SuccessValue, 'dHJ1ZQ==');
+	// 	} catch(e) {
+	// 		console.log('fail')
+	// 		console.log(keyPair2.publicKey.toString())
+	// 	}
+		
+	// });
 
 });
