@@ -18,7 +18,7 @@ if (useDeployedLinkdrop) {
 	linkdropAccount = new Account(near.connection, contractId);
 }
 
-// 85 Tgas is enough with callback
+// 85 Tgas is enough with callback check
 const gas = '85000000000000';
 
 describe('Linkdrop Proxy', function () {
@@ -108,7 +108,7 @@ describe('Linkdrop Proxy', function () {
 		assert.strictEqual(res.status.SuccessValue, 'dHJ1ZQ==');
 	});
 
-	/// testing if promise fails (must edit contract->is_promise_success to return false)
+	/// testing if promise fails (must edit contract->on_account_created to return false)
 	// it('creation of account - FAIL', async function() {
 	// 	near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
 	// 	const new_account_id = 'linkdrop-wrapper-' + Date.now().toString();
