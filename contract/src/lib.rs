@@ -46,6 +46,15 @@ impl LinkDrop {
             accounts: LookupMap::new(StorageKey::Accounts),
         }
     }
+
+	pub fn set_contract(&mut self, linkdrop_contract: AccountId) {
+		assert_eq!(
+            env::predecessor_account_id(),
+            env::current_account_id(),
+            "predecessor != current"
+        );
+		self.linkdrop_contract = linkdrop_contract;
+	}
     /// Allows given public key to claim sent balance.
     /// Takes ACCESS_KEY_ALLOWANCE as fee from deposit to cover account creation via an access key.
     #[payable]
