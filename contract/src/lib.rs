@@ -21,7 +21,7 @@ enum StorageKey {
 /// 0.02 N
 const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000;
 /// can take 0.5 of access key since gas required is 6.6 times what was actually used
-const NEW_ACCOUNT_BASIC_AMOUNT: u128 = 10_000_000_000_000_000_000_000;
+const NEW_ACCOUNT_BASIC_AMOUNT: u128 = 15_000_000_000_000_000_000_000;
 const ON_CREATE_ACCOUNT_GAS: Gas = Gas(40_000_000_000_000);
 const ON_CALLBACK_GAS: Gas = Gas(20_000_000_000_000);
 /// Indicates there are no deposit for a callback for better readability.

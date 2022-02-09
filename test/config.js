@@ -1,4 +1,4 @@
-const contractName = 'dev-1629577690634-55836781166812';
+const contractName = 'dev-1644437742324-61327708214699';
 
 module.exports = function getConfig(network = 'mainnet') {
 	let config = {
@@ -16,7 +16,7 @@ module.exports = function getConfig(network = 'mainnet') {
 			...config,
 			GAS: "200000000000000",
 			gas: "200000000000000",
-			DEFAULT_NEW_ACCOUNT_AMOUNT: "5",
+			NEW_ACCOUNT_AMOUNT: "5000000000000000000000000",
 			DEFAULT_NEW_CONTRACT_AMOUNT: "5",
 			GUESTS_ACCOUNT_SECRET:
 			"7UVfzoKZL4WZGF98C3Ue7tmmA6QamHCiB1Wd5pkxVPAc7j6jf3HXz5Y9cR93Y68BfGDtMLQ9Q29Njw5ZtzGhPxv",

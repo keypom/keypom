@@ -2,14 +2,22 @@ const fs = require("fs");
 const BN = require('bn.js');
 const fetch = require('node-fetch');
 const nearAPI = require('near-api-js');
-const { KeyPair, Account, Contract, utils: { format: { parseNearAmount } } } = nearAPI;
+const { KeyPair, Account, Contract, utils: { format: { parseNearAmount, formatNearAmount } } } = nearAPI;
 const { near, credentials, connection, keyStore, contract, contractAccount } = require('./near-utils');
 const getConfig = require('./config');
 const {
 	networkId, contractName, contractMethods, gas,
-	DEFAULT_NEW_ACCOUNT_AMOUNT, 
+	NEW_ACCOUNT_AMOUNT, 
 	DEFAULT_NEW_CONTRACT_AMOUNT,
 } = getConfig('testnet');
+
+const format = (amount) => {
+	const res = formatNearAmount(amount, 8)
+	if (res.indexOf('-') > -1) {
+		return '-' + res.replace('-', '')
+	}
+	return res
+}
 
 const TEST_HOST = 'http://localhost:3000';
 /// exports
@@ -17,15 +25,7 @@ async function initContract() {
 	/// try to call new on contract, swallow e if already initialized
 	try {
 		const newArgs = {
-			owner_id: contractAccount.accountId,
-			"metadata": {
-				"spec": "nft-1",
-				"name": "UHHM NFT - Hip Hop Heads",
-				"symbol": "HHH"
-			},
-			supply_cap_by_type: {
-				test: '1000000',
-			},
+			linkdrop_contract: contractId
 		};
 		await contract.new(newArgs);
 	} catch (e) {
@@ -35,7 +35,6 @@ async function initContract() {
 	}
 	return { contract, contractName };
 }
-const getAccountBalance = async (accountId) => (new nearAPI.Account(connection, accountId)).getAccountBalance();
 
 const initAccount = async(accountId, secret) => {
 	account = new nearAPI.Account(connection, accountId);
@@ -57,14 +56,24 @@ const createOrInitAccount = async(accountId, secret, amount = DEFAULT_NEW_CONTRA
 	return account;
 };
 
-async function getAccount(accountId, fundingAmount = DEFAULT_NEW_ACCOUNT_AMOUNT, secret) {
-	accountId = accountId || generateUniqueSubAccount();
+const getAccount = async (accountId, fundingAmount = NEW_ACCOUNT_AMOUNT, secret) => {
 	const account = new nearAPI.Account(connection, accountId);
 	try {
+		let secret;
+		try {
+			secret = JSON.parse(fs.readFileSync(process.env.HOME + `/.near-credentials/${networkId}/${accountId}.json`, 'utf-8')).private_key;
+		} catch(e) {
+			if (!/no such file|does not exist/.test(e.toString())) {
+				throw e;
+			}
+			secret = fs.readFileSync(`./neardev/${accountId}`, 'utf-8');
+		}
+		const newKeyPair = KeyPair.fromString(secret);
+		keyStore.setKey(networkId, accountId, newKeyPair);
 		await account.state();
 		return account;
 	} catch(e) {
-		if (!/does not exist/.test(e.toString())) {
+		if (!/no such file|does not exist/.test(e.toString())) {
 			throw e;
 		}
 	}
@@ -117,13 +126,13 @@ function generateUniqueSubAccount() {
 }
 
 /// internal
-async function createAccount(accountId, fundingAmount = DEFAULT_NEW_ACCOUNT_AMOUNT, secret) {
-	const contractAccount = new Account(connection, contractName);
+const createAccount = async (accountId, fundingAmount = NEW_ACCOUNT_AMOUNT, secret) => {
 	const newKeyPair = secret ? KeyPair.fromString(secret) : KeyPair.fromRandom('ed25519');
-	await contractAccount.createAccount(accountId, newKeyPair.publicKey, new BN(parseNearAmount(fundingAmount)));
+	fs.writeFileSync(`./neardev/${accountId}` , newKeyPair.toString(), 'utf-8');
+	await contractAccount.createAccount(accountId, newKeyPair.publicKey, fundingAmount);
 	keyStore.setKey(networkId, accountId, newKeyPair);
 	return new nearAPI.Account(connection, accountId);
-}
+};
 
 const getSignature = async (account) => {
 	const { accountId } = account;
@@ -162,7 +171,46 @@ const loadCredentials = (accountId) => {
 	return credentials;
 };
 
+/// debugging
+
+const getAccountBalance = (accountId) => (new nearAPI.Account(connection, accountId)).getAccountBalance();
+const getAccountState = (accountId) => (new nearAPI.Account(connection, accountId)).state();
+const totalDiff = (balanceBefore, balanceAfter) => format(new BN(balanceAfter.total).sub(new BN(balanceBefore.total)).toString());
+const availableDiff = (balanceBefore, balanceAfter) => format(new BN(balanceAfter.available).sub(new BN(balanceBefore.available)).toString());
+const stateCost = (balanceBefore, balanceAfter) => format(new BN(balanceAfter.stateStaked).sub(new BN(balanceBefore.stateStaked)).toString());
+const bytesUsed = (stateBefore, stateAfter) => parseInt(stateAfter.storage_usage, 10) - parseInt(stateBefore.storage_usage);
+
+/// analyzing
+
+let data = {};
+const recordStart = async (accountId) => {
+	data[accountId] = {
+		balance: await getAccountBalance(accountId),
+		state: await getAccountState(accountId),
+	};
+};
+
+const recordStop = async (accountId) => {
+	const before = data[accountId];
+	const after = {
+		balance: await getAccountBalance(accountId),
+		state: await getAccountState(accountId),
+	};
+
+	console.log(format(before.balance.total), format(after.balance.total))
+
+	console.log(
+		'\n', 'Analysis:', '\n',
+		'Total diff:', totalDiff(before.balance, after.balance), '\n',
+		'Avail diff:', availableDiff(before.balance, after.balance), '\n',
+		'State used:', stateCost(before.balance, after.balance), '\n',
+		'Bytes used:', bytesUsed(before.state, after.state), '\n',
+	);
+};
+
 module.exports = { 
+	recordStart,
+	recordStop,
 	TEST_HOST,
 	near,
 	gas,

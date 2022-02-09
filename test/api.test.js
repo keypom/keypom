@@ -8,6 +8,9 @@ let {
 	networkId,
 	contractId,
 	contractAccount,
+	recordStart,
+	recordStop,
+	getAccount,
 } = testUtils;
 
 let linkdropAccount = contractAccount;
@@ -20,9 +23,12 @@ if (useDeployedLinkdrop) {
 
 // 85 Tgas is enough with callback check
 const gas = '85000000000000';
+const attachedDeposit = parseNearAmount('0.02')
 
 describe('Linkdrop Proxy', function () {
-	this.timeout(20000);
+	this.timeout(60000);
+
+	const aliceId = 'alice-test.' + contractId
 
 	// linkdrop keypairs
 	const keyPair1 = KeyPair.fromRandom('ed25519');
@@ -33,8 +39,15 @@ describe('Linkdrop Proxy', function () {
 	const keyPairNewAccount = KeyPair.fromRandom('ed25519');
 	const new_public_key = keyPairNewAccount.publicKey.toString();
 
-	it('contract deployed', async function() {
+	it('accounts and contract deployed', async function() {
+
+		alice = await getAccount(aliceId);
+		// console.log(alice)
+
 		const state = await linkdropAccount.state();
+		if (state.code_hash.indexOf('111111') === 0) {
+			return assert(true)
+		}
 		try {
 			await contractAccount.functionCall({
 				contractId,
@@ -53,32 +66,36 @@ describe('Linkdrop Proxy', function () {
 		assert.notStrictEqual(state.code_hash, '11111111111111111111111111111111');
 	});
 
-	it('creation of linkdrop and wallet link for testing', async function() {
-		await contractAccount.functionCall({
-			contractId,
-			methodName: 'send',
-			args: {
-				public_key: public_key1
-			},
-			gas,
-			// could be 0.02 N wallet needs to reduce gas from 100 Tgas to 50 Tgas
-			attachedDeposit: parseNearAmount('0.03')
-		});
+	// it('creation of linkdrop and wallet link for testing', async function() {
 
-		console.log(`https://wallet.testnet.near.org/linkdrop/${contractId}/${keyPair1.secretKey}?redirectUrl=https://example.com`);
+	// 	await alice.functionCall({
+	// 		contractId,
+	// 		methodName: 'send',
+	// 		args: {
+	// 			public_key: public_key1
+	// 		},
+	// 		gas,
+	// 		// could be 0.02 N wallet needs to reduce gas from 100 Tgas to 50 Tgas
+	// 		attachedDeposit
+	// 	});
 
-		return true;
-	});
+	// 	console.log(`https://wallet.testnet.near.org/linkdrop/${contractId}/${keyPair1.secretKey}?redirectUrl=https://example.com`);
+
+	// 	return true;
+	// });
 
 	it('creation of linkdrop', async function() {
-		const res = await contractAccount.functionCall({
+
+		await recordStart(contractId)
+
+		const res = await alice.functionCall({
 			contractId,
 			methodName: 'send',
 			args: {
 				public_key: public_key2
 			},
 			gas,
-			attachedDeposit: parseNearAmount('0.03')
+			attachedDeposit
 		});
 
 		assert.strictEqual(res.status.SuccessValue, '');
@@ -88,7 +105,7 @@ describe('Linkdrop Proxy', function () {
 		// WARNING tests after this with contractAccount will fail - signing key lost
 		// set key for contractAccount to linkdrop keyPair
 		near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
-		const new_account_id = 'linkdrop-wrapper-' + Date.now().toString();
+		const new_account_id = 'linkdrop-wrapper-' + Date.now().toString() + '.testnet';
 
 		const res = await linkdropAccount.functionCall({
 			contractId,
@@ -100,12 +117,14 @@ describe('Linkdrop Proxy', function () {
 			gas,
 		});
 
-		console.log(new_account_id);
-		console.log(Buffer.from(res.status.SuccessValue, 'base64').toString('utf-8'))
+		await recordStop(contractId)
 
-		// console.log(res)
-		// true
-		assert.strictEqual(res.status.SuccessValue, 'dHJ1ZQ==');
+		try {
+			await (new Account(near.connection, new_account_id)).state()
+			assert(true)
+		} catch (e) {
+			assert(false)
+		}
 	});
 
 	/// testing if promise fails (must edit contract->on_account_created to return false)
