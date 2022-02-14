@@ -55,8 +55,9 @@ impl LinkDrop {
         );
 		self.linkdrop_contract = linkdrop_contract;
 	}
-    /// Allows given public key to claim sent balance.
-    /// Takes ACCESS_KEY_ALLOWANCE as fee from deposit to cover account creation via an access key.
+
+	/// sending (adding keys)
+
     #[payable]
     pub fn send(&mut self, public_key: PublicKey) -> Promise {
         assert!(
@@ -77,22 +78,70 @@ impl LinkDrop {
         )
     }
 
-    /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: AccountId) -> Promise {
-        assert_eq!(
+    #[payable]
+    pub fn send_multiple(&mut self, public_keys: Vec<PublicKey>) {
+        assert!(
+            env::attached_deposit() >= ACCESS_KEY_ALLOWANCE,
+            "Deposit < ACCESS_KEY_ALLOWANCE"
+        );
+
+		let current_account_id = env::current_account_id();
+
+		let promise = env::promise_batch_create(&current_account_id);
+
+		let len = public_keys.len() as u128;
+		
+		for pk in public_keys {
+
+			env::promise_batch_action_add_key_with_function_call(
+				promise, 
+				&pk, 
+				0, 
+				ACCESS_KEY_ALLOWANCE, 
+				&current_account_id, 
+				b"claim,create_account_and_claim"
+			);
+			
+			self.accounts.insert(
+				&pk, 
+				&(self.accounts.get(&pk).unwrap_or(0) + env::attached_deposit() / len - ACCESS_KEY_ALLOWANCE),
+			);
+		}
+
+		env::promise_return(promise);
+    }
+
+	/// claiming
+
+	fn process_claim(&mut self) -> Balance {
+		assert_eq!(
             env::predecessor_account_id(),
             env::current_account_id(),
             "predecessor != current"
         );
+        let mut amount = self
+            .accounts
+            .remove(&env::signer_account_pk())
+            .expect("Missing public key");
+
+		Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
+
+		if amount == 0 {
+			amount = NEW_ACCOUNT_BASIC_AMOUNT;
+		}
+
+		amount
+	}
+
+    /// Claim tokens for specific account that are attached to the public key this tx is signed with.
+    pub fn claim(&mut self, account_id: AccountId) -> Promise {
         assert!(
             env::is_valid_account_id(account_id.as_bytes()),
             "Invalid account id"
         );
-        let amount = self
-            .accounts
-            .remove(&env::signer_account_pk())
-            .expect("Missing public key");
-        Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
+
+        let amount = self.process_claim();
+		
         Promise::new(account_id).transfer(amount)
     }
 
@@ -102,26 +151,12 @@ impl LinkDrop {
         new_account_id: AccountId,
         new_public_key: PublicKey,
     ) -> Promise {
-        assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
         assert!(
             env::is_valid_account_id(new_account_id.as_bytes()),
             "Invalid account id"
         );
 
-        let mut amount = self
-            .accounts
-            .remove(&env::signer_account_pk())
-            .expect("Missing public key");
-
-        Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
-
-        if amount == 0 {
-            amount = NEW_ACCOUNT_BASIC_AMOUNT;
-        }
+        let amount = self.process_claim();
 
         ext_linkdrop::create_account(
             new_account_id,

@@ -23,7 +23,9 @@ if (useDeployedLinkdrop) {
 
 // 85 Tgas is enough with callback check
 const gas = '85000000000000';
+const gasMultiple = '200000000000000';
 const attachedDeposit = parseNearAmount('0.02')
+const attachedDepositDouble = parseNearAmount('0.04')
 
 describe('Linkdrop Proxy', function () {
 	this.timeout(60000);
@@ -84,18 +86,26 @@ describe('Linkdrop Proxy', function () {
 	// 	return true;
 	// });
 
-	it('creation of linkdrop', async function() {
+	/// keyPair1
+
+	it('creation of linkdrops', async function() {
+
+		const EXTRA = 0
+		const extraKeys = []
+		for (let i = 0; i < EXTRA; i++) {
+			extraKeys.push(KeyPair.fromRandom('ed25519').publicKey.toString())
+		}
 
 		await recordStart(contractId)
 
 		const res = await alice.functionCall({
 			contractId,
-			methodName: 'send',
+			methodName: 'send_multiple',
 			args: {
-				public_key: public_key2
+				public_keys: [public_key1, public_key2, ...extraKeys]
 			},
-			gas,
-			attachedDeposit
+			gas: gasMultiple,
+			attachedDeposit: parseNearAmount((0.02 * (EXTRA+2)).toString())
 		});
 
 		assert.strictEqual(res.status.SuccessValue, '');
@@ -104,7 +114,7 @@ describe('Linkdrop Proxy', function () {
 	it('creation of account', async function() {
 		// WARNING tests after this with contractAccount will fail - signing key lost
 		// set key for contractAccount to linkdrop keyPair
-		near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
+		near.connection.signer.keyStore.setKey(networkId, contractId, keyPair1);
 		const new_account_id = 'linkdrop-wrapper-' + Date.now().toString() + '.testnet';
 
 		const res = await linkdropAccount.functionCall({
@@ -119,12 +129,55 @@ describe('Linkdrop Proxy', function () {
 
 		await recordStop(contractId)
 
+		console.log('created account', new_account_id)
+
 		try {
 			await (new Account(near.connection, new_account_id)).state()
 			assert(true)
 		} catch (e) {
 			assert(false)
 		}
+	});
+
+	/// keyPair2
+
+	// it('creation of linkdrop', async function() {
+
+	// 	await recordStart(contractId)
+
+	// 	const res = await alice.functionCall({
+	// 		contractId,
+	// 		methodName: 'send',
+	// 		args: {
+	// 			public_key: public_key2
+	// 		},
+	// 		gas,
+	// 		attachedDeposit
+	// 	});
+
+	// 	assert.strictEqual(res.status.SuccessValue, '');
+	// });
+
+	it('claim of linkdrop', async function() {
+		// WARNING tests after this with contractAccount will fail - signing key lost
+		// set key for contractAccount to linkdrop keyPair
+		near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
+		const account_id = 'testnet';
+
+		const res = await linkdropAccount.functionCall({
+			contractId,
+			methodName: 'claim',
+			args: {
+				account_id,
+			},
+			gas,
+		});
+
+		await recordStop(contractId)
+
+		// console.log(res)
+
+		assert(true)
 	});
 
 	/// testing if promise fails (must edit contract->on_account_created to return false)
