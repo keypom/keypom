@@ -20,8 +20,8 @@ enum StorageKey {
 
 /// 0.02 N
 const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000;
-/// can take 0.5 of access key since gas required is 6.6 times what was actually used
-const NEW_ACCOUNT_BASIC_AMOUNT: u128 = 15_000_000_000_000_000_000_000;
+/// absolute bare minimum for a new account 1_820_000_000_000_000_000_000
+const NEW_ACCOUNT_BASIC_AMOUNT: u128 = 1_820_000_000_000_000_000_000;
 const ON_CREATE_ACCOUNT_GAS: Gas = Gas(40_000_000_000_000);
 const ON_CALLBACK_GAS: Gas = Gas(20_000_000_000_000);
 /// Indicates there are no deposit for a callback for better readability.
@@ -80,16 +80,16 @@ impl LinkDrop {
 
     #[payable]
     pub fn send_multiple(&mut self, public_keys: Vec<PublicKey>) {
+	    
+		let len = public_keys.len() as u128;
+	    
         assert!(
-            env::attached_deposit() >= ACCESS_KEY_ALLOWANCE,
+            env::attached_deposit() >= ACCESS_KEY_ALLOWANCE * len,
             "Deposit < ACCESS_KEY_ALLOWANCE"
         );
 
 		let current_account_id = env::current_account_id();
-
 		let promise = env::promise_batch_create(&current_account_id);
-
-		let len = public_keys.len() as u128;
 		
 		for pk in public_keys {
 
@@ -126,7 +126,7 @@ impl LinkDrop {
 
 		Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
 
-		if amount == 0 {
+		if amount < NEW_ACCOUNT_BASIC_AMOUNT {
 			amount = NEW_ACCOUNT_BASIC_AMOUNT;
 		}
 
