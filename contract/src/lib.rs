@@ -3,7 +3,7 @@ use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U128;
 use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
-    Promise, PromiseResult, PublicKey,
+    Promise, PromiseResult, PublicKey, PromiseOrValue,
 };
 
 /* 
@@ -12,7 +12,7 @@ use near_sdk::{
     - storing pub key and account data in the map
     Some of this can be refunded once the account is claimed.
 */ 
-const STORAGE_ALLOWANCE: u128 = 10_000_000_000_000_000_000_000; // 0.01 N 
+const STORAGE_ALLOWANCE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N 
 /* 
     allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
     available when GAS is burnt using the access key. The burnt GAS will not be refunded but any unburnt GAS that remains can be refunded.
@@ -27,11 +27,15 @@ const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000; // 0.02 N
 */ 
 const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000; // 0.00284 N
 
-const ON_CREATE_ACCOUNT_GAS: Gas = Gas(40_000_000_000_000); // 40 TGas
-const ON_CALLBACK_GAS: Gas = Gas(20_000_000_000_000); // 20 TGas
+const ON_NFT_TRANSFER_GAS: Gas = Gas(20_000_000_000_000); // 20 TGas
 
-// Defaulting burnt GAS to be 300 TGas (0.03 $NEAR)
-const BURNT_GAS: u128 = 30_000_000_000_000_000_000_000;
+const ON_CREATE_ACCOUNT_GAS: Gas = Gas(30_000_000_000_000); // 30 TGas
+const ON_CALLBACK_GAS: Gas = Gas(45_000_000_000_000); // 40 TGas
+
+
+
+// Defaulting burnt GAS to be 100 TGas (0.01 $NEAR)
+const BURNT_GAS: u128 = 10_000_000_000_000_000_000_000;
 
 /// Indicates there are no deposit for a callback for better readability.
 const NO_DEPOSIT: u128 = 0;
@@ -49,9 +53,13 @@ enum StorageKey {
 pub struct AccountData {
     pub funder_id: AccountId,
     pub balance: U128,
+    pub token_contract: Option<AccountId>,
+    pub nft_id: Option<String>,
 }
 
 mod ext_traits;
+mod nft;
+
 use crate::ext_traits::*;
 
 #[near_bindgen]
@@ -116,6 +124,8 @@ impl LinkDropProxy {
                 &AccountData{
                     funder_id: env::predecessor_account_id(),
                     balance: balance,
+                    token_contract: None,
+                    nft_id: None
                 },
             ).is_none(),
             "Account for PublicKey exists"
@@ -193,6 +203,8 @@ impl LinkDropProxy {
                     &AccountData{
                         funder_id: funder_id.clone(),
                         balance,
+                        token_contract: None,
+                        nft_id: None
                     },
                 ).is_none(),
                 "Account for PublicKey exists"
@@ -204,7 +216,7 @@ impl LinkDropProxy {
 
 	
     /// Internal method for deleting the used key and removing / returning account data.
-	fn process_claim(&mut self) -> (PublicKey, U128, AccountId) {
+	fn process_claim(&mut self) -> (PublicKey, U128, AccountId, Option<String>, Option<AccountId>) {
         // Ensure only the current contract is calling the method using the access key
 		assert_eq!(
             env::predecessor_account_id(),
@@ -217,6 +229,8 @@ impl LinkDropProxy {
         let AccountData {
             funder_id,
             balance,
+            token_contract,
+            nft_id,
         } = self.accounts
             .remove(&signer_pk)
             .expect("Missing public key");
@@ -225,20 +239,23 @@ impl LinkDropProxy {
 		Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
 
         // Return account data info
-		(signer_pk, balance, funder_id)
+		(signer_pk, balance, funder_id, nft_id, token_contract)
 	}
 
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) -> Promise {
         // Delete the access key and remove / return account data.
-        let (signer_pk, balance, funder_id) = self.process_claim();
+        let (signer_pk, balance, funder_id, nft_id, token_contract) = self.process_claim();
 		
         // Send the existing account ID the desired linkdrop balance.
-        Promise::new(account_id).transfer(balance.0)
+        Promise::new(account_id.clone()).transfer(balance.0)
         .then(ext_self::on_claim(
+            account_id,
 			signer_pk,
             balance,
             funder_id,
+            nft_id, 
+            token_contract,
 			env::current_account_id(),
 			NO_DEPOSIT,
 			ON_CALLBACK_GAS,
@@ -251,20 +268,33 @@ impl LinkDropProxy {
         new_account_id: AccountId,
         new_public_key: PublicKey,
     ) -> Promise {
-        // Delete the access key and remove / return account data.
-        let (signer_pk, balance, funder_id) = self.process_claim();
+        let mut used_gas = env::used_gas();
+        let mut prepaid_gas = env::prepaid_gas();
 
+        env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas, prepaid_gas));
+
+        // Delete the access key and remove / return account data.
+        let (signer_pk, balance, funder_id, nft_id, token_contract) = self.process_claim();
+
+        used_gas = env::used_gas();
+        prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("In CAAC after process claim used gas: {:?} prepaid gas: {:?}", used_gas, prepaid_gas));
+        
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
         ext_linkdrop::create_account(
-            new_account_id,
+            new_account_id.clone(),
             new_public_key,
             self.linkdrop_contract.clone(),
             balance.0,
             ON_CREATE_ACCOUNT_GAS,
         ).then(ext_self::on_claim(
+            new_account_id,
 			signer_pk,
             balance,
             funder_id,
+            nft_id, 
+            token_contract,
 			env::current_account_id(),
 			NO_DEPOSIT,
 			ON_CALLBACK_GAS,
@@ -272,7 +302,12 @@ impl LinkDropProxy {
     }
 
 	/// self callback checks if account was created successfully or not. If yes, refunds excess storage, sends NFTs, FTs etc..
-    pub fn on_claim(&mut self, pk: PublicKey, balance: U128, funder_id: AccountId) -> bool {
+    pub fn on_claim(&mut self, new_account_id: AccountId, pk: PublicKey, balance: U128, funder_id: AccountId, nft_id: Option<String>, token_contract: Option<AccountId>) -> bool {
+        let mut used_gas = env::used_gas();
+        let mut prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("Beginning of on claim used gas: {:?} prepaid gas: {:?}", used_gas, prepaid_gas));
+
         assert_eq!(
             env::predecessor_account_id(),
             env::current_account_id(),
@@ -287,9 +322,36 @@ impl LinkDropProxy {
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !creation_succeeded {
             amount_to_refund += balance.0
-        } //TODO: NFTS, FTs
+        }
+
+        used_gas = env::used_gas();
+        prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("In on claim before refund used gas: {:?} prepaid gas: {:?}", used_gas, prepaid_gas));
 
         Promise::new(funder_id).transfer(amount_to_refund);
+
+        // If NFT isn't successfully transferred, should send it back to it's original owner? 
+        if nft_id.is_some() {
+            let nft_contract_id = token_contract.expect("no contract ID found");
+            let token_id = nft_id.expect("no token Id found");
+
+            used_gas = env::used_gas();
+            prepaid_gas = env::prepaid_gas();
+
+            env::log_str(&format!("In on claim before nft transfer used gas: {:?} prepaid gas: {:?}", used_gas, prepaid_gas));
+
+             // CCC to the NFT contract to transfer the token.
+             ext_nft_contract::nft_transfer(
+                new_account_id, 
+                token_id,
+                None,
+                Some("Linkdroped NFT".to_string()),
+                nft_contract_id,
+                1,
+                ON_NFT_TRANSFER_GAS,
+            );
+        }
 
         creation_succeeded
     }
