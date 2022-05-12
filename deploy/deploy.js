@@ -3,7 +3,7 @@ const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/for
 const path = require("path");
 const homedir = require("os").homedir();
 
-let LINKDROP_PROXY_CONTRACT_ID = "dev-1652365122896-92863799006677";
+let LINKDROP_PROXY_CONTRACT_ID = "dev-1652367334754-70786864685876";
 let FUNDING_ACCOUNT_ID = "benjiman.testnet";
 let NETWORK_ID = "testnet";
 let near;

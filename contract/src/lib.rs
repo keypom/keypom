@@ -136,6 +136,8 @@ impl LinkDropProxy {
             env::current_account_id(),
             ACCESS_KEY_METHOD_NAMES.to_string(),
         )
+
+        //TODO: do assertions at the end and dynamically calculate required storage? Store this in the account data?
     }
 
     /*
@@ -229,12 +231,18 @@ impl LinkDropProxy {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) -> Promise {
         // Delete the access key and remove / return account data.
-        let (_, balance, _) = self.process_claim();
+        let (signer_pk, balance, funder_id) = self.process_claim();
 		
         // Send the existing account ID the desired linkdrop balance.
         Promise::new(account_id).transfer(balance.0)
-        //TODO: check transfer went well with a callback? or no.
-        //TODO: NFTs, FTs, and refund funder
+        .then(ext_self::on_claim(
+			signer_pk,
+            balance,
+            funder_id,
+			env::current_account_id(),
+			NO_DEPOSIT,
+			ON_CALLBACK_GAS,
+		))
     }
 
     /// Create new account and and claim tokens to it.
@@ -253,9 +261,9 @@ impl LinkDropProxy {
             self.linkdrop_contract.clone(),
             balance.0,
             ON_CREATE_ACCOUNT_GAS,
-        ).then(ext_self::on_account_created(
+        ).then(ext_self::on_claim(
 			signer_pk,
-            balance.0,
+            balance,
             funder_id,
 			env::current_account_id(),
 			NO_DEPOSIT,
@@ -263,8 +271,8 @@ impl LinkDropProxy {
 		))
     }
 
-	/// self callback checks if account was created successfully or not
-    pub fn on_account_created(&mut self, pk: PublicKey, balance: U128, funder_id: AccountId) -> bool {
+	/// self callback checks if account was created successfully or not. If yes, refunds excess storage, sends NFTs, FTs etc..
+    pub fn on_claim(&mut self, pk: PublicKey, balance: U128, funder_id: AccountId) -> bool {
         assert_eq!(
             env::predecessor_account_id(),
             env::current_account_id(),
@@ -273,13 +281,16 @@ impl LinkDropProxy {
 		assert_eq!(env::promise_results_count(), 1, "no promise result");
         let creation_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        // If not successful, we refund the funder for everything minus the burnt GAS.
+        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
+        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE - BURNT_GAS;
+        
+        // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !creation_succeeded {
-            let amount_to_refund = balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE - BURNT_GAS;
-            Promise::new(funder_id).transfer(amount_to_refund);
-        }
+            amount_to_refund += balance.0
+        } //TODO: NFTS, FTs
 
-        //TODO: NFTS, FTs
+        Promise::new(funder_id).transfer(amount_to_refund);
+
         creation_succeeded
     }
 

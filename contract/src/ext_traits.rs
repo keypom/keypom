@@ -7,5 +7,5 @@ trait ExtLinkdrop {
 }
 #[ext_contract(ext_self)]
 trait ExtLinkdrop {
-    fn on_account_created(&mut self, pk: PublicKey, balance: Balance, funder_id: AccountId) -> bool;
+    fn on_claim(&mut self, pk: PublicKey, balance: U128, funder_id: AccountId) -> bool;
 }
