@@ -283,7 +283,7 @@ impl LinkDropProxy {
         creation_succeeded
     }
 
-    /// Returns the balance associated with given key.
+    /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
     pub fn get_key_balance(&self, key: PublicKey) -> U128 {
         let account_data = self.accounts
             .get(&key)
