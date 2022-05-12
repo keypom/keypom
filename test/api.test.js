@@ -24,8 +24,8 @@ if (useDeployedLinkdrop) {
 // 85 Tgas is enough with callback check
 const gas = '85000000000000';
 const gasMultiple = '200000000000000';
-const attachedDeposit = parseNearAmount('0.02')
-const attachedDepositDouble = parseNearAmount('0.04')
+const attachedDeposit = parseNearAmount('0.03')
+const attachedDepositDouble = parseNearAmount('0.06')
 
 describe('Linkdrop Proxy', function () {
 	this.timeout(60000);
@@ -55,7 +55,7 @@ describe('Linkdrop Proxy', function () {
 				contractId,
 				methodName: 'new',
 				args: {
-					linkdrop_contract: 'testnet'
+					linkdrop_contract: 'testnet',
 				},
 				gas
 			});
@@ -64,7 +64,7 @@ describe('Linkdrop Proxy', function () {
 				console.warn(e);
 			}
 		}
-
+		
 		assert.notStrictEqual(state.code_hash, '11111111111111111111111111111111');
 	});
 
@@ -102,42 +102,46 @@ describe('Linkdrop Proxy', function () {
 			contractId,
 			methodName: 'send_multiple',
 			args: {
-				public_keys: [public_key1, public_key2, ...extraKeys]
+				public_keys: [public_key1, public_key2, ...extraKeys],
+				balance: 0,
 			},
 			gas: gasMultiple,
-			attachedDeposit: parseNearAmount((0.02 * (EXTRA+2)).toString())
+			attachedDeposit: parseNearAmount((0.03 * (EXTRA+2)).toString())
 		});
+
+		console.log(`https://wallet.testnet.near.org/linkdrop/${contractId}/${keyPair1.secretKey}?redirectUrl=https://example.com`);
+		console.log(`https://wallet.testnet.near.org/linkdrop/${contractId}/${keyPair2.secretKey}?redirectUrl=https://example.com`);
 
 		assert.strictEqual(res.status.SuccessValue, '');
 	});
 
-	it('creation of account', async function() {
-		// WARNING tests after this with contractAccount will fail - signing key lost
-		// set key for contractAccount to linkdrop keyPair
-		near.connection.signer.keyStore.setKey(networkId, contractId, keyPair1);
-		const new_account_id = 'linkdrop-wrapper-' + Date.now().toString() + '.testnet';
+	// it('creation of account', async function() {
+	// 	// WARNING tests after this with contractAccount will fail - signing key lost
+	// 	// set key for contractAccount to linkdrop keyPair
+	// 	near.connection.signer.keyStore.setKey(networkId, contractId, keyPair1);
+	// 	const new_account_id = 'linkdrop-wrapper-' + Date.now().toString() + '.testnet';
 
-		const res = await linkdropAccount.functionCall({
-			contractId,
-			methodName: 'create_account_and_claim',
-			args: {
-				new_account_id,
-				new_public_key,
-			},
-			gas,
-		});
+	// 	const res = await linkdropAccount.functionCall({
+	// 		contractId,
+	// 		methodName: 'create_account_and_claim',
+	// 		args: {
+	// 			new_account_id,
+	// 			new_public_key,
+	// 		},
+	// 		gas,
+	// 	});
 
-		await recordStop(contractId)
+	// 	await recordStop(contractId)
 
-		console.log('created account', new_account_id)
+	// 	console.log('created account', new_account_id)
 
-		try {
-			await (new Account(near.connection, new_account_id)).state()
-			assert(true)
-		} catch (e) {
-			assert(false)
-		}
-	});
+	// 	try {
+	// 		await (new Account(near.connection, new_account_id)).state()
+	// 		assert(true)
+	// 	} catch (e) {
+	// 		assert(false)
+	// 	}
+	// });
 
 	/// keyPair2
 
@@ -158,27 +162,27 @@ describe('Linkdrop Proxy', function () {
 	// 	assert.strictEqual(res.status.SuccessValue, '');
 	// });
 
-	it('claim of linkdrop', async function() {
-		// WARNING tests after this with contractAccount will fail - signing key lost
-		// set key for contractAccount to linkdrop keyPair
-		near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
-		const account_id = 'testnet';
+	// it('claim of linkdrop', async function() {
+	// 	// WARNING tests after this with contractAccount will fail - signing key lost
+	// 	// set key for contractAccount to linkdrop keyPair
+	// 	near.connection.signer.keyStore.setKey(networkId, contractId, keyPair2);
+	// 	const account_id = 'testnet';
 
-		const res = await linkdropAccount.functionCall({
-			contractId,
-			methodName: 'claim',
-			args: {
-				account_id,
-			},
-			gas,
-		});
+	// 	const res = await linkdropAccount.functionCall({
+	// 		contractId,
+	// 		methodName: 'claim',
+	// 		args: {
+	// 			account_id,
+	// 		},
+	// 		gas,
+	// 	});
 
-		await recordStop(contractId)
+	// 	await recordStop(contractId)
 
-		// console.log(res)
+	// 	// console.log(res)
 
-		assert(true)
-	});
+	// 	assert(true)
+	// });
 
 	/// testing if promise fails (must edit contract->on_account_created to return false)
 	// it('creation of account - FAIL', async function() {

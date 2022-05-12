@@ -8,9 +8,16 @@ use near_sdk::{
 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
+pub struct AccountData {
+    pub funder_id: AccountId,
+    pub balance: Balance,
+}
+
+#[near_bindgen]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
 pub struct LinkDrop {
     pub linkdrop_contract: AccountId,
-    pub accounts: LookupMap<PublicKey, Balance>,
+    pub accounts: LookupMap<PublicKey, AccountData>,
 }
 
 #[derive(BorshSerialize, BorshStorageKey)]
@@ -18,14 +25,16 @@ enum StorageKey {
     Accounts,
 }
 
-/// 0.02 N
+/// 0.03 N
+const STORAGE_ALLOWANCE: u128 = 10_000_000_000_000_000_000_000;
 const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000;
-/// absolute bare minimum for a new account 1_820_000_000_000_000_000_000
-const NEW_ACCOUNT_BASIC_AMOUNT: u128 = 1_820_000_000_000_000_000_000;
+const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000;
+
 const ON_CREATE_ACCOUNT_GAS: Gas = Gas(40_000_000_000_000);
 const ON_CALLBACK_GAS: Gas = Gas(20_000_000_000_000);
-/// Indicates there are no deposit for a callback for better readability.
 const NO_DEPOSIT: u128 = 0;
+
+const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
 
 /// external and self callbacks
 #[ext_contract(ext_linkdrop)]
@@ -34,7 +43,7 @@ trait ExtLinkdrop {
 }
 #[ext_contract(ext_self)]
 trait ExtLinkdrop {
-    fn on_account_created(&mut self, pk: PublicKey) -> bool;
+    fn on_account_created(&mut self, pk: PublicKey, balance: Balance, funder_id: AccountId) -> bool;
 }
 
 #[near_bindgen]
@@ -59,37 +68,62 @@ impl LinkDrop {
 	/// sending (adding keys)
 
     #[payable]
-    pub fn send(&mut self, public_key: PublicKey) -> Promise {
+    pub fn send(&mut self, public_key: PublicKey, balance: Balance) -> Promise {
+
+        let attached_deposit = env::attached_deposit();
+
         assert!(
-            env::attached_deposit() >= ACCESS_KEY_ALLOWANCE,
+            attached_deposit >= ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE,
             "Deposit < ACCESS_KEY_ALLOWANCE"
         );
+
+        if balance > 0 {
+            assert!(
+                attached_deposit >= balance + NEW_ACCOUNT_BASE + STORAGE_ALLOWANCE,
+                "Deposit < balance + NEW_ACCOUNT_BASE + STORAGE_ALLOWANCE"
+            );
+        }
+        
         let pk = public_key;
-        let value = self.accounts.get(&pk).unwrap_or(0);
-        self.accounts.insert(
-            &pk,
-            &(value + env::attached_deposit() - ACCESS_KEY_ALLOWANCE),
+        assert!(self.accounts.insert(
+                &pk,
+                &AccountData{
+                    funder_id: env::predecessor_account_id(),
+                    balance,
+                },
+            ).is_none(),
+            "Account for PublicKey exists"
         );
+
         Promise::new(env::current_account_id()).add_access_key(
             pk,
             ACCESS_KEY_ALLOWANCE,
             env::current_account_id(),
-            b"claim,create_account_and_claim".to_vec(),
+            ACCESS_KEY_METHOD_NAMES.to_string(),
         )
     }
 
     #[payable]
-    pub fn send_multiple(&mut self, public_keys: Vec<PublicKey>) {
+    pub fn send_multiple(&mut self, public_keys: Vec<PublicKey>, balance: Balance) {
 	    
+        let attached_deposit = env::attached_deposit();
 		let len = public_keys.len() as u128;
 	    
         assert!(
-            env::attached_deposit() >= ACCESS_KEY_ALLOWANCE * len,
+            attached_deposit >= (ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE) * len,
             "Deposit < ACCESS_KEY_ALLOWANCE"
         );
 
+        if balance > 0 {
+            assert!(
+                attached_deposit >= (balance + NEW_ACCOUNT_BASE + STORAGE_ALLOWANCE) * len,
+                "Deposit < balance + NEW_ACCOUNT_BASE + STORAGE_ALLOWANCE"
+            );
+        }
+
 		let current_account_id = env::current_account_id();
 		let promise = env::promise_batch_create(&current_account_id);
+        let funder_id = env::predecessor_account_id();
 		
 		for pk in public_keys {
 
@@ -99,13 +133,18 @@ impl LinkDrop {
 				0, 
 				ACCESS_KEY_ALLOWANCE, 
 				&current_account_id, 
-				b"claim,create_account_and_claim"
+				ACCESS_KEY_METHOD_NAMES
 			);
 			
-			self.accounts.insert(
-				&pk, 
-				&(self.accounts.get(&pk).unwrap_or(0) + env::attached_deposit() / len - ACCESS_KEY_ALLOWANCE),
-			);
+			assert!(self.accounts.insert(
+                    &pk,
+                    &AccountData{
+                        funder_id: funder_id.clone(),
+                        balance,
+                    },
+                ).is_none(),
+                "Account for PublicKey exists"
+            );
 		}
 
 		env::promise_return(promise);
@@ -113,24 +152,25 @@ impl LinkDrop {
 
 	/// claiming
 
-	fn process_claim(&mut self) -> Balance {
+	fn process_claim(&mut self) -> (PublicKey, Balance, AccountId) {
 		assert_eq!(
             env::predecessor_account_id(),
             env::current_account_id(),
             "predecessor != current"
         );
-        let mut amount = self
-            .accounts
-            .remove(&env::signer_account_pk())
+
+        let signer_pk = env::signer_account_pk();
+
+        let AccountData {
+            funder_id,
+            balance,
+        } = self.accounts
+            .remove(&signer_pk)
             .expect("Missing public key");
 
 		Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
 
-		if amount < NEW_ACCOUNT_BASIC_AMOUNT {
-			amount = NEW_ACCOUNT_BASIC_AMOUNT;
-		}
-
-		amount
+		(signer_pk, balance, funder_id)
 	}
 
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
@@ -140,9 +180,9 @@ impl LinkDrop {
             "Invalid account id"
         );
 
-        let amount = self.process_claim();
+        let (_, balance, _) = self.process_claim();
 		
-        Promise::new(account_id).transfer(amount)
+        Promise::new(account_id).transfer(balance)
     }
 
     /// Create new account and and claim tokens to it.
@@ -156,17 +196,19 @@ impl LinkDrop {
             "Invalid account id"
         );
 
-        let amount = self.process_claim();
+        let (signer_pk, balance, funder_id) = self.process_claim();
 
         ext_linkdrop::create_account(
             new_account_id,
             new_public_key,
-            &self.linkdrop_contract,
-            amount,
+            self.linkdrop_contract.clone(),
+            balance + NEW_ACCOUNT_BASE,
             ON_CREATE_ACCOUNT_GAS,
         ).then(ext_self::on_account_created(
-			env::signer_account_pk(),
-			&env::current_account_id(),
+			signer_pk,
+            balance,
+            funder_id,
+			env::current_account_id(),
 			NO_DEPOSIT,
 			ON_CALLBACK_GAS,
 		))
@@ -174,14 +216,14 @@ impl LinkDrop {
 
     /// Returns the balance associated with given key.
     pub fn get_key_balance(&self, key: PublicKey) -> U128 {
-        self.accounts
+        let account_data = self.accounts
             .get(&key)
-            .expect("Key missing")
-            .into()
+            .expect("Key missing");
+        (account_data.balance + NEW_ACCOUNT_BASE).into()
     }
 
 	/// self callback checks if account was created successfully or not
-    pub fn on_account_created(&mut self, pk:PublicKey) -> bool {
+    pub fn on_account_created(&mut self, pk: PublicKey, balance: Balance, funder_id: AccountId) -> bool {
         assert_eq!(
             env::predecessor_account_id(),
             env::current_account_id(),
@@ -189,14 +231,23 @@ impl LinkDrop {
         );
 		assert_eq!(env::promise_results_count(), 1, "no promise result");
         let creation_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+
+        // if not successful, we need to add back the key and the balance
         if !creation_succeeded {
-			// put access key back (was deleted before calling linkdrop contract)
+            self.accounts.insert(
+                &pk,
+                &AccountData{
+                    funder_id,
+                    balance,
+                },
+            );
+
             Promise::new(env::current_account_id()).add_access_key(
-				pk,
-				ACCESS_KEY_ALLOWANCE,
-				env::current_account_id(),
-				b"claim,create_account_and_claim".to_vec(),
-			);
+                pk,
+                ACCESS_KEY_ALLOWANCE,
+                env::current_account_id(),
+                ACCESS_KEY_METHOD_NAMES.to_string(),
+            );
         }
         creation_succeeded
     }

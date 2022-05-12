@@ -17,28 +17,16 @@ const {
 } = nearAPI;
 
 
-const credPath = `./neardev/${networkId}/${contractId}.json`;
+const credPath = `${process.env.HOME}/.near-credentials/${networkId}/${contractId}.json`
 console.log(
 	"Loading Credentials:\n",
 	credPath
 );
-
-let credentials;
-try {
-	credentials = JSON.parse(
-		fs.readFileSync(
-			credPath
-		)
-	);
-} catch(e) {
-	console.warn('credentials not in /neardev');
-	/// attempt to load backup creds from local machine
-	credentials = JSON.parse(
-		fs.readFileSync(
-			`${process.env.HOME}/.near-credentials/${networkId}/${contractId}.json`
-		)
-	);
-}
+let credentials = JSON.parse(
+	fs.readFileSync(
+		credPath
+	)
+);
 
 const keyStore = new InMemoryKeyStore();
 keyStore.setKey(
