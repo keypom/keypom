@@ -10,7 +10,7 @@ impl LinkDropProxy {
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Delete the access key and remove / return account data.
-        let (_, balance, funder_id, nft_id, token_contract, token_sender) = self.process_claim();
+        let (_, funder_id, balance, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
         
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -21,11 +21,13 @@ impl LinkDropProxy {
         Promise::new(account_id.clone()).transfer(balance.0)
         .then(ext_self::on_claim(
             account_id,
-            balance,
             funder_id,
-            nft_id, 
-            token_contract,
+            balance,
             token_sender,
+            token_contract,
+            nft_id, 
+            ft_balance,
+            ft_storage,
             env::current_account_id(),
             NO_DEPOSIT,
             GAS_FOR_ON_CLAIM,
@@ -50,7 +52,7 @@ impl LinkDropProxy {
         env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Delete the access key and remove / return account data.
-        let (_, balance, funder_id, nft_id, token_contract, token_sender) = self.process_claim();
+        let (_, funder_id, balance, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -66,11 +68,13 @@ impl LinkDropProxy {
             GAS_FOR_CREATE_ACCOUNT,
         ).then(ext_self::on_claim(
             new_account_id,
-            balance,
             funder_id,
-            nft_id, 
-            token_contract,
+            balance,
             token_sender,
+            token_contract,
+            nft_id, 
+            ft_balance,
+            ft_storage,
             env::current_account_id(),
             NO_DEPOSIT,
             GAS_FOR_ON_CLAIM,
@@ -85,12 +89,14 @@ impl LinkDropProxy {
 
     /// self callback checks if account was created successfully or not. If yes, refunds excess storage, sends NFTs, FTs etc..
     pub fn on_claim(&mut self, 
-        new_account_id: AccountId, 
-        balance: U128, 
+        account_id: AccountId, 
         funder_id: AccountId, 
-        nft_id: Option<String>, 
+        balance: U128, 
+        token_sender: Option<AccountId>,
         token_contract: Option<AccountId>,
-        token_sender: Option<AccountId>
+        nft_id: Option<String>, 
+        ft_balance: Option<U128>,
+        ft_storage: Option<U128>
     ) -> bool {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
@@ -118,11 +124,14 @@ impl LinkDropProxy {
 
         env::log_str(&format!("In on claim before refund used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
+        // Refunding
         Promise::new(funder_id).transfer(amount_to_refund);
 
-        // If NFT isn't successfully transferred, should send it back to it's original owner? 
+        /*
+            Non Fungible Tokens
+        */
         if nft_id.is_some() {
-            let nft_contract_id = token_contract.expect("no contract ID found");
+            let nft_contract_id = token_contract.clone().expect("no contract ID found");
             let token_id = nft_id.expect("no token Id found");
 
             used_gas = env::used_gas();
@@ -134,7 +143,7 @@ impl LinkDropProxy {
             if claim_succeeded {
                 // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
                 ext_nft_contract::nft_transfer(
-                    new_account_id, 
+                    account_id.clone(), 
                     token_id.clone(),
                     None,
                     Some("Linkdropped NFT".to_string()),
@@ -143,7 +152,7 @@ impl LinkDropProxy {
                     GAS_FOR_SIMPLE_NFT_TRANSFER,
                 ).then(ext_self::nft_resolve_transfer(
                     token_id,
-                    token_sender.expect("no token sender associated with NFT"),
+                    token_sender.clone().expect("no token sender associated with NFT"),
                     nft_contract_id,
                     env::current_account_id(),
                     NO_DEPOSIT,
@@ -152,7 +161,7 @@ impl LinkDropProxy {
             } else {
                 // CCC to the NFT contract to transfer the token to the original token sender. No callback necessary.
                 ext_nft_contract::nft_transfer(
-                    token_sender.expect("no token sender associated with NFT"), 
+                    token_sender.clone().expect("no token sender associated with NFT"), 
                     token_id,
                     None,
                     Some("Linkdropped NFT".to_string()),
@@ -160,6 +169,79 @@ impl LinkDropProxy {
                     1,
                     GAS_FOR_SIMPLE_NFT_TRANSFER,
                 );
+            }
+            
+        }
+
+        /*
+            Fungible Tokens
+        */
+        if ft_balance.is_some() {
+            let ft_contract_id = token_contract.expect("no contract ID found");
+            let amount = ft_balance.expect("no ft balance found");
+            let storage_required = ft_storage.expect("no ft storage found");
+
+            used_gas = env::used_gas();
+            prepaid_gas = env::prepaid_gas();
+
+            env::log_str(&format!("In on claim before ft transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+
+            // Only send the fungible tokens to the new account if the claim was successful. We return the FTs if it wasn't successful in the else case.
+            if claim_succeeded {
+                // Create a new batch promise to pay storage and transfer NFTs to the new account ID
+                let batch_ft_promise_id = env::promise_batch_create(&ft_contract_id);
+
+                // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
+                env::promise_batch_action_function_call(
+                    batch_ft_promise_id,
+                    "storage_deposit",
+                    json!({ "account_id": account_id }).to_string().as_bytes(),
+                    storage_required.0,
+                    GAS_FOR_STORAGE_DEPOSIT
+                );
+
+                // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
+                env::promise_batch_action_function_call(
+                    batch_ft_promise_id,
+                    "ft_transfer",
+                    json!({ "receiver_id": account_id, "amount": amount, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
+                    1,
+                    GAS_FOR_FT_TRANSFER
+                );
+
+                // Callback after both the storage was deposited and the fungible tokens were sent
+                env::promise_then(
+                    batch_ft_promise_id,
+                    env::current_account_id(),
+                    "ft_resolve_batch",
+                    json!({ "amount": amount, "token_sender": token_sender, "token_contract": ft_contract_id }).to_string().as_bytes(),
+                    NO_DEPOSIT,
+                    GAS_FOR_RESOLVE_BATCH
+                );
+            } else {
+                // Create a new batch promise to pay storage and refund the FTs to the original sender 
+                let batch_ft_promise_id = env::promise_batch_create(&ft_contract_id);
+
+                // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
+                env::promise_batch_action_function_call(
+                    batch_ft_promise_id,
+                    "storage_deposit",
+                    json!({ "account_id": token_sender }).to_string().as_bytes(),
+                    amount.0,
+                    GAS_FOR_STORAGE_DEPOSIT
+                );
+
+                // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
+                env::promise_batch_action_function_call(
+                    batch_ft_promise_id,
+                    "ft_transfer",
+                    json!({ "receiver_id": token_sender, "amount": amount, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
+                    1,
+                    GAS_FOR_FT_TRANSFER
+                );
+
+                // Return the result of the batch as the return of the function
+                env::promise_return(batch_ft_promise_id);
             }
             
         }
@@ -173,7 +255,7 @@ impl LinkDropProxy {
     }
 
     /// Internal method for deleting the used key and removing / returning account data.
-    fn process_claim(&mut self) -> (PublicKey, U128, AccountId, Option<String>, Option<AccountId>, Option<AccountId>) {
+    fn process_claim(&mut self) -> (PublicKey, AccountId, U128, Option<AccountId>, Option<AccountId>, Option<String>, Option<U128>, Option<U128>) {
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
             env::predecessor_account_id(),
@@ -186,9 +268,11 @@ impl LinkDropProxy {
         let AccountData {
             funder_id,
             balance,
+            token_sender,
             token_contract,
             nft_id,
-            token_sender,
+            ft_balance,
+            ft_storage
         } = self.accounts
             .remove(&signer_pk)
             .expect("Missing public key");
@@ -197,6 +281,6 @@ impl LinkDropProxy {
         Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
 
         // Return account data info
-        (signer_pk, balance, funder_id, nft_id, token_contract, token_sender)
+        (signer_pk, funder_id, balance, token_sender, token_contract, nft_id, ft_balance, ft_storage)
     }
 }

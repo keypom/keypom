@@ -18,16 +18,33 @@ trait ExtNFTContract {
     );
 }
 
+/// FT contract
+#[ext_contract(ext_ft_contract)]
+trait ExtFTContract {
+    fn ft_transfer(
+        &mut self,
+        receiver_id: AccountId,
+        amount: U128,
+        memo: Option<String>,
+    );
+
+    fn storage_balance_bounds(
+        &self,
+    ) -> StorageBalanceBounds;
+}
+
 #[ext_contract(ext_self)]
 trait ExtThis {
     fn on_claim(
         &mut self, 
-        new_account_id: AccountId, 
-        balance: U128, 
+        account_id: AccountId, 
         funder_id: AccountId, 
-        nft_id: Option<String>, 
+        balance: U128, 
+        token_sender: Option<AccountId>,
         token_contract: Option<AccountId>,
-        token_sender: Option<AccountId>
+        nft_id: Option<String>, 
+        ft_balance: Option<U128>,
+        ft_storage: Option<U128>
     ) -> bool;
 
     fn nft_resolve_transfer(
@@ -35,5 +52,12 @@ trait ExtThis {
         token_id: String,
         token_sender: AccountId,
         token_contract: AccountId
+    );
+
+    fn resolve_storage_check(
+        &mut self,
+        public_keys: Vec<PublicKey>,
+        funder_id: AccountId,
+        balance: U128
     );
 }
