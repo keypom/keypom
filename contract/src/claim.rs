@@ -140,7 +140,7 @@ impl LinkDropProxy {
                     Some("Linkdropped NFT".to_string()),
                     nft_contract_id.clone(),
                     1,
-                    GAS_FOR_COMPLEX_NFT_TRANSFER,
+                    GAS_FOR_SIMPLE_NFT_TRANSFER,
                 ).then(ext_self::nft_resolve_transfer(
                     token_id,
                     token_sender.expect("no token sender associated with NFT"),
