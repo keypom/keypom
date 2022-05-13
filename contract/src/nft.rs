@@ -1,18 +1,11 @@
 use crate::*;
 
-pub trait NonFungibleTokenReceiver {
-    fn nft_on_transfer(
-        &mut self,
-        token_id: String,
-        msg: PublicKey,
-    ) -> PromiseOrValue<bool>;
-}
-
 #[near_bindgen]
-impl NonFungibleTokenReceiver for LinkDropProxy {
-    fn nft_on_transfer(
+impl LinkDropProxy {
+    pub fn nft_on_transfer(
         &mut self,
         token_id: String,
+        sender_id: AccountId,
         msg: PublicKey,
     ) -> PromiseOrValue<bool> {
         assert!(token_id.len() <= 256, "Contract cannot accept token IDs of length greater than 256 bytes");
@@ -26,6 +19,7 @@ impl NonFungibleTokenReceiver for LinkDropProxy {
             balance,
             token_contract,
             nft_id: _,
+            token_sender: _
         } = self.accounts
             .get(&msg)
             .expect("Missing public key");
@@ -40,11 +34,53 @@ impl NonFungibleTokenReceiver for LinkDropProxy {
                 funder_id: env::predecessor_account_id(),
                 balance: balance,
                 nft_id: Some(token_id),
-                token_contract: Some(contract_id)
+                token_contract: Some(contract_id),
+                token_sender: Some(sender_id)
             },
         );
 
         // Everything went well and we don't need to return the token.
         PromiseOrValue::Value(false)
+    }
+
+    /// self callback checks if account was created successfully or not. If yes, refunds excess storage, sends NFTs, FTs etc..
+    pub fn nft_resolve_transfer(&mut self, 
+        token_id: String, 
+        token_sender: AccountId,
+        token_contract: AccountId 
+    ) -> bool {
+        let mut used_gas = env::used_gas();
+        let mut prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+
+        assert_eq!(
+            env::predecessor_account_id(),
+            env::current_account_id(),
+            "predecessor != current"
+        );
+        assert_eq!(env::promise_results_count(), 1, "no promise result");
+        let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        
+
+        used_gas = env::used_gas();
+        prepaid_gas = env::prepaid_gas();
+        env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+
+        // If not successful, the balance is added to the amount to refund since it was never transferred.
+        if !transfer_succeeded {
+            env::log_str("Attempt to transfer the new account was unsuccessful. Sending the NFT to the original sender.");
+            ext_nft_contract::nft_transfer(
+                token_sender, 
+                token_id,
+                None,
+                Some("Linkdropped NFT Refund".to_string()),
+                token_contract,
+                1,
+                GAS_FOR_SIMPLE_NFT_TRANSFER,
+            );
+        }
+
+        transfer_succeeded
     }
 }
