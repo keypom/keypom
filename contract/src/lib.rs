@@ -1,9 +1,11 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U128;
+use near_sdk::serde::{Deserialize};
+use near_sdk::serde_json::{json};
 use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
-    Promise, PromiseResult, PublicKey, PromiseOrValue,
+    Promise, PromiseResult, PublicKey, PromiseOrValue, promise_result_as_success,
 };
 
 /* 
@@ -39,8 +41,15 @@ const BURNT_GAS: u128 = 10_000_000_000_000_000_000_000;
 const GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000); // 10 TGas
 const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(15_000_000_000_000 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
 
-const GAS_FOR_ON_CLAIM: Gas = Gas(20_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 20 TGas + 25 TGas + 10 TGas= 55 TGas 
-const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(30_000_000_000_000); // 30 TGas
+const GAS_FOR_ON_CLAIM: Gas = Gas(24_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 24 TGas + 25 TGas + 10 TGas= 59 TGas 
+const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
+
+const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000); // 10 TGas
+const GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000); // 25 TGas
+
+const GAS_FOR_FT_TRANSFER: Gas = Gas(7_500_000_000_000); // 7.5 TGas
+const GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(7_500_000_000_000); // 7.5 TGas
+const GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + GAS_FOR_FT_TRANSFER.0 + GAS_FOR_STORAGE_DEPOSIT.0); // 10 TGas + 7.5 TGas + 7.5 TGas = 25 TGas
 
 const ONE_GIGGA_GAS: u64 = 1_000_000_000;
 
@@ -58,15 +67,18 @@ enum StorageKey {
 pub struct AccountData {
     pub funder_id: AccountId,
     pub balance: U128,
+    pub token_sender: Option<AccountId>,
     pub token_contract: Option<AccountId>,
     pub nft_id: Option<String>,
-    pub token_sender: Option<AccountId>,
+    pub ft_balance: Option<U128>,
+    pub ft_storage: Option<U128>,
 }
 
 mod claim;
 mod send;
 mod ext_traits;
 mod nft;
+mod ft;
 
 use crate::ext_traits::*;
 

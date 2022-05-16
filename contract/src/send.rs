@@ -10,7 +10,7 @@ impl LinkDropProxy {
         The balance is the amount of $NEAR the sender wants the linkdrop to contain.
     */
     #[payable]
-    pub fn send(&mut self, public_key: PublicKey, balance: U128) -> Promise {
+    pub fn send(&mut self, public_key: PublicKey, balance: U128, ft_contract_id: Option<AccountId>) {
         let attached_deposit = env::attached_deposit();
 
         /*
@@ -36,31 +36,49 @@ impl LinkDropProxy {
                 &AccountData{
                     funder_id: env::predecessor_account_id(),
                     balance: balance,
+                    token_sender: None,
                     token_contract: None,
                     nft_id: None,
-                    token_sender: None
+                    ft_balance: None,
+                    ft_storage: None
                 },
             ).is_none(),
             "Account for PublicKey exists"
         );
-
-        // If the user overpaid for the desired linkdrop balance, refund them.
-        if attached_deposit > balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE {
-            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - balance.0 - ACCESS_KEY_ALLOWANCE - STORAGE_ALLOWANCE);
-        }
 
         /*
             add the public key as an access key to the contract 
             which can only call claim and create_account_and_claim on this contract
         */
         Promise::new(env::current_account_id()).add_access_key(
-            pk,
+            pk.clone(),
             ACCESS_KEY_ALLOWANCE,
             env::current_account_id(),
             ACCESS_KEY_METHOD_NAMES.to_string(),
-        )
+        );
 
-        //TODO: do assertions at the end and dynamically calculate required storage? Store this in the account data?
+        // Check if user will attach fungible tokens
+        if ft_contract_id.is_some() {
+            /*
+                Get the storage required by the FT contract and ensure the user has attached enough
+                deposit to cover the storage and perform refunds if they overpayed.
+            */ 
+            ext_ft_contract::storage_balance_bounds(
+                ft_contract_id.unwrap(),
+                NO_DEPOSIT,
+                GAS_FOR_STORAGE_BALANCE_BOUNDS,
+            ).then(ext_self::resolve_storage_check(
+                vec![pk],
+                env::predecessor_account_id(),
+                balance,
+                env::current_account_id(),
+                attached_deposit,
+                GAS_FOR_RESOLVE_STORAGE_CHECK,
+            ));
+        } else if attached_deposit > balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE {    
+            // If the user overpaid for the desired linkdrop balance, refund them.
+            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - balance.0 - ACCESS_KEY_ALLOWANCE - STORAGE_ALLOWANCE);
+        }
     }
 
     /*
@@ -71,7 +89,7 @@ impl LinkDropProxy {
         The balance is the amount of $NEAR the sender wants each linkdrop to contain.
     */
     #[payable]
-    pub fn send_multiple(&mut self, public_keys: Vec<PublicKey>, balance: U128) {
+    pub fn send_multiple(&mut self, public_keys: Vec<PublicKey>, balance: U128, ft_contract_id: Option<AccountId>) {
         
         let attached_deposit = env::attached_deposit();
         let len = public_keys.len() as u128;
@@ -99,7 +117,7 @@ impl LinkDropProxy {
         let funder_id = env::predecessor_account_id();
         
         // Loop through each public key and insert into the map and create the key
-        for pk in public_keys {
+        for pk in public_keys.clone() {
 
             env::promise_batch_action_add_key_with_function_call(
                 promise, 
@@ -116,9 +134,11 @@ impl LinkDropProxy {
                     &AccountData{
                         funder_id: funder_id.clone(),
                         balance,
+                        token_sender: None,
                         token_contract: None,
                         nft_id: None,
-                        token_sender: None
+                        ft_balance: None,
+                        ft_storage: None
                     },
                 ).is_none(),
                 "Account for PublicKey exists"
@@ -126,5 +146,28 @@ impl LinkDropProxy {
         }
 
         env::promise_return(promise);
+
+        // Check if user will attach fungible tokens
+        if ft_contract_id.is_some() {
+            /*
+                Get the storage required by the FT contract and ensure the user has attached enough
+                deposit to cover the storage and perform refunds if they overpayed.
+            */ 
+            ext_ft_contract::storage_balance_bounds(
+                ft_contract_id.unwrap(),
+                NO_DEPOSIT,
+                GAS_FOR_STORAGE_BALANCE_BOUNDS,
+            ).then(ext_self::resolve_storage_check(
+                public_keys,
+                env::predecessor_account_id(),
+                balance,
+                env::current_account_id(),
+                attached_deposit,
+                GAS_FOR_RESOLVE_STORAGE_CHECK,
+            ));
+        } else if attached_deposit > (balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE) * len {    
+            // If the user overpaid for the desired linkdrop balances, refund them.
+            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - (balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE) * len);
+        }
     }
 }

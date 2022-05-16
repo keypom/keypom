@@ -15,11 +15,13 @@ impl LinkDropProxy {
         // No need to assert that the funder is the sender since we don't wanna enforce anything unnecessary.
         // All that matters is we've received the token and that the token belongs to some public key.
         let AccountData {
-            funder_id: _,
+            funder_id,
             balance,
+            token_sender: _,
             token_contract,
             nft_id: _,
-            token_sender: _
+            ft_balance: _,
+            ft_storage: _
         } = self.accounts
             .get(&msg)
             .expect("Missing public key");
@@ -27,15 +29,17 @@ impl LinkDropProxy {
         // Ensure that both the token contract is none since we only store one set of NFT / FT data.
         assert!(token_contract.is_none(), "PK must have no external token contract.");
 
-        //insert the NFT token ID and token contract back into the map
+        // Insert the NFT token ID and token contract back into the map
         self.accounts.insert(
             &msg,
             &AccountData{
-                funder_id: env::predecessor_account_id(),
-                balance: balance,
-                nft_id: Some(token_id),
+                funder_id,
+                balance,
+                token_sender: Some(sender_id),
                 token_contract: Some(contract_id),
-                token_sender: Some(sender_id)
+                nft_id: Some(token_id),
+                ft_balance: None,
+                ft_storage: None
             },
         );
 
@@ -43,8 +47,9 @@ impl LinkDropProxy {
         PromiseOrValue::Value(false)
     }
 
-    /// self callback checks if account was created successfully or not. If yes, refunds excess storage, sends NFTs, FTs etc..
-    pub fn nft_resolve_transfer(&mut self, 
+    /// self callback checks if NFT was successfully transferred to the new account. If yes, do nothing. If no, refund original sender
+    pub fn nft_resolve_transfer(
+        &mut self, 
         token_id: String, 
         token_sender: AccountId,
         token_contract: AccountId 
