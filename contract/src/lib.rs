@@ -1,7 +1,7 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
 use near_sdk::json_types::U128;
-use near_sdk::serde::{Deserialize};
+use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::{json};
 use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
@@ -63,7 +63,8 @@ enum StorageKey {
 }
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
 #[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct AccountData {
     pub funder_id: AccountId,
     pub balance: U128,
@@ -116,5 +117,12 @@ impl LinkDropProxy {
             .get(&key)
             .expect("Key missing");
         (account_data.balance.0).into()
+    }
+
+    /// Returns the account data corresponding to a specific key
+    pub fn get_key_information(&self, key: PublicKey) -> AccountData {
+        self.accounts
+            .get(&key)
+            .expect("Key missing")
     }
 }
