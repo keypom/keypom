@@ -2,16 +2,22 @@ const { connect, KeyPair, keyStores, utils } = require("near-api-js");
 const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/format");
 const path = require("path");
 const homedir = require("os").homedir();
+  
+let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
+let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
+let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
-let LINKDROP_PROXY_CONTRACT_ID = "dev-1652477128472-86692119156549";
-let FUNDING_ACCOUNT_ID = "benjiman.testnet";
 let NETWORK_ID = "testnet";
 let near;
 let config;
 let keyStore;
 
+/*
+	Hard coding NFT contract and metadata. Change this if you want.
+*/
+let NFT_CONTRACT_ID = "example-nft.testnet";
 const METADATA = {
-	"title": "Linkdrop Go Team",
+	"title": "Linkdropped Go Team NFT",
 	"description": "Testing Linkdrop NFT Go Team Token",
 	"media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif",
 	"media_hash": null,
@@ -47,20 +53,19 @@ const initiateNear = async () => {
 
 async function start() {
 	//deployed linkdrop proxy contract
-	const contractId = LINKDROP_PROXY_CONTRACT_ID;
 	await initiateNear();
 
-	const contractAccount = await near.account(contractId);
+	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
+		throw "must specify proxy contract ID, funding account ID and linkdrop $NEAR amount";
+	}
 
-	const sendingAccount = await near.account(FUNDING_ACCOUNT_ID);
+	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
+	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
-	let state = await contractAccount.state(); 
-	console.log('state before initialization: ', state);
-
-	console.log("initializing contract");
+	console.log(`initializing contract for account ${LINKDROP_PROXY_CONTRACT_ID}`);
 	try {
 		await contractAccount.functionCall(
-			contractId, 
+			LINKDROP_PROXY_CONTRACT_ID, 
 			'new', 
 			{
 				linkdrop_contract: "testnet",
@@ -71,53 +76,50 @@ async function start() {
 		console.log('error initializing contract: ', e);
 	}
 	
+	console.log("generating keypair.");
 	let keyPair = await KeyPair.fromRandom('ed25519'); 
 	let pubKey = keyPair.publicKey.toString();
 	console.log('pubKey: ', pubKey);
 
-	state = await contractAccount.state(); 
-	console.log('state after initialization: ', state);
-
-	console.log("sending funds as FUNDING_ACCOUNT_ID");
+	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
 	try {
-		await sendingAccount.functionCall(
-			contractId, 
+		await fundingAccount.functionCall(
+			LINKDROP_PROXY_CONTRACT_ID, 
 			'send', 
 			{
 				public_key: pubKey,
-				balance: parseNearAmount("0.01")
+				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
 			}, 
 			"300000000000000", 
-			parseNearAmount('1')
+			parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + 1).toString())
 		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
 
-	state = await contractAccount.state(); 
-	console.log('state after send: ', state);
-    
-	console.log("minting and sending NFT as to public key");
 	try {
 		const tokenId = Date.now().toString();
-		await sendingAccount.functionCall(
-			'example-nft.testnet', 
+		console.log(`minting NFT with token ID ${tokenId} on contract ${tokenId} with receiver: ${FUNDING_ACCOUNT_ID}`);
+		
+		await fundingAccount.functionCall(
+			NFT_CONTRACT_ID, 
 			'nft_mint', 
 			{
 				token_id: tokenId,
-				receiver_id: 'benjiman.testnet',
+				receiver_id: FUNDING_ACCOUNT_ID,
 				token_metadata: METADATA,
 			}, 
 			"300000000000000", 
 			parseNearAmount('1')
 		);
 
-		await sendingAccount.functionCall(
-			'example-nft.testnet', 
+		console.log(`transferring NFT to linkdrop proxy contract with nft_transfer_call`);
+		await fundingAccount.functionCall(
+			NFT_CONTRACT_ID, 
 			'nft_transfer_call', 
 			{
 				token_id: tokenId,
-				receiver_id: contractId,
+				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
 				msg: pubKey,
 			}, 
 			"300000000000000", 
@@ -126,11 +128,8 @@ async function start() {
 	} catch(e) {
 		console.log('error minting and sending NFTs: ', e);
 	}
-
-	state = await contractAccount.state(); 
-	console.log('state after mint: ', state);
-
-	console.log(`https://wallet.testnet.near.org/linkdrop/${contractId}/${keyPair.secretKey}`);
+    
+	console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPair.secretKey}`);
 }
 
 start();

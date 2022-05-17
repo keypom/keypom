@@ -198,9 +198,9 @@ If you want to run the deploy scripts, you'll need:
 
 The project comes with several useful scripts in order to test and view functionalities for creating linkdrops. These scripts include:
 
-- [deploy_basic.js](deploy/deploy_simple.js) creating a linkdrop preloaded with just $NEAR
-- [deploy_nft.js](deploy/deploy_nft.js) creating a linkdrop preloaded with $NEAR and an NFT
-- [deploy_ft.js](deploy/deploy_ft.js) creating a linkdrop preloaded with $NEAR and fungible tokens.
+- [simple.js](deploy/simple.js) creating a linkdrop preloaded with just $NEAR
+- [nft.js](deploy/nft.js) creating a linkdrop preloaded with $NEAR and an NFT
+- [ft.js](deploy/ft.js) creating a linkdrop preloaded with $NEAR and fungible tokens.
 
 The first step is to compile the contract to WebAssembly by running:
 
@@ -224,7 +224,7 @@ near call YOUR_CONTRACT_ID.testnet new '{"linkdrop_contract": "testnet"}' --acco
 
 You're now ready to create custom linkdrops pre-loaded with NFTs and FTs. You can either interact with the contract directly using the CLI or use one of the pre-deployed scripts.
 
-#### Using the CLI
+### Using the CLI
 After the contract is deployed, you have a couple options for creating linkdrops: 
 
 - Creating single linkdrops.
@@ -251,13 +251,115 @@ Once the function is successful, you can create the link and click it to claim t
     wallet.testnet.near.org/linkdrop/{YOUR_CONTRACT_ID.testnet}/{privKey1}
 ```
 
-#### Using the pre-deployed scripts
+### Using the pre-deployed scripts
 
-If you'd like to use some of the deploy scripts found in the `deploy` folder, those can help automate the process and can be run by using: 
+If you'd like to use some of the deploy scripts found in the `deploy` folder, those can help automate the process. 
+
+#### Simple Linkdrops with No NFTs or FTs
+
+If you'd like to create a simple linkdrop with no pre-loaded NFTs or FTs, first specify the following environment variables:
 
 ```bash
-node deploy/deploy_simple.js
+export LINKDROP_PROXY_CONTRACT_ID="INSERT_HERE"
+export FUNDING_ACCOUNT_ID="INSERT_HERE"
+export LINKDROP_NEAR_AMOUNT="INSERT_HERE"
 ```
+
+This will set the proxy contract that you wish to create linkdrops on, the account ID of the funding address (person creating the linkdrops and sending the funds), and the actual $NEAR amount that the linkdrop will contain. It is recommended to simply run a `dev-deploy` and use the dev contract ID to test these scripts. Once this is finished, run the following script:
+
+```
+node deploy/simple.js
+```
+
+Once the script has finished executing, a link to the wallet should appear in your console similar to: 
+
+```bash
+https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt1hqv4s96Z8K83VoPnWqXK9vjfYb5QsBrv793aZ2jucBiLP35YWJq9rPGziRpDM35HEUftUtpP1WLzFocqJ
+```
+
+Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way.
+
+#### Linkdrops with NFTs
+
+If you'd like to create a linkdrop with a pre-loaded NFT, first specify the following environment variables:
+
+```bash
+export LINKDROP_PROXY_CONTRACT_ID="INSERT_HERE"
+export FUNDING_ACCOUNT_ID="INSERT_HERE"
+export LINKDROP_NEAR_AMOUNT="INSERT_HERE"
+```
+
+If you ran the script now, it would mint a predefined NFT on the contract `example-nft.testnet`. If you wish to change the NFT contract or the metadata for the token, simply open the `deploy/nft.js` script and change the following lines:
+
+```js
+/*
+	Hard coding NFT contract and metadata. Change this if you want.
+*/
+let NFT_CONTRACT_ID = "example-nft.testnet";
+const METADATA = {
+	"title": "Linkdropped Go Team NFT",
+	"description": "Testing Linkdrop NFT Go Team Token",
+	"media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif",
+	"media_hash": null,
+	"copies": 10000,
+	"issued_at": null,
+	"expires_at": null,
+	"starts_at": null,
+	"updated_at": null,
+	"extra": null,
+	"reference": null,
+	"reference_hash": null
+};
+```
+
+Once you've either changed the NFT info or you're happy with minting a Go Team NFT on the example NFT contract, run the NFT script:
+
+```
+node deploy/nft.js
+```
+
+Once the script has finished executing, a link to the wallet should appear in your console similar to: 
+
+```bash
+https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt1hqv4s96Z8K83VoPnWqXK9vjfYb5QsBrv793aZ2jucBiLP35YWJq9rPGziRpDM35HEUftUtpP1WLzFocqJ
+```
+
+Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way. When this is finished, navigate to your collectibles tab and you should see an NFT similar to:
+
+<img src="assets/claimed-nft.png" alt="Logo">
+
+#### Linkdrops with FTs
+
+If you'd like to create a linkdrop with some pre-loaded FTs, you'll need to first specify the following environment variables:
+
+```bash
+export LINKDROP_PROXY_CONTRACT_ID="INSERT_HERE"
+export FUNDING_ACCOUNT_ID="INSERT_HERE"
+export LINKDROP_NEAR_AMOUNT="INSERT_HERE"
+```
+
+In addition, you need to specify the FT contract ID you'd like to pre-load the linkdrop with.
+
+```bash
+export FT_CONTRACT_ID="INSERT_HERE"
+```
+> **NOTE:** the FT script will pay for the proxy contract's storage but the funding account ID must be in possession of at least 25 FTs or else the script will panic.
+
+Once this is finished, run the FT script.
+
+```
+node deploy/ft.js
+```
+
+Once the script has finished executing, a link to the wallet should appear in your console similar to: 
+
+```bash
+https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt1hqv4s96Z8K83VoPnWqXK9vjfYb5QsBrv793aZ2jucBiLP35YWJq9rPGziRpDM35HEUftUtpP1WLzFocqJ
+```
+
+Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way. When this is finished, you should see your fungible tokens:
+
+<img src="assets/claimed-ft.png" alt="Logo">
 
 ## Flowcharts
 
