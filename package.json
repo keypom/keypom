@@ -1,7 +1,8 @@
 {
-	"name": "nft-standard",
-	"version": "0.1.0",
+	"name": "near-proxy-linkdrop-contract",
+	"version": "1.0.0",
 	"license": "MIT",
+	"author": "Ben Kurrek, Matt Lockyer",
 	"scripts": {
 		"fix": "eslint test/ --fix",
 		"build-contract": "./build.sh",
