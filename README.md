@@ -9,8 +9,6 @@
 <div align="center">
 <br />
 
-[![license](https://img.shields.io/github/license/dec0dOS/amazing-github-template.svg?style=flat-square)](LICENSE)
-
 [![made by BenKurrek](https://img.shields.io/badge/made%20by-BenKurrek-ff1414.svg?style=flat-square)](https://github.com/BenKurrek)
 [![made by mattlockyer](https://img.shields.io/badge/made%20by-MattLockyer-ff1414.svg?style=flat-square)](https://github.com/mattlockyer)
 
@@ -392,7 +390,7 @@ You can use [markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli
 
 ## License
 
-This project is licensed under the **MIT license**. Feel free to edit and distribute this code as you like.
+This project is licensed under the **GPL License**.
 
 ## Acknowledgements
 
