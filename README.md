@@ -392,7 +392,7 @@ You can use [markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli
 
 ## License
 
-This project is licensed under the **MIT license**. Feel free to edit and distribute this code as you like.
+This project is licensed under the **GPL License**.
 
 ## Acknowledgements
 
