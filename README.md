@@ -238,7 +238,7 @@ After the contract is deployed, you have a couple options for creating linkdrops
 - Creating single linkdrops.
 - Creating multiple linkdrops at a time.
 
-This will cover creating single linkdrops, however, the only differences between `send` and `send_multiple` are outlined in the [flowcharts](#flowcharts) section. 
+This will cover creating single linkdrops, however, the only differences between `send` and `send_multiple` are outlined in the [how it works](#how-it-works) flowchart section. 
 
 - Start by creating a keypair locally (you can use near-api-js to do this as seen in the deploy scripts).
 - Call the `send` function and pass in the `public_key`, `balance`, and if you will be pre-loading fungible tokens, pass in the `ft_contract_id` as well.
