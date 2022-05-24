@@ -1,9 +1,19 @@
-<h1 align="center">
-    <img src="assets/claimed-linkdrop.png" alt="Logo" width="314" height="322">
-</h1>
+<style>
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+<img src="assets/claimed-linkdrop.png" class="center" alt="Logo" style="width: 35%; height: 35%">
+<br />
 
 <div align="center">
-  NEAR Linkdrop Proxy - the hub for creating linkdrops with $NEAR, NFTs, and FTs
+  <h1>
+  NEAR Linkdrop Proxy
+  </h1>
+  The hub for creating linkdrops with $NEAR, NFTs, and FTs
 </div>
 
 <div align="center">
@@ -20,12 +30,11 @@
 
 - [About](#about)
 - [How it Works](#how-it-works)
+  - [NFTs](#nft-linkdrops)
+  - [Fungible Tokens](#fungible-token-linkdrops)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Quickstart](#quickstart)  
-  - [Usage](#usage)
-- [Flowcharts](#flowcharts)
-
 - [Contributing](#contributing)
 - [Acknowledgements](#acknowledgements)
 
@@ -33,7 +42,7 @@
 
 ---
 
-## About
+# About
 
 <table>
 <tr>
@@ -63,12 +72,12 @@ Key features of the **Linkdrop Proxy Contract**:
 </tr>
 </table>
 
-### Built With
+## Built With
 
 - [near-sdk-rs](https://github.com/near/near-sdk-rs)
 - [near-api-js](https://github.com/near/near-api-js)
 
-## How it Works
+# How it Works
 
 Once the contract is deployed, you can either batch create linkdrops, or you can create them one-by-one. With each basic linkdrop, you have the option to either pre-load them with an NFT, or a fungible token.
 
@@ -101,8 +110,7 @@ To view information account data information for a given key, you can call the f
 near view YOUR_LINKDROP_PROXY_CONTRACT get_key_information '{"key": "ed25519:7jszQk7sfbdQy8NHM1EfJi9r3ncyvKa4ZoKU7uk9PbqR"}'
 ```
 
-<details>
-<summary>Example response: </summary>
+Example response:
 <p>
 
 ```bash
@@ -118,10 +126,15 @@ near view YOUR_LINKDROP_PROXY_CONTRACT get_key_information '{"key": "ed25519:7js
 ```
 
 </p>
-</details>
+
+Below are some flowcharts for creating single linkdrops and batch creating multiple linkdrops.
+
+<img src="flowcharts/creating-single-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+<br />
+<img src="flowcharts/creating-multiple-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
 
 
-### NFT Linkdrops
+## NFT Linkdrops
 
 With the proxy contract, users can pre-load a linkdrop with **only one** NFT due to GAS constraints. In order to pre-load the NFT, you must: 
 - execute the `nft_transfer_call` funtion on the NFT contract and you *must* pass in `pubKey1` (the public key of the keypair created locally and passed into the `send` function) into the `msg` parameter. An example of this can be: 
@@ -132,15 +145,17 @@ near call NFT_CONTRACT.testnet nft_transfer_call '{"token_id": "token1", "receiv
 
 > **NOTE:** you must send the NFT after the linkdrop has been created. You cannot send an NFT with a public key that isn't on the contract yet.
 
+<img src="flowcharts/adding-nfts-and-fts-to-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+
 Once the NFT is sent to the contract, it will be registered and you can view the current information about any key using the `get_key_information` function. Upon claiming, the NFT will be transferred from the contract to the newly created account (or existing account) along with the balance of the linkdrop. If any part of the linkdrop claiming process is unsuccessful, **both** the NFT and the $NEAR will be refunded to the funder and token sender respectively.
 
 > **NOTE:** If the NFT fails to transfer from the contract back to the token sender due to a refund for any reason, the NFT will remain on the proxy contract.
 
 If the linkdrop is successfully claimed, the funder will be refunded for everything **except** the burnt GAS and linkdrop balance. This results in the actual linkdrop cost being extremely low (burnt GAS + initial balance).
 
-For a more in-depth flow-chart, see the [flowcharts](#flowcharts) section.
+<img src="flowcharts/claiming-nft-linkdrops-with-new-accounts.png" class="center" style="width: 65%; height: 65%" alt="Logo">
 
-### Fungible Token Linkdrops
+## Fungible Token Linkdrops
 
 With the proxy contract, users can pre-load a linkdrop with **only one** type of fungible token due to GAS constraints. The number of fungible tokens, however, is not limited. You could load 1 TEAM token, or a million TEAM tokens. You cannot, however, load 10 TEAM tokens and 50 MIKE tokens at the same time.
 
@@ -150,6 +165,8 @@ In order to pre-load linkdrop. As mentioned in the [About](#about) section, this
 ```bash
 near call linkdrop-proxy.testnet send '{"public_key": "ed25519:4iwBf6eAXZ4bcN6TWPikSqu3UJ2HUwF8wNNkGZrgDYqE", "balance": "10000000000000000000000", "ft_contract_id": "ft.examples.benjiman.testnet"}' --deposit 1 --accountId "benjiman.testnet"
 ```
+
+<img src="flowcharts/adding-nfts-and-fts-to-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
 
 Once all the storage has been paid for, the process for pre-loading the fungible tokens is similar to how you would pre-load an NFT: 
 
@@ -167,13 +184,13 @@ Once the fungible tokens are sent to the contract, they will be registered and y
 
 If the linkdrop is successfully claimed, the funder will be refunded for everything **except** the burnt GAS, linkdrop balance, and fungible token storage.
 
-For a more in-depth flow-chart, see the [flowcharts](#flowcharts) section.
+<img src="flowcharts/claiming-ft-linkdrops-with-new-accounts.png" class="center" style="width: 65%; height: 65%" alt="Logo">
 
-## Getting Started
+<br />
 
+# Getting Started
 
-
-### Prerequisites
+## Prerequisites
 
 In order to successfully use this contract, you should have the following installed on your machine: 
 
@@ -185,7 +202,7 @@ In order to successfully use this contract, you should have the following instal
 If you want to run the deploy scripts, you'll need:
 - [Node JS](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 
-### Quickstart
+## Quickstart
 
 The project comes with several useful scripts in order to test and view functionalities for creating linkdrops. These scripts include:
 
@@ -215,7 +232,7 @@ near call YOUR_CONTRACT_ID.testnet new '{"linkdrop_contract": "testnet"}' --acco
 
 You're now ready to create custom linkdrops pre-loaded with NFTs and FTs. You can either interact with the contract directly using the CLI or use one of the pre-deployed scripts.
 
-### Using the CLI
+## Using the CLI
 After the contract is deployed, you have a couple options for creating linkdrops: 
 
 - Creating single linkdrops.
@@ -242,11 +259,12 @@ Once the function is successful, you can create the link and click it to claim t
     wallet.testnet.near.org/linkdrop/{YOUR_CONTRACT_ID.testnet}/{privKey1}
 ```
 
-### Using the pre-deployed scripts
+## Using the pre-deployed scripts
 
 If you'd like to use some of the deploy scripts found in the `deploy` folder, those can help automate the process. 
+<br />
 
-#### Simple Linkdrops with No NFTs or FTs
+### Simple Linkdrops with No NFTs or FTs
 
 If you'd like to create a simple linkdrop with no pre-loaded NFTs or FTs, first specify the following environment variables:
 
@@ -269,8 +287,9 @@ https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt
 ```
 
 Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way.
+<br />
 
-#### Linkdrops with NFTs
+### Linkdrops with NFTs
 
 If you'd like to create a linkdrop with a pre-loaded NFT, first specify the following environment variables:
 
@@ -317,9 +336,10 @@ https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt
 
 Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way. When this is finished, navigate to your collectibles tab and you should see an NFT similar to:
 
-<img src="assets/claimed-nft.png" alt="Logo">
+<img src="assets/claimed-nft.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+<br />
 
-#### Linkdrops with FTs
+## Linkdrops with FTs
 
 If you'd like to create a linkdrop with some pre-loaded FTs, you'll need to first specify the following environment variables:
 
@@ -350,30 +370,9 @@ https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt
 
 Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way. When this is finished, you should see your fungible tokens:
 
-<img src="assets/claimed-ft.png" alt="Logo">
+<img src="assets/claimed-ft.png" class="center" style="width: 65%; height: 65%" alt="Logo">
 
-## Flowcharts
-
-### Creating Single Linkdrops
-<img src="flowcharts/creating-single-linkdrops.png" alt="Logo">
-
-
-### Creating Multiple Linkdrops
-<img src="flowcharts/creating-multiple-linkdrops.png" alt="Logo">
-
-### Adding NFTs and FTs to Linkdrops
-<img src="flowcharts/adding-nfts-and-fts-to-linkdrops.png" alt="Logo">
-
-### Claiming NFT Linkdrops With New Accounts
-<img src="flowcharts/claiming-nft-linkdrops-with-new-accounts.png" alt="Logo">
-
-### Claiming FT Linkdrops With New Accounts
-<img src="flowcharts/claiming-ft-linkdrops-with-new-accounts.png" alt="Logo">
-
-
-
-
-## Contributing
+# Contributing
 
 First off, thanks for taking the time to contribute! Contributions are what makes the open-source community such an amazing place to learn, inspire, and create. Any contributions you make will benefit everybody else and are **greatly appreciated**.
 
@@ -388,11 +387,11 @@ Please adhere to this project's [code of conduct](docs/CODE_OF_CONDUCT.md).
 
 You can use [markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli) to check for common markdown style inconsistency.
 
-## License
+# License
 
 This project is licensed under the **GPL License**.
 
-## Acknowledgements
+# Acknowledgements
 
 Thanks for these awesome resources that were used during the development of the **Linkdrop Proxy Contract**:
 
