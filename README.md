@@ -1,13 +1,7 @@
-<style>
-.center {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>
-
-<img src="assets/claimed-linkdrop.png" class="center" alt="Logo" style="width: 35%; height: 35%">
-<br />
+<p align="center">
+  <img src="assets/claimed-linkdrop.png" alt="Logo" style="width: 35%; height: 35%">
+  <br />
+</p>
 
 <div align="center">
   <h1>
@@ -129,9 +123,11 @@ Example response:
 
 Below are some flowcharts for creating single linkdrops and batch creating multiple linkdrops.
 
-<img src="flowcharts/creating-single-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
-<br />
-<img src="flowcharts/creating-multiple-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+<p align="center">
+  <img src="flowcharts/creating-single-linkdrops.png" style="width: 65%; height: 65%" alt="Logo">
+  <br />
+  <img src="flowcharts/creating-multiple-linkdrops.png" style="width: 65%; height: 65%" alt="Logo">
+</p>
 
 
 ## NFT Linkdrops
@@ -145,7 +141,9 @@ near call NFT_CONTRACT.testnet nft_transfer_call '{"token_id": "token1", "receiv
 
 > **NOTE:** you must send the NFT after the linkdrop has been created. You cannot send an NFT with a public key that isn't on the contract yet.
 
-<img src="flowcharts/adding-nfts-and-fts-to-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+<p align="center">
+  <img src="flowcharts/adding-nfts-and-fts-to-linkdrops.png" style="width: 65%; height: 65%" alt="Logo">
+</p>
 
 Once the NFT is sent to the contract, it will be registered and you can view the current information about any key using the `get_key_information` function. Upon claiming, the NFT will be transferred from the contract to the newly created account (or existing account) along with the balance of the linkdrop. If any part of the linkdrop claiming process is unsuccessful, **both** the NFT and the $NEAR will be refunded to the funder and token sender respectively.
 
@@ -153,7 +151,9 @@ Once the NFT is sent to the contract, it will be registered and you can view the
 
 If the linkdrop is successfully claimed, the funder will be refunded for everything **except** the burnt GAS and linkdrop balance. This results in the actual linkdrop cost being extremely low (burnt GAS + initial balance).
 
-<img src="flowcharts/claiming-nft-linkdrops-with-new-accounts.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+<p align="center">
+  <img src="flowcharts/claiming-nft-linkdrops-with-new-accounts.png" style="width: 65%; height: 65%" alt="Logo">
+</p>
 
 ## Fungible Token Linkdrops
 
@@ -166,7 +166,9 @@ In order to pre-load linkdrop. As mentioned in the [About](#about) section, this
 near call linkdrop-proxy.testnet send '{"public_key": "ed25519:4iwBf6eAXZ4bcN6TWPikSqu3UJ2HUwF8wNNkGZrgDYqE", "balance": "10000000000000000000000", "ft_contract_id": "ft.examples.benjiman.testnet"}' --deposit 1 --accountId "benjiman.testnet"
 ```
 
-<img src="flowcharts/adding-nfts-and-fts-to-linkdrops.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+<p align="center">
+  <img src="flowcharts/adding-nfts-and-fts-to-linkdrops.png" style="width: 65%; height: 65%" alt="Logo">
+</p>
 
 Once all the storage has been paid for, the process for pre-loading the fungible tokens is similar to how you would pre-load an NFT: 
 
@@ -184,9 +186,10 @@ Once the fungible tokens are sent to the contract, they will be registered and y
 
 If the linkdrop is successfully claimed, the funder will be refunded for everything **except** the burnt GAS, linkdrop balance, and fungible token storage.
 
-<img src="flowcharts/claiming-ft-linkdrops-with-new-accounts.png" class="center" style="width: 65%; height: 65%" alt="Logo">
-
-<br />
+<p align="center">
+  <img src="flowcharts/claiming-ft-linkdrops-with-new-accounts.png"  style="width: 65%; height: 65%" alt="Logo">
+  <br />
+</p>
 
 # Getting Started
 
@@ -336,8 +339,10 @@ https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt
 
 Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way. When this is finished, navigate to your collectibles tab and you should see an NFT similar to:
 
-<img src="assets/claimed-nft.png" class="center" style="width: 65%; height: 65%" alt="Logo">
-<br />
+<p align="center">
+  <img src="assets/claimed-nft.png"  style="width: 65%; height: 65%" alt="Logo">
+  <br />
+</p>
 
 ## Linkdrops with FTs
 
@@ -370,7 +375,9 @@ https://wallet.testnet.near.org/linkdrop/dev-1652794689263-24159113353222/4YULUt
 
 Once you've clicked the link, you can either fund an existing account with the linkdrop balance, or you can create a new account and fund it that way. When this is finished, you should see your fungible tokens:
 
-<img src="assets/claimed-ft.png" class="center" style="width: 65%; height: 65%" alt="Logo">
+<p align="center">
+  <img src="assets/claimed-ft.png"  style="width: 65%; height: 65%" alt="Logo">
+</p>
 
 # Contributing
 
