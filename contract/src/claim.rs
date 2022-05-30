@@ -10,7 +10,7 @@ impl LinkDropProxy {
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Delete the access key and remove / return account data.
-        let (_, funder_id, balance, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
+        let (_, funder_id, balance, storage_used, cb_data_sent, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
         
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -23,6 +23,8 @@ impl LinkDropProxy {
             account_id,
             funder_id,
             balance,
+            storage_used,
+            cb_data_sent,
             token_sender,
             token_contract,
             nft_id, 
@@ -52,7 +54,7 @@ impl LinkDropProxy {
         env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Delete the access key and remove / return account data.
-        let (_, funder_id, balance, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
+        let (_, funder_id, balance, storage_used, cb_data_sent, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -70,6 +72,8 @@ impl LinkDropProxy {
             new_account_id,
             funder_id,
             balance,
+            storage_used,
+            cb_data_sent,
             token_sender,
             token_contract,
             nft_id, 
@@ -92,6 +96,8 @@ impl LinkDropProxy {
         account_id: AccountId, 
         funder_id: AccountId, 
         balance: U128, 
+        storage_used: U128,
+        cb_data_sent: bool,
         token_sender: Option<AccountId>,
         token_contract: Option<AccountId>,
         nft_id: Option<String>, 
@@ -101,6 +107,7 @@ impl LinkDropProxy {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
 
+        env::log_str(&format!("CB Data Sent: {}",cb_data_sent));
         env::log_str(&format!("Beginning of on claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         assert_eq!(
@@ -112,7 +119,7 @@ impl LinkDropProxy {
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE - BURNT_GAS;
+        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
         
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
@@ -130,7 +137,7 @@ impl LinkDropProxy {
         /*
             Non Fungible Tokens
         */
-        if nft_id.is_some() {
+        if nft_id.is_some() && cb_data_sent == true {
             let nft_contract_id = token_contract.clone().expect("no contract ID found");
             let token_id = nft_id.expect("no token Id found");
 
@@ -176,7 +183,7 @@ impl LinkDropProxy {
         /*
             Fungible Tokens
         */
-        if ft_balance.is_some() {
+        if ft_balance.is_some() && cb_data_sent == true {
             let ft_contract_id = token_contract.expect("no contract ID found");
             let amount = ft_balance.expect("no ft balance found");
             let storage_required = ft_storage.expect("no ft storage found");
@@ -255,7 +262,7 @@ impl LinkDropProxy {
     }
 
     /// Internal method for deleting the used key and removing / returning account data.
-    fn process_claim(&mut self) -> (PublicKey, AccountId, U128, Option<AccountId>, Option<AccountId>, Option<String>, Option<U128>, Option<U128>) {
+    fn process_claim(&mut self) -> (PublicKey, AccountId, U128, U128, bool, Option<AccountId>, Option<AccountId>, Option<String>, Option<U128>, Option<U128>) {
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
             env::predecessor_account_id(),
@@ -265,22 +272,50 @@ impl LinkDropProxy {
 
         // Get the PK of the signer which should be the contract's function call access key
         let signer_pk = env::signer_account_pk();
-        let AccountData {
-            funder_id,
-            balance,
-            token_sender,
-            token_contract,
-            nft_id,
-            ft_balance,
-            ft_storage
-        } = self.accounts
+
+        // By default, every key should have account data
+        let account_data = self.accounts
             .remove(&signer_pk)
-            .expect("Missing public key");
+            .expect("Key missing");
+
+        let funder_id = account_data.funder_id;
+        let balance = account_data.balance;
+        let cb_data_sent = account_data.cb_data_sent;
+        let storage_used = account_data.storage_used;
+        let mut token_sender = None;
+        let mut token_contract = None;
+        let mut nft_id = None;
+        let mut ft_balance = None;
+        let mut ft_storage = None;
+
+        // If the linkdrop has a callback ID, return the specific callback info. Otherwise, return only account data. 
+        if let Some(nonce) = account_data.cb_id {
+            let cb_type = account_data.cb_type.unwrap();
+
+            // Check for the specific callback type and return the info.
+            match cb_type {
+                CBType::NFT => {
+                    let nft_data = self.nft.remove(&nonce).expect("No NFT data found for the public key");
+                    token_sender = Some(nft_data.nft_sender);
+                    token_contract = Some(nft_data.nft_contract);
+                    nft_id = Some(nft_data.nft_token_id);
+                },
+                CBType::FT => {
+                    let ft_data = self.ft.remove(&nonce).expect("No FT data found for the public key");
+                    token_sender = Some(ft_data.ft_sender);
+                    token_contract = Some(ft_data.ft_contract);
+                    ft_balance = Some(ft_data.ft_balance);
+                    ft_storage = Some(ft_data.ft_storage.expect("FT storage missing"));
+                },
+                CBType::FC => {
+                }
+            }
+        }
 
         // Delete the key
         Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
 
         // Return account data info
-        (signer_pk, funder_id, balance, token_sender, token_contract, nft_id, ft_balance, ft_storage)
+        (signer_pk, funder_id, balance, storage_used, cb_data_sent, token_sender, token_contract, nft_id, ft_balance, ft_storage)
     }
 }

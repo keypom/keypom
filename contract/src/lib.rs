@@ -9,12 +9,13 @@ use near_sdk::{
 };
 
 /* 
-    minimum amount of storage required to cover:
-    - storing access key on the contract
-    - storing pub key and account data in the map
-    Some of this can be refunded once the account is claimed.
-*/ 
-const STORAGE_ALLOWANCE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N 
+    minimum amount of storage required to store an access key on the contract
+    1_330_000_000_000_000_000_000 Simple linkdrop: 0.00133 $NEAR
+    2_420_000_000_000_000_000_000 NFT Linkdrop: 0.00242 $NEAR
+*/
+const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N 
+
+
 /* 
     allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
     available when GAS is burnt using the access key. The burnt GAS will not be refunded but any unburnt GAS that remains can be refunded.
@@ -53,41 +54,70 @@ const GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + GAS_FOR_FT_TRANSFER.
 
 const ONE_GIGGA_GAS: u64 = 1_000_000_000;
 
-
 /// Methods callable by the function call access key
 const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
-
-#[derive(BorshSerialize, BorshStorageKey)]
-enum StorageKey {
-    Accounts,
-}
-/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize)]
-#[serde(crate = "near_sdk::serde")]
-pub struct AccountData {
-    pub funder_id: AccountId,
-    pub balance: U128,
-    pub token_sender: Option<AccountId>,
-    pub token_contract: Option<AccountId>,
-    pub nft_id: Option<String>,
-    pub ft_balance: Option<U128>,
-    pub ft_storage: Option<U128>,
-}
 
 mod claim;
 mod send;
 mod ext_traits;
 mod nft;
 mod ft;
+mod function_call;
 
 use crate::ext_traits::*;
+use crate::nft::*;
+use crate::ft::*;
+use crate::function_call::*;
+
+/// Defines the type of callback associated with the linkdrop. Either NFT, Fungible Token, or Function call.
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub enum CBType {
+    NFT,
+    FT,
+    FC
+}
+
+/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
+#[near_bindgen]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct AccountData {
+    pub funder_id: AccountId,
+    pub balance: U128,
+    pub storage_used: U128,
+
+    /*
+        EXTRA
+    */
+    pub cb_type: Option<CBType>, //nonce - if set, becomes lookup to all NFT, FT, CD 
+    pub cb_id: Option<u64>, //nonce - if set, becomes lookup to all NFT, FT, CD 
+    pub cb_data_sent: bool,
+    
+}
+
+#[derive(BorshSerialize, BorshStorageKey)]
+enum StorageKey {
+    Accounts,
+    NFTData,
+    FTData,
+    FCData,
+}
 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
 pub struct LinkDropProxy {
     pub linkdrop_contract: AccountId,
     pub accounts: LookupMap<PublicKey, AccountData>,
+
+    pub nonce: u64,
+
+    /*
+        EXTRA
+    */
+    pub nft: LookupMap<u64, NFTData>,
+    pub ft: LookupMap<u64, FTData>,
+    pub fc: LookupMap<u64, FCData>
 }
 
 #[near_bindgen]
@@ -98,6 +128,10 @@ impl LinkDropProxy {
         Self {
             linkdrop_contract,
             accounts: LookupMap::new(StorageKey::Accounts),
+            nft: LookupMap::new(StorageKey::NFTData),
+            ft: LookupMap::new(StorageKey::FTData),
+            fc: LookupMap::new(StorageKey::FCData),
+            nonce: 0,
         }
     }
 
@@ -119,10 +153,59 @@ impl LinkDropProxy {
         (account_data.balance.0).into()
     }
 
-    /// Returns the account data corresponding to a specific key
-    pub fn get_key_information(&self, key: PublicKey) -> AccountData {
-        self.accounts
+    /// Returns the data corresponding to a specific key
+    pub fn get_key_information(
+        &self, 
+        key: PublicKey
+    ) -> (AccountData, Option<NFTData>, Option<FTData>, Option<FCData>) {
+        // By default, every key should have account data
+        let account_data = self.accounts
             .get(&key)
-            .expect("Key missing")
+            .expect("Key missing");
+        
+        // If the linkdrop has a callback ID, return the specific callback info. Otherwise, return only account data. 
+        if let Some(nonce) = account_data.cb_id {
+            let cb_type = account_data.clone().cb_type.unwrap();
+
+            // Check for the specific callback type and return the info.
+            match cb_type {
+                CBType::NFT => {
+                    return (
+                        account_data,
+                        self.nft.get(&nonce),
+                        None,
+                        None
+                    )
+                },
+                CBType::FT => {
+                    return (
+                        account_data,
+                        None,
+                        self.ft.get(&nonce),
+                        None
+                    )
+                },
+                CBType::FC => {
+                    return (
+                        account_data,
+                        None,
+                        None,
+                        self.fc.get(&nonce)
+                    )
+                }
+            }
+        } else {
+            return (
+                account_data,
+                None,
+                None,
+                None
+            )
+        }
+    }
+
+    /// Returns the current nonce on the contract
+    pub fn get_nonce(&self) -> u64 {
+        self.nonce
     }
 }

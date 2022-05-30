@@ -54,6 +54,7 @@ const initiateNear = async () => {
 async function start() {
 	//deployed linkdrop proxy contract
 	await initiateNear();
+	const tokenId = Date.now().toString();
 
 	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
 		throw "must specify proxy contract ID, funding account ID and linkdrop $NEAR amount";
@@ -83,12 +84,18 @@ async function start() {
 
 	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
 	try {
+		let nft_data = {};
+		nft_data["nft_sender"] = FUNDING_ACCOUNT_ID;
+		nft_data["nft_contract"] = NFT_CONTRACT_ID;
+		nft_data["nft_token_id"] = tokenId;
+
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'send', 
 			{
 				public_key: pubKey,
-				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
+				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+				nft_data,
 			}, 
 			"300000000000000", 
 			parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + 1).toString())
@@ -98,7 +105,6 @@ async function start() {
 	}
 
 	try {
-		const tokenId = Date.now().toString();
 		console.log(`minting NFT with token ID ${tokenId} on contract ${tokenId} with receiver: ${FUNDING_ACCOUNT_ID}`);
 		
 		await fundingAccount.functionCall(

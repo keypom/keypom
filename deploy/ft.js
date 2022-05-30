@@ -6,7 +6,7 @@ const homedir = require("os").homedir();
 let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
-let FT_CONTRACT_ID = process.env.FT_CONTRACT_ID;;
+let FT_CONTRACT_ID = process.env.FT_CONTRACT_ID;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -65,13 +65,18 @@ async function start() {
 
 	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
 	try {
+		let ft_data = {};
+		ft_data["ft_contract"] = FT_CONTRACT_ID;
+		ft_data["ft_sender"] = FUNDING_ACCOUNT_ID;
+		ft_data["ft_balance"] = "25";
+
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'send', 
 			{
 				public_key: pubKey,
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
-				ft_contract_id: FT_CONTRACT_ID
+				ft_data,
 			}, 
 			"300000000000000", 
 			parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + 1).toString())

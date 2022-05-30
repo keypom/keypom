@@ -40,6 +40,8 @@ trait ExtThis {
         account_id: AccountId, 
         funder_id: AccountId, 
         balance: U128, 
+        storage_used: U128,
+        cb_data_sent: bool,
         token_sender: Option<AccountId>,
         token_contract: Option<AccountId>,
         nft_id: Option<String>, 
@@ -58,6 +60,8 @@ trait ExtThis {
         &mut self,
         public_keys: Vec<PublicKey>,
         funder_id: AccountId,
-        balance: U128
+        balance: U128,
+        required_storage: U128,
+        cb_ids: Vec<u64>,
     );
 }
