@@ -140,12 +140,12 @@ impl LinkDropProxy {
             - access key allowance 
             - and a balance for the account (which must be greater than new account base)
         */
+        env::log_str(&format!("Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, Desired FC Attached Deposit If Applicable: {}", yocto_to_near(attached_deposit), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(balance.0), yocto_to_near(required_storage), if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}));
         assert!(
             attached_deposit >= ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0},
             "Deposit must be large enough to cover desired balance, access key allowance, and contract storage, and function call deposit if applicable."
         );
-        env::log_str(&format!("Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, Desired FC Attached Deposit If Applicable: {}", yocto_to_near(attached_deposit), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(balance.0), yocto_to_near(required_storage), if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}));
-
+        
         /*
             add the public key as an access key to the contract 
             which can only call claim and create_account_and_claim on this contract
@@ -355,13 +355,11 @@ impl LinkDropProxy {
 
             this must be true for every public key passed in.
         */
+        env::log_str(&format!("Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, function call deposit (if applicable): {}, length: {}", yocto_to_near(attached_deposit), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(balance.0), yocto_to_near(required_storage), if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}, len));
         assert!(
             attached_deposit >= (ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len,
             "Deposit must be large enough to cover desired balance, access key allowanc, contract storage, and function call deposit (if applicable) for all keys"
         );
-
-        env::log_str(&format!("Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, function call deposit (if applicable): {}, length: {}", yocto_to_near(attached_deposit), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(balance.0), yocto_to_near(required_storage), if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}, len));
-
 
         env::promise_return(promise);
 
