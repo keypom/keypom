@@ -39,19 +39,25 @@ const BURNT_GAS: u128 = 10_000_000_000_000_000_000_000;
 /*
     GAS Constants
 */
-const GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000); // 10 TGas
-const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(15_000_000_000_000 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
-
-const GAS_FOR_ON_CLAIM: Gas = Gas(24_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 24 TGas + 25 TGas + 10 TGas= 59 TGas 
-const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
-
 const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000); // 10 TGas
 const GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000); // 25 TGas
 
+const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
+const GAS_FOR_ON_CLAIM: Gas = Gas(24_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 24 TGas + 25 TGas + 10 TGas= 59 TGas 
+
+// NFTs
+const GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000); // 10 TGas
+const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(15_000_000_000_000 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
+
+// FTs
 const GAS_FOR_FT_TRANSFER: Gas = Gas(7_500_000_000_000); // 7.5 TGas
 const GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(7_500_000_000_000); // 7.5 TGas
 const GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + GAS_FOR_FT_TRANSFER.0 + GAS_FOR_STORAGE_DEPOSIT.0); // 10 TGas + 7.5 TGas + 7.5 TGas = 25 TGas
 
+// Function Calls
+const GAS_FOR_CALLBACK_FUNCTION_CALL: Gas = Gas(25_000_000_000_000); // 25 TGas
+
+// Utils
 const ONE_GIGGA_GAS: u64 = 1_000_000_000;
 
 /// Methods callable by the function call access key
@@ -68,6 +74,14 @@ use crate::ext_traits::*;
 use crate::nft::*;
 use crate::ft::*;
 use crate::function_call::*;
+
+pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
+    //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
+    let formatted_near = yocto / 100_000_000_000_000_000_000;
+    let near = formatted_near as f64 / 10_000_f64;
+
+    near
+}
 
 /// Defines the type of callback associated with the linkdrop. Either NFT, Fungible Token, or Function call.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Clone)]
@@ -207,5 +221,5 @@ impl LinkDropProxy {
     /// Returns the current nonce on the contract
     pub fn get_nonce(&self) -> u64 {
         self.nonce
-    }
+    }   
 }

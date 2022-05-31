@@ -1,3 +1,5 @@
+use near_sdk::json_types::Base64VecU8;
+
 use crate::*;
 
 /// external and self callbacks
@@ -42,11 +44,17 @@ trait ExtThis {
         balance: U128, 
         storage_used: U128,
         cb_data_sent: bool,
-        token_sender: Option<AccountId>,
-        token_contract: Option<AccountId>,
+        /*
+            EXTRA
+        */
+        cb_sender: Option<AccountId>,
+        cb_contract: Option<AccountId>,
         nft_id: Option<String>, 
         ft_balance: Option<U128>,
-        ft_storage: Option<U128>
+        ft_storage: Option<U128>,
+        cb_method: Option<String>,
+        cb_args: Option<Base64VecU8>,
+        cb_deposit: Option<U128>,
     ) -> bool;
 
     fn nft_resolve_transfer(

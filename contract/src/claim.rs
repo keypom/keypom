@@ -1,3 +1,5 @@
+use near_sdk::json_types::Base64VecU8;
+
 use crate::*;
 
 #[near_bindgen]
@@ -9,8 +11,21 @@ impl LinkDropProxy {
 
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return account data.
-        let (_, funder_id, balance, storage_used, cb_data_sent, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
+        // Delete the access key and remove / return account data, and optionally callback data.
+        let (
+            funder_id, 
+            balance, 
+            storage_used, 
+            cb_data_sent, 
+            cb_sender, 
+            cb_contract, 
+            nft_id, 
+            ft_balance, 
+            ft_storage,
+            cb_method,
+            cb_args,
+            cb_deposit
+        ) = self.process_claim();
         
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -25,11 +40,17 @@ impl LinkDropProxy {
             balance,
             storage_used,
             cb_data_sent,
-            token_sender,
-            token_contract,
+            /*
+                EXTRA
+            */
+            cb_sender,
+            cb_contract,
             nft_id, 
             ft_balance,
             ft_storage,
+            cb_method,
+            cb_args,
+            cb_deposit,
             env::current_account_id(),
             NO_DEPOSIT,
             GAS_FOR_ON_CLAIM,
@@ -53,8 +74,21 @@ impl LinkDropProxy {
 
         env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return account data.
-        let (_, funder_id, balance, storage_used, cb_data_sent, token_sender, token_contract, nft_id, ft_balance, ft_storage) = self.process_claim();
+        // Delete the access key and remove / return account data, and optionally callback data.
+        let (
+            funder_id, 
+            balance, 
+            storage_used, 
+            cb_data_sent, 
+            cb_sender, 
+            cb_contract, 
+            nft_id, 
+            ft_balance, 
+            ft_storage,
+            cb_method,
+            cb_args,
+            cb_deposit
+        ) = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -74,11 +108,17 @@ impl LinkDropProxy {
             balance,
             storage_used,
             cb_data_sent,
-            token_sender,
-            token_contract,
+            /*
+                EXTRA
+            */
+            cb_sender,
+            cb_contract,
             nft_id, 
             ft_balance,
             ft_storage,
+            cb_method,
+            cb_args,
+            cb_deposit,
             env::current_account_id(),
             NO_DEPOSIT,
             GAS_FOR_ON_CLAIM,
@@ -98,11 +138,18 @@ impl LinkDropProxy {
         balance: U128, 
         storage_used: U128,
         cb_data_sent: bool,
-        token_sender: Option<AccountId>,
-        token_contract: Option<AccountId>,
+        /*
+            EXTRA
+        */
+        cb_sender: Option<AccountId>,
+        cb_contract: Option<AccountId>,
         nft_id: Option<String>, 
         ft_balance: Option<U128>,
-        ft_storage: Option<U128>
+        ft_storage: Option<U128>,
+        cb_method: Option<String>,
+        cb_args: Option<Base64VecU8>,
+        cb_deposit: Option<U128>,
+
     ) -> bool {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
@@ -121,8 +168,11 @@ impl LinkDropProxy {
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
         
+        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used.0), yocto_to_near(BURNT_GAS)));
+
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
+            env::log_str(&format!("Claim unsuccesful. Refunding linkdrop balance as well: {}", balance.0));
             amount_to_refund += balance.0
         }
 
@@ -132,13 +182,13 @@ impl LinkDropProxy {
         env::log_str(&format!("In on claim before refund used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Refunding
-        Promise::new(funder_id).transfer(amount_to_refund);
+        Promise::new(funder_id.clone()).transfer(amount_to_refund);
 
         /*
             Non Fungible Tokens
         */
         if nft_id.is_some() && cb_data_sent == true {
-            let nft_contract_id = token_contract.clone().expect("no contract ID found");
+            let nft_contract_id = cb_contract.clone().expect("no contract ID found");
             let token_id = nft_id.expect("no token Id found");
 
             used_gas = env::used_gas();
@@ -159,7 +209,7 @@ impl LinkDropProxy {
                     GAS_FOR_SIMPLE_NFT_TRANSFER,
                 ).then(ext_self::nft_resolve_transfer(
                     token_id,
-                    token_sender.clone().expect("no token sender associated with NFT"),
+                    cb_sender.clone().expect("no token sender associated with NFT"),
                     nft_contract_id,
                     env::current_account_id(),
                     NO_DEPOSIT,
@@ -168,7 +218,7 @@ impl LinkDropProxy {
             } else {
                 // CCC to the NFT contract to transfer the token to the original token sender. No callback necessary.
                 ext_nft_contract::nft_transfer(
-                    token_sender.clone().expect("no token sender associated with NFT"), 
+                    cb_sender.clone().expect("no token sender associated with NFT"), 
                     token_id,
                     None,
                     Some("Linkdropped NFT".to_string()),
@@ -184,7 +234,7 @@ impl LinkDropProxy {
             Fungible Tokens
         */
         if ft_balance.is_some() && cb_data_sent == true {
-            let ft_contract_id = token_contract.expect("no contract ID found");
+            let ft_contract_id = cb_contract.clone().expect("no contract ID found");
             let amount = ft_balance.expect("no ft balance found");
             let storage_required = ft_storage.expect("no ft storage found");
 
@@ -221,7 +271,7 @@ impl LinkDropProxy {
                     batch_ft_promise_id,
                     env::current_account_id(),
                     "ft_resolve_batch",
-                    json!({ "amount": amount, "token_sender": token_sender, "token_contract": ft_contract_id }).to_string().as_bytes(),
+                    json!({ "amount": amount, "token_sender": cb_sender, "token_contract": ft_contract_id }).to_string().as_bytes(),
                     NO_DEPOSIT,
                     GAS_FOR_RESOLVE_BATCH
                 );
@@ -233,7 +283,7 @@ impl LinkDropProxy {
                 env::promise_batch_action_function_call(
                     batch_ft_promise_id,
                     "storage_deposit",
-                    json!({ "account_id": token_sender }).to_string().as_bytes(),
+                    json!({ "account_id": cb_sender }).to_string().as_bytes(),
                     amount.0,
                     GAS_FOR_STORAGE_DEPOSIT
                 );
@@ -242,7 +292,7 @@ impl LinkDropProxy {
                 env::promise_batch_action_function_call(
                     batch_ft_promise_id,
                     "ft_transfer",
-                    json!({ "receiver_id": token_sender, "amount": amount, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
+                    json!({ "receiver_id": cb_sender, "amount": amount, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
                     1,
                     GAS_FOR_FT_TRANSFER
                 );
@@ -251,6 +301,34 @@ impl LinkDropProxy {
                 env::promise_return(batch_ft_promise_id);
             }
             
+        }
+
+        /*
+            Function Calls
+        */
+        if cb_method.is_some() && cb_args.is_some() && cb_deposit.is_some() && cb_data_sent == true {
+            // Only call the function if the claim was successful. If not, refund the callback sender for the callback deposit. 
+            let deposit = cb_deposit.unwrap();
+
+            if claim_succeeded {
+                let receiver_id = cb_contract.expect("no callback contract specified");
+                let method = cb_method.unwrap();
+                let args = cb_args.unwrap();
+
+                Promise::new(receiver_id).function_call(
+                    method, 
+                    args.0, 
+                    deposit.0, 
+                    GAS_FOR_CALLBACK_FUNCTION_CALL
+                );
+
+            } else {
+                env::log_str(&format!("Claim unsuccesful. Refunding callback deposit as well: {}", yocto_to_near(deposit.0)));
+                // Refunding
+                Promise::new(funder_id).transfer(deposit.0);
+            }
+            
+
         }
 
         used_gas = env::used_gas();
@@ -262,7 +340,23 @@ impl LinkDropProxy {
     }
 
     /// Internal method for deleting the used key and removing / returning account data.
-    fn process_claim(&mut self) -> (PublicKey, AccountId, U128, U128, bool, Option<AccountId>, Option<AccountId>, Option<String>, Option<U128>, Option<U128>) {
+    fn process_claim(&mut self) -> (
+        AccountId, // Funder ID
+        U128, // Linkdrop Balance
+        U128, // Storage used
+        bool, // CB Data Sent
+        /*
+            EXTRA
+        */
+        Option<AccountId>, // Callback sender
+        Option<AccountId>, // Callback contract
+        Option<String>, // NFT Token ID
+        Option<U128>, // FT Balance to send
+        Option<U128>, // FT Storage to pay
+        Option<String>, // Callback method to call
+        Option<Base64VecU8>, // Callback arguments to pass
+        Option<U128>, // Callback deposit to attach
+    ) {
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
             env::predecessor_account_id(),
@@ -282,11 +376,18 @@ impl LinkDropProxy {
         let balance = account_data.balance;
         let cb_data_sent = account_data.cb_data_sent;
         let storage_used = account_data.storage_used;
-        let mut token_sender = None;
-        let mut token_contract = None;
+
+        /*
+            EXTRA
+        */
+        let mut cb_sender = None;
+        let mut cb_contract = None;
         let mut nft_id = None;
         let mut ft_balance = None;
         let mut ft_storage = None;
+        let mut cb_method = None;
+        let mut cb_args = None;
+        let mut cb_deposit = None;
 
         // If the linkdrop has a callback ID, return the specific callback info. Otherwise, return only account data. 
         if let Some(nonce) = account_data.cb_id {
@@ -296,18 +397,23 @@ impl LinkDropProxy {
             match cb_type {
                 CBType::NFT => {
                     let nft_data = self.nft.remove(&nonce).expect("No NFT data found for the public key");
-                    token_sender = Some(nft_data.nft_sender);
-                    token_contract = Some(nft_data.nft_contract);
+                    cb_sender = Some(nft_data.nft_sender);
+                    cb_contract = Some(nft_data.nft_contract);
                     nft_id = Some(nft_data.nft_token_id);
                 },
                 CBType::FT => {
                     let ft_data = self.ft.remove(&nonce).expect("No FT data found for the public key");
-                    token_sender = Some(ft_data.ft_sender);
-                    token_contract = Some(ft_data.ft_contract);
+                    cb_sender = Some(ft_data.ft_sender);
+                    cb_contract = Some(ft_data.ft_contract);
                     ft_balance = Some(ft_data.ft_balance);
                     ft_storage = Some(ft_data.ft_storage.expect("FT storage missing"));
                 },
                 CBType::FC => {
+                    let fc_data = self.fc.remove(&nonce).expect("No FC data found for the public key");
+                    cb_contract = Some(fc_data.receiver);
+                    cb_method = Some(fc_data.method);
+                    cb_args = Some(fc_data.args);
+                    cb_deposit = Some(fc_data.deposit);
                 }
             }
         }
@@ -316,6 +422,19 @@ impl LinkDropProxy {
         Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
 
         // Return account data info
-        (signer_pk, funder_id, balance, storage_used, cb_data_sent, token_sender, token_contract, nft_id, ft_balance, ft_storage)
+        (
+            funder_id, 
+            balance, 
+            storage_used, 
+            cb_data_sent, 
+            cb_sender, 
+            cb_contract, 
+            nft_id, 
+            ft_balance, 
+            ft_storage,
+            cb_method,
+            cb_args,
+            cb_deposit
+        )
     }
 }

@@ -1,3 +1,5 @@
+use near_sdk::json_types::Base64VecU8;
+
 use crate::*;
 
 /// Keep track of nft data 
@@ -7,6 +9,7 @@ use crate::*;
 pub struct FCData {
     pub receiver: AccountId,
     pub method: String,
-    pub args: String,
+    // Optimization
+    pub args: Base64VecU8,
     pub deposit: U128
 }
