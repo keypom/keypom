@@ -17,7 +17,7 @@ impl LinkDropProxy {
         balance: U128,
         ft_data: Option<FTData>,
         nft_data: Option<NFTData>,
-        fc_data: Option<FCData>
+        fc_data: Option<FCData>,
     ) {
         let attached_deposit = env::attached_deposit();
 
@@ -31,7 +31,6 @@ impl LinkDropProxy {
 
         // Keep track of the cb info
         let mut cb_id = None;
-        let mut cb_type = None;
 
         let pk = public_key;
         assert!(self.accounts.insert(
@@ -41,7 +40,6 @@ impl LinkDropProxy {
                     balance: balance,
                     storage_used: U128(340282366920938463463374607431768211455),
                     cb_id: None,
-                    cb_type: None,
                     cb_data_sent: false
                 },
             ).is_none(),
@@ -55,7 +53,6 @@ impl LinkDropProxy {
 
             // Keep track of the callback type
             cb_id = Some(self.nonce);
-            cb_type = Some(CBType::FT);
 
             // Insert the FT data or the unique callback ID associated with the linkdrop
             self.ft.insert(
@@ -80,7 +77,6 @@ impl LinkDropProxy {
             
             // Keep track of the callback type
             cb_id = Some(self.nonce);
-            cb_type = Some(CBType::NFT);
 
             // Insert passed in data into map
             self.nft.insert(
@@ -98,7 +94,6 @@ impl LinkDropProxy {
             assert!(nft_data.is_none() && ft_data.is_none(), "Cannot have multi-typed linkdrop");
             // Keep track of the callback type
             cb_id = Some(self.nonce);
-            cb_type = Some(CBType::FC);
 
             // Insert passed in data into map
             self.fc.insert(
@@ -123,7 +118,6 @@ impl LinkDropProxy {
                 balance: balance,
                 storage_used: U128(required_storage),
                 cb_id: cb_id,
-                cb_type: cb_type,
                 /* 
                     No need to complete step 2 (sending NFT / FTs) if the linkdrop is either regular or function call 
                     so set callback data being sent to true in that case
@@ -186,7 +180,7 @@ impl LinkDropProxy {
     }
 
     /*
-        user has created a bunch of keypairs and passesd in the public keys and attached some deposit.
+        user has created a bunch of keypairs and passed in the public keys and attached some deposit.
         this will store the account data and allow that keys to call claim and create_account_and_claim
         on this contract.
 
@@ -198,11 +192,19 @@ impl LinkDropProxy {
         public_keys: Vec<PublicKey>, 
         balance: U128, 
         ft_data: Option<FTData>,
-        nft_data: Option<NFTData>,
-        fc_data: Option<FCData>
+        nft_data: Option<Vec<NFTData>>,
+        fc_data: Option<Vec<FCData>>
     ) {
         let attached_deposit = env::attached_deposit();
         let len = public_keys.len() as u128;
+
+        if let Some(data) = nft_data.clone() {
+            assert!(
+                data.len() as u128 == len,
+                "Must specify NFT Data for each key"
+            )
+        }
+        
 
         assert!(
             balance.0 >= NEW_ACCOUNT_BASE,
@@ -213,7 +215,10 @@ impl LinkDropProxy {
         let promise = env::promise_batch_create(&current_account_id);
         let mut required_storage = 0;
         let mut cb_ids = vec![];
+        // Keep track of the total attached deposit across all function calls
+        let mut total_attached_deposit = 0;
 
+        let mut index = 0;
         // Loop through each public key and insert into the map and create the key
         for pk in public_keys.clone() {
             // Calculate the storage usage for linkdrop with the maximum U128 size
@@ -221,7 +226,6 @@ impl LinkDropProxy {
 
             // Keep track of the cb info
             let mut cb_id = None;
-            let mut cb_type = None;
 
             assert!(self.accounts.insert(
                 &pk,
@@ -230,7 +234,6 @@ impl LinkDropProxy {
                     balance: balance,
                     storage_used: U128(340282366920938463463374607431768211455),
                     cb_id: None,
-                    cb_type: None,
                     cb_data_sent: false
                 },
             ).is_none(),
@@ -245,7 +248,6 @@ impl LinkDropProxy {
                 // Keep track of the callback type
                 cb_ids.push(self.nonce);
                 cb_id = Some(self.nonce);
-                cb_type = Some(CBType::FT);
 
                 // Insert the FT data or the unique callback ID associated with the linkdrop
                 self.ft.insert(
@@ -271,12 +273,11 @@ impl LinkDropProxy {
                 // Keep track of the callback type
                 cb_ids.push(self.nonce);
                 cb_id = Some(self.nonce);
-                cb_type = Some(CBType::NFT);
 
                 // Insert passed in data into map
                 self.nft.insert(
                     &self.nonce,
-                    &nft_data.clone().unwrap()
+                    &nft_data.clone().unwrap()[index]
                 );
 
                 // Increment nonce
@@ -291,12 +292,12 @@ impl LinkDropProxy {
                 // Keep track of the callback type
                 cb_ids.push(self.nonce);
                 cb_id = Some(self.nonce);
-                cb_type = Some(CBType::FC);
+                total_attached_deposit = total_attached_deposit + fc_data.clone().unwrap()[index].deposit.0;
 
                 // Insert passed in data into map
                 self.fc.insert(
                     &self.nonce,
-                    &fc_data.clone().unwrap()
+                    &fc_data.clone().unwrap()[index]
                 );
                 
                 // Increment nonce
@@ -315,7 +316,6 @@ impl LinkDropProxy {
                     balance: balance,
                     storage_used: U128(required_storage),
                     cb_id: cb_id,
-                    cb_type: cb_type,
                     /* 
                         No need to complete step 2 (sending NFT / FTs) if the linkdrop is either regular or function call 
                         so set callback data being sent to true in that case
@@ -333,7 +333,7 @@ impl LinkDropProxy {
                 - and a balance for the account (which must be greater than new account base)
             */
             assert!(
-                attached_deposit >= ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0},
+                attached_deposit >= ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap()[index].deposit.0} else {0},
                 "Deposit must be large enough to cover desired balance, access key allowance, and contract storage"
             );
 
@@ -346,6 +346,8 @@ impl LinkDropProxy {
                 &current_account_id, 
                 ACCESS_KEY_METHOD_NAMES
             );
+
+            index = index + 1;
         }
 
         /*
@@ -356,10 +358,19 @@ impl LinkDropProxy {
 
             this must be true for every public key passed in.
         */
-        env::log_str(&format!("Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, function call deposit (if applicable): {}, length: {}", yocto_to_near(attached_deposit), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(balance.0), yocto_to_near(required_storage), if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}, len));
+        env::log_str(&format!(
+            "Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, total function call deposits (if applicable): {}, length: {}", 
+            yocto_to_near(attached_deposit), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(ACCESS_KEY_ALLOWANCE), 
+            yocto_to_near(balance.0), 
+            yocto_to_near(required_storage), 
+            yocto_to_near(total_attached_deposit), 
+            len)
+        );
         assert!(
-            attached_deposit >= (ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len,
-            "Deposit must be large enough to cover desired balance, access key allowanc, contract storage, and function call deposit (if applicable) for all keys"
+            attached_deposit >= (ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 ) * len + total_attached_deposit,
+            "Deposit must be large enough to cover desired balance, access key allowance, contract storage, and function call deposit (if applicable) for all keys"
         );
 
         env::promise_return(promise);
@@ -385,10 +396,10 @@ impl LinkDropProxy {
                 attached_deposit,
                 GAS_FOR_RESOLVE_STORAGE_CHECK,
             ));
-        } else if attached_deposit > (ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len {
-            env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - ((ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len))));    
+        } else if attached_deposit > (ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0) * len + total_attached_deposit {
+            env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - ((ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0) * len + total_attached_deposit))));    
             // If the user overpaid for the desired linkdrop balances, refund them.
-            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - ((ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len));
+            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - ((ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0) * len + total_attached_deposit));
         }
     }
 }

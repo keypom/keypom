@@ -7,7 +7,7 @@ let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
-let OFFSET = 0.0;
+let OFFSET = 0.1;
 let STORAGE = 0.038;
 
 let NETWORK_ID = "testnet";
@@ -73,10 +73,10 @@ async function start() {
 	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
 	try {
 		let fc_data_base = {};
-		let argsBase = btoa(JSON.stringify({
+		let argsBase = JSON.stringify({
 			public_key:  keyPairs[0].publicKey.toString(),
 			balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
-		}));
+		});
 		fc_data_base["receiver"] = LINKDROP_PROXY_CONTRACT_ID;
 		fc_data_base["method"] = "send";
 		fc_data_base["args"] = argsBase;
@@ -89,11 +89,11 @@ async function start() {
 
 		let fc_data_final = {};
 		for(var i = 1; i < keyPairs.length-1; i++) {
-			let args = btoa(JSON.stringify({
+			let args = JSON.stringify({
 				public_key:  keyPairs[i].publicKey.toString(),
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
 				fc_data: argsArray[i - 1],
-			}));
+			});
             
 			fc_data_final["receiver"] = LINKDROP_PROXY_CONTRACT_ID;
 			fc_data_final["method"] = "send";

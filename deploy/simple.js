@@ -6,6 +6,9 @@ const homedir = require("os").homedir();
 let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
+let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
+
+let OFFSET = 0.1;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -36,8 +39,8 @@ async function start() {
 	//deployed linkdrop proxy contract
 	await initiateNear();
 
-	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
-		throw "must specify proxy contract ID, funding account ID and linkdrop $NEAR amount";
+	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !SEND_MULTIPLE) {
+		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount and whether to send multiple";
 	}
 
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
@@ -56,29 +59,60 @@ async function start() {
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
-	
-	console.log("generating keypair.");
-	let keyPair = await KeyPair.fromRandom('ed25519'); 
-	let pubKey = keyPair.publicKey.toString();
-	console.log('pubKey: ', pubKey);
 
-	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
+	let keyPairs = [];
+	let pubKeys = [];
+
+	if(SEND_MULTIPLE != "false") {
+		console.log("BATCH Creating keypairs");
+		for(var i = 0; i < 5; i++) {
+			console.log('i: ', i);
+			let keyPair = await KeyPair.fromRandom('ed25519'); 
+			keyPairs.push(keyPair);   
+			pubKeys.push(keyPair.publicKey.toString());   
+		}
+		console.log("Finished.");
+	} else {
+		let keyPair = await KeyPair.fromRandom('ed25519'); 
+		keyPairs.push(keyPair);   
+		pubKeys.push(keyPair.publicKey.toString());   
+	}
+
 	try {
-		await fundingAccount.functionCall(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'send', 
-			{
-				public_key: pubKey,
-				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
-			}, 
-			"300000000000000", 
-			parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + 1).toString())
-		);
+		if(SEND_MULTIPLE != "false") {
+			await fundingAccount.functionCall(
+				LINKDROP_PROXY_CONTRACT_ID, 
+				'send_multiple', 
+				{
+					public_keys: pubKeys,
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
+				}, 
+				"300000000000000", 
+				parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
+			);
+		} else {
+			console.log("Sending one linkdrop");
+			await fundingAccount.functionCall(
+				LINKDROP_PROXY_CONTRACT_ID, 
+				'send', 
+				{
+					public_key: pubKeys[0],
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
+				}, 
+				"300000000000000", 
+				parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET).toString())
+			);
+		}
+		
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
     
-	console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPair.secretKey}`);
+	for(var i = 0; i < keyPairs.length; i++) {
+		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);
+		console.log("Pub Key: ", keyPairs[i].publicKey.toString());
+	}
 }
+
 
 start();

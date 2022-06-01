@@ -71,6 +71,7 @@ mod ext_traits;
 mod nft;
 mod ft;
 mod function_call;
+mod helpers;
 
 use crate::ext_traits::*;
 use crate::nft::*;
@@ -85,15 +86,6 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
-/// Defines the type of callback associated with the linkdrop. Either NFT, Fungible Token, or Function call.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub enum CBType {
-    NFT,
-    FT,
-    FC
-}
-
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Clone)]
@@ -106,7 +98,6 @@ pub struct AccountData {
     /*
         EXTRA
     */
-    pub cb_type: Option<CBType>, //nonce - if set, becomes lookup to all NFT, FT, CD 
     pub cb_id: Option<u64>, //nonce - if set, becomes lookup to all NFT, FT, CD 
     pub cb_data_sent: bool,
     
@@ -173,51 +164,44 @@ impl LinkDropProxy {
     pub fn get_key_information(
         &self, 
         key: PublicKey
-    ) -> (AccountData, Option<NFTData>, Option<FTData>, Option<FCData>) {
+    ) -> (
+        Option<AccountData>, 
+        Option<FTData>, 
+        Option<NFTData>, 
+        Option<FCData>
+    ) {
         // By default, every key should have account data
         let account_data = self.accounts
-            .get(&key)
-            .expect("Key missing");
-        
-        // If the linkdrop has a callback ID, return the specific callback info. Otherwise, return only account data. 
-        if let Some(nonce) = account_data.cb_id {
-            let cb_type = account_data.clone().cb_type.unwrap();
+            .get(&key);
 
-            // Check for the specific callback type and return the info.
-            match cb_type {
-                CBType::NFT => {
-                    return (
-                        account_data,
-                        self.nft.get(&nonce),
-                        None,
-                        None
-                    )
-                },
-                CBType::FT => {
-                    return (
-                        account_data,
-                        None,
-                        self.ft.get(&nonce),
-                        None
-                    )
-                },
-                CBType::FC => {
-                    return (
-                        account_data,
-                        None,
-                        None,
-                        self.fc.get(&nonce)
-                    )
-                }
-            }
-        } else {
+        // If there's no account data, return none across the board.
+        if account_data.is_none() {
             return (
-                account_data,
+                None,
                 None,
                 None,
                 None
             )
         }
+
+        // Default all callback data to None
+        let mut ft_data = None;
+        let mut nft_data = None;
+        let mut fc_data = None;
+
+        // If there's a Nonce, remove all occurrences of the nonce and 
+        if let Some(nonce) = account_data.clone().unwrap().cb_id {
+            ft_data = self.ft.get(&nonce);
+            nft_data = self.nft.get(&nonce);
+            fc_data = self.fc.get(&nonce);
+        }
+
+        (
+            account_data,
+            ft_data,
+            nft_data,
+            fc_data
+        )
     }
 
     /// Returns the current nonce on the contract

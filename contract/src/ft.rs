@@ -38,7 +38,6 @@ impl LinkDropProxy {
             balance,
             storage_used,
             cb_id,
-            cb_type,
             cb_data_sent,
         } = self.accounts
             .get(&msg)
@@ -68,7 +67,6 @@ impl LinkDropProxy {
                 balance,
                 storage_used,
                 cb_id,
-                cb_type,
                 cb_data_sent: true,
             },
         );
