@@ -139,6 +139,7 @@ impl LinkDropProxy {
                 - Linkdrop data
             - access key allowance 
             - and a balance for the account (which must be greater than new account base)
+            - Desired function call deposit if specified
         */
         env::log_str(&format!("Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, Desired FC Attached Deposit If Applicable: {}", yocto_to_near(attached_deposit), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(balance.0), yocto_to_near(required_storage), if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}));
         assert!(
@@ -210,7 +211,7 @@ impl LinkDropProxy {
         
         let current_account_id = env::current_account_id();
         let promise = env::promise_batch_create(&current_account_id);
-        let required_storage = 0;
+        let mut required_storage = 0;
         let mut cb_ids = vec![];
 
         // Loop through each public key and insert into the map and create the key
@@ -302,7 +303,7 @@ impl LinkDropProxy {
                 self.nonce += 1;
             }
             let final_storage = env::storage_usage();
-            let required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
+            required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
             
             /*
                 Insert key back into map with proper used storage

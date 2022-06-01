@@ -55,6 +55,7 @@ trait ExtThis {
         cb_method: Option<String>,
         cb_args: Option<Base64VecU8>,
         cb_deposit: Option<U128>,
+        refund_to_deposit: Option<bool>
     ) -> bool;
 
     fn nft_resolve_transfer(

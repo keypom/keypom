@@ -11,5 +11,6 @@ pub struct FCData {
     pub method: String,
     // Optimization
     pub args: Base64VecU8,
-    pub deposit: U128
+    pub deposit: U128,
+    pub refund_to_deposit: Option<bool>,
 }

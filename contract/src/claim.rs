@@ -9,6 +9,9 @@ impl LinkDropProxy {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
 
+        // Ensure the user attaches enough GAS and isn't doing anything malicious / third party.
+        assert!(prepaid_gas >= MIN_PREPAID_GAS_FOR_CLAIM, "Cannot attach less than the minimum amount of prepaid gas");
+
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Delete the access key and remove / return account data, and optionally callback data.
@@ -24,7 +27,8 @@ impl LinkDropProxy {
             ft_storage,
             cb_method,
             cb_args,
-            cb_deposit
+            cb_deposit,
+            refund_to_deposit,
         ) = self.process_claim();
         
         used_gas = env::used_gas();
@@ -51,6 +55,7 @@ impl LinkDropProxy {
             cb_method,
             cb_args,
             cb_deposit,
+            refund_to_deposit,
             env::current_account_id(),
             NO_DEPOSIT,
             GAS_FOR_ON_CLAIM,
@@ -72,6 +77,9 @@ impl LinkDropProxy {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
 
+        // Ensure the user attaches enough GAS and isn't doing anything malicious / third party.
+        assert!(prepaid_gas >= MIN_PREPAID_GAS_FOR_CLAIM, "Cannot attach less than the minimum amount of prepaid gas");
+
         env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Delete the access key and remove / return account data, and optionally callback data.
@@ -87,7 +95,8 @@ impl LinkDropProxy {
             ft_storage,
             cb_method,
             cb_args,
-            cb_deposit
+            cb_deposit,
+            refund_to_deposit
         ) = self.process_claim();
 
         used_gas = env::used_gas();
@@ -119,6 +128,7 @@ impl LinkDropProxy {
             cb_method,
             cb_args,
             cb_deposit,
+            refund_to_deposit,
             env::current_account_id(),
             NO_DEPOSIT,
             GAS_FOR_ON_CLAIM,
@@ -149,6 +159,7 @@ impl LinkDropProxy {
         cb_method: Option<String>,
         cb_args: Option<Base64VecU8>,
         cb_deposit: Option<U128>,
+        refund_to_deposit: Option<bool>
 
     ) -> bool {
         let mut used_gas = env::used_gas();
@@ -181,8 +192,23 @@ impl LinkDropProxy {
 
         env::log_str(&format!("In on claim before refund used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Refunding
-        Promise::new(funder_id.clone()).transfer(amount_to_refund);
+        /* 
+            If the claim is not successful, we should always refund. The only case where we refund
+            if the claim was successful is if the user specified that the refund should go into the
+            deposit.
+
+            0 0     Refund     !success  -> do refund
+            0 1     Refund      success  -> do refund
+            1 0     No Refund  !success  -> do refund
+            1 1     No Refund   Success  -> don't do refund
+        */ 
+        if !claim_succeeded || (!refund_to_deposit.unwrap_or(false) && claim_succeeded) {
+            // Refunding
+            env::log_str(&format!("Refunding funder: {:?} For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
+            Promise::new(funder_id.clone()).transfer(amount_to_refund);
+        } else {
+            env::log_str(&format!("Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}", funder_id, claim_succeeded, refund_to_deposit.unwrap_or(false)));
+        }
 
         /*
             Non Fungible Tokens
@@ -315,15 +341,18 @@ impl LinkDropProxy {
                 let method = cb_method.unwrap();
                 let args = cb_args.unwrap();
 
+                env::log_str(&format!("Attaching Total: {:?} Deposit: {:?} Should Refund?: {:?} Amount To Refund: {:?}", yocto_to_near(deposit.0 + if refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}), yocto_to_near(deposit.0), refund_to_deposit.unwrap_or(false), yocto_to_near(amount_to_refund)));
+
                 Promise::new(receiver_id).function_call(
                     method, 
                     args.0, 
-                    deposit.0, 
+                    // The claim is successful so attach the amount to refund to the deposit instead of refunding the funder.
+                    deposit.0 + if refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}, 
                     GAS_FOR_CALLBACK_FUNCTION_CALL
                 );
 
             } else {
-                env::log_str(&format!("Claim unsuccesful. Refunding callback deposit as well: {}", yocto_to_near(deposit.0)));
+                env::log_str(&format!("Claim unsuccessful. Refunding callback deposit as well: {}", yocto_to_near(deposit.0)));
                 // Refunding
                 Promise::new(funder_id).transfer(deposit.0);
             }
@@ -356,6 +385,7 @@ impl LinkDropProxy {
         Option<String>, // Callback method to call
         Option<Base64VecU8>, // Callback arguments to pass
         Option<U128>, // Callback deposit to attach
+        Option<bool>, // Should the refund go to the deposit of the function call
     ) {
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
@@ -388,6 +418,7 @@ impl LinkDropProxy {
         let mut cb_method = None;
         let mut cb_args = None;
         let mut cb_deposit = None;
+        let mut refund_to_deposit = None;
 
         // If the linkdrop has a callback ID, return the specific callback info. Otherwise, return only account data. 
         if let Some(nonce) = account_data.cb_id {
@@ -414,6 +445,7 @@ impl LinkDropProxy {
                     cb_method = Some(fc_data.method);
                     cb_args = Some(fc_data.args);
                     cb_deposit = Some(fc_data.deposit);
+                    refund_to_deposit = fc_data.refund_to_deposit;
                 }
             }
         }
@@ -434,7 +466,8 @@ impl LinkDropProxy {
             ft_storage,
             cb_method,
             cb_args,
-            cb_deposit
+            cb_deposit,
+            refund_to_deposit
         )
     }
 }
