@@ -58,8 +58,8 @@ async function start() {
 	//deployed linkdrop proxy contract
 	await initiateNear();
 
-	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
-		throw "must specify proxy contract ID, funding account ID and linkdrop $NEAR amount";
+	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !SEND_MULTIPLE) {
+		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount and whether to send multiple";
 	}
 
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
