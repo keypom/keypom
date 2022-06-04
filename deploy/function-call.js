@@ -8,12 +8,27 @@ let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
 
-let OFFSET = 0.1;
+let OFFSET = 2;
 
 let NETWORK_ID = "testnet";
 let near;
 let config;
 let keyStore;
+
+const METADATA = {
+	"title": "My Linkdrop Called This Function!",
+	"description": "Linkdrop NFT that was lazy minted when the linkdrop was claimed",
+	"media": "https://bafybeicek3skoaae4p5chsutjzytls5dmnj5fbz6iqsd2uej334sy46oge.ipfs.nftstorage.link/",
+	"media_hash": null,
+	"copies": 10000,
+	"issued_at": null,
+	"expires_at": null,
+	"starts_at": null,
+	"updated_at": null,
+	"extra": null,
+	"reference": null,
+	"reference_hash": null
+};
 
 // set up near
 const initiateNear = async () => {
@@ -62,6 +77,7 @@ async function start() {
 
 	let keyPairs = [];
 	let pubKeys = [];
+	let fc_data = [];
 
 	if(SEND_MULTIPLE != "false") {
 		console.log("BATCH Creating keypairs");
@@ -70,12 +86,40 @@ async function start() {
 			let keyPair = await KeyPair.fromRandom('ed25519'); 
 			keyPairs.push(keyPair);   
 			pubKeys.push(keyPair.publicKey.toString());   
+
+			fc_data.push(
+				{
+					receiver: "example-nft.testnet",
+					method: "nft_mint",
+					args: JSON.stringify({
+						token_id: keyPair.publicKey.toString(),
+						token_metadata: METADATA,
+					}),
+					deposit: parseNearAmount("1"),
+					refund_to_deposit: true,
+					claimed_account_field: "receiver_id"
+				}
+			);
 		}
 		console.log("Finished.");
 	} else {
 		let keyPair = await KeyPair.fromRandom('ed25519'); 
 		keyPairs.push(keyPair);   
-		pubKeys.push(keyPair.publicKey.toString());   
+		pubKeys.push(keyPair.publicKey.toString()); 
+		
+		fc_data.push(
+			{
+				receiver: "example-nft.testnet",
+				method: "nft_mint",
+				args: JSON.stringify({
+					token_id: keyPair.publicKey.toString(),
+					token_metadata: METADATA,
+				}),
+				deposit: parseNearAmount("1"),
+				refund_to_deposit: true,
+				claimed_account_field: "receiver_id"
+			}
+		);
 	}
 
 	try {
@@ -85,7 +129,8 @@ async function start() {
 				'send_multiple', 
 				{
 					public_keys: pubKeys,
-					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+					fc_data
 				}, 
 				"300000000000000", 
 				parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
@@ -97,7 +142,8 @@ async function start() {
 				'send', 
 				{
 					public_key: pubKeys[0],
-					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+					fc_data: fc_data[0]
 				}, 
 				"300000000000000", 
 				parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET).toString())
