@@ -564,20 +564,20 @@ impl LinkDropProxy {
         // Get the status of the cross contract call
         let claim_succeeded = self.assert_success(); 
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
+        // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS since balance was sent to new account.
         let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
         
         env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used.0), yocto_to_near(BURNT_GAS)));
 
-        // If not successful, the balance is added to the amount to refund since it was never transferred.
+        // If not successful, the balance and deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
-            env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance as well: {}", balance.0));
-            amount_to_refund += balance.0
+            env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance: {} and deposit: {}", balance.0, deposit.0));
+            amount_to_refund += balance.0 + deposit.0
         }
 
         /* 
-            If the claim is not successful, we should always refund. The only case where we refund
-            if the claim was successful is if the user specified that the refund should go into the
+            If the claim is not successful, we should always refund. The only case where we don't refund is
+            if the claim was successful and the user specified that the refund should go into the
             deposit.
 
             0 0     Refund     !success  -> do refund
@@ -596,7 +596,7 @@ impl LinkDropProxy {
         /*
             Function Calls
         */
-        // Only call the function if the claim was successful. If not, refund the callback sender for the callback deposit. 
+        // Only call the function if the claim was successful.
         if claim_succeeded {
             let mut final_args = args.clone();
 
@@ -615,11 +615,6 @@ impl LinkDropProxy {
                 deposit.0 + if add_refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}, 
                 GAS_FOR_CALLBACK_FUNCTION_CALL
             );
-
-        } else {
-            env::log_str(&format!("Claim unsuccessful. Refunding callback deposit as well: {}", yocto_to_near(deposit.0)));
-            // Refunding
-            Promise::new(funder_id).transfer(deposit.0);
         }
 
         claim_succeeded
