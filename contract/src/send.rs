@@ -359,8 +359,9 @@ impl LinkDropProxy {
             this must be true for every public key passed in.
         */
         env::log_str(&format!(
-            "Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, total function call deposits (if applicable): {}, length: {}", 
+            "Attached Deposit: {}, Required: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, total function call deposits (if applicable): {}, length: {}", 
             yocto_to_near(attached_deposit), 
+            yocto_to_near((ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0) * len + total_attached_deposit), 
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(ACCESS_KEY_ALLOWANCE), 
             yocto_to_near(balance.0), 
