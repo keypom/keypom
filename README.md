@@ -26,7 +26,7 @@
 - [How it Works](#how-it-works)
   - [NFTs](#nft-linkdrops)
   - [Fungible Tokens](#fungible-token-linkdrops)
-  - [Function Calls](#fungible-token-linkdrops)
+  - [Function Calls](#function-calls)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Quickstart](#quickstart)  
