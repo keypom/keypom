@@ -46,6 +46,9 @@ impl LinkDropProxy {
             "Account for PublicKey exists"
         );
 
+        // Add the public key to the set of keys mapped to the funder
+        self.internal_add_key_to_funder(&env::predecessor_account_id(), &public_key);
+
         // Check if FT data was passed in and insert into map
         if ft_data.is_some() {
             // Ensure that if FT data is specified, NFT and FC are not
@@ -125,9 +128,6 @@ impl LinkDropProxy {
                 cb_data_sent: if ft_data.is_some() || nft_data.is_some() { false } else { true }
             },
         );
-
-        // Add the public key to the set of keys mapped to the funder
-        self.internal_add_key_to_funder(&env::predecessor_account_id(), &public_key);
         
         /*
             ensure the user attached enough to cover:
@@ -257,6 +257,9 @@ impl LinkDropProxy {
             "Account for PublicKey exists"
             );
 
+            // Add the public key to the set of keys mapped to the funder
+            self.internal_add_key_to_funder(&env::predecessor_account_id(), &pk);
+
             // Check if FT data was passed in and insert into map
             if ft_data.is_some() {
                 // Ensure that if FT data is specified, NFT and FC are not
@@ -340,9 +343,6 @@ impl LinkDropProxy {
                     cb_data_sent: if ft_data.is_some() || nft_data.is_some() { false } else { true }
                 },
             );
-
-            // Add the public key to the set of keys mapped to the funder
-            self.internal_add_key_to_funder(&env::predecessor_account_id(), &pk);
 
 
             /*
