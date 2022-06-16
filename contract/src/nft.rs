@@ -30,7 +30,7 @@ impl LinkDropProxy {
             storage_used,
             cb_id,
             cb_data_sent,
-        } = self.accounts
+        } = self.data_for_pk
             .get(&msg)
             .expect("Missing public key");
 
@@ -51,7 +51,7 @@ impl LinkDropProxy {
         
 
         // Insert the account data back with the cb data sent set to true
-        self.accounts.insert(
+        self.data_for_pk.insert(
             &msg,
             &AccountData{
                 funder_id,
@@ -94,15 +94,16 @@ impl LinkDropProxy {
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !transfer_succeeded {
             env::log_str("Attempt to transfer the new account was unsuccessful. Sending the NFT to the original sender.");
-            ext_nft_contract::nft_transfer(
-                token_sender, 
-                token_id,
-                None,
-                Some("Linkdropped NFT Refund".to_string()),
-                token_contract,
-                1,
-                GAS_FOR_SIMPLE_NFT_TRANSFER,
-            );
+            ext_nft_contract::ext(token_contract)
+                // Call nft transfer with the min GAS and 1 yoctoNEAR. all unspent GAS will be added on top
+                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
+                .with_attached_deposit(1)
+                .nft_transfer(
+                    token_sender, 
+                    token_id,
+                    None,
+                    Some("Linkdropped NFT Refund".to_string()),
+                );
         }
 
         transfer_succeeded
