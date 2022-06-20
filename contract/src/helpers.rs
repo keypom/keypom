@@ -32,8 +32,6 @@ impl LinkDropProxy {
                     //we get a new unique prefix for the collection
                     account_id_hash: hash_account_id(&account_id),
                 }
-                .try_to_vec()
-                .unwrap(),
             )
         });
 

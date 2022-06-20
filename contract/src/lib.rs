@@ -17,13 +17,14 @@ const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N
 
 
 /* 
-    allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
+allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
     available when GAS is burnt using the access key. The burnt GAS will not be refunded but any unburnt GAS that remains can be refunded.
 
     If this is lower, wallet will throw the following error:
     Access Key {account_id}:{public_key} does not have enough balance 0.01 for transaction costing 0.018742491841859367297184
 */  
-const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000; // 0.02 N 
+const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000; // 0.02 N (200 TGas)
+
 /* 
     minimum amount of NEAR that a new account (with longest possible name) must have when created 
     If this is less, it will throw a lack balance for state error (assuming you have the same account ID length)
