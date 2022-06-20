@@ -1,3 +1,5 @@
+use near_sdk::GasWeight;
+
 use crate::*;
 
 
@@ -39,7 +41,7 @@ impl LinkDropProxy {
             storage_used,
             cb_id,
             cb_data_sent,
-        } = self.accounts
+        } = self.data_for_pk
             .get(&msg)
             .expect("Missing public key");
 
@@ -60,7 +62,7 @@ impl LinkDropProxy {
         assert!(ft_contract == contract_id && ft_sender == sender_id && ft_balance == amount, "FT data must match what was sent");
         
         // Insert the account data back with the cb data sent set to true
-        self.accounts.insert(
+        self.data_for_pk.insert(
             &msg,
             &AccountData{
                 funder_id,
@@ -107,21 +109,25 @@ impl LinkDropProxy {
         let batch_ft_promise_id = env::promise_batch_create(&token_contract);
 
         // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-        env::promise_batch_action_function_call(
+        // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
+        env::promise_batch_action_function_call_weight(
             batch_ft_promise_id,
             "storage_deposit",
             json!({ "account_id": token_sender }).to_string().as_bytes(),
             amount.0,
-            GAS_FOR_STORAGE_DEPOSIT
+            MIN_GAS_FOR_STORAGE_DEPOSIT,
+            GasWeight(1)
         );
 
         // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-        env::promise_batch_action_function_call(
+        // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
+        env::promise_batch_action_function_call_weight(
             batch_ft_promise_id,
             "ft_transfer",
             json!({ "receiver_id": token_sender, "amount": amount, "memo": "Refunding Linkdropped FT Tokens" }).to_string().as_bytes(),
             1,
-            GAS_FOR_FT_TRANSFER
+            MIN_GAS_FOR_FT_TRANSFER,
+            GasWeight(1)
         );
 
         // Return the result of the batch as the return of the function
@@ -194,6 +200,7 @@ impl LinkDropProxy {
 
             // If the user overpaid for the desired linkdrop balance, refund them.
             if attached_deposit > (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len {    
+                env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len)));
                 Promise::new(funder_id).transfer(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len);
             }
             

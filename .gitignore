@@ -5,6 +5,7 @@
 /.pnp
 .pnp.js
 /out
+/neardev
 
 #cache
 .cache

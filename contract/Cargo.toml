@@ -8,4 +8,4 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-near-sdk = "=4.0.0-pre.8"
+near-sdk = "4.0.0"

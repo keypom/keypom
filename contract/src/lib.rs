@@ -1,11 +1,11 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::LookupMap;
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::{json};
 use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
-    Promise, PromiseResult, PublicKey, PromiseOrValue, promise_result_as_success,
+    Promise, PromiseResult, PublicKey, PromiseOrValue, promise_result_as_success, CryptoHash,
 };
 
 /* 
@@ -17,13 +17,14 @@ const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N
 
 
 /* 
-    allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
+allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
     available when GAS is burnt using the access key. The burnt GAS will not be refunded but any unburnt GAS that remains can be refunded.
 
     If this is lower, wallet will throw the following error:
     Access Key {account_id}:{public_key} does not have enough balance 0.01 for transaction costing 0.018742491841859367297184
 */  
-const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000; // 0.02 N 
+const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000; // 0.02 N (200 TGas)
+
 /* 
     minimum amount of NEAR that a new account (with longest possible name) must have when created 
     If this is less, it will throw a lack balance for state error (assuming you have the same account ID length)
@@ -37,27 +38,27 @@ const NO_DEPOSIT: u128 = 0;
 const BURNT_GAS: u128 = 10_000_000_000_000_000_000_000;
 
 /*
-    GAS Constants
+    GAS Constants (outlines the minimum to attach. Any unspent GAS will be added according to the weights)
 */
-const MIN_PREPAID_GAS_FOR_CLAIM: Gas = Gas(100_000_000_000_000); // 100 TGas
-
-const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000); // 10 TGas
-const GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000); // 25 TGas
-
-const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
-const GAS_FOR_ON_CLAIM: Gas = Gas(24_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 24 TGas + 25 TGas + 10 TGas= 59 TGas 
+const MIN_GAS_FOR_ON_CLAIM: Gas = Gas(55_000_000_000_000); // 55 TGas
 
 // NFTs
-const GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000); // 10 TGas
-const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(15_000_000_000_000 + GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
+const MIN_GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000); // 10 TGas
+const MIN_GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(15_000_000_000_000 + MIN_GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
 
 // FTs
-const GAS_FOR_FT_TRANSFER: Gas = Gas(7_500_000_000_000); // 7.5 TGas
-const GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(7_500_000_000_000); // 7.5 TGas
-const GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + GAS_FOR_FT_TRANSFER.0 + GAS_FOR_STORAGE_DEPOSIT.0); // 10 TGas + 7.5 TGas + 7.5 TGas = 25 TGas
+// Actual amount of GAS to attach when querying the storage balance bounds. No unspent GAS will be attached on top of this (weight of 0)
+const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000); // 10 TGas
+const MIN_GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000); // 25 TGas
+const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000); // 5 TGas
+const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000); // 5 TGas
+const MIN_GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + MIN_GAS_FOR_FT_TRANSFER.0 + MIN_GAS_FOR_STORAGE_DEPOSIT.0); // 13 TGas + 5 TGas + 5 TGas = 23 TGas
 
 // Function Calls
-const GAS_FOR_CALLBACK_FUNCTION_CALL: Gas = Gas(40_000_000_000_000); // 40 TGas
+const MIN_GAS_FOR_CALLBACK_FUNCTION_CALL: Gas = Gas(30_000_000_000_000); // 30 TGas
+
+// Actual amount of GAS to attach when creating a new account. No unspent GAS will be attached on top of this (weight of 0)
+const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
 
 // Utils
 const ONE_GIGGA_GAS: u64 = 1_000_000_000;
@@ -71,6 +72,7 @@ mod ext_traits;
 mod nft;
 mod ft;
 mod function_call;
+mod views;
 mod helpers;
 
 use crate::ext_traits::*;
@@ -103,9 +105,24 @@ pub struct AccountData {
     
 }
 
+/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
+#[near_bindgen]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct KeyInfo {
+    pub pk: Option<PublicKey>,
+    pub account_data: Option<AccountData>, 
+    pub ft_data: Option<FTData>, 
+    pub nft_data: Option<NFTData>, 
+    pub fc_data: Option<FCData>
+    
+}
+
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
-    Accounts,
+    DataForPublicKey,
+    KeysForFunder,
+    KeysPerFunderInner { account_id_hash: CryptoHash },
     NFTData,
     FTData,
     FCData,
@@ -115,7 +132,8 @@ enum StorageKey {
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
 pub struct LinkDropProxy {
     pub linkdrop_contract: AccountId,
-    pub accounts: LookupMap<PublicKey, AccountData>,
+    pub data_for_pk: UnorderedMap<PublicKey, AccountData>,
+    pub keys_for_funder: LookupMap<AccountId, UnorderedSet<PublicKey>>,
 
     pub nonce: u64,
 
@@ -134,7 +152,8 @@ impl LinkDropProxy {
     pub fn new(linkdrop_contract: AccountId) -> Self {
         Self {
             linkdrop_contract,
-            accounts: LookupMap::new(StorageKey::Accounts),
+            data_for_pk: UnorderedMap::new(StorageKey::DataForPublicKey),
+            keys_for_funder: LookupMap::new(StorageKey::KeysForFunder),
             nft: LookupMap::new(StorageKey::NFTData),
             ft: LookupMap::new(StorageKey::FTData),
             fc: LookupMap::new(StorageKey::FCData),
@@ -151,61 +170,4 @@ impl LinkDropProxy {
         );
 		self.linkdrop_contract = linkdrop_contract;
 	}
-
-    /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
-    pub fn get_key_balance(&self, key: PublicKey) -> U128 {
-        let account_data = self.accounts
-            .get(&key)
-            .expect("Key missing");
-        (account_data.balance.0).into()
-    }
-
-    /// Returns the data corresponding to a specific key
-    pub fn get_key_information(
-        &self, 
-        key: PublicKey
-    ) -> (
-        Option<AccountData>, 
-        Option<FTData>, 
-        Option<NFTData>, 
-        Option<FCData>
-    ) {
-        // By default, every key should have account data
-        let account_data = self.accounts
-            .get(&key);
-
-        // If there's no account data, return none across the board.
-        if account_data.is_none() {
-            return (
-                None,
-                None,
-                None,
-                None
-            )
-        }
-
-        // Default all callback data to None
-        let mut ft_data = None;
-        let mut nft_data = None;
-        let mut fc_data = None;
-
-        // If there's a Nonce, remove all occurrences of the nonce and 
-        if let Some(nonce) = account_data.clone().unwrap().cb_id {
-            ft_data = self.ft.get(&nonce);
-            nft_data = self.nft.get(&nonce);
-            fc_data = self.fc.get(&nonce);
-        }
-
-        (
-            account_data,
-            ft_data,
-            nft_data,
-            fc_data
-        )
-    }
-
-    /// Returns the current nonce on the contract
-    pub fn get_nonce(&self) -> u64 {
-        self.nonce
-    }   
 }

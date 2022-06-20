@@ -32,8 +32,8 @@ impl LinkDropProxy {
         // Keep track of the cb info
         let mut cb_id = None;
 
-        let pk = public_key;
-        assert!(self.accounts.insert(
+        let pk = public_key.clone();
+        assert!(self.data_for_pk.insert(
                 &pk,
                 &AccountData{
                     funder_id: env::predecessor_account_id(),
@@ -45,6 +45,9 @@ impl LinkDropProxy {
             ).is_none(),
             "Account for PublicKey exists"
         );
+
+        // Add the public key to the set of keys mapped to the funder
+        self.internal_add_key_to_funder(&env::predecessor_account_id(), &public_key);
 
         // Check if FT data was passed in and insert into map
         if ft_data.is_some() {
@@ -111,7 +114,7 @@ impl LinkDropProxy {
         /*
             Insert key back into map with proper used storage
         */
-        self.accounts.insert(
+        self.data_for_pk.insert(
             &pk,
             &AccountData{
                 funder_id: env::predecessor_account_id(),
@@ -135,7 +138,17 @@ impl LinkDropProxy {
             - and a balance for the account (which must be greater than new account base)
             - Desired function call deposit if specified
         */
-        env::log_str(&format!("Attached Deposit: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, Desired FC Attached Deposit If Applicable: {}", yocto_to_near(attached_deposit), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(balance.0), yocto_to_near(required_storage), if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}));
+        env::log_str(&format!(
+            "Attached Deposit: {}, Required: {}, Access Key Storage: {}, Access Key Allowance: {}, Linkdrop Balance: {}, required storage: {}, Desired FC Attached Deposit If Applicable: {}", 
+            yocto_to_near(attached_deposit), 
+            yocto_to_near(ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(ACCESS_KEY_ALLOWANCE), 
+            yocto_to_near(balance.0), 
+            yocto_to_near(required_storage), 
+            if fc_data.is_some() {yocto_to_near(fc_data.clone().unwrap().deposit.0)} else {0.0}
+            )
+        );
         assert!(
             attached_deposit >= ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0},
             "Deposit must be large enough to cover desired balance, access key allowance, and contract storage, and function call deposit if applicable."
@@ -158,20 +171,24 @@ impl LinkDropProxy {
                 Get the storage required by the FT contract and ensure the user has attached enough
                 deposit to cover the storage and perform refunds if they overpayed.
             */
-            ext_ft_contract::storage_balance_bounds(
-                ft_data.unwrap().ft_contract,
-                NO_DEPOSIT,
-                GAS_FOR_STORAGE_BALANCE_BOUNDS,
-            ).then(ext_self::resolve_storage_check(
-                vec![pk],
-                env::predecessor_account_id(),
-                balance,
-                U128(required_storage),
-                vec![cb_id.expect("callback ID expected")],
-                env::current_account_id(),
-                attached_deposit,
-                GAS_FOR_RESOLVE_STORAGE_CHECK,
-            ));
+            ext_ft_contract::ext(ft_data.unwrap().ft_contract)
+                // Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.
+                .with_static_gas(GAS_FOR_STORAGE_BALANCE_BOUNDS)
+                .with_unused_gas_weight(0)
+                .storage_balance_bounds()
+            .then(
+                Self::ext(env::current_account_id())
+                    // Resolve the promise with the attached deposit and the min GAS. All unspent GAS will be added to this call.
+                    .with_static_gas(MIN_GAS_FOR_RESOLVE_STORAGE_CHECK)
+                    .with_attached_deposit(attached_deposit)
+                    .resolve_storage_check(
+                        vec![pk],
+                        env::predecessor_account_id(),
+                        balance,
+                        U128(required_storage),
+                        vec![cb_id.expect("callback ID expected")],
+                    )
+            );
         } else if attached_deposit > balance.0 + ACCESS_KEY_ALLOWANCE + required_storage + ACCESS_KEY_STORAGE + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0} {    
             env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - balance.0 - ACCESS_KEY_ALLOWANCE - required_storage - ACCESS_KEY_STORAGE - if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0})));
             // If the user overpaid for the desired linkdrop balance, refund them.
@@ -227,7 +244,7 @@ impl LinkDropProxy {
             // Keep track of the cb info
             let mut cb_id = None;
 
-            assert!(self.accounts.insert(
+            assert!(self.data_for_pk.insert(
                 &pk,
                 &AccountData{
                     funder_id: env::predecessor_account_id(),
@@ -239,6 +256,9 @@ impl LinkDropProxy {
             ).is_none(),
             "Account for PublicKey exists"
             );
+
+            // Add the public key to the set of keys mapped to the funder
+            self.internal_add_key_to_funder(&env::predecessor_account_id(), &pk);
 
             // Check if FT data was passed in and insert into map
             if ft_data.is_some() {
@@ -309,7 +329,7 @@ impl LinkDropProxy {
             /*
                 Insert key back into map with proper used storage
             */
-            self.accounts.insert(
+            self.data_for_pk.insert(
                 &pk,
                 &AccountData{
                     funder_id: env::predecessor_account_id(),
@@ -323,6 +343,7 @@ impl LinkDropProxy {
                     cb_data_sent: if ft_data.is_some() || nft_data.is_some() { false } else { true }
                 },
             );
+
 
             /*
                 ensure the user attached enough to cover:
@@ -383,20 +404,25 @@ impl LinkDropProxy {
                 Get the storage required by the FT contract and ensure the user has attached enough
                 deposit to cover the storage and perform refunds if they overpayed.
             */ 
-            ext_ft_contract::storage_balance_bounds(
-                ft_data.unwrap().ft_contract,
-                NO_DEPOSIT,
-                GAS_FOR_STORAGE_BALANCE_BOUNDS,
-            ).then(ext_self::resolve_storage_check(
-                public_keys,
-                env::predecessor_account_id(),
-                balance,
-                U128(required_storage),
-                cb_ids,
-                env::current_account_id(),
-                attached_deposit,
-                GAS_FOR_RESOLVE_STORAGE_CHECK,
-            ));
+
+            ext_ft_contract::ext(ft_data.unwrap().ft_contract)
+                // Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.
+                .with_static_gas(GAS_FOR_STORAGE_BALANCE_BOUNDS)
+                .with_unused_gas_weight(0)
+                .storage_balance_bounds()
+            .then(
+                Self::ext(env::current_account_id())
+                    // Resolve the promise with the attached deposit and the min GAS. All unspent GAS will be added to this call.
+                    .with_static_gas(MIN_GAS_FOR_RESOLVE_STORAGE_CHECK)
+                    .with_attached_deposit(attached_deposit)
+                    .resolve_storage_check(
+                        public_keys,
+                        env::predecessor_account_id(),
+                        balance,
+                        U128(required_storage),
+                        cb_ids,
+                    )
+            );
         } else if attached_deposit > (ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0) * len + total_attached_deposit {
             env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - ((ACCESS_KEY_STORAGE + required_storage + ACCESS_KEY_ALLOWANCE + balance.0) * len + total_attached_deposit))));    
             // If the user overpaid for the desired linkdrop balances, refund them.
