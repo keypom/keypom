@@ -1,4 +1,18 @@
+use near_sdk::GasWeight;
+
 use crate::*;
+
+
+/// Keep track fungible token data for an access key
+#[near_bindgen]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct FTData {
+    pub ft_contract: AccountId,
+    pub ft_sender: AccountId,
+    pub ft_balance: U128,
+    pub ft_storage: Option<U128>,
+}
 
 // Returned from the storage balance bounds cross contract call on the FT contract
 #[derive(Deserialize)]
@@ -24,31 +38,38 @@ impl LinkDropProxy {
         let AccountData {
             funder_id,
             balance,
-            token_sender: _,
-            token_contract,
-            nft_id: _,
-            ft_balance: _,
-            ft_storage,
-        } = self.accounts
+            storage_used,
+            cb_id,
+            cb_data_sent,
+        } = self.data_for_pk
             .get(&msg)
             .expect("Missing public key");
 
-        // Ensure that we know the storage and it has been paid
-        assert!(ft_storage.is_some());
-        // Ensure that the token contract is none since we only store one set of NFT / FT data.
-        assert!(token_contract.is_none(), "PK must have no external token contract.");
+        // Ensure there's a callback ID (meaning the linkdrop is not a regular linkdrop)
+        let callback_id = cb_id.expect("Callback ID must be set");
 
-        // Insert the FT token amount and token contract back into the map along with the sender ID (which may differ from funder)
-        self.accounts.insert(
+        // Assert that the FTs have NOT been sent yet
+        assert!(cb_data_sent == false, "FTs already sent. Cannot send more.");
+
+        // Ensure that the linkdrop contains FT data already
+        let FTData { 
+            ft_contract,
+            ft_sender, 
+            ft_balance, 
+            ft_storage: _ 
+        } = self.ft.get(&callback_id).expect("No FT data found for the unique callback ID.");
+
+        assert!(ft_contract == contract_id && ft_sender == sender_id && ft_balance == amount, "FT data must match what was sent");
+        
+        // Insert the account data back with the cb data sent set to true
+        self.data_for_pk.insert(
             &msg,
             &AccountData{
                 funder_id,
-                balance: balance,
-                token_sender: Some(sender_id),
-                token_contract: Some(contract_id),
-                nft_id: None,
-                ft_balance: Some(amount),
-                ft_storage,
+                balance,
+                storage_used,
+                cb_id,
+                cb_data_sent: true,
             },
         );
 
@@ -88,21 +109,25 @@ impl LinkDropProxy {
         let batch_ft_promise_id = env::promise_batch_create(&token_contract);
 
         // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-        env::promise_batch_action_function_call(
+        // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
+        env::promise_batch_action_function_call_weight(
             batch_ft_promise_id,
             "storage_deposit",
             json!({ "account_id": token_sender }).to_string().as_bytes(),
             amount.0,
-            GAS_FOR_STORAGE_DEPOSIT
+            MIN_GAS_FOR_STORAGE_DEPOSIT,
+            GasWeight(1)
         );
 
         // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-        env::promise_batch_action_function_call(
+        // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
+        env::promise_batch_action_function_call_weight(
             batch_ft_promise_id,
             "ft_transfer",
             json!({ "receiver_id": token_sender, "amount": amount, "memo": "Refunding Linkdropped FT Tokens" }).to_string().as_bytes(),
             1,
-            GAS_FOR_FT_TRANSFER
+            MIN_GAS_FOR_FT_TRANSFER,
+            GasWeight(1)
         );
 
         // Return the result of the batch as the return of the function
@@ -117,51 +142,78 @@ impl LinkDropProxy {
         &mut self, 
         public_keys: Vec<PublicKey>, 
         funder_id: AccountId,
-        balance: U128 
-    ) {
+        balance: U128,
+        required_storage: U128,
+        cb_ids: Vec<u64>,
+    ) -> bool {
         let attached_deposit = env::attached_deposit();
         let len = public_keys.len() as u128;
 
         // Check promise result.
-        let result = promise_result_as_success().unwrap_or_else(|| {
+        let result = promise_result_as_success();
+
+        if result.is_none() || cb_ids.len() as u128 != len {
             // Refund the funder any excess $NEAR and panic which will cause generic $NEAR linkdrops to be used
-            Promise::new(funder_id.clone()).transfer(attached_deposit - (balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE) * len);
-            env::panic_str("Unsuccessful query to get storage. Refunding funder excess $NEAR and generic $NEAR linkdrop will be used.");
-        });
-
-        // Try to get the storage balance bounds from the result of the promise
-		let StorageBalanceBounds{ min, max: _ } = near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result).unwrap_or_else(|_| {
-            // Refund the funder any excess $NEAR and panic which will cause generic $NEAR linkdrops to be used
-            Promise::new(funder_id.clone()).transfer(attached_deposit - (balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE) * len);
-            env::panic_str("Invalid storage balance. Refunding funder excess $NEAR and generic $NEAR linkdrop will be used.");
-        });
-
-        // Ensure the user attached enough to cover the regular $NEAR linkdrops case PLUS the storage for the fungible token contract for each key
-        assert!(
-            attached_deposit >= attached_deposit - (balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE + min.0) * len,
-            "Deposit must be large enough to cover desired balance, access key allowance, and contract storage"
-        );
-
-        // Loop through each public key and insert them into the map with the new FT storage
-        for pk in public_keys {
-            // Ensure none of the public keys exist already
-            self.accounts.insert(
-                    &pk,
-                    &AccountData{
-                        funder_id: funder_id.clone(),
-                        balance,
-                        token_sender: None,
-                        token_contract: None,
-                        nft_id: None,
-                        ft_balance: None,
-                        ft_storage: Some(min)
-                    },
-                );
+            env::log_str("Unsuccessful query to get storage. Refunding funder excess $NEAR and generic $NEAR linkdrop will be used.");
+            Promise::new(funder_id.clone()).transfer(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0) * len);
+            for cb_id in cb_ids {
+                self.ft.remove(&cb_id);
+            }
+            return false;
         }
 
-        if attached_deposit > (balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE) * len {    
+        // Try to get the storage balance bounds from the result of the promise
+		if let Ok(StorageBalanceBounds{ min, max: _ }) = near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result.unwrap()) {
+            // Ensure the user attached enough to cover the regular $NEAR linkdrops case PLUS the storage for the fungible token contract for each key
+            
+            if attached_deposit < attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len {
+                env::log_str("Deposit must be large enough to cover desired balance, access key allowance, and contract storage");
+                for cb_id in cb_ids {
+                    self.ft.remove(&cb_id);
+                }
+                return false;
+            }
+
+            let mut index = 0;
+            // Loop through each public key and insert them into the map with the new FT storage
+            for _pk_ in public_keys {
+                // Get current FT data excluding the storage
+                let FTData { 
+                    ft_contract,
+                    ft_sender, 
+                    ft_balance, 
+                    ft_storage: _
+                } = self.ft.get(&cb_ids[index]).expect("No FT data found for the unique callback ID.");
+
+                // Insert the FT data including the new storage for the unique callback ID associated with the linkdrop
+                self.ft.insert(
+                    &cb_ids[index], 
+                    &FTData { 
+                        ft_contract: ft_contract,
+                        ft_sender: ft_sender, 
+                        ft_balance: ft_balance, 
+                        ft_storage: Some(min),
+                    }
+                );
+                index += 1;
+            }
+
             // If the user overpaid for the desired linkdrop balance, refund them.
-            Promise::new(funder_id).transfer(attached_deposit - (balance.0 + ACCESS_KEY_ALLOWANCE + STORAGE_ALLOWANCE) * len);
+            if attached_deposit > (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len {    
+                env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len)));
+                Promise::new(funder_id).transfer(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len);
+            }
+            
+            // Everything went well and we return true
+            return true
+        } else {
+            env::log_str("Unsuccessful query to get storage. Refunding funder excess $NEAR and generic $NEAR linkdrop will be used.");
+            // Refund the funder any excess $NEAR and panic which will cause generic $NEAR linkdrops to be used
+            Promise::new(funder_id.clone()).transfer(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0) * len);
+            for cb_id in cb_ids {
+                self.ft.remove(&cb_id);
+            }
+            return false;
         }
     }
 }

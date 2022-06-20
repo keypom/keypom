@@ -1,11 +1,11 @@
 [package]
 name = "linkdrop-proxy"
-version = "0.1.0"
-authors = ["Matt Lockyer <mattdlockyer@gmail.com>"]
+version = "1.0.0"
+authors = ["Ben Kurrek <bkurrek@uwaterloo.ca>, Matt Lockyer <mattdlockyer@gmail.com>"]
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-near-sdk = "4.0.0-pre.8"
+near-sdk = "4.0.0"

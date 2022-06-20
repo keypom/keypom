@@ -6,6 +6,9 @@ const homedir = require("os").homedir();
 let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
+let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
+
+let OFFSET = 2;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -55,8 +58,8 @@ async function start() {
 	//deployed linkdrop proxy contract
 	await initiateNear();
 
-	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
-		throw "must specify proxy contract ID, funding account ID and linkdrop $NEAR amount";
+	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !SEND_MULTIPLE) {
+		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount and whether to send multiple";
 	}
 
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
@@ -76,60 +79,106 @@ async function start() {
 		console.log('error initializing contract: ', e);
 	}
 	
-	console.log("generating keypair.");
-	let keyPair = await KeyPair.fromRandom('ed25519'); 
-	let pubKey = keyPair.publicKey.toString();
-	console.log('pubKey: ', pubKey);
+	let keyPairs = [];
+	let pubKeys = [];
+	let nft_data = [];
 
-	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
-	try {
-		await fundingAccount.functionCall(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'send', 
-			{
-				public_key: pubKey,
-				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
-			}, 
-			"300000000000000", 
-			parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + 1).toString())
-		);
-	} catch(e) {
-		console.log('error initializing contract: ', e);
+	if(SEND_MULTIPLE != "false") {
+		console.log("BATCH Creating keypairs");
+		for(var i = 0; i < 5; i++) {
+			console.log('i: ', i);
+			let keyPair = await KeyPair.fromRandom('ed25519'); 
+			keyPairs.push(keyPair);   
+			pubKeys.push(keyPair.publicKey.toString());  
+			
+			nft_data.push({
+				nft_sender: FUNDING_ACCOUNT_ID,
+				nft_contract: NFT_CONTRACT_ID,
+				nft_token_id: keyPair.publicKey.toString()
+			});
+		}
+		console.log("Finished.");
+	} else {
+		let keyPair = await KeyPair.fromRandom('ed25519'); 
+		keyPairs.push(keyPair);   
+		pubKeys.push(keyPair.publicKey.toString());  
+		
+		nft_data.push({
+			nft_sender: FUNDING_ACCOUNT_ID,
+			nft_contract: NFT_CONTRACT_ID,
+			nft_token_id: keyPair.publicKey.toString()
+		});
 	}
 
 	try {
-		const tokenId = Date.now().toString();
-		console.log(`minting NFT with token ID ${tokenId} on contract ${tokenId} with receiver: ${FUNDING_ACCOUNT_ID}`);
+		if(SEND_MULTIPLE != "false") {
+			await fundingAccount.functionCall(
+				LINKDROP_PROXY_CONTRACT_ID, 
+				'send_multiple', 
+				{
+					public_keys: pubKeys,
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+					nft_data
+				}, 
+				"300000000000000", 
+				parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
+			);
+		} else {
+			console.log("Sending one linkdrop");
+			await fundingAccount.functionCall(
+				LINKDROP_PROXY_CONTRACT_ID, 
+				'send', 
+				{
+					public_key: pubKeys[0],
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+					nft_data: nft_data[0]
+				}, 
+				"300000000000000", 
+				parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET).toString())
+			);
+		}
 		
-		await fundingAccount.functionCall(
-			NFT_CONTRACT_ID, 
-			'nft_mint', 
-			{
-				token_id: tokenId,
-				receiver_id: FUNDING_ACCOUNT_ID,
-				token_metadata: METADATA,
-			}, 
-			"300000000000000", 
-			parseNearAmount('1')
-		);
+	} catch(e) {
+		console.log('error initializing contract: ', e);
+	}
+	
+	try {
+		for(var i = 0; i < pubKeys.length; i++) {
+			console.log(`minting NFT with token ID ${nft_data[i].nft_token_id} on contract ${NFT_CONTRACT_ID} with receiver: ${FUNDING_ACCOUNT_ID}`);
+			
+			await fundingAccount.functionCall(
+				NFT_CONTRACT_ID, 
+				'nft_mint', 
+				{
+					token_id: nft_data[i].nft_token_id,
+					receiver_id: FUNDING_ACCOUNT_ID,
+					token_metadata: METADATA,
+				}, 
+				"300000000000000", 
+				parseNearAmount('1')
+			);
 
-		console.log(`transferring NFT to linkdrop proxy contract with nft_transfer_call`);
-		await fundingAccount.functionCall(
-			NFT_CONTRACT_ID, 
-			'nft_transfer_call', 
-			{
-				token_id: tokenId,
-				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
-				msg: pubKey,
-			}, 
-			"300000000000000", 
-			'1'
-		);
+			console.log(`transferring NFT to linkdrop proxy contract with nft_transfer_call`);
+			await fundingAccount.functionCall(
+				NFT_CONTRACT_ID, 
+				'nft_transfer_call', 
+				{
+					token_id: nft_data[i].nft_token_id,
+					receiver_id: LINKDROP_PROXY_CONTRACT_ID,
+					msg: pubKeys[i],
+				}, 
+				"300000000000000", 
+				'1'
+			);
+		}
 	} catch(e) {
 		console.log('error minting and sending NFTs: ', e);
 	}
     
-	console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPair.secretKey}`);
+	for(var i = 0; i < keyPairs.length; i++) {
+		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);
+		console.log("Pub Key: ", keyPairs[i].publicKey.toString());
+	}
 }
 
 start();

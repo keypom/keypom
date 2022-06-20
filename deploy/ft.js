@@ -6,8 +6,10 @@ const homedir = require("os").homedir();
 let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
-let FT_CONTRACT_ID = process.env.FT_CONTRACT_ID;;
+let FT_CONTRACT_ID = process.env.FT_CONTRACT_ID;
+let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
 
+let OFFSET = 2;
 let NETWORK_ID = "testnet";
 let near;
 let config;
@@ -37,8 +39,8 @@ async function start() {
 	//deployed linkdrop proxy contract
 	await initiateNear();
 
-	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !FT_CONTRACT_ID) {
-		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount, and FT contract ID";
+	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !SEND_MULTIPLE) {
+		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount and whether to send multiple";
 	}
 
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
@@ -58,57 +60,95 @@ async function start() {
 		console.log('error initializing contract: ', e);
 	}
 	
-	console.log("generating keypair.");
-	let keyPair = await KeyPair.fromRandom('ed25519'); 
-	let pubKey = keyPair.publicKey.toString();
-	console.log('pubKey: ', pubKey);
+	let keyPairs = [];
+	let pubKeys = [];
+
+	if(SEND_MULTIPLE != "false") {
+		console.log("BATCH Creating keypairs");
+		for(var i = 0; i < 5; i++) {
+			console.log('i: ', i);
+			let keyPair = await KeyPair.fromRandom('ed25519'); 
+			keyPairs.push(keyPair);   
+			pubKeys.push(keyPair.publicKey.toString());  
+		}
+		console.log("Finished.");
+	} else {
+		let keyPair = await KeyPair.fromRandom('ed25519'); 
+		keyPairs.push(keyPair);   
+		pubKeys.push(keyPair.publicKey.toString());  
+	}
 
 	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
 	try {
-		await fundingAccount.functionCall(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'send', 
-			{
-				public_key: pubKey,
-				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
-				ft_contract_id: FT_CONTRACT_ID
-			}, 
-			"300000000000000", 
-			parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + 1).toString())
-		);
+		let ft_data = {};
+		ft_data["ft_contract"] = FT_CONTRACT_ID;
+		ft_data["ft_sender"] = FUNDING_ACCOUNT_ID;
+		ft_data["ft_balance"] = "25";
+
+		if(SEND_MULTIPLE != "false") {
+			await fundingAccount.functionCall(
+				LINKDROP_PROXY_CONTRACT_ID, 
+				'send_multiple', 
+				{
+					public_keys: pubKeys,
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+					ft_data
+				}, 
+				"300000000000000", 
+				parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
+			);
+		} else {
+			console.log("Sending one linkdrop");
+			await fundingAccount.functionCall(
+				LINKDROP_PROXY_CONTRACT_ID, 
+				'send', 
+				{
+					public_key: pubKeys[0],
+					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+					ft_data
+				}, 
+				"300000000000000", 
+				parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET).toString())
+			);
+		}
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
 
 	try {
-		console.log(`Paying for FT storage on contract: ${FT_CONTRACT_ID} for the proxy contract ID`);
-		await fundingAccount.functionCall(
-			FT_CONTRACT_ID, 
-			'storage_deposit', 
-			{
-				account_id: LINKDROP_PROXY_CONTRACT_ID,
-			}, 
-			"300000000000000", 
-			parseNearAmount('1')
-		);
+		for(var i = 0; i < pubKeys.length; i++) {
+			console.log(`Paying for FT storage on contract: ${FT_CONTRACT_ID} for the proxy contract ID`);
+			await fundingAccount.functionCall(
+				FT_CONTRACT_ID, 
+				'storage_deposit', 
+				{
+					account_id: LINKDROP_PROXY_CONTRACT_ID,
+				}, 
+				"300000000000000", 
+				parseNearAmount('1')
+			);
 
-		console.log(`Transferring 25 FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
-		await fundingAccount.functionCall(
-			FT_CONTRACT_ID, 
-			'ft_transfer_call', 
-			{
-				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
-				amount: "25",
-				msg: pubKey,
-			}, 
-			"300000000000000", 
-			'1'
-		);
+			console.log(`Transferring 25 FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
+			await fundingAccount.functionCall(
+				FT_CONTRACT_ID, 
+				'ft_transfer_call', 
+				{
+					receiver_id: LINKDROP_PROXY_CONTRACT_ID,
+					amount: "25",
+					msg: pubKeys[i],
+				}, 
+				"300000000000000", 
+				'1'
+			);
+		}
 	} catch(e) {
 		console.log('error sending FTs: ', e);
 	}
-    
-	console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPair.secretKey}`);
+	
+	for(var i = 0; i < keyPairs.length; i++) {
+		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);
+		console.log("Pub Key: ", keyPairs[i].publicKey.toString());
+	}
 }
 
 start();

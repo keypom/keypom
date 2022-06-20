@@ -1,5 +1,15 @@
 use crate::*;
 
+/// Keep track of nft data 
+#[near_bindgen]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct NFTData {
+    pub nft_sender: AccountId,
+    pub nft_contract: AccountId,
+    pub nft_token_id: String,
+}
+
 #[near_bindgen]
 impl LinkDropProxy {
     pub fn nft_on_transfer(
@@ -17,29 +27,38 @@ impl LinkDropProxy {
         let AccountData {
             funder_id,
             balance,
-            token_sender: _,
-            token_contract,
-            nft_id: _,
-            ft_balance: _,
-            ft_storage: _
-        } = self.accounts
+            storage_used,
+            cb_id,
+            cb_data_sent,
+        } = self.data_for_pk
             .get(&msg)
             .expect("Missing public key");
 
-        // Ensure that both the token contract is none since we only store one set of NFT / FT data.
-        assert!(token_contract.is_none(), "PK must have no external token contract.");
+        // Ensure there's a callback ID (meaning the linkdrop is not a regular linkdrop)
+        let callback_id = cb_id.expect("Callback ID must be set");
+        
+        // Assert that the FTs have NOT been sent yet
+        assert!(cb_data_sent == false, "NFT already sent. Cannot send more.");
 
-        // Insert the NFT token ID and token contract back into the map
-        self.accounts.insert(
+        // Ensure that the linkdrop contains FT data already
+        let NFTData { 
+            nft_sender,
+            nft_contract,
+            nft_token_id
+        } = self.nft.get(&callback_id).expect("No NFT data found for the unique callback ID.");
+
+        assert!(nft_sender == sender_id && nft_contract == contract_id && nft_token_id == token_id, "NFT data must match what was sent");
+        
+
+        // Insert the account data back with the cb data sent set to true
+        self.data_for_pk.insert(
             &msg,
             &AccountData{
                 funder_id,
                 balance,
-                token_sender: Some(sender_id),
-                token_contract: Some(contract_id),
-                nft_id: Some(token_id),
-                ft_balance: None,
-                ft_storage: None
+                storage_used,
+                cb_id,
+                cb_data_sent: true,
             },
         );
 
@@ -75,15 +94,16 @@ impl LinkDropProxy {
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !transfer_succeeded {
             env::log_str("Attempt to transfer the new account was unsuccessful. Sending the NFT to the original sender.");
-            ext_nft_contract::nft_transfer(
-                token_sender, 
-                token_id,
-                None,
-                Some("Linkdropped NFT Refund".to_string()),
-                token_contract,
-                1,
-                GAS_FOR_SIMPLE_NFT_TRANSFER,
-            );
+            ext_nft_contract::ext(token_contract)
+                // Call nft transfer with the min GAS and 1 yoctoNEAR. all unspent GAS will be added on top
+                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
+                .with_attached_deposit(1)
+                .nft_transfer(
+                    token_sender, 
+                    token_id,
+                    None,
+                    Some("Linkdropped NFT Refund".to_string()),
+                );
         }
 
         transfer_succeeded
