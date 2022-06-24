@@ -29,51 +29,28 @@ impl DropZone {
         &mut self,
         sender_id: AccountId,
         amount: U128,
-        msg: PublicKey,
+        msg: DropId,
     ) -> PromiseOrValue<U128> {
         let contract_id = env::predecessor_account_id();
 
-        // No need to assert that the funder is the sender since we don't wanna enforce anything unnecessary.
-        // All that matters is we've received the FTs and that they belongs to some public key.
-        let AccountData {
-            funder_id,
-            balance,
-            storage_used,
-            cb_id,
-            cb_data_sent,
-        } = self.data_for_pk
-            .get(&msg)
-            .expect("Missing public key");
+        let mut drop = self.drop_type_for_id.get(&msg).expect("No drop found for ID");
+        let FTData { ft_contract, ft_sender, ft_balance, ft_storage } = drop.ft_data.expect("No FT data found for drop");
 
-        // Ensure there's a callback ID (meaning the linkdrop is not a regular linkdrop)
-        let callback_id = cb_id.expect("Callback ID must be set");
-
-        // Assert that the FTs have NOT been sent yet
-        assert!(cb_data_sent == false, "FTs already sent. Cannot send more.");
-
-        // Ensure that the linkdrop contains FT data already
-        let FTData { 
-            ft_contract,
-            ft_sender, 
-            ft_balance, 
-            ft_storage: _ 
-        } = self.ft.get(&callback_id).expect("No FT data found for the unique callback ID.");
-
-        assert!(ft_contract == contract_id && ft_sender == sender_id && ft_balance == amount, "FT data must match what was sent");
+        assert!(ft_contract == contract_id && ft_sender == sender_id && amount.0 >= ft_balance.0, "FT data must match what was sent");
         
-        // Insert the account data back with the cb data sent set to true
-        self.data_for_pk.insert(
-            &msg,
-            &AccountData{
-                funder_id,
-                balance,
-                storage_used,
-                cb_id,
-                cb_data_sent: true,
-            },
-        );
+        // Get the number of keys to register with the amount that is sent.
+        let keys_to_register = amount.0 / ft_balance.0;
+        drop.keys_registered += keys_to_register;
 
-        // Everything went well and we don't need to return any tokens
+        // Ensure that the keys to register can't exceed the number of keys in the drop
+        if drop.keys_registered > drop.len {
+            drop.keys_registered = drop.len
+        }
+
+        // Insert the drop with the updated data
+        self.drop_type_for_id.insert(&msg, &drop);
+
+        // Everything went well and we don't need to return any tokens (if they over-sent, we keep it)
         PromiseOrValue::Value(U128(0))
     }
 

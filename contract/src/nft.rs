@@ -16,51 +16,26 @@ impl DropZone {
         &mut self,
         token_id: String,
         sender_id: AccountId,
-        msg: PublicKey,
+        msg: DropId,
     ) -> PromiseOrValue<bool> {
         assert!(token_id.len() <= 256, "Contract cannot accept token IDs of length greater than 256 bytes");
 
         let contract_id = env::predecessor_account_id();
 
-        // No need to assert that the funder is the sender since we don't wanna enforce anything unnecessary.
-        // All that matters is we've received the token and that the token belongs to some public key.
-        let AccountData {
-            funder_id,
-            balance,
-            storage_used,
-            cb_id,
-            cb_data_sent,
-        } = self.data_for_pk
-            .get(&msg)
-            .expect("Missing public key");
-
-        // Ensure there's a callback ID (meaning the linkdrop is not a regular linkdrop)
-        let callback_id = cb_id.expect("Callback ID must be set");
-        
-        // Assert that the FTs have NOT been sent yet
-        assert!(cb_data_sent == false, "NFT already sent. Cannot send more.");
-
-        // Ensure that the linkdrop contains FT data already
-        let NFTData { 
-            nft_sender,
-            nft_contract,
-            nft_token_id
-        } = self.nft.get(&callback_id).expect("No NFT data found for the unique callback ID.");
+        let mut drop = self.drop_type_for_id.get(&msg).expect("No drop found for ID");
+        let NFTData { nft_sender, nft_contract, nft_token_id } = drop.nft_data.expect("No NFT data found for drop");
 
         assert!(nft_sender == sender_id && nft_contract == contract_id && nft_token_id == token_id, "NFT data must match what was sent");
         
+        drop.keys_registered += 1;
 
-        // Insert the account data back with the cb data sent set to true
-        self.data_for_pk.insert(
-            &msg,
-            &AccountData{
-                funder_id,
-                balance,
-                storage_used,
-                cb_id,
-                cb_data_sent: true,
-            },
-        );
+        // Ensure that the number of keys registered cannot exceed the drop length
+        if drop.keys_registered > drop.len {
+            drop.keys_registered = drop.len
+        }
+
+        // Insert the drop with the updated data
+        self.drop_type_for_id.insert(&msg, &drop);
 
         // Everything went well and we don't need to return the token.
         PromiseOrValue::Value(false)

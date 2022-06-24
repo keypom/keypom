@@ -31,13 +31,14 @@ impl DropZone {
         );
 
         let len = public_keys.len() as u128;
+        let drop_id = self.nonce;
         
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
 
         // Add drop type with largest possible storage used and keys registered for now.
         self.drop_type_for_id.insert(
-            &self.nonce, 
+            &drop_id, 
             &DropType { 
                 funder_id: env::predecessor_account_id(), 
                 balance, 
@@ -51,11 +52,11 @@ impl DropZone {
             }
         );
         // Add this drop ID to the funder's set of drops
-        self.internal_add_drop_to_funder(env::predecessor_account_id(), self.nonce);
+        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &drop_id);
 
         // Loop through and add each drop ID to the public keys
         for pk in public_keys {
-            self.drop_id_for_pk.insert(&pk, &self.nonce);
+            self.drop_id_for_pk.insert(&pk, &drop_id);
         }
 
         // TODO: add storage for access keys * num of public keys
@@ -64,7 +65,7 @@ impl DropZone {
         let total_required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
         
         self.drop_type_for_id.insert(
-            &self.nonce, 
+            &drop_id, 
             &DropType { 
                 funder_id: env::predecessor_account_id(), 
                 balance, 
@@ -78,7 +79,7 @@ impl DropZone {
                 keys_registered: 0
             }
         );
-        
+
         // Increment the drop ID nonce
         self.nonce += 1;
 
@@ -147,10 +148,7 @@ impl DropZone {
                     .with_attached_deposit(attached_deposit)
                     .resolve_storage_check(
                         public_keys,
-                        env::predecessor_account_id(),
-                        balance,
-                        U128(required_storage),
-                        cb_ids,
+                        drop_id
                     )
             );
         } else if attached_deposit > required_deposit {
