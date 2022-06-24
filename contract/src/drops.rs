@@ -1,6 +1,6 @@
 use near_sdk::{Balance, require};
 
-use crate::*;
+use crate::{*, helpers::hash_account_id};
 
 #[near_bindgen]
 impl DropZone {
@@ -25,65 +25,66 @@ impl DropZone {
         require!(num_cbs_specified <= 1, "You cannot specify more than one callback data");
 
         // Ensure the balance for each drop is larger than the minimum
-        assert!(
+        require!(
             balance.0 >= NEW_ACCOUNT_BASE,
             "cannot have a desired account balance less than the absolute minimum for creating an account"
         );
 
+        // Funder is the predecessor
+        let funder_id = env::predecessor_account_id();
         let len = public_keys.len() as u128;
         let drop_id = self.nonce;
-        
+        let attached_deposit = env::attached_deposit();
+
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
+
+        let mut key_set: UnorderedSet<PublicKey> = UnorderedSet::new(StorageKey::DropsForFunderInner {
+            //we get a new unique prefix for the collection
+            account_id_hash: hash_account_id(&funder_id),
+        });
+
+        // Add this drop ID to the funder's set of drops
+        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &drop_id);
+
+        // Loop through and add each drop ID to the public keys. Also populate the key set.
+        for pk in public_keys.clone() {
+            key_set.insert(&pk);
+            self.drop_id_for_pk.insert(&pk, &drop_id);
+        }
+
+        let mut drop = DropType { 
+            funder_id: env::predecessor_account_id(), 
+            balance, 
+            pks: key_set,
+            ft_data: ft_data.clone(), 
+            nft_data: nft_data.clone(),
+            fc_data: fc_data.clone(),
+            storage_used_per_key: U128(u128::max_value()),
+            keys_registered: 0
+        };
 
         // Add drop type with largest possible storage used and keys registered for now.
         self.drop_type_for_id.insert(
             &drop_id, 
-            &DropType { 
-                funder_id: env::predecessor_account_id(), 
-                balance, 
-                pks: public_keys,
-                len, 
-                ft_data, 
-                nft_data,
-                fc_data, 
-                storage_used_per_key: U128(u128::max_value()), 
-                keys_registered: 0
-            }
+            &drop
         );
-        // Add this drop ID to the funder's set of drops
-        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &drop_id);
-
-        // Loop through and add each drop ID to the public keys
-        for pk in public_keys {
-            self.drop_id_for_pk.insert(&pk, &drop_id);
-        }
 
         // TODO: add storage for access keys * num of public keys
         // Calculate the storage being used for the entire drop and add it to the drop type.
         let final_storage = env::storage_usage();
         let total_required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
-        
+
+        // Insert the drop back with the storage
+        drop.storage_used_per_key = U128(total_required_storage / len);
         self.drop_type_for_id.insert(
             &drop_id, 
-            &DropType { 
-                funder_id: env::predecessor_account_id(), 
-                balance, 
-                pks: public_keys, 
-                len,
-                ft_data, 
-                nft_data,
-                fc_data, 
-                storage_used_per_key: U128(total_required_storage / len),
-                // All keys start as unregistered. Assets must be sent to the contract to register them (i.e FTs)
-                keys_registered: 0
-            }
+            &drop
         );
 
         // Increment the drop ID nonce
         self.nonce += 1;
 
-        let attached_deposit = env::attached_deposit();
         let required_deposit = total_required_storage + (ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len;
         env::log_str(&format!(
             "Attached Deposit: {}, 

@@ -18,20 +18,20 @@ impl DropZone {
         sender_id: AccountId,
         msg: DropId,
     ) -> PromiseOrValue<bool> {
-        assert!(token_id.len() <= 256, "Contract cannot accept token IDs of length greater than 256 bytes");
+        require!(token_id.len() <= 256, "Contract cannot accept token IDs of length greater than 256 bytes");
 
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_type_for_id.get(&msg).expect("No drop found for ID");
-        let NFTData { nft_sender, nft_contract, nft_token_id } = drop.nft_data.expect("No NFT data found for drop");
+        let NFTData { nft_sender, nft_contract, nft_token_id } = drop.nft_data.as_ref().expect("No NFT data found for drop");
 
-        assert!(nft_sender == sender_id && nft_contract == contract_id && nft_token_id == token_id, "NFT data must match what was sent");
+        require!(nft_sender == &sender_id && nft_contract == &contract_id && nft_token_id == &token_id, "NFT data must match what was sent");
         
         drop.keys_registered += 1;
 
         // Ensure that the number of keys registered cannot exceed the drop length
-        if drop.keys_registered > drop.len {
-            drop.keys_registered = drop.len
+        if drop.keys_registered > drop.pks.len() {
+            drop.keys_registered = drop.pks.len()
         }
 
         // Insert the drop with the updated data

@@ -34,17 +34,17 @@ impl DropZone {
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_type_for_id.get(&msg).expect("No drop found for ID");
-        let FTData { ft_contract, ft_sender, ft_balance, ft_storage } = drop.ft_data.expect("No FT data found for drop");
+        let FTData { ft_contract, ft_sender, ft_balance, ft_storage: _ } = drop.ft_data.as_ref().expect("No FT data found for drop");
 
-        assert!(ft_contract == contract_id && ft_sender == sender_id && amount.0 >= ft_balance.0, "FT data must match what was sent");
+        require!(ft_contract == &contract_id && ft_sender == &sender_id && amount.0 >= ft_balance.0, "FT data must match what was sent");
         
         // Get the number of keys to register with the amount that is sent.
-        let keys_to_register = amount.0 / ft_balance.0;
+        let keys_to_register = (amount.0 / ft_balance.0) as u64;
         drop.keys_registered += keys_to_register;
 
         // Ensure that the keys to register can't exceed the number of keys in the drop
-        if drop.keys_registered > drop.len {
-            drop.keys_registered = drop.len
+        if drop.keys_registered > drop.pks.len() {
+            drop.keys_registered = drop.pks.len()
         }
 
         // Insert the drop with the updated data
@@ -131,7 +131,7 @@ impl DropZone {
             env::log_str("Unsuccessful query to get storage. Refunding funder.");
             // Remove the drop
             let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
-            let funder_id = drop.funder_id;
+            let funder_id = drop.funder_id.clone();
             
             // Remove the drop ID from the funder's list
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
@@ -140,14 +140,12 @@ impl DropZone {
             for pk in public_keys {
                 self.drop_id_for_pk.remove(&pk.clone());
 
-                // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
-                if drop.pks.remove(&pk) {
-                    drop.len = drop.len - 1
-                }
+                // Remove the pk from the drop's set.
+                drop.pks.remove(&pk);
             }
             
             // If there are keys still left in the drop, add the drop back in with updated data
-            if drop.len > 0 {
+            if !drop.pks.is_empty() {
                 // Add drop type back with the updated data.
                 self.drop_type_for_id.insert(
                     &drop_id, 
@@ -172,7 +170,7 @@ impl DropZone {
                 env::log_str("Deposit not large enough to cover FT storage for each key. Refunding funder.");
                 // Remove the drop
                 let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
-                let funder_id = drop.funder_id;
+                let funder_id = drop.funder_id.clone();
                 
                 // Remove the drop ID from the funder's list
                 self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
@@ -181,14 +179,12 @@ impl DropZone {
                 for pk in public_keys {
                     self.drop_id_for_pk.remove(&pk.clone());
 
-                    // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
-                    if drop.pks.remove(&pk) {
-                        drop.len = drop.len - 1
-                    }
+                    // Remove the pk from the drop's set.
+                    drop.pks.remove(&pk);
                 }
                 
                 // If there are keys still left in the drop, add the drop back in with updated data
-                if drop.len > 0 {
+                if !drop.pks.is_empty() {
                     // Add drop type back with the updated data.
                     self.drop_type_for_id.insert(
                         &drop_id, 
@@ -203,8 +199,10 @@ impl DropZone {
             }
 
             // Update the FT data to include the storage and insert the drop back with the updated FT data
-            let mut new_ft_data = drop.ft_data.unwrap();
+            let mut new_ft_data = drop.ft_data.clone().unwrap();
             new_ft_data.ft_storage = Some(min);
+            drop.ft_data = Some(new_ft_data);
+
             self.drop_type_for_id.insert(
                 &drop_id, 
                 &drop
@@ -223,7 +221,7 @@ impl DropZone {
             env::log_str("Unsuccessful query to get storage. Refunding funder.");
             // Remove the drop
             let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
-            let funder_id = drop.funder_id;
+            let funder_id = drop.funder_id.clone();
             
             // Remove the drop ID from the funder's list
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
@@ -232,14 +230,12 @@ impl DropZone {
             for pk in public_keys {
                 self.drop_id_for_pk.remove(&pk.clone());
 
-                // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
-                if drop.pks.remove(&pk) {
-                    drop.len = drop.len - 1
-                }
+                // Remove the pk from the drop's set.
+                drop.pks.remove(&pk);
             }
             
             // If there are keys still left in the drop, add the drop back in with updated data
-            if drop.len > 0 {
+            if !drop.pks.is_empty() {
                 // Add drop type back with the updated data.
                 self.drop_type_for_id.insert(
                     &drop_id, 

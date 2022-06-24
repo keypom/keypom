@@ -1,11 +1,12 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LookupSet};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::{json};
 use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
     Promise, PromiseResult, PublicKey, PromiseOrValue, promise_result_as_success, CryptoHash,
+    require
 };
 
 /* 
@@ -91,17 +92,14 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
 pub type DropId = u128;
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[derive(BorshDeserialize, BorshSerialize, Serialize)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct DropType {
     // Funder of this specific drop type
     pub funder_id: AccountId,
     // Balance for all linkdrops of this drop type
     pub balance: U128,
     // Set of public keys associated with this drop type
-    pub pks: LookupSet<PublicKey>,
-    // Total number of keys currently linked to this drop (both registered and unregistered)
-    pub len: u128,
+    pub pks: UnorderedSet<PublicKey>,
 
     // Specific data associated with this drop type
     pub ft_data: Option<FTData>, 
@@ -110,7 +108,7 @@ pub struct DropType {
     // How much storage was used for EACH key and not the entire drop as a whole 
     pub storage_used_per_key: U128,
     // How many keys are registered (assets such as FTs sent)
-    pub keys_registered: u128,
+    pub keys_registered: u64,
 }
 
 

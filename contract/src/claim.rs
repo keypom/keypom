@@ -253,29 +253,27 @@ impl DropZone {
         // Remove the drop ID for the public key
         self.drop_id_for_pk.remove(&signer_pk.clone());
 
-        // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
-        if drop.pks.remove(&signer_pk) {
-            drop.len = drop.len - 1
-        }
+        // Remove the pk from the drop's set.
+        drop.pks.remove(&signer_pk);
 
         // If it's an NFT or FT drop, decrement the registered keys
         if drop.ft_data.is_some() || drop.nft_data.is_some() {
             if drop.keys_registered == 0 {
-                env::panic_str("Key not registerred. Assets must be sent")
+                env::panic_str("Key not registered. Assets must be sent")
             }
 
             drop.keys_registered -= 1;
         }
         
         // If there are keys still left in the drop, add the drop back in with updated data
-        if drop.len > 0 {
+        if !drop.pks.is_empty() {
             // Add drop type back with the updated data.
             self.drop_type_for_id.insert(
                 &drop_id, 
                 &drop
             );
         }
-        
+
         // Return the drop
         drop
     }
