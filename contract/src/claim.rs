@@ -11,9 +11,8 @@ impl DropZone {
 
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return account data, and optionally callback data.
-        let key_data = self.process_claim();
-        let account_data = key_data.account_data.unwrap();
+        // Delete the access key and remove / return drop data.
+        let drop_data = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -21,9 +20,9 @@ impl DropZone {
         env::log_str(&format!("in regular claim right before transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Send the existing account ID the desired linkdrop balance.
-        Promise::new(account_id.clone()).transfer(account_data.balance.0)
+        Promise::new(account_id.clone()).transfer(drop_data.balance.0)
         .then(
-            if let Some(ft_data) = key_data.ft_data {
+            if let Some(ft_data) = drop_data.ft_data {
                 // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -31,13 +30,11 @@ impl DropZone {
                     // Account ID that claimed the linkdrop
                     account_id, 
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
-                    // Did the sender end up sending the FTs to the contract
-                    account_data.cb_data_sent,
+                    drop_data.storage_used_per_key,
                     // Who sent the FTs?
                     ft_data.ft_sender,
                     // Where are the FTs stored
@@ -47,7 +44,7 @@ impl DropZone {
                     // How much storage does it cost to register the new account
                     ft_data.ft_storage.unwrap(),
                 )
-            } else if let Some(nft_data) = key_data.nft_data {
+            } else if let Some(nft_data) = drop_data.nft_data {
                 // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -55,13 +52,11 @@ impl DropZone {
                     // Account ID that claimed the linkdrop
                     account_id, 
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
-                    // Did the sender end up sending the FTs to the contract
-                    account_data.cb_data_sent,
+                    drop_data.storage_used_per_key,
                     // Sender of the NFT
                     nft_data.nft_sender,
                     // Contract where the NFT is stored
@@ -69,7 +64,7 @@ impl DropZone {
                     // Token ID for the NFT
                     nft_data.nft_token_id,
                 )
-            } else if let Some(fc_data) = key_data.fc_data {
+            } else if let Some(fc_data) = drop_data.fc_data {
                 // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -77,11 +72,11 @@ impl DropZone {
                     // Account ID that claimed the linkdrop
                     account_id, 
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
+                    drop_data.storage_used_per_key,
                     // Receiver of the function call
                     fc_data.receiver,
                     // Method to call on the contract
@@ -101,11 +96,11 @@ impl DropZone {
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
                 .on_claim_simple(
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
+                    drop_data.storage_used_per_key,
                 )
             }
         );
@@ -128,9 +123,8 @@ impl DropZone {
 
         env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return account data, and optionally callback data.
-        let key_data = self.process_claim();
-        let account_data = key_data.account_data.unwrap();
+        // Delete the access key and remove / return drop data.
+        let drop_data = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -140,7 +134,7 @@ impl DropZone {
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
         ext_linkdrop::ext(self.linkdrop_contract.clone())
             // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
-            .with_attached_deposit(account_data.balance.0)
+            .with_attached_deposit(drop_data.balance.0)
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
             .with_unused_gas_weight(0)
             .create_account(
@@ -148,7 +142,7 @@ impl DropZone {
                 new_public_key,  
             )
         .then(
-            if let Some(ft_data) = key_data.ft_data {
+            if let Some(ft_data) = drop_data.ft_data {
                 // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -156,13 +150,11 @@ impl DropZone {
                     // Account ID that claimed the linkdrop
                     new_account_id, 
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
-                    // Did the sender end up sending the FTs to the contract
-                    account_data.cb_data_sent,
+                    drop_data.storage_used_per_key,
                     // Who sent the FTs?
                     ft_data.ft_sender,
                     // Where are the FTs stored
@@ -172,7 +164,7 @@ impl DropZone {
                     // How much storage does it cost to register the new account
                     ft_data.ft_storage.unwrap(),
                 )
-            } else if let Some(nft_data) = key_data.nft_data {
+            } else if let Some(nft_data) = drop_data.nft_data {
                 // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -180,13 +172,11 @@ impl DropZone {
                     // Account ID that claimed the linkdrop
                     new_account_id, 
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
-                    // Did the sender end up sending the FTs to the contract
-                    account_data.cb_data_sent,
+                    drop_data.storage_used_per_key,
                     // Sender of the NFT
                     nft_data.nft_sender,
                     // Contract where the NFT is stored
@@ -194,7 +184,7 @@ impl DropZone {
                     // Token ID for the NFT
                     nft_data.nft_token_id,
                 )
-            } else if let Some(fc_data) = key_data.fc_data {
+            } else if let Some(fc_data) = drop_data.fc_data {
                 // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -202,11 +192,11 @@ impl DropZone {
                     // Account ID that claimed the linkdrop
                     new_account_id, 
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
+                    drop_data.storage_used_per_key,
                     // Receiver of the function call
                     fc_data.receiver,
                     // Method to call on the contract
@@ -226,11 +216,11 @@ impl DropZone {
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
                 .on_claim_simple(
                     // Account ID that funded the linkdrop
-                    account_data.funder_id, 
+                    drop_data.funder_id,
                     // Balance associated with the linkdrop
-                    account_data.balance, 
+                    drop_data.balance, 
                     // How much storage was used to store linkdrop info
-                    account_data.storage_used,
+                    drop_data.storage_used_per_key,
                 )
             }
         );
@@ -243,7 +233,7 @@ impl DropZone {
     }
 
     /// Internal method for deleting the used key and removing / returning linkdrop data.
-    fn process_claim(&mut self) -> KeyInfo {
+    fn process_claim(&mut self) -> DropType {
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
             env::predecessor_account_id(),
@@ -254,35 +244,40 @@ impl DropZone {
         // Get the PK of the signer which should be the contract's function call access key
         let signer_pk = env::signer_account_pk();
 
-        // By default, every key should have account data
-        let account_data = self.data_for_pk
-            .remove(&signer_pk)
-            .expect("Key missing");
+        // By default, every key should have a drop ID
+        let drop_id = self.drop_id_for_pk.get(&signer_pk).expect("No drop ID found for PK");
+        // Remove the drop
+        let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+        // Remove the drop ID from the funder's list
+        self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+        // Remove the drop ID for the public key
+        self.drop_id_for_pk.remove(&signer_pk.clone());
 
-        // Remove the key from the set of keys mapped to the funder
-        self.internal_remove_key_to_funder(&account_data.funder_id, &signer_pk);
-
-        // Delete the key
-        Promise::new(env::current_account_id()).delete_key(env::signer_account_pk());
-
-        // Default all callback data to None
-        let mut key_info = KeyInfo {
-            pk: None,
-            account_data: Some(account_data.clone()),
-            fc_data: None,
-            nft_data: None,
-            ft_data: None
-        };
-
-        // If there's a Nonce, remove all occurrences of the nonce and return the linkdrop data
-        if let Some(nonce) = account_data.cb_id {
-            key_info.ft_data = self.ft.remove(&nonce);
-            key_info.nft_data = self.nft.remove(&nonce);
-            key_info.fc_data = self.fc.remove(&nonce);
+        // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
+        if drop.pks.remove(&signer_pk) {
+            drop.len = drop.len - 1
         }
 
-        // Return the key info
-        key_info
+        // If it's an NFT or FT drop, decrement the registered keys
+        if drop.ft_data.is_some() || drop.nft_data.is_some() {
+            if drop.keys_registered == 0 {
+                env::panic_str("Key not registerred. Assets must be sent")
+            }
+
+            drop.keys_registered -= 1;
+        }
+        
+        // If there are keys still left in the drop, add the drop back in with updated data
+        if drop.len > 0 {
+            // Add drop type back with the updated data.
+            self.drop_type_for_id.insert(
+                &drop_id, 
+                &drop
+            );
+        }
+        
+        // Return the drop
+        drop
     }
 
     /// self callback for simple linkdrops with no FTs, NFTs, or FCs.
@@ -332,8 +327,6 @@ impl DropZone {
         balance: U128, 
         // How much storage was used to store linkdrop info
         storage_used: U128,
-        // Did the sender end up sending the FTs to the contract
-        did_send_fts: bool,
         // Who sent the FTs?
         ft_sender: AccountId,
         // Where are the FTs stored
@@ -346,7 +339,6 @@ impl DropZone {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Did FTs get sent: {}",did_send_fts));
         env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
        // Get the status of the cross contract call
@@ -371,81 +363,77 @@ impl DropZone {
             Fungible Tokens. 
             - Only send the FTs if the sender ended up sending the contract the tokens.
         */
-        if did_send_fts == true {
-            // Only send the fungible tokens to the new account if the claim was successful. We return the FTs if it wasn't successful in the else case.
-            if claim_succeeded {
-                // Create a new batch promise to pay storage and transfer NFTs to the new account ID
-                let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
+        // Only send the fungible tokens to the new account if the claim was successful. We return the FTs if it wasn't successful in the else case.
+        if claim_succeeded {
+            // Create a new batch promise to pay storage and transfer NFTs to the new account ID
+            let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
 
-                // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
-                // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
-                env::promise_batch_action_function_call_weight(
-                    batch_ft_promise_id,
-                    "storage_deposit",
-                    json!({ "account_id": account_id }).to_string().as_bytes(),
-                    ft_storage.0,
-                    MIN_GAS_FOR_STORAGE_DEPOSIT,
-                    GasWeight(1)
-                );  
+            // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
+            // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
+            env::promise_batch_action_function_call_weight(
+                batch_ft_promise_id,
+                "storage_deposit",
+                json!({ "account_id": account_id }).to_string().as_bytes(),
+                ft_storage.0,
+                MIN_GAS_FOR_STORAGE_DEPOSIT,
+                GasWeight(1)
+            );  
 
-                // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-                // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
-                env::promise_batch_action_function_call_weight(
-                    batch_ft_promise_id,
-                    "ft_transfer",
-                    json!({ "receiver_id": account_id, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
-                    1,
-                    MIN_GAS_FOR_FT_TRANSFER,
-                    GasWeight(1)
-                );
+            // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
+            // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
+            env::promise_batch_action_function_call_weight(
+                batch_ft_promise_id,
+                "ft_transfer",
+                json!({ "receiver_id": account_id, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
+                1,
+                MIN_GAS_FOR_FT_TRANSFER,
+                GasWeight(1)
+            );
 
-                // Create the second batch promise to execute after the batch_ft_promise_id batch is finished executing.
-                // It will execute on the current account ID (this contract)
-                let batch_ft_resolve_promise_id = env::promise_batch_then(batch_ft_promise_id, &env::current_account_id());
+            // Create the second batch promise to execute after the batch_ft_promise_id batch is finished executing.
+            // It will execute on the current account ID (this contract)
+            let batch_ft_resolve_promise_id = env::promise_batch_then(batch_ft_promise_id, &env::current_account_id());
 
-                // Execute a function call as part of the resolved promise index created in promise_batch_then
-                // Callback after both the storage was deposited and the fungible tokens were sent
-                // Call the function with the min GAS and then attach 3/5 of the unspent GAS to the call
-                env::promise_batch_action_function_call_weight(
-                    batch_ft_resolve_promise_id,
-                    "ft_resolve_batch",
-                    json!({ "amount": ft_balance, "token_sender": ft_sender, "token_contract": ft_contract }).to_string().as_bytes(),
-                    NO_DEPOSIT,
-                    MIN_GAS_FOR_RESOLVE_BATCH,
-                    GasWeight(3)
-                );
+            // Execute a function call as part of the resolved promise index created in promise_batch_then
+            // Callback after both the storage was deposited and the fungible tokens were sent
+            // Call the function with the min GAS and then attach 3/5 of the unspent GAS to the call
+            env::promise_batch_action_function_call_weight(
+                batch_ft_resolve_promise_id,
+                "ft_resolve_batch",
+                json!({ "amount": ft_balance, "token_sender": ft_sender, "token_contract": ft_contract }).to_string().as_bytes(),
+                NO_DEPOSIT,
+                MIN_GAS_FOR_RESOLVE_BATCH,
+                GasWeight(3)
+            );
 
-            } else {
-                // Create a new batch promise to pay storage and refund the FTs to the original sender 
-                let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
-
-                // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-                // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
-                env::promise_batch_action_function_call_weight(
-                    batch_ft_promise_id,
-                    "storage_deposit",
-                    json!({ "account_id": ft_sender }).to_string().as_bytes(),
-                    ft_storage.0,
-                    MIN_GAS_FOR_STORAGE_DEPOSIT,
-                    GasWeight(1)
-                );
-
-                // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-                // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
-                env::promise_batch_action_function_call_weight(
-                    batch_ft_promise_id,
-                    "ft_transfer",
-                    json!({ "receiver_id": ft_sender, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
-                    1,
-                    MIN_GAS_FOR_FT_TRANSFER,
-                    GasWeight(1)
-                );
-
-                // Return the result of the batch as the return of the function
-                env::promise_return(batch_ft_promise_id);
-            }
         } else {
-            env::log_str("Cannot send FTs since the sender never transferred the contract the tokens.");
+            // Create a new batch promise to pay storage and refund the FTs to the original sender 
+            let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
+
+            // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
+            // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
+            env::promise_batch_action_function_call_weight(
+                batch_ft_promise_id,
+                "storage_deposit",
+                json!({ "account_id": ft_sender }).to_string().as_bytes(),
+                ft_storage.0,
+                MIN_GAS_FOR_STORAGE_DEPOSIT,
+                GasWeight(1)
+            );
+
+            // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
+            // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
+            env::promise_batch_action_function_call_weight(
+                batch_ft_promise_id,
+                "ft_transfer",
+                json!({ "receiver_id": ft_sender, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
+                1,
+                MIN_GAS_FOR_FT_TRANSFER,
+                GasWeight(1)
+            );
+
+            // Return the result of the batch as the return of the function
+            env::promise_return(batch_ft_promise_id);
         }
 
         claim_succeeded
@@ -461,8 +449,6 @@ impl DropZone {
         balance: U128, 
         // How much storage was used to store linkdrop info
         storage_used: U128,
-        // Did the sender end up sending the NFT to the contract
-        did_send_nft: bool,
         // Sender of the NFT
         nft_sender: AccountId,
         // Contract where the NFT is stored
@@ -473,7 +459,6 @@ impl DropZone {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Was NFT sent to contract: {}",did_send_nft));
         env::log_str(&format!("Beginning of on claim NFT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Get the status of the cross contract call
@@ -497,47 +482,42 @@ impl DropZone {
         /*
             Non Fungible Tokens
         */
-        if did_send_nft == true {
-            // Only send the NFT to the new account if the claim was successful. We return the NFT if it wasn't successful in the else case.
-            if claim_succeeded {
-                // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
-                ext_nft_contract::ext(nft_contract.clone())
-                    // Call nft transfer with the min GAS and 1 yoctoNEAR. 1/2 unspent GAS will be added on top
-                    .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
-                    .with_attached_deposit(1)
-                    .nft_transfer(
-                        account_id.clone(), 
-                        token_id.clone(),
-                        None,
-                        Some("Linkdropped NFT".to_string()),
-                    )
-                // We then resolve the promise and call nft_resolve_transfer on our own contract
-                .then(
-                    // Call resolve transfer with the min GAS and no deposit. 1/2 unspent GAS will be added on top
-                    Self::ext(env::current_account_id())
-                        .with_static_gas(MIN_GAS_FOR_RESOLVE_TRANSFER)
-                        .nft_resolve_transfer(
-                            token_id,
-                            nft_sender,
-                            nft_contract,
-                        )
-                );
-            } else {
-                // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
-                ext_nft_contract::ext(nft_contract)
-                    // Call nft transfer with the min GAS and 1 yoctoNEAR. all unspent GAS will be added on top
-                    .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
-                    .with_attached_deposit(1)
-                    .nft_transfer(
-                        nft_sender, 
+        // Only send the NFT to the new account if the claim was successful. We return the NFT if it wasn't successful in the else case.
+        if claim_succeeded {
+            // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
+            ext_nft_contract::ext(nft_contract.clone())
+                // Call nft transfer with the min GAS and 1 yoctoNEAR. 1/2 unspent GAS will be added on top
+                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
+                .with_attached_deposit(1)
+                .nft_transfer(
+                    account_id.clone(), 
+                    token_id.clone(),
+                    None,
+                    Some("Linkdropped NFT".to_string()),
+                )
+            // We then resolve the promise and call nft_resolve_transfer on our own contract
+            .then(
+                // Call resolve transfer with the min GAS and no deposit. 1/2 unspent GAS will be added on top
+                Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_RESOLVE_TRANSFER)
+                    .nft_resolve_transfer(
                         token_id,
-                        None,
-                        Some("Linkdropped NFT".to_string()),
-                    );
-            }
-            
+                        nft_sender,
+                        nft_contract,
+                    )
+            );
         } else {
-            env::log_str("Cannot send FTs since the sender never transferred the contract the tokens.");
+            // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
+            ext_nft_contract::ext(nft_contract)
+                // Call nft transfer with the min GAS and 1 yoctoNEAR. all unspent GAS will be added on top
+                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
+                .with_attached_deposit(1)
+                .nft_transfer(
+                    nft_sender, 
+                    token_id,
+                    None,
+                    Some("Linkdropped NFT".to_string()),
+                );
         }
 
         claim_succeeded
