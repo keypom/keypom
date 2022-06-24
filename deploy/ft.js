@@ -9,6 +9,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let FT_CONTRACT_ID = process.env.FT_CONTRACT_ID;
 let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
 
+let NUM_KEYS_IF_SEND_MULTIPLE = 130;
 let OFFSET = 2;
 let NETWORK_ID = "testnet";
 let near;
@@ -65,7 +66,7 @@ async function start() {
 
 	if(SEND_MULTIPLE != "false") {
 		console.log("BATCH Creating keypairs");
-		for(var i = 0; i < 5; i++) {
+		for(var i = 0; i < NUM_KEYS_IF_SEND_MULTIPLE; i++) {
 			console.log('i: ', i);
 			let keyPair = await KeyPair.fromRandom('ed25519'); 
 			keyPairs.push(keyPair);   
@@ -116,18 +117,17 @@ async function start() {
 	}
 
 	try {
+		console.log(`Paying for FT storage on contract: ${FT_CONTRACT_ID} for the proxy contract ID`);
+		await fundingAccount.functionCall(
+			FT_CONTRACT_ID, 
+			'storage_deposit', 
+			{
+				account_id: LINKDROP_PROXY_CONTRACT_ID,
+			}, 
+			"300000000000000", 
+			parseNearAmount('1')
+		);
 		for(var i = 0; i < pubKeys.length; i++) {
-			console.log(`Paying for FT storage on contract: ${FT_CONTRACT_ID} for the proxy contract ID`);
-			await fundingAccount.functionCall(
-				FT_CONTRACT_ID, 
-				'storage_deposit', 
-				{
-					account_id: LINKDROP_PROXY_CONTRACT_ID,
-				}, 
-				"300000000000000", 
-				parseNearAmount('1')
-			);
-
 			console.log(`Transferring 25 FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
 			await fundingAccount.functionCall(
 				FT_CONTRACT_ID, 

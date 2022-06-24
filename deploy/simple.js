@@ -9,7 +9,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
 
 let OFFSET = 0.1;
-
+let NUM_KEYS_IF_SEND_MULTIPLE = 50;
 let NETWORK_ID = "testnet";
 let near;
 let config;
@@ -65,7 +65,7 @@ async function start() {
 
 	if(SEND_MULTIPLE != "false") {
 		console.log("BATCH Creating keypairs");
-		for(var i = 0; i < 5; i++) {
+		for(var i = 0; i < NUM_KEYS_IF_SEND_MULTIPLE; i++) {
 			console.log('i: ', i);
 			let keyPair = await KeyPair.fromRandom('ed25519'); 
 			keyPairs.push(keyPair);   

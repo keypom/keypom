@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LookupSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::{json};
@@ -67,7 +67,7 @@ const ONE_GIGGA_GAS: u64 = 1_000_000_000;
 const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
 
 mod claim;
-mod send;
+mod drops;
 mod ext_traits;
 mod nft;
 mod ft;
@@ -88,75 +88,67 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
+pub type DropId = u128;
+
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
-pub struct AccountData {
+pub struct DropType {
+    // Funder of this specific drop type
     pub funder_id: AccountId,
+    // Balance for all linkdrops of this drop type
     pub balance: U128,
-    pub storage_used: U128,
+    // Set of public keys associated with this drop type
+    pub pks: LookupSet<PublicKey>,
+    // Total number of keys currently linked to this drop (both registered and unregistered)
+    pub len: u128,
 
-    /*
-        EXTRA
-    */
-    pub cb_id: Option<u64>, //nonce - if set, becomes lookup to all NFT, FT, CD 
-    pub cb_data_sent: bool,
-    
-}
-
-/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize)]
-#[serde(crate = "near_sdk::serde")]
-pub struct KeyInfo {
-    pub pk: Option<PublicKey>,
-    pub account_data: Option<AccountData>, 
+    // Specific data associated with this drop type
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<NFTData>, 
-    pub fc_data: Option<FCData>
-    
+    pub fc_data: Option<FCData>,
+    // How much storage was used for EACH key and not the entire drop as a whole 
+    pub storage_used_per_key: U128,
+    // How many keys are registered (assets such as FTs sent)
+    pub keys_registered: u128,
 }
+
 
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
-    DataForPublicKey,
-    KeysForFunder,
-    KeysPerFunderInner { account_id_hash: CryptoHash },
-    NFTData,
-    FTData,
-    FCData,
+    DropIdForPk,
+    DropTypeForId,
+    DropsForFunder,
+    DropsForFunderInner { account_id_hash: CryptoHash },
 }
 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
-pub struct LinkDropProxy {
+pub struct DropZone {
+    // Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
     pub linkdrop_contract: AccountId,
-    pub data_for_pk: UnorderedMap<PublicKey, AccountData>,
-    pub keys_for_funder: LookupMap<AccountId, UnorderedSet<PublicKey>>,
-
-    pub nonce: u64,
-
-    /*
-        EXTRA
-    */
-    pub nft: LookupMap<u64, NFTData>,
-    pub ft: LookupMap<u64, FTData>,
-    pub fc: LookupMap<u64, FCData>
+    
+    // Map each key to a nonce rather than repeating each drop data type in memory
+    pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
+    // Map the nonce to a specific drop type
+    pub drop_type_for_id: LookupMap<DropId, DropType>,
+    // Keep track of a nonce used for the drop IDs
+    pub nonce: DropId,
+    
+    // Keep track of the drop ids for each funder for pagination
+    pub drops_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
 }
 
 #[near_bindgen]
-impl LinkDropProxy {
-    /// Initialize proxy hub contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
+impl DropZone {
+    /// Initialize contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
     #[init]
     pub fn new(linkdrop_contract: AccountId) -> Self {
         Self {
             linkdrop_contract,
-            data_for_pk: UnorderedMap::new(StorageKey::DataForPublicKey),
-            keys_for_funder: LookupMap::new(StorageKey::KeysForFunder),
-            nft: LookupMap::new(StorageKey::NFTData),
-            ft: LookupMap::new(StorageKey::FTData),
-            fc: LookupMap::new(StorageKey::FCData),
+            drop_id_for_pk: UnorderedMap::new(StorageKey::DropIdForPk),
+            drop_type_for_id: LookupMap::new(StorageKey::DropTypeForId),
+            drops_for_funder: LookupMap::new(StorageKey::DropsForFunder),
             nonce: 0,
         }
     }

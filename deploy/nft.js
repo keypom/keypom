@@ -18,7 +18,7 @@ let keyStore;
 /*
 	Hard coding NFT contract and metadata. Change this if you want.
 */
-let NFT_CONTRACT_ID = "example-nft.testnet";
+let NFT_CONTRACT_ID = "nft.examples.testnet";
 const METADATA = {
 	"title": "Linkdropped Go Team NFT",
 	"description": "Testing Linkdrop NFT Go Team Token",

@@ -89,7 +89,7 @@ async function start() {
 
 			fc_data.push(
 				{
-					receiver: "example-nft.testnet",
+					receiver: "nft.examples.testnet",
 					method: "nft_mint",
 					args: JSON.stringify({
 						token_id: keyPair.publicKey.toString(),
@@ -109,7 +109,7 @@ async function start() {
 		
 		fc_data.push(
 			{
-				receiver: "example-nft.testnet",
+				receiver: "nft.examples.testnet",
 				method: "nft_mint",
 				args: JSON.stringify({
 					token_id: keyPair.publicKey.toString(),

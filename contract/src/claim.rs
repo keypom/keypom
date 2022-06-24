@@ -3,7 +3,7 @@ use near_sdk::GasWeight;
 use crate::*;
 
 #[near_bindgen]
-impl LinkDropProxy {
+impl DropZone {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
         let mut used_gas = env::used_gas();

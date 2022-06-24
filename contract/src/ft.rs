@@ -23,7 +23,7 @@ pub struct StorageBalanceBounds {
 }
 
 #[near_bindgen]
-impl LinkDropProxy {
+impl DropZone {
     /// Allows users to attach fungible tokens to the Linkdrops. Must have storage recorded by this point. You can only attach one set of FTs or NFT at a time.
     pub fn ft_on_transfer(
         &mut self,
@@ -139,80 +139,140 @@ impl LinkDropProxy {
     #[payable]
     /// self callback gets the storage balance bounds and inserts that into account data for each public key passed in
     pub fn resolve_storage_check(
-        &mut self, 
-        public_keys: Vec<PublicKey>, 
-        funder_id: AccountId,
-        balance: U128,
-        required_storage: U128,
-        cb_ids: Vec<u64>,
+        &mut self,
+        public_keys: Vec<PublicKey>,
+        drop_id: DropId
     ) -> bool {
-        let attached_deposit = env::attached_deposit();
-        let len = public_keys.len() as u128;
-
         // Check promise result.
         let result = promise_result_as_success();
+        let attached_deposit = env::attached_deposit();
+        let pub_keys_len = public_keys.len() as u128;
 
-        if result.is_none() || cb_ids.len() as u128 != len {
-            // Refund the funder any excess $NEAR and panic which will cause generic $NEAR linkdrops to be used
-            env::log_str("Unsuccessful query to get storage. Refunding funder excess $NEAR and generic $NEAR linkdrop will be used.");
-            Promise::new(funder_id.clone()).transfer(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0) * len);
-            for cb_id in cb_ids {
-                self.ft.remove(&cb_id);
+        // If things went wrong, we need to delete the data and refund the user.
+        if result.is_none() {
+            // Refund the funder any excess $NEAR
+            env::log_str("Unsuccessful query to get storage. Refunding funder.");
+            // Remove the drop
+            let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+            let funder_id = drop.funder_id;
+            
+            // Remove the drop ID from the funder's list
+            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+            
+            // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
+            for pk in public_keys {
+                self.drop_id_for_pk.remove(&pk.clone());
+
+                // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
+                if drop.pks.remove(&pk) {
+                    drop.len = drop.len - 1
+                }
             }
+            
+            // If there are keys still left in the drop, add the drop back in with updated data
+            if drop.len > 0 {
+                // Add drop type back with the updated data.
+                self.drop_type_for_id.insert(
+                    &drop_id, 
+                    &drop
+                );
+            }
+
+            // Refund the funder for their attached deposit
+            Promise::new(funder_id).transfer(attached_deposit);
+
             return false;
         }
 
         // Try to get the storage balance bounds from the result of the promise
 		if let Ok(StorageBalanceBounds{ min, max: _ }) = near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result.unwrap()) {
-            // Ensure the user attached enough to cover the regular $NEAR linkdrops case PLUS the storage for the fungible token contract for each key
+            let mut drop = self.drop_type_for_id.get(&drop_id).unwrap();
             
-            if attached_deposit < attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len {
-                env::log_str("Deposit must be large enough to cover desired balance, access key allowance, and contract storage");
-                for cb_id in cb_ids {
-                    self.ft.remove(&cb_id);
+            // Ensure the user attached enough to cover the regular $NEAR linkdrops case PLUS the storage for the fungible token contract for each key
+            let required_deposit =  (drop.storage_used_per_key.0 + ACCESS_KEY_ALLOWANCE + drop.balance.0 + min.0) * pub_keys_len;
+            
+            if attached_deposit < required_deposit {
+                env::log_str("Deposit not large enough to cover FT storage for each key. Refunding funder.");
+                // Remove the drop
+                let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+                let funder_id = drop.funder_id;
+                
+                // Remove the drop ID from the funder's list
+                self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+                
+                // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
+                for pk in public_keys {
+                    self.drop_id_for_pk.remove(&pk.clone());
+
+                    // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
+                    if drop.pks.remove(&pk) {
+                        drop.len = drop.len - 1
+                    }
                 }
+                
+                // If there are keys still left in the drop, add the drop back in with updated data
+                if drop.len > 0 {
+                    // Add drop type back with the updated data.
+                    self.drop_type_for_id.insert(
+                        &drop_id, 
+                        &drop
+                    );
+                }
+
+                // Refund the funder for their attached deposit
+                Promise::new(funder_id).transfer(attached_deposit);
+
                 return false;
             }
 
-            let mut index = 0;
-            // Loop through each public key and insert them into the map with the new FT storage
-            for _pk_ in public_keys {
-                // Get current FT data excluding the storage
-                let FTData { 
-                    ft_contract,
-                    ft_sender, 
-                    ft_balance, 
-                    ft_storage: _
-                } = self.ft.get(&cb_ids[index]).expect("No FT data found for the unique callback ID.");
-
-                // Insert the FT data including the new storage for the unique callback ID associated with the linkdrop
-                self.ft.insert(
-                    &cb_ids[index], 
-                    &FTData { 
-                        ft_contract: ft_contract,
-                        ft_sender: ft_sender, 
-                        ft_balance: ft_balance, 
-                        ft_storage: Some(min),
-                    }
-                );
-                index += 1;
-            }
+            // Update the FT data to include the storage and insert the drop back with the updated FT data
+            let mut new_ft_data = drop.ft_data.unwrap();
+            new_ft_data.ft_storage = Some(min);
+            self.drop_type_for_id.insert(
+                &drop_id, 
+                &drop
+            );
 
             // If the user overpaid for the desired linkdrop balance, refund them.
-            if attached_deposit > (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len {    
-                env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len)));
-                Promise::new(funder_id).transfer(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0 + min.0) * len);
+            if attached_deposit > required_deposit {    
+                env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - required_deposit)));
+                Promise::new(drop.funder_id).transfer(attached_deposit - required_deposit);
             }
             
             // Everything went well and we return true
             return true
         } else {
-            env::log_str("Unsuccessful query to get storage. Refunding funder excess $NEAR and generic $NEAR linkdrop will be used.");
-            // Refund the funder any excess $NEAR and panic which will cause generic $NEAR linkdrops to be used
-            Promise::new(funder_id.clone()).transfer(attached_deposit - (ACCESS_KEY_STORAGE + required_storage.0 + ACCESS_KEY_ALLOWANCE + balance.0) * len);
-            for cb_id in cb_ids {
-                self.ft.remove(&cb_id);
+            // Refund the funder any excess $NEAR
+            env::log_str("Unsuccessful query to get storage. Refunding funder.");
+            // Remove the drop
+            let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+            let funder_id = drop.funder_id;
+            
+            // Remove the drop ID from the funder's list
+            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+            
+            // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
+            for pk in public_keys {
+                self.drop_id_for_pk.remove(&pk.clone());
+
+                // Remove the pk from the drop's set. If the key was successfully removed, decrement the keys left
+                if drop.pks.remove(&pk) {
+                    drop.len = drop.len - 1
+                }
             }
+            
+            // If there are keys still left in the drop, add the drop back in with updated data
+            if drop.len > 0 {
+                // Add drop type back with the updated data.
+                self.drop_type_for_id.insert(
+                    &drop_id, 
+                    &drop
+                );
+            }
+
+            // Refund the funder for their attached deposit
+            Promise::new(funder_id).transfer(attached_deposit);
+
             return false;
         }
     }

@@ -5,7 +5,7 @@ pub(crate) fn hash_account_id(account_id: &AccountId) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
 
-impl LinkDropProxy {
+impl DropZone {
     /// Asserts that the cross contract call was successful. Returns the success value
     pub(crate) fn assert_success(&mut self) -> bool {
         assert_eq!(

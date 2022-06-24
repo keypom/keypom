@@ -1,7 +1,7 @@
 use crate::*;
 
 #[near_bindgen]
-impl LinkDropProxy {
+impl DropZone {
     /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
     pub fn get_key_balance(&self, key: PublicKey) -> U128 {
         let account_data = self.data_for_pk

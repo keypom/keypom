@@ -11,7 +11,7 @@ pub struct NFTData {
 }
 
 #[near_bindgen]
-impl LinkDropProxy {
+impl DropZone {
     pub fn nft_on_transfer(
         &mut self,
         token_id: String,
