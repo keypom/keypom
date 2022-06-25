@@ -245,16 +245,16 @@ impl DropZone {
         let signer_pk = env::signer_account_pk();
 
         // By default, every key should have a drop ID
-        let drop_id = self.drop_id_for_pk.get(&signer_pk).expect("No drop ID found for PK");
+        let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("No drop ID found for PK");
+        env::log_str(&format!("Drop ID: {:?}", drop_id));
+
         // Remove the drop
         let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
-        // Remove the drop ID from the funder's list
-        self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
-        // Remove the drop ID for the public key
-        self.drop_id_for_pk.remove(&signer_pk.clone());
 
+        env::log_str(&format!("Drop PKs Len: {:?}", drop.pks.len()));
         // Remove the pk from the drop's set.
         drop.pks.remove(&signer_pk);
+        env::log_str(&format!("Drop PKs Len 2: {:?}", drop.pks.len()));
 
         // If it's an NFT or FT drop, decrement the registered keys
         if drop.ft_data.is_some() || drop.nft_data.is_some() {
@@ -272,7 +272,12 @@ impl DropZone {
                 &drop_id, 
                 &drop
             );
+        } else {
+            // Remove the drop ID from the funder's list if the drop is now empty
+            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
         }
+
+        env::log_str(&format!("!Is Empty?: {:?}", !drop.pks.is_empty()));
 
         // Return the drop
         drop

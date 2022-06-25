@@ -92,7 +92,7 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
 pub type DropId = u128;
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, Debug)]
 pub struct DropType {
     // Funder of this specific drop type
     pub funder_id: AccountId,

@@ -55,7 +55,7 @@ impl DropZone {
             //if there is no set of drops for the owner, we panic with the following message:
             .expect("No Drops found for the funder");
 
-        //we remove the the drop IDfrom  the set of drops
+        //we remove the the drop ID from  the set of drops
         drop_set.remove(drop_id);
 
         //if the set is now empty, we remove the funder from the drops_for_funder collection

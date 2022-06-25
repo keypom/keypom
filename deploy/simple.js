@@ -10,7 +10,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
 
 let OFFSET = 0.1;
-let NUM_KEYS_IF_SEND_MULTIPLE = 50;
+let NUM_KEYS_IF_SEND_MULTIPLE = 3;
 let NETWORK_ID = "testnet";
 let near;
 let config;
