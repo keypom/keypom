@@ -2,6 +2,7 @@ const { connect, KeyPair, keyStores, utils } = require("near-api-js");
 const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/format");
 const path = require("path");
 const homedir = require("os").homedir();
+const { writeFile, mkdir, readFile } = require('fs/promises');
   
 let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
@@ -79,34 +80,99 @@ async function start() {
 	}
 
 	try {
-		if(SEND_MULTIPLE != "false") {
-			await fundingAccount.functionCall(
-				LINKDROP_PROXY_CONTRACT_ID, 
-				'send_multiple', 
-				{
-					public_keys: pubKeys,
-					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
-				}, 
-				"300000000000000", 
-				parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
-			);
-		} else {
-			console.log("Sending one linkdrop");
-			await fundingAccount.functionCall(
-				LINKDROP_PROXY_CONTRACT_ID, 
-				'send', 
-				{
-					public_key: pubKeys[0],
-					balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
-				}, 
-				"300000000000000", 
-				parseNearAmount((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET).toString())
-			);
-		}
-		
+		await fundingAccount.functionCall(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'create_drop', 
+			{
+				public_keys: pubKeys,
+				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
+			}, 
+			"300000000000000", 
+			parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
+		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
+
+	try {
+		let viewData = {};
+		const totalSupply = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'key_total_supply', 
+		);
+		viewData.key_total_supply = totalSupply; 
+		console.log('totalSupply: ', totalSupply);
+
+		const getKeys = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_keys'
+		);
+		viewData.get_keys = getKeys; 
+		console.log('getKeys: ', getKeys);
+
+		const keySupplyForFunder = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'key_supply_for_funder',
+			{
+				account_id: FUNDING_ACCOUNT_ID
+			}
+		);
+		viewData.key_supply_for_funder = keySupplyForFunder; 
+		console.log('keySupplyForFunder: ', keySupplyForFunder);
+
+		const dropSupplyForFunder = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'drop_supply_for_funder',
+			{
+				account_id: FUNDING_ACCOUNT_ID
+			}
+		);
+		viewData.drop_supply_for_funder = dropSupplyForFunder; 
+		console.log('dropSupplyForFunder: ', dropSupplyForFunder);
+
+		const dropsForFunder = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'drops_for_funder',
+			{
+				account_id: FUNDING_ACCOUNT_ID
+			}
+		);
+		viewData.drops_for_funder = dropsForFunder; 
+		console.log('dropsForFunder: ', dropsForFunder);
+
+		const getKeyInformation = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_key_information',
+			{
+				key: pubKeys[0]
+			}
+		);
+		viewData.get_key_information = getKeyInformation; 
+		console.log('getKeyInformation: ', getKeyInformation);
+
+		const getDropInformation = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_drop_information',
+			{
+				drop_id: 0
+			}
+		);
+		viewData.get_drop_information = getDropInformation; 
+		console.log('getDropInformation: ', getDropInformation);
+
+		const getNonce = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_nonce',
+		);
+		viewData.get_nonce = getNonce;
+		console.log('getNonce: ', getNonce);
+
+		await writeFile(`./views.json`, JSON.stringify(viewData));
+	} catch(e) {
+		console.log('error initializing contract: ', e);
+	}
+
+
     
 	for(var i = 0; i < keyPairs.length; i++) {
 		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);

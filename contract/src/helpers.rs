@@ -1,7 +1,7 @@
 use crate::*;
 
 //used to generate a unique prefix in our storage collections (this is to avoid data collisions)
-pub(crate) fn hash_account_id(account_id: &AccountId) -> CryptoHash {
+pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
 
@@ -30,7 +30,7 @@ impl DropZone {
             UnorderedSet::new(
                 StorageKey::DropsForFunderInner {
                     //we get a new unique prefix for the collection
-                    account_id_hash: hash_account_id(&account_id),
+                    account_id_hash: hash_account_id(&account_id.to_string()),
                 }
             )
         });

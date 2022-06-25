@@ -41,7 +41,7 @@ impl DropZone {
 
         let mut key_set: UnorderedSet<PublicKey> = UnorderedSet::new(StorageKey::DropsForFunderInner {
             //we get a new unique prefix for the collection
-            account_id_hash: hash_account_id(&funder_id),
+            account_id_hash: hash_account_id(&format!("{}{}", self.nonce, funder_id)),
         });
 
         // Add this drop ID to the funder's set of drops

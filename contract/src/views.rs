@@ -70,11 +70,13 @@ impl DropZone {
     ) -> u64 {
         //get the set of drops for the passed in funder
         let drops_for_owner = self.drops_for_funder.get(&account_id);
+        env::log_str(&format!("Drops: {:?}", drops_for_owner));
 
         //if there is some set of drops, we'll iterate through and collect all the keys
         if let Some(drops_for_owner) = drops_for_owner {
             let mut supply = 0;
             for id in drops_for_owner.iter() {
+                env::log_str(&format!("ID: {:?}", id));
                 supply += self.drop_type_for_id.get(&id).unwrap().pks.len();
             }
 
@@ -108,7 +110,7 @@ impl DropZone {
         account_id: AccountId,
     ) -> Vec<DropId> {
         //iterate through each key using an iterator
-        self.drops_for_funder.get(&account_id).unwrap().to_vec()
+        self.drops_for_funder.get(&account_id).unwrap().iter().collect()
     }
 
     /// Returns the JsonDropType corresponding to a specific key
