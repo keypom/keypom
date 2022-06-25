@@ -65,6 +65,18 @@ async function start() {
 		'get_nonce',
 	);
 
+	try {
+		await fundingAccount.functionCall(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'add_to_balance', 
+			{},
+			"300000000000000", 
+			parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
+		);
+	} catch(e) {
+		console.log('error initializing contract: ', e);
+	}
+
 	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
 	try {
 		let ft_data = {};
@@ -80,7 +92,6 @@ async function start() {
 				ft_data
 			}, 
 			"300000000000000", 
-			parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
 		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);
