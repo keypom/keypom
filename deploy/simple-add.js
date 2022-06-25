@@ -9,7 +9,6 @@ let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
 let OFFSET = 0.1;
-let DROP_FEE = 1;
 let KEY_FEE = 0.005;
 let NUM_KEYS = 3;
 
@@ -46,23 +45,7 @@ async function start() {
 		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount and whether to send multiple";
 	}
 
-	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
-
-	console.log(`initializing contract for account ${LINKDROP_PROXY_CONTRACT_ID}`);
-	try {
-		await contractAccount.functionCall(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'new', 
-			{
-				linkdrop_contract: "testnet",
-				owner_id: LINKDROP_PROXY_CONTRACT_ID
-			}, 
-			"300000000000000", 
-		);
-	} catch(e) {
-		console.log('error initializing contract: ', e);
-	}
 
 	let keyPairs = [];
 	let pubKeys = [];
@@ -76,22 +59,26 @@ async function start() {
 	}
 	console.log("Finished.");
 
-	const dropId = await fundingAccount.viewFunction(
+	let dropId = await fundingAccount.viewFunction(
 		LINKDROP_PROXY_CONTRACT_ID, 
 		'get_nonce',
 	);
 
+	dropId -= 1;
+	
+	console.log('dropId: ', dropId);
+
 	try {
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'create_drop', 
+			'add_to_drop', 
 			{
 				public_keys: pubKeys,
-				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT)
+				drop_id: dropId
 			}, 
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length + DROP_FEE).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length).toString()
 			)
 		);
 	} catch(e) {
@@ -175,7 +162,7 @@ async function start() {
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
 
-		await writeFile(`./views.json`, JSON.stringify(viewData));
+		await writeFile(`./views-add.json`, JSON.stringify(viewData));
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}

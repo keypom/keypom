@@ -1,5 +1,5 @@
 {
-    "key_total_supply": "3",
+    "key_total_supply": "6",
     "get_keys": [
         {
             "pk": "ed25519:4HckzWG9Wr9hVdnVyN4azazFYmH4MqUvWHvnULyNT35C",
@@ -27,10 +27,37 @@
             "nft_data": null,
             "fc_data": null,
             "storage_used_per_key": "6596666666666666666666"
+        },
+        {
+            "pk": "ed25519:GUsD16ZyJdnCqAosup4VWPzo6gyWVS3WhVyAevXtRbQk",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": null,
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "6596666666666666666666"
+        },
+        {
+            "pk": "ed25519:8uMHLfWMN351avVhAvzXKgeXiJdXPLZMbWkYvsf4sB5v",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": null,
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "6596666666666666666666"
+        },
+        {
+            "pk": "ed25519:2XVxJo9RQX8XUr3hA8x5c7uees9ZtLLpnf5fXrfunJmo",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": null,
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "6596666666666666666666"
         }
     ],
     "get_key_information": {
-        "pk": "ed25519:4HckzWG9Wr9hVdnVyN4azazFYmH4MqUvWHvnULyNT35C",
+        "pk": "ed25519:GUsD16ZyJdnCqAosup4VWPzo6gyWVS3WhVyAevXtRbQk",
         "funder_id": "benjiman.testnet",
         "balance": "5000000000000000000000",
         "ft_data": null,
@@ -74,9 +101,36 @@
             "nft_data": null,
             "fc_data": null,
             "storage_used_per_key": "6596666666666666666666"
+        },
+        {
+            "pk": "ed25519:GUsD16ZyJdnCqAosup4VWPzo6gyWVS3WhVyAevXtRbQk",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": null,
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "6596666666666666666666"
+        },
+        {
+            "pk": "ed25519:8uMHLfWMN351avVhAvzXKgeXiJdXPLZMbWkYvsf4sB5v",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": null,
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "6596666666666666666666"
+        },
+        {
+            "pk": "ed25519:2XVxJo9RQX8XUr3hA8x5c7uees9ZtLLpnf5fXrfunJmo",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": null,
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "6596666666666666666666"
         }
     ],
-    "key_supply_for_funder": 3,
+    "key_supply_for_funder": 6,
     "drop_supply_for_funder": 1,
     "drops_for_funder": [
         {

@@ -85,7 +85,7 @@ impl DropZone {
         // Increment the drop ID nonce
         self.nonce += 1;
 
-        let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len;
+        let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + ACCESS_KEY_STORAGE + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len;
         env::log_str(&format!(
             "Attached Deposit: {}, 
             Required Deposit: {}, 
@@ -159,6 +159,101 @@ impl DropZone {
                     )
             );
         } else if attached_deposit > required_deposit {
+            env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - required_deposit)));    
+            // If the user overpaid for the desired linkdrop balances, refund them.
+            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - required_deposit);
+        }
+
+        drop_id
+    }
+
+    /*
+        Allows users to add to an existing drop.
+        Only the funder can call this method
+    */
+    #[payable]
+    pub fn add_to_drop(
+        &mut self, 
+        public_keys: Vec<PublicKey>, 
+        drop_id: DropId
+    ) -> DropId {
+        let mut drop = self.drop_for_id.get(&drop_id).expect("no drop found for ID");
+        let funder = &drop.funder_id;
+
+        require!(funder == &env::predecessor_account_id(), "only funder can add to drops");
+
+        let len = public_keys.len() as u128;
+
+        let attached_deposit = env::attached_deposit();
+        // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
+        let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + if drop.fc_data.is_some() {drop.fc_data.clone().unwrap().deposit.0} else {0}) * len;
+        env::log_str(&format!(
+            "Attached Deposit: {}, 
+            Required Deposit: {}, 
+            Storage per key: {}, 
+            Key fee: {}, 
+            ACCESS_KEY_ALLOWANCE: {},
+            ACCESS_KEY_STORAGE: {}, 
+            Balance per key: {}, 
+            function call deposits (if applicable): {}, 
+            length: {}", 
+            yocto_to_near(attached_deposit), 
+            yocto_to_near(required_deposit),
+            yocto_to_near(drop.storage_used_per_key.0),
+            yocto_to_near(self.key_fee), 
+            yocto_to_near(ACCESS_KEY_ALLOWANCE), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(drop.balance.0), 
+            yocto_to_near(if drop.fc_data.is_some() {drop.fc_data.clone().unwrap().deposit.0} else {0}), 
+            len)
+        );
+        /*
+            Ensure the attached deposit can cover: 
+        */ 
+        require!(attached_deposit >= required_deposit, "Not enough deposit");
+        // Increment our fees earned
+        self.fees_collected += self.key_fee * len;
+
+        /*
+            Add data to storage
+        */
+        // get the existing key set and add new PKs
+        let mut exiting_key_set = drop.pks;
+        // Loop through and add each drop ID to the public keys. Also populate the key set.
+        for pk in public_keys.clone() {
+            exiting_key_set.insert(&pk);
+            self.drop_id_for_pk.insert(&pk, &drop_id);
+        }
+
+        // Set the drop's PKs to the newly populated set
+        drop.pks = exiting_key_set;
+
+        // Add the drop back in for the drop ID 
+        self.drop_for_id.insert(
+            &drop_id, 
+            &drop
+        );
+        
+        // Create a new promise batch to create all the access keys
+        let current_account_id = env::current_account_id();
+        let promise = env::promise_batch_create(&current_account_id);
+        
+        // Loop through each public key and create the access keys
+        for pk in public_keys.clone() {
+            // Must assert in the loop so no access keys are made?
+            env::promise_batch_action_add_key_with_function_call(
+                promise, 
+                &pk, 
+                0, 
+                ACCESS_KEY_ALLOWANCE, 
+                &current_account_id, 
+                ACCESS_KEY_METHOD_NAMES
+            );
+        }
+
+        env::promise_return(promise);
+        
+        if attached_deposit > required_deposit {
             env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - required_deposit)));    
             // If the user overpaid for the desired linkdrop balances, refund them.
             Promise::new(env::predecessor_account_id()).transfer(attached_deposit - required_deposit);
