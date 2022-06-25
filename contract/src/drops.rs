@@ -85,10 +85,12 @@ impl DropZone {
         // Increment the drop ID nonce
         self.nonce += 1;
 
-        let required_deposit = total_required_storage + (ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len;
+        let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len;
         env::log_str(&format!(
             "Attached Deposit: {}, 
             Required Deposit: {}, 
+            Drop Fee: {}, 
+            Key Fee: {}, 
             Total Required Storage: {}, 
             ACCESS_KEY_STORAGE: {},
             ACCESS_KEY_ALLOWANCE: {}, 
@@ -97,6 +99,8 @@ impl DropZone {
             length: {}", 
             yocto_to_near(attached_deposit), 
             yocto_to_near(required_deposit),
+            yocto_to_near(self.drop_fee),
+            yocto_to_near(self.key_fee),
             yocto_to_near(total_required_storage), 
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(ACCESS_KEY_ALLOWANCE), 
@@ -108,7 +112,9 @@ impl DropZone {
             Ensure the attached deposit can cover: 
         */ 
         require!(attached_deposit >= required_deposit, "Not enough deposit");
-
+        
+        // Increment our fees earned
+        self.fees_collected += self.drop_fee + self.key_fee * len;
         
         // Create a new promise batch to create all the access keys
         let current_account_id = env::current_account_id();

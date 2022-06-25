@@ -212,4 +212,9 @@ impl DropZone {
     pub fn get_nonce(&self) -> u128 {
         self.nonce
     }
+
+    /// Returns how many fees the contract has collected
+    pub fn get_fees_collected(&self) -> U128 {
+        U128(self.fees_collected)
+    }
 }   

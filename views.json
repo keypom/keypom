@@ -1,1 +1,1454 @@
-{"key_total_supply":"3","get_keys":[{"pk":"ed25519:EYc2JqPN6EPFP6ewmVKfKhexoUmEqz84Kxgek3wiuxh6","funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666"},{"pk":"ed25519:De47ZkDw5CMhYogbi9xfn3ZaDe1n6Ckxu8UxURqU4ErT","funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666"},{"pk":"ed25519:BPf6fkEUuNCBHt5PSNHZm8MJJmCSuUj5iycGxh6xPUhn","funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666"}],"get_key_information":{"pk":"ed25519:EYc2JqPN6EPFP6ewmVKfKhexoUmEqz84Kxgek3wiuxh6","funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666"},"get_drop_information":{"funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666","keys_registered":2},"get_keys_for_drop":[{"pk":"ed25519:EYc2JqPN6EPFP6ewmVKfKhexoUmEqz84Kxgek3wiuxh6","funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666"},{"pk":"ed25519:De47ZkDw5CMhYogbi9xfn3ZaDe1n6Ckxu8UxURqU4ErT","funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666"},{"pk":"ed25519:BPf6fkEUuNCBHt5PSNHZm8MJJmCSuUj5iycGxh6xPUhn","funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666"}],"key_supply_for_funder":3,"drop_supply_for_funder":1,"drops_for_funder":[{"funder_id":"benjiman.testnet","balance":"5000000000000000000000","ft_data":{"ft_contract":"ft.examples.benjiman.testnet","ft_sender":"benjiman.testnet","ft_balance":"25","ft_storage":"1250000000000000000000"},"nft_data":null,"fc_data":null,"storage_used_per_key":"6826666666666666666666","keys_registered":2}],"get_nonce":1}
+{
+    "key_total_supply": "100",
+    "get_keys": [
+        {
+            "pk": "ed25519:3UvUJL4QzBdggFLu6cTvctHBBgwaSGTjEy6HQxUJcV9m",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:6BE6H2q1Yk9DkK7RKm4Ebu2276pwmb3vdJtT42F6QScY",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:GovMNBrUcD3ShsMdadyHPoMjEHQcZpVAgoRb6QEqMtMJ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HeQzNbvXUTfDUFbC3rTfn3nM9hixjLjokxwLdtAen2Mk",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:5Ft39fBzptDBkvXEu5QD91Wt4yKkc2xdbPdSMdKeRnHY",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:9ijryy3dagQ9j1eRiiA4g6E3nJRu2MViPSiyMaNuvWs8",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HxMgtyGdGkv7QCqiB1LneMqHPuxtyB75xDr5xSaKXVJE",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FpUpfJ3dYVd6ri4Eb4KoHzKD2J5RNcTqcZF9TaUA8GQW",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FMNHFfUcjQ9MDkQrvxW4PACAARMTJiy2KFKeCXTYZCHx",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:E2H9YD8msbDhF92hdZG5q32aijbNSdKzf5qkDaqpXuXo",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:GZYipNRwrBeuPvzLHJYA7cTizcwaR8zWH1PrJTTyBxBg",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FvpecKE48VmHStYUbTBHtYQFy13hWoGZ2gLHDfwNt1XW",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:BcvjDEHJRLUHxNcfRP7yYJgrwLAbwFXzxgxWU8yWhUis",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:Ha6TcP4H7xAe8Aw4HUsx4WhsTfppsAsTG9kegyyPqsdH",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:6U65QCJ7o9s5ownXoGCPbFoZTDtr4DkhFNDyEvQdPd7t",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HZzPrHsC7YXkepp174ywX4CUbW22ksbPkAV9agk22WTU",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EQhhry7yPoppLupTBfERhKTbVtkrBYsLqMDyWzBrjfBq",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:7PLdhJoPUxvGTeXccMg1XfwUnD1wD2m7QxX1oXUXnSxp",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:AZXEgcDF7s96oRAH9MRR4qzBFu7es3vZekDwVg3V9S1i",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3g1fZtDGDTarDSToNHNEEqopAmzEw8c2s5tpUYX6iy2k",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:7EoLBj2nR42RBMWSxXqFToceZ52y39GsEn7KnRYNhpSB",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EgahY5S5fqScYN2AmQaa7CfRxeTEynHqcnNz8eZpRg3q",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EWjSnDmjRz73V46rhe7qD6tRd6JK6drukmFcSyeirjwc",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8tE3h42zBqmcCKZNCPj6Mj1wu2fstf4vTZD2e7QH6brZ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3xha32dYbGBgs76kpJkTA89T9MTSkufzegGDnXspRDfJ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:CzxozjpA3jMGPcBEeiS41gUGyXtrXa8k7LzNUuhdzxM",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:BJTpw2gdznBvpfhEddi6ZDD3co92UNTYQFT5BGhKsR1P",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:2SUZxbhXmGfWRzsvvWbEw4FaWMbN97iUpAVtZusJ3fkM",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:Fzr5gk2xkzmUJLFbmezGMjjwjQtj8toq8hKpDCWPF9h1",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8QKduc7GstcVzfSJjvttavtHG5qyXtBsVpTzRNir8t2E",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:AZjgpFuvjLGXCQmNtL2nGZnPAxj9x5crZJm3i4EfQxnb",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8XDR8SF7nduXdNyUnrkbX8yNnnNneirKDKFXggw893UD",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8Z3fYthFazXghv1fd1jiMGbyGPnhkzXnuyZpNUwK4Nrk",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:DemwyWa2kHW1Hc8uiTCsSz48Z2s511sYDNjQo8fpa2bK",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:2eeVPpDKb3mHUyNDTJHsjTYaxNwLrcmCkZn2Sed3C632",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:SojNdPkswgarKnPQuwPP9r2eVtSpex3zsMa3BzioVtD",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8rGgdsdt9JSjYgwDcVqhRZKx7WHXRiK2MFKAEBi8tEZz",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3cWPjPss2kRdTTbcvUgXRDWAcQt3hwXCoxB9ktRpABrB",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:2uhGhCxwBrr6yKM1srahZrnzGw3jUZQthLbhG999juut",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:71SibncrCLN43TEPJLMZsYvakeXMwMGddWku1Z5fux85",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HZ8bm7gGLz4mMyHNAHDjgiEgfh2G7eYWb8sD3UNmbPaQ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:9EKuLv4JodC4xQphvzuqnKjuj6pCCeYrKNmrMShpZYmv",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EvP7s1C6erkYLXqbtM2kxQdkPcBQVJasoa6Z3NnH1tA3",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:BDU3BL9QamzbMaPpYbg6hFFeerNfVZjLrnuYpWJ1xCSJ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:J2VKVC7mjTQmcEZEw8TNAXwkXSR2QsYhdERSosWokVAB",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FKqwfMq4xbUWLpFxfuwUZ6Pab3QKfw7Hx7La1EnXQxaN",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:iqPQV1TW4f3TBwi2xb2cpWuL1Va4LuNFTtyeG6kMtba",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:CpeEeG16syvz7qHJfPfNu1piPvCJ1sLEJy92QhLP9QP3",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3EfjZVb9KqpbiAbrQhYiL9bcsokpydqkUJnDTQXLnxFL",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:4BrXpjzmLnTv138ePJw86gSSz64e5eedbfte7sWACTey",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        }
+    ],
+    "get_key_information": {
+        "pk": "ed25519:3UvUJL4QzBdggFLu6cTvctHBBgwaSGTjEy6HQxUJcV9m",
+        "funder_id": "benjiman.testnet",
+        "balance": "5000000000000000000000",
+        "ft_data": {
+            "ft_contract": "ft.examples.benjiman.testnet",
+            "ft_sender": "benjiman.testnet",
+            "ft_balance": "25",
+            "ft_storage": "1250000000000000000000"
+        },
+        "nft_data": null,
+        "fc_data": null,
+        "storage_used_per_key": "4841400000000000000000"
+    },
+    "get_drop_information": {
+        "funder_id": "benjiman.testnet",
+        "balance": "5000000000000000000000",
+        "ft_data": {
+            "ft_contract": "ft.examples.benjiman.testnet",
+            "ft_sender": "benjiman.testnet",
+            "ft_balance": "25",
+            "ft_storage": "1250000000000000000000"
+        },
+        "nft_data": null,
+        "fc_data": null,
+        "storage_used_per_key": "4841400000000000000000",
+        "keys_registered": 100
+    },
+    "get_keys_for_drop": [
+        {
+            "pk": "ed25519:3UvUJL4QzBdggFLu6cTvctHBBgwaSGTjEy6HQxUJcV9m",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:6BE6H2q1Yk9DkK7RKm4Ebu2276pwmb3vdJtT42F6QScY",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:GovMNBrUcD3ShsMdadyHPoMjEHQcZpVAgoRb6QEqMtMJ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HeQzNbvXUTfDUFbC3rTfn3nM9hixjLjokxwLdtAen2Mk",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:5Ft39fBzptDBkvXEu5QD91Wt4yKkc2xdbPdSMdKeRnHY",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:9ijryy3dagQ9j1eRiiA4g6E3nJRu2MViPSiyMaNuvWs8",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HxMgtyGdGkv7QCqiB1LneMqHPuxtyB75xDr5xSaKXVJE",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FpUpfJ3dYVd6ri4Eb4KoHzKD2J5RNcTqcZF9TaUA8GQW",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FMNHFfUcjQ9MDkQrvxW4PACAARMTJiy2KFKeCXTYZCHx",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:E2H9YD8msbDhF92hdZG5q32aijbNSdKzf5qkDaqpXuXo",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:GZYipNRwrBeuPvzLHJYA7cTizcwaR8zWH1PrJTTyBxBg",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FvpecKE48VmHStYUbTBHtYQFy13hWoGZ2gLHDfwNt1XW",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:BcvjDEHJRLUHxNcfRP7yYJgrwLAbwFXzxgxWU8yWhUis",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:Ha6TcP4H7xAe8Aw4HUsx4WhsTfppsAsTG9kegyyPqsdH",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:6U65QCJ7o9s5ownXoGCPbFoZTDtr4DkhFNDyEvQdPd7t",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HZzPrHsC7YXkepp174ywX4CUbW22ksbPkAV9agk22WTU",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EQhhry7yPoppLupTBfERhKTbVtkrBYsLqMDyWzBrjfBq",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:7PLdhJoPUxvGTeXccMg1XfwUnD1wD2m7QxX1oXUXnSxp",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:AZXEgcDF7s96oRAH9MRR4qzBFu7es3vZekDwVg3V9S1i",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3g1fZtDGDTarDSToNHNEEqopAmzEw8c2s5tpUYX6iy2k",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:7EoLBj2nR42RBMWSxXqFToceZ52y39GsEn7KnRYNhpSB",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EgahY5S5fqScYN2AmQaa7CfRxeTEynHqcnNz8eZpRg3q",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EWjSnDmjRz73V46rhe7qD6tRd6JK6drukmFcSyeirjwc",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8tE3h42zBqmcCKZNCPj6Mj1wu2fstf4vTZD2e7QH6brZ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3xha32dYbGBgs76kpJkTA89T9MTSkufzegGDnXspRDfJ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:CzxozjpA3jMGPcBEeiS41gUGyXtrXa8k7LzNUuhdzxM",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:BJTpw2gdznBvpfhEddi6ZDD3co92UNTYQFT5BGhKsR1P",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:2SUZxbhXmGfWRzsvvWbEw4FaWMbN97iUpAVtZusJ3fkM",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:Fzr5gk2xkzmUJLFbmezGMjjwjQtj8toq8hKpDCWPF9h1",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8QKduc7GstcVzfSJjvttavtHG5qyXtBsVpTzRNir8t2E",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:AZjgpFuvjLGXCQmNtL2nGZnPAxj9x5crZJm3i4EfQxnb",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8XDR8SF7nduXdNyUnrkbX8yNnnNneirKDKFXggw893UD",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8Z3fYthFazXghv1fd1jiMGbyGPnhkzXnuyZpNUwK4Nrk",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:DemwyWa2kHW1Hc8uiTCsSz48Z2s511sYDNjQo8fpa2bK",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:2eeVPpDKb3mHUyNDTJHsjTYaxNwLrcmCkZn2Sed3C632",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:SojNdPkswgarKnPQuwPP9r2eVtSpex3zsMa3BzioVtD",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:8rGgdsdt9JSjYgwDcVqhRZKx7WHXRiK2MFKAEBi8tEZz",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3cWPjPss2kRdTTbcvUgXRDWAcQt3hwXCoxB9ktRpABrB",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:2uhGhCxwBrr6yKM1srahZrnzGw3jUZQthLbhG999juut",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:71SibncrCLN43TEPJLMZsYvakeXMwMGddWku1Z5fux85",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:HZ8bm7gGLz4mMyHNAHDjgiEgfh2G7eYWb8sD3UNmbPaQ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:9EKuLv4JodC4xQphvzuqnKjuj6pCCeYrKNmrMShpZYmv",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:EvP7s1C6erkYLXqbtM2kxQdkPcBQVJasoa6Z3NnH1tA3",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:BDU3BL9QamzbMaPpYbg6hFFeerNfVZjLrnuYpWJ1xCSJ",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:J2VKVC7mjTQmcEZEw8TNAXwkXSR2QsYhdERSosWokVAB",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:FKqwfMq4xbUWLpFxfuwUZ6Pab3QKfw7Hx7La1EnXQxaN",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:iqPQV1TW4f3TBwi2xb2cpWuL1Va4LuNFTtyeG6kMtba",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:CpeEeG16syvz7qHJfPfNu1piPvCJ1sLEJy92QhLP9QP3",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:3EfjZVb9KqpbiAbrQhYiL9bcsokpydqkUJnDTQXLnxFL",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        },
+        {
+            "pk": "ed25519:4BrXpjzmLnTv138ePJw86gSSz64e5eedbfte7sWACTey",
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000"
+        }
+    ],
+    "key_supply_for_funder": 100,
+    "drop_supply_for_funder": 1,
+    "drops_for_funder": [
+        {
+            "funder_id": "benjiman.testnet",
+            "balance": "5000000000000000000000",
+            "ft_data": {
+                "ft_contract": "ft.examples.benjiman.testnet",
+                "ft_sender": "benjiman.testnet",
+                "ft_balance": "25",
+                "ft_storage": "1250000000000000000000"
+            },
+            "nft_data": null,
+            "fc_data": null,
+            "storage_used_per_key": "4841400000000000000000",
+            "keys_registered": 100
+        }
+    ],
+    "get_nonce": 1
+}

@@ -67,7 +67,14 @@ const ONE_GIGGA_GAS: u64 = 1_000_000_000;
 /// Methods callable by the function call access key
 const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
 
+/*
+    FEES
+*/
+const DROP_CREATION_FEE: u128 = 1_000_000_000_000_000_000_000_000; // 0.1 N 
+const KEY_ADDITION_FEE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N 
+
 mod claim;
+mod owner;
 mod drops;
 mod ext_traits;
 mod nft;
@@ -123,6 +130,7 @@ enum StorageKey {
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
 pub struct DropZone {
+    pub owner_id: AccountId,
     // Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
     pub linkdrop_contract: AccountId,
     
@@ -132,6 +140,11 @@ pub struct DropZone {
     pub drop_for_id: LookupMap<DropId, Drop>,
     // Keep track of the drop ids for each funder for pagination
     pub drop_ids_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
+
+    // Fees taken by the contract. One is for creating a drop, the other is for each key in the drop.
+    pub drop_fee: u128,
+    pub key_fee: u128,
+    pub fees_collected: u128,
     
     // Keep track of a nonce used for the drop IDs
     pub nonce: DropId,
@@ -141,23 +154,20 @@ pub struct DropZone {
 impl DropZone {
     /// Initialize contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
     #[init]
-    pub fn new(linkdrop_contract: AccountId) -> Self {
+    pub fn new(linkdrop_contract: AccountId, owner_id: AccountId) -> Self {
         Self {
+            owner_id,
             linkdrop_contract,
             drop_id_for_pk: UnorderedMap::new(StorageKey::DropIdForPk),
             drop_for_id: LookupMap::new(StorageKey::DropsForId),
             drop_ids_for_funder: LookupMap::new(StorageKey::DropIdsForFunder),
             nonce: 0,
+            /*
+                FEES
+            */
+            drop_fee: DROP_CREATION_FEE,
+            key_fee: KEY_ADDITION_FEE,
+            fees_collected: 0,
         }
     }
-
-    /// Set the desired linkdrop contract to interact with
-	pub fn set_contract(&mut self, linkdrop_contract: AccountId) {
-		assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
-		self.linkdrop_contract = linkdrop_contract;
-	}
 }

@@ -10,7 +10,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let FT_CONTRACT_ID = process.env.FT_CONTRACT_ID;
 let SEND_MULTIPLE = process.env.SEND_MULTIPLE;
 
-let NUM_KEYS_IF_SEND_MULTIPLE = 3;
+let NUM_KEYS_IF_SEND_MULTIPLE = 100;
 let OFFSET = 2;
 let NETWORK_ID = "testnet";
 let near;
@@ -48,19 +48,20 @@ async function start() {
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
-	console.log(`initializing contract for account ${LINKDROP_PROXY_CONTRACT_ID}`);
-	try {
-		await contractAccount.functionCall(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'new', 
-			{
-				linkdrop_contract: "testnet"
-			}, 
-			"300000000000000", 
-		);
-	} catch(e) {
-		console.log('error initializing contract: ', e);
-	}
+	// console.log(`initializing contract for account ${LINKDROP_PROXY_CONTRACT_ID}`);
+	// try {
+	// 	await contractAccount.functionCall(
+	// 		LINKDROP_PROXY_CONTRACT_ID, 
+	// 		'new', 
+	// 		{
+	// 			linkdrop_contract: "testnet",
+	// 			owner_id: LINKDROP_PROXY_CONTRACT_ID
+	// 		}, 
+	// 		"300000000000000", 
+	// 	);
+	// } catch(e) {
+	// 	console.log('error initializing contract: ', e);
+	// }
 	
 	let keyPairs = [];
 	let pubKeys = [];
@@ -111,20 +112,18 @@ async function start() {
 			"300000000000000", 
 			parseNearAmount('1')
 		);
-		for(var i = 0; i < pubKeys.length - 1; i++) {
-			console.log(`Transferring 25 FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
-			await fundingAccount.functionCall(
-				FT_CONTRACT_ID, 
-				'ft_transfer_call', 
-				{
-					receiver_id: LINKDROP_PROXY_CONTRACT_ID,
-					amount: "25",
-					msg: dropId.toString(),
-				}, 
-				"300000000000000", 
-				'1'
-			);
-		}
+		console.log(`Transferring ${25 * NUM_KEYS_IF_SEND_MULTIPLE} FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
+		await fundingAccount.functionCall(
+			FT_CONTRACT_ID, 
+			'ft_transfer_call', 
+			{
+				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
+				amount: (25 * NUM_KEYS_IF_SEND_MULTIPLE).toString(),
+				msg: dropId.toString(),
+			}, 
+			"300000000000000", 
+			'1'
+		);
 	} catch(e) {
 		console.log('error sending FTs: ', e);
 	}
