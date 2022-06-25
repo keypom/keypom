@@ -29,11 +29,11 @@ impl DropZone {
         &mut self,
         sender_id: AccountId,
         amount: U128,
-        msg: DropId,
+        msg: U128,
     ) -> PromiseOrValue<U128> {
         let contract_id = env::predecessor_account_id();
 
-        let mut drop = self.drop_type_for_id.get(&msg).expect("No drop found for ID");
+        let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
         let FTData { ft_contract, ft_sender, ft_balance, ft_storage: _ } = drop.ft_data.as_ref().expect("No FT data found for drop");
 
         require!(ft_contract == &contract_id && ft_sender == &sender_id && amount.0 >= ft_balance.0, "FT data must match what was sent");
@@ -48,7 +48,7 @@ impl DropZone {
         }
 
         // Insert the drop with the updated data
-        self.drop_type_for_id.insert(&msg, &drop);
+        self.drop_for_id.insert(&msg.0, &drop);
 
         // Everything went well and we don't need to return any tokens (if they over-sent, we keep it)
         PromiseOrValue::Value(U128(0))
@@ -130,7 +130,7 @@ impl DropZone {
             // Refund the funder any excess $NEAR
             env::log_str("Unsuccessful query to get storage. Refunding funder.");
             // Remove the drop
-            let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+            let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             let funder_id = drop.funder_id.clone();
             
             // Remove the drop ID from the funder's list
@@ -146,8 +146,8 @@ impl DropZone {
             
             // If there are keys still left in the drop, add the drop back in with updated data
             if !drop.pks.is_empty() {
-                // Add drop type back with the updated data.
-                self.drop_type_for_id.insert(
+                // Add drop back with the updated data.
+                self.drop_for_id.insert(
                     &drop_id, 
                     &drop
                 );
@@ -161,7 +161,7 @@ impl DropZone {
 
         // Try to get the storage balance bounds from the result of the promise
 		if let Ok(StorageBalanceBounds{ min, max: _ }) = near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result.unwrap()) {
-            let mut drop = self.drop_type_for_id.get(&drop_id).unwrap();
+            let mut drop = self.drop_for_id.get(&drop_id).unwrap();
             
             // Ensure the user attached enough to cover the regular $NEAR linkdrops case PLUS the storage for the fungible token contract for each key
             let required_deposit =  (drop.storage_used_per_key.0 + ACCESS_KEY_ALLOWANCE + drop.balance.0 + min.0) * pub_keys_len;
@@ -169,7 +169,7 @@ impl DropZone {
             if attached_deposit < required_deposit {
                 env::log_str("Deposit not large enough to cover FT storage for each key. Refunding funder.");
                 // Remove the drop
-                let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+                let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
                 let funder_id = drop.funder_id.clone();
                 
                 // Remove the drop ID from the funder's list
@@ -185,8 +185,8 @@ impl DropZone {
                 
                 // If there are keys still left in the drop, add the drop back in with updated data
                 if !drop.pks.is_empty() {
-                    // Add drop type back with the updated data.
-                    self.drop_type_for_id.insert(
+                    // Add drop back with the updated data.
+                    self.drop_for_id.insert(
                         &drop_id, 
                         &drop
                     );
@@ -203,7 +203,7 @@ impl DropZone {
             new_ft_data.ft_storage = Some(min);
             drop.ft_data = Some(new_ft_data);
 
-            self.drop_type_for_id.insert(
+            self.drop_for_id.insert(
                 &drop_id, 
                 &drop
             );
@@ -220,7 +220,7 @@ impl DropZone {
             // Refund the funder any excess $NEAR
             env::log_str("Unsuccessful query to get storage. Refunding funder.");
             // Remove the drop
-            let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+            let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             let funder_id = drop.funder_id.clone();
             
             // Remove the drop ID from the funder's list
@@ -236,8 +236,8 @@ impl DropZone {
             
             // If there are keys still left in the drop, add the drop back in with updated data
             if !drop.pks.is_empty() {
-                // Add drop type back with the updated data.
-                self.drop_type_for_id.insert(
+                // Add drop back with the updated data.
+                self.drop_for_id.insert(
                     &drop_id, 
                     &drop
                 );

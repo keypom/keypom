@@ -93,15 +93,15 @@ pub type DropId = u128;
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
 #[derive(BorshDeserialize, BorshSerialize, Debug)]
-pub struct DropType {
-    // Funder of this specific drop type
+pub struct Drop {
+    // Funder of this specific drop
     pub funder_id: AccountId,
-    // Balance for all linkdrops of this drop type
+    // Balance for all linkdrops of this drop
     pub balance: U128,
-    // Set of public keys associated with this drop type
+    // Set of public keys associated with this drop
     pub pks: UnorderedSet<PublicKey>,
 
-    // Specific data associated with this drop type
+    // Specific data associated with this drop
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<NFTData>, 
     pub fc_data: Option<FCData>,
@@ -115,9 +115,9 @@ pub struct DropType {
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
     DropIdForPk,
-    DropTypeForId,
-    DropsForFunder,
-    DropsForFunderInner { account_id_hash: CryptoHash },
+    DropsForId,
+    DropIdsForFunder,
+    DropIdsForFunderInner { account_id_hash: CryptoHash },
 }
 
 #[near_bindgen]
@@ -126,15 +126,15 @@ pub struct DropZone {
     // Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
     pub linkdrop_contract: AccountId,
     
-    // Map each key to a nonce rather than repeating each drop data type in memory
+    // Map each key to a nonce rather than repeating each drop data in memory
     pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
-    // Map the nonce to a specific drop type
-    pub drop_type_for_id: LookupMap<DropId, DropType>,
+    // Map the nonce to a specific drop
+    pub drop_for_id: LookupMap<DropId, Drop>,
+    // Keep track of the drop ids for each funder for pagination
+    pub drop_ids_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
+    
     // Keep track of a nonce used for the drop IDs
     pub nonce: DropId,
-    
-    // Keep track of the drop ids for each funder for pagination
-    pub drops_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
 }
 
 #[near_bindgen]
@@ -145,8 +145,8 @@ impl DropZone {
         Self {
             linkdrop_contract,
             drop_id_for_pk: UnorderedMap::new(StorageKey::DropIdForPk),
-            drop_type_for_id: LookupMap::new(StorageKey::DropTypeForId),
-            drops_for_funder: LookupMap::new(StorageKey::DropsForFunder),
+            drop_for_id: LookupMap::new(StorageKey::DropsForId),
+            drop_ids_for_funder: LookupMap::new(StorageKey::DropIdsForFunder),
             nonce: 0,
         }
     }

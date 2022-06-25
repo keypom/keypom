@@ -233,7 +233,7 @@ impl DropZone {
     }
 
     /// Internal method for deleting the used key and removing / returning linkdrop data.
-    fn process_claim(&mut self) -> DropType {
+    fn process_claim(&mut self) -> Drop {
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
             env::predecessor_account_id(),
@@ -249,7 +249,7 @@ impl DropZone {
         env::log_str(&format!("Drop ID: {:?}", drop_id));
 
         // Remove the drop
-        let mut drop = self.drop_type_for_id.remove(&drop_id).expect("drop type not found");
+        let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
 
         env::log_str(&format!("Drop PKs Len: {:?}", drop.pks.len()));
         // Remove the pk from the drop's set.
@@ -267,8 +267,8 @@ impl DropZone {
         
         // If there are keys still left in the drop, add the drop back in with updated data
         if !drop.pks.is_empty() {
-            // Add drop type back with the updated data.
-            self.drop_type_for_id.insert(
+            // Add drop back with the updated data.
+            self.drop_for_id.insert(
                 &drop_id, 
                 &drop
             );

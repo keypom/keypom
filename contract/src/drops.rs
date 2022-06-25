@@ -19,7 +19,7 @@ impl DropZone {
         ft_data: Option<FTData>,
         nft_data: Option<NFTData>,
         fc_data: Option<FCData>
-    ) {
+    ) -> DropId {
         // Ensure the user has only specified one type of callback data
         let num_cbs_specified = if ft_data.is_some() {1} else {0} + if nft_data.is_some() {1} else {0} + if fc_data.is_some() {1} else {0};
         require!(num_cbs_specified <= 1, "You cannot specify more than one callback data");
@@ -39,7 +39,7 @@ impl DropZone {
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
 
-        let mut key_set: UnorderedSet<PublicKey> = UnorderedSet::new(StorageKey::DropsForFunderInner {
+        let mut key_set: UnorderedSet<PublicKey> = UnorderedSet::new(StorageKey::DropIdsForFunderInner {
             //we get a new unique prefix for the collection
             account_id_hash: hash_account_id(&format!("{}{}", self.nonce, funder_id)),
         });
@@ -53,7 +53,7 @@ impl DropZone {
             self.drop_id_for_pk.insert(&pk, &drop_id);
         }
 
-        let mut drop = DropType { 
+        let mut drop = Drop { 
             funder_id: env::predecessor_account_id(), 
             balance, 
             pks: key_set,
@@ -64,20 +64,20 @@ impl DropZone {
             keys_registered: 0
         };
 
-        // Add drop type with largest possible storage used and keys registered for now.
-        self.drop_type_for_id.insert(
+        // Add drop with largest possible storage used and keys registered for now.
+        self.drop_for_id.insert(
             &drop_id, 
             &drop
         );
 
         // TODO: add storage for access keys * num of public keys
-        // Calculate the storage being used for the entire drop and add it to the drop type.
+        // Calculate the storage being used for the entire drop and add it to the drop.
         let final_storage = env::storage_usage();
         let total_required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
 
         // Insert the drop back with the storage
         drop.storage_used_per_key = U128(total_required_storage / len);
-        self.drop_type_for_id.insert(
+        self.drop_for_id.insert(
             &drop_id, 
             &drop
         );
@@ -157,5 +157,7 @@ impl DropZone {
             // If the user overpaid for the desired linkdrop balances, refund them.
             Promise::new(env::predecessor_account_id()).transfer(attached_deposit - required_deposit);
         }
+
+        drop_id
     }
 }

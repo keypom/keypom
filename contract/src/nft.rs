@@ -16,13 +16,13 @@ impl DropZone {
         &mut self,
         token_id: String,
         sender_id: AccountId,
-        msg: DropId,
+        msg: U128,
     ) -> PromiseOrValue<bool> {
         require!(token_id.len() <= 256, "Contract cannot accept token IDs of length greater than 256 bytes");
 
         let contract_id = env::predecessor_account_id();
 
-        let mut drop = self.drop_type_for_id.get(&msg).expect("No drop found for ID");
+        let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
         let NFTData { nft_sender, nft_contract, nft_token_id } = drop.nft_data.as_ref().expect("No NFT data found for drop");
 
         require!(nft_sender == &sender_id && nft_contract == &contract_id && nft_token_id == &token_id, "NFT data must match what was sent");
@@ -35,7 +35,7 @@ impl DropZone {
         }
 
         // Insert the drop with the updated data
-        self.drop_type_for_id.insert(&msg, &drop);
+        self.drop_for_id.insert(&msg.0, &drop);
 
         // Everything went well and we don't need to return the token.
         PromiseOrValue::Value(false)

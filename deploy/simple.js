@@ -79,6 +79,11 @@ async function start() {
 		pubKeys.push(keyPair.publicKey.toString());   
 	}
 
+	const dropId = await fundingAccount.viewFunction(
+		LINKDROP_PROXY_CONTRACT_ID, 
+		'get_nonce',
+	);
+
 	try {
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
@@ -110,6 +115,37 @@ async function start() {
 		viewData.get_keys = getKeys; 
 		console.log('getKeys: ', getKeys);
 
+		const keyInfo = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_key_information',
+			{
+				key: pubKeys[0]
+			}
+		);
+		viewData.get_key_information = keyInfo; 
+		console.log('keyInfo: ', keyInfo);
+
+		const dropInfo = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_drop_information',
+			{
+				drop_id: dropId
+			}
+		);
+		viewData.get_drop_information = dropInfo; 
+		console.log('dropInfo: ', dropInfo);
+
+		const keysForDrop = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_keys_for_drop',
+			{
+				drop_id: dropId
+			}
+		);
+		viewData.get_keys_for_drop = keysForDrop; 
+		console.log('keysForDrop: ', keysForDrop);
+
+
 		const keySupplyForFunder = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'key_supply_for_funder',
@@ -139,33 +175,6 @@ async function start() {
 		);
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
-
-		const getKeyInformation = await fundingAccount.viewFunction(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'get_key_information',
-			{
-				key: pubKeys[0]
-			}
-		);
-		viewData.get_key_information = getKeyInformation; 
-		console.log('getKeyInformation: ', getKeyInformation);
-
-		const getDropInformation = await fundingAccount.viewFunction(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'get_drop_information',
-			{
-				drop_id: 0
-			}
-		);
-		viewData.get_drop_information = getDropInformation; 
-		console.log('getDropInformation: ', getDropInformation);
-
-		const getNonce = await fundingAccount.viewFunction(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'get_nonce',
-		);
-		viewData.get_nonce = getNonce;
-		console.log('getNonce: ', getNonce);
 
 		await writeFile(`./views.json`, JSON.stringify(viewData));
 	} catch(e) {
