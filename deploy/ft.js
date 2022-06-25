@@ -47,21 +47,6 @@ async function start() {
 
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
-
-	// console.log(`initializing contract for account ${LINKDROP_PROXY_CONTRACT_ID}`);
-	// try {
-	// 	await contractAccount.functionCall(
-	// 		LINKDROP_PROXY_CONTRACT_ID, 
-	// 		'new', 
-	// 		{
-	// 			linkdrop_contract: "testnet",
-	// 			owner_id: LINKDROP_PROXY_CONTRACT_ID
-	// 		}, 
-	// 		"300000000000000", 
-	// 	);
-	// } catch(e) {
-	// 	console.log('error initializing contract: ', e);
-	// }
 	
 	let keyPairs = [];
 	let pubKeys = [];

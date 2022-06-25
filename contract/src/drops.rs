@@ -34,7 +34,9 @@ impl DropZone {
         let funder_id = env::predecessor_account_id();
         let len = public_keys.len() as u128;
         let drop_id = self.nonce;
-        let attached_deposit = env::attached_deposit();
+
+        // Get the current balance of the funder. 
+        let mut current_user_balance = self.user_balances.get(&funder_id).expect("No user balance found");
 
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
@@ -87,7 +89,7 @@ impl DropZone {
 
         let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + ACCESS_KEY_STORAGE + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len;
         env::log_str(&format!(
-            "Attached Deposit: {}, 
+            "Current balance: {}, 
             Required Deposit: {}, 
             Drop Fee: {}, 
             Key Fee: {}, 
@@ -97,7 +99,7 @@ impl DropZone {
             Linkdrop Balance: {}, 
             total function call deposits (if applicable): {}, 
             length: {}", 
-            yocto_to_near(attached_deposit), 
+            yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
             yocto_to_near(self.drop_fee),
             yocto_to_near(self.key_fee),
@@ -111,7 +113,11 @@ impl DropZone {
         /*
             Ensure the attached deposit can cover: 
         */ 
-        require!(attached_deposit >= required_deposit, "Not enough deposit");
+        require!(current_user_balance >= required_deposit, "Not enough deposit");
+        // Decrement the user's balance by the required deposit and insert back into the map
+        current_user_balance -= required_deposit;
+        self.user_balances.insert(&funder_id, &current_user_balance);
+        
         
         // Increment our fees earned
         self.fees_collected += self.drop_fee + self.key_fee * len;
@@ -150,18 +156,14 @@ impl DropZone {
                 .storage_balance_bounds()
             .then(
                 Self::ext(env::current_account_id())
-                    // Resolve the promise with the attached deposit and the min GAS. All unspent GAS will be added to this call.
+                    // Resolve the promise with the min GAS. All unspent GAS will be added to this call.
                     .with_static_gas(MIN_GAS_FOR_RESOLVE_STORAGE_CHECK)
-                    .with_attached_deposit(attached_deposit)
                     .resolve_storage_check(
                         public_keys,
-                        drop_id
+                        drop_id,
+                        required_deposit
                     )
             );
-        } else if attached_deposit > required_deposit {
-            env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - required_deposit)));    
-            // If the user overpaid for the desired linkdrop balances, refund them.
-            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - required_deposit);
         }
 
         drop_id
@@ -184,11 +186,13 @@ impl DropZone {
 
         let len = public_keys.len() as u128;
 
-        let attached_deposit = env::attached_deposit();
+        // Get the current balance of the funder. 
+        let mut current_user_balance = self.user_balances.get(&funder).expect("No user balance found");
+
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
-        let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + if drop.fc_data.is_some() {drop.fc_data.clone().unwrap().deposit.0} else {0}) * len;
+        let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + if drop.fc_data.is_some() {drop.fc_data.clone().unwrap().deposit.0} else {0} + if drop.ft_data.is_some() {drop.ft_data.clone().unwrap().ft_storage.unwrap().0} else {0}) * len;
         env::log_str(&format!(
-            "Attached Deposit: {}, 
+            "Current User Balance: {}, 
             Required Deposit: {}, 
             Storage per key: {}, 
             Key fee: {}, 
@@ -197,7 +201,7 @@ impl DropZone {
             Balance per key: {}, 
             function call deposits (if applicable): {}, 
             length: {}", 
-            yocto_to_near(attached_deposit), 
+            yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
             yocto_to_near(drop.storage_used_per_key.0),
             yocto_to_near(self.key_fee), 
@@ -210,7 +214,11 @@ impl DropZone {
         /*
             Ensure the attached deposit can cover: 
         */ 
-        require!(attached_deposit >= required_deposit, "Not enough deposit");
+        require!(current_user_balance >= required_deposit, "Not enough deposit");
+        // Decrement the user's balance by the required deposit and insert back into the map
+        current_user_balance -= required_deposit;
+        self.user_balances.insert(&funder, &current_user_balance);
+
         // Increment our fees earned
         self.fees_collected += self.key_fee * len;
 
@@ -252,12 +260,6 @@ impl DropZone {
         }
 
         env::promise_return(promise);
-        
-        if attached_deposit > required_deposit {
-            env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - required_deposit)));    
-            // If the user overpaid for the desired linkdrop balances, refund them.
-            Promise::new(env::predecessor_account_id()).transfer(attached_deposit - required_deposit);
-        }
 
         drop_id
     }

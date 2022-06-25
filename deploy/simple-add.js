@@ -71,15 +71,26 @@ async function start() {
 	try {
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
+			'add_to_balance', 
+			{},
+			"300000000000000", 
+			parseNearAmount(
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length).toString()
+			)
+		);
+	} catch(e) {
+		console.log('error initializing contract: ', e);
+	}
+
+	try {
+		await fundingAccount.functionCall(
+			LINKDROP_PROXY_CONTRACT_ID, 
 			'add_to_drop', 
 			{
 				public_keys: pubKeys,
 				drop_id: dropId
 			}, 
 			"300000000000000", 
-			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length).toString()
-			)
 		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);

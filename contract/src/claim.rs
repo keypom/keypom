@@ -313,8 +313,11 @@ impl DropZone {
         }
 
         env::log_str(&format!("Refunding funder: {:?} For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
-        // Send the necessary funds to the funder
-        Promise::new(funder_id.clone()).transfer(amount_to_refund);
+        
+        // Get the funder's balance and increment it by the amount to refund
+        let mut cur_funder_balance = self.user_balances.get(&funder_id).expect("No funder balance found");
+        cur_funder_balance += amount_to_refund;
+        self.user_balances.insert(&funder_id, &cur_funder_balance);
 
         claim_succeeded
     }
@@ -358,9 +361,11 @@ impl DropZone {
             amount_to_refund += balance.0
         }
 
-        env::log_str(&format!("Refunding funder: {:?} For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
-        // Perform the refund for the necessary amount
-        Promise::new(funder_id.clone()).transfer(amount_to_refund);
+        env::log_str(&format!("Refunding funder: {:?} balance For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
+        // Get the funder's balance and increment it by the amount to refund
+        let mut cur_funder_balance = self.user_balances.get(&funder_id).expect("No funder balance found");
+        cur_funder_balance += amount_to_refund;
+        self.user_balances.insert(&funder_id, &cur_funder_balance);
 
         /*
             Fungible Tokens. 
@@ -478,9 +483,11 @@ impl DropZone {
             amount_to_refund += balance.0
         }
 
-        env::log_str(&format!("Refunding funder: {:?} For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
-        // Perform the refund for the necessary amount
-        Promise::new(funder_id.clone()).transfer(amount_to_refund);
+        env::log_str(&format!("Refunding funder: {:?} balance For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
+        // Get the funder's balance and increment it by the amount to refund
+        let mut cur_funder_balance = self.user_balances.get(&funder_id).expect("No funder balance found");
+        cur_funder_balance += amount_to_refund;
+        self.user_balances.insert(&funder_id, &cur_funder_balance);
 
         /*
             Non Fungible Tokens
@@ -580,8 +587,11 @@ impl DropZone {
         */ 
         if !claim_succeeded || (!add_refund_to_deposit.unwrap_or(false) && claim_succeeded) {
             // Refunding
-            env::log_str(&format!("Refunding funder: {:?} For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
-            Promise::new(funder_id.clone()).transfer(amount_to_refund);
+            env::log_str(&format!("Refunding funder: {:?} balance For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
+            // Get the funder's balance and increment it by the amount to refund
+            let mut cur_funder_balance = self.user_balances.get(&funder_id).expect("No funder balance found");
+            cur_funder_balance += amount_to_refund;
+            self.user_balances.insert(&funder_id, &cur_funder_balance);
         } else {
             env::log_str(&format!("Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}", funder_id, claim_succeeded, add_refund_to_deposit.unwrap_or(false)));
         }

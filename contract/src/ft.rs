@@ -118,17 +118,17 @@ impl DropZone {
     pub fn resolve_storage_check(
         &mut self,
         public_keys: Vec<PublicKey>,
-        drop_id: DropId
+        drop_id: DropId,
+        required_deposit: u128,
     ) -> bool {
         // Check promise result.
         let result = promise_result_as_success();
-        let attached_deposit = env::attached_deposit();
         let pub_keys_len = public_keys.len() as u128;
 
         // If things went wrong, we need to delete the data and refund the user.
         if result.is_none() {
             // Refund the funder any excess $NEAR
-            env::log_str("Unsuccessful query to get storage. Refunding funder.");
+            env::log_str(&format!("Unsuccessful query to get storage. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
             // Remove the drop
             let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             let funder_id = drop.funder_id.clone();
@@ -153,8 +153,10 @@ impl DropZone {
                 );
             }
 
-            // Refund the funder for their attached deposit
-            Promise::new(funder_id).transfer(attached_deposit);
+            // Refund the user's balance for the required deposit
+            let mut user_balance = self.user_balances.get(&funder_id).unwrap();
+            user_balance += required_deposit;
+            self.user_balances.insert(&funder_id, &user_balance);
 
             return false;
         }
@@ -162,15 +164,17 @@ impl DropZone {
         // Try to get the storage balance bounds from the result of the promise
 		if let Ok(StorageBalanceBounds{ min, max: _ }) = near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result.unwrap()) {
             let mut drop = self.drop_for_id.get(&drop_id).unwrap();
+            let funder_id = drop.funder_id.clone();
+
+            // Get the current user balance ad ensure that they have the extra $NEAR for covering the FT storage
+            let mut cur_user_balance = self.user_balances.get(&funder_id).unwrap();
+            let extra_storage_required =  min.0 * pub_keys_len;
             
-            // Ensure the user attached enough to cover the regular $NEAR linkdrops case PLUS the storage for the fungible token contract for each key
-            let required_deposit =  (drop.storage_used_per_key.0 + ACCESS_KEY_ALLOWANCE + drop.balance.0 + min.0) * pub_keys_len;
-            
-            if attached_deposit < required_deposit {
-                env::log_str("Deposit not large enough to cover FT storage for each key. Refunding funder.");
+            // Ensure the user's current balance can cover the extra storage required
+            if cur_user_balance < extra_storage_required {
+                env::log_str(&format!("Not enough balance to cover FT storage for each key. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
                 // Remove the drop
-                let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
-                let funder_id = drop.funder_id.clone();
+                self.drop_for_id.remove(&drop_id).unwrap();
                 
                 // Remove the drop ID from the funder's list
                 self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
@@ -192,8 +196,9 @@ impl DropZone {
                     );
                 }
 
-                // Refund the funder for their attached deposit
-                Promise::new(funder_id).transfer(attached_deposit);
+                // Refund the user's balance for the required deposit
+                cur_user_balance += required_deposit;
+                self.user_balances.insert(&funder_id, &cur_user_balance);
 
                 return false;
             }
@@ -208,17 +213,16 @@ impl DropZone {
                 &drop
             );
 
-            // If the user overpaid for the desired linkdrop balance, refund them.
-            if attached_deposit > required_deposit {    
-                env::log_str(&format!("Refunding User for: {}", yocto_to_near(attached_deposit - required_deposit)));
-                Promise::new(drop.funder_id).transfer(attached_deposit - required_deposit);
-            }
-            
+
+            // Decrement the user's balance by the extra required and insert back into the map
+            cur_user_balance -= extra_storage_required;
+            self.user_balances.insert(&funder_id, &cur_user_balance);
+
             // Everything went well and we return true
             return true
         } else {
             // Refund the funder any excess $NEAR
-            env::log_str("Unsuccessful query to get storage. Refunding funder.");
+            env::log_str(&format!("Unsuccessful query to get storage. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
             // Remove the drop
             let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             let funder_id = drop.funder_id.clone();
@@ -243,8 +247,10 @@ impl DropZone {
                 );
             }
 
-            // Refund the funder for their attached deposit
-            Promise::new(funder_id).transfer(attached_deposit);
+            // Refund the user's balance for the required deposit
+            let mut user_balance = self.user_balances.get(&funder_id).unwrap();
+            user_balance += required_deposit;
+            self.user_balances.insert(&funder_id, &user_balance);
 
             return false;
         }

@@ -6,7 +6,7 @@ use near_sdk::serde_json::{json};
 use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
     Promise, PromiseResult, PublicKey, PromiseOrValue, promise_result_as_success, CryptoHash,
-    require
+    require, Balance
 };
 
 /* 
@@ -82,6 +82,7 @@ mod ft;
 mod function_call;
 mod views;
 mod helpers;
+mod storage;
 
 use crate::ext_traits::*;
 use crate::nft::*;
@@ -125,6 +126,7 @@ enum StorageKey {
     DropsForId,
     DropIdsForFunder,
     DropIdsForFunderInner { account_id_hash: CryptoHash },
+    UserBalances
 }
 
 #[near_bindgen]
@@ -145,6 +147,9 @@ pub struct DropZone {
     pub drop_fee: u128,
     pub key_fee: u128,
     pub fees_collected: u128,
+
+    // keep track of the balances for each user. This is to prepay for drop creations
+    pub user_balances: LookupMap<AccountId, Balance>,
     
     // Keep track of a nonce used for the drop IDs
     pub nonce: DropId,
@@ -161,6 +166,7 @@ impl DropZone {
             drop_id_for_pk: UnorderedMap::new(StorageKey::DropIdForPk),
             drop_for_id: LookupMap::new(StorageKey::DropsForId),
             drop_ids_for_funder: LookupMap::new(StorageKey::DropIdsForFunder),
+            user_balances: LookupMap::new(StorageKey::UserBalances),
             nonce: 0,
             /*
                 FEES
