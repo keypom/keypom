@@ -1,6 +1,6 @@
 use near_sdk::{Balance, require};
 
-use crate::{*, helpers::hash_account_id};
+use crate::*;
 
 #[near_bindgen]
 impl DropZone {

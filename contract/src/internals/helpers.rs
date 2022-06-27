@@ -1,6 +1,6 @@
 use crate::*;
 
-//used to generate a unique prefix in our storage collections (this is to avoid data collisions)
+/// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
@@ -18,7 +18,7 @@ impl DropZone {
         matches!(env::promise_result(0), PromiseResult::Successful(_))
     }
 
-    //add a drop ID to the set of drops a funder has
+    /// Add a drop ID to the set of drops a funder has
     pub(crate) fn internal_add_drop_to_funder(
         &mut self,
         account_id: &AccountId,

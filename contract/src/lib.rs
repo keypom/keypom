@@ -73,21 +73,14 @@ const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
 const DROP_CREATION_FEE: u128 = 1_000_000_000_000_000_000_000_000; // 0.1 N 
 const KEY_ADDITION_FEE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N 
 
-mod claim;
-mod owner;
-mod drops;
-mod ext_traits;
-mod nft;
-mod ft;
-mod function_call;
+mod internals;
+mod stage1;
+mod stage2;
+mod stage3;
 mod views;
-mod helpers;
-mod storage;
 
-use crate::ext_traits::*;
-use crate::nft::*;
-use crate::ft::*;
-use crate::function_call::*;
+use internals::*;
+use stage2::*;
 
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
