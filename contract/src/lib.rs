@@ -93,7 +93,7 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
 pub type DropId = u128;
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[derive(BorshDeserialize, BorshSerialize, Debug)]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct Drop {
     // Funder of this specific drop
     pub funder_id: AccountId,
@@ -119,6 +119,7 @@ enum StorageKey {
     DropsForId,
     DropIdsForFunder,
     DropIdsForFunderInner { account_id_hash: CryptoHash },
+    TokenIdsForDrop { account_id_hash: CryptoHash },
     UserBalances
 }
 
@@ -132,7 +133,7 @@ pub struct DropZone {
     // Map each key to a nonce rather than repeating each drop data in memory
     pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
     // Map the nonce to a specific drop
-    pub drop_for_id: LookupMap<DropId, Drop>,
+    pub drop_for_id: LookupMap<DropId, Drop>,    
     // Keep track of the drop ids for each funder for pagination
     pub drop_ids_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
 

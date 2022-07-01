@@ -20,9 +20,10 @@ impl DropZone {
         env::log_str(&format!("in regular claim right before transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Send the existing account ID the desired linkdrop balance.
-        Promise::new(account_id.clone()).transfer(drop_data.balance.0)
-        .then(
-            if let Some(ft_data) = drop_data.ft_data {
+        let promise = Promise::new(account_id.clone()).transfer(drop_data.balance.0);
+        
+        if let Some(ft_data) = drop_data.ft_data {
+            promise.then(
                 // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -44,7 +45,11 @@ impl DropZone {
                     // How much storage does it cost to register the new account
                     ft_data.ft_storage.unwrap(),
                 )
-            } else if let Some(nft_data) = drop_data.nft_data {
+            );
+        } else if let Some(nft_data) = drop_data.nft_data {
+            // Get the next token ID
+            let token_id = nft_data.token_ids.unwrap().iter().next().unwrap();
+            promise.then(
                 // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -62,9 +67,11 @@ impl DropZone {
                     // Contract where the NFT is stored
                     nft_data.nft_contract,
                     // Token ID for the NFT
-                    nft_data.nft_token_id,
+                    token_id
                 )
-            } else if let Some(fc_data) = drop_data.fc_data {
+            );
+        } else if let Some(fc_data) = drop_data.fc_data {
+            promise.then(
                 // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -90,7 +97,9 @@ impl DropZone {
                     // Should we add the account ID as part of the args and what key should it live in
                     fc_data.claimed_account_field,
                 )
-            } else {
+            );
+        } else {
+            promise.then(
                 // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -102,14 +111,13 @@ impl DropZone {
                     // How much storage was used to store linkdrop info
                     drop_data.storage_used_per_key,
                 )
-            }
-        );
+            );
+        }
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("End of regular claim function: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
     }
 
     /// Create new account and and claim tokens to it.
@@ -132,7 +140,7 @@ impl DropZone {
         env::log_str(&format!("In CAAC after process claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
         
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
-        ext_linkdrop::ext(self.linkdrop_contract.clone())
+        let promise = ext_linkdrop::ext(self.linkdrop_contract.clone())
             // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
             .with_attached_deposit(drop_data.balance.0)
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
@@ -140,9 +148,10 @@ impl DropZone {
             .create_account(
                 new_account_id.clone(),
                 new_public_key,  
-            )
-        .then(
-            if let Some(ft_data) = drop_data.ft_data {
+            );
+
+        if let Some(ft_data) = drop_data.ft_data {
+            promise.then(
                 // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -164,7 +173,11 @@ impl DropZone {
                     // How much storage does it cost to register the new account
                     ft_data.ft_storage.unwrap(),
                 )
-            } else if let Some(nft_data) = drop_data.nft_data {
+            );
+        } else if let Some(nft_data) = drop_data.nft_data {
+            // Get the next token ID
+            let token_id = nft_data.token_ids.unwrap().iter().next().unwrap();
+            promise.then(
                 // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -182,9 +195,11 @@ impl DropZone {
                     // Contract where the NFT is stored
                     nft_data.nft_contract,
                     // Token ID for the NFT
-                    nft_data.nft_token_id,
+                    token_id
                 )
-            } else if let Some(fc_data) = drop_data.fc_data {
+            );
+        } else if let Some(fc_data) = drop_data.fc_data {
+            promise.then(
                 // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
@@ -210,20 +225,22 @@ impl DropZone {
                     // Should we add the account ID as part of the args and what key should it live in
                     fc_data.claimed_account_field,
                 )
-            } else {
+            );
+        } else {
+            promise.then(
                 // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
                 .on_claim_simple(
                     // Account ID that funded the linkdrop
-                    drop_data.funder_id,
+                    drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
                     // How much storage was used to store linkdrop info
                     drop_data.storage_used_per_key,
                 )
-            }
-        );
+            );
+        }
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -246,15 +263,12 @@ impl DropZone {
 
         // By default, every key should have a drop ID
         let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("No drop ID found for PK");
-        env::log_str(&format!("Drop ID: {:?}", drop_id));
 
         // Remove the drop
         let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
 
-        env::log_str(&format!("Drop PKs Len: {:?}", drop.pks.len()));
         // Remove the pk from the drop's set.
         drop.pks.remove(&signer_pk);
-        env::log_str(&format!("Drop PKs Len 2: {:?}", drop.pks.len()));
 
         // If it's an NFT or FT drop, decrement the registered keys
         if drop.ft_data.is_some() || drop.nft_data.is_some() {
@@ -277,8 +291,9 @@ impl DropZone {
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
         }
 
-        env::log_str(&format!("!Is Empty?: {:?}", !drop.pks.is_empty()));
-
+        // Delete the key
+        Promise::new(env::current_account_id()).delete_key(signer_pk);
+        
         // Return the drop
         drop
     }

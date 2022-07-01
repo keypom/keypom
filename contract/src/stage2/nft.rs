@@ -2,12 +2,13 @@ use crate::*;
 
 /// Keep track of nft data 
 #[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct NFTData {
     pub nft_sender: AccountId,
     pub nft_contract: AccountId,
-    pub nft_token_id: String,
+    pub longest_token_id: String,
+    pub storage_for_longest: Balance,
+    pub token_ids: Option<UnorderedSet<String>>,
 }
 
 #[near_bindgen]
@@ -18,21 +19,29 @@ impl DropZone {
         sender_id: AccountId,
         msg: U128,
     ) -> PromiseOrValue<bool> {
-        require!(token_id.len() <= 256, "Contract cannot accept token IDs of length greater than 256 bytes");
-
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
-        let NFTData { nft_sender, nft_contract, nft_token_id } = drop.nft_data.as_ref().expect("No NFT data found for drop");
+        let mut nft_data = drop.nft_data.expect("No NFT data found for drop");
+        let mut token_ids = nft_data.token_ids.unwrap();
 
-        require!(nft_sender == &sender_id && nft_contract == &contract_id && nft_token_id == &token_id, "NFT data must match what was sent");
-        
+        require!(nft_data.nft_sender == sender_id && nft_data.nft_contract == contract_id, "NFT data must match what was sent");
+        require!(token_id.len() <= nft_data.longest_token_id.len(), "token ID must be less than largest token specified");
+        require!(token_ids.insert(&token_id) == true, "token ID already registered");
+
+        // Re-insert the token IDs into the NFT Data struct 
+        nft_data.token_ids = Some(token_ids);
+
+        // Increment the keys registered
         drop.keys_registered += 1;
 
         // Ensure that the number of keys registered cannot exceed the drop length
         if drop.keys_registered > drop.pks.len() {
             drop.keys_registered = drop.pks.len()
         }
+
+        // Add the nft data back with the updated set
+        drop.nft_data = Some(nft_data);
 
         // Insert the drop with the updated data
         self.drop_for_id.insert(&msg.0, &drop);

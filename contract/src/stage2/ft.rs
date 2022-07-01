@@ -36,7 +36,8 @@ impl DropZone {
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
         let FTData { ft_contract, ft_sender, ft_balance, ft_storage: _ } = drop.ft_data.as_ref().expect("No FT data found for drop");
 
-        require!(ft_contract == &contract_id && ft_sender == &sender_id && amount.0 >= ft_balance.0, "FT data must match what was sent");
+        require!(amount.0 % ft_balance.0 == 0, "amount must be a multiple of the drop balance");
+        require!(ft_contract == &contract_id && ft_sender == &sender_id, "FT data must match what was sent");
         
         // Get the number of keys to register with the amount that is sent.
         let keys_to_register = (amount.0 / ft_balance.0) as u64;
@@ -130,29 +131,17 @@ impl DropZone {
             // Refund the funder any excess $NEAR
             env::log_str(&format!("Unsuccessful query to get storage. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
             // Remove the drop
-            let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
+            let drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             let funder_id = drop.funder_id.clone();
             
             // Remove the drop ID from the funder's list
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
             
-            // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
+            // Loop through the keys and remove the public keys' mapping
             for pk in public_keys {
                 self.drop_id_for_pk.remove(&pk.clone());
-
-                // Remove the pk from the drop's set.
-                drop.pks.remove(&pk);
             }
             
-            // If there are keys still left in the drop, add the drop back in with updated data
-            if !drop.pks.is_empty() {
-                // Add drop back with the updated data.
-                self.drop_for_id.insert(
-                    &drop_id, 
-                    &drop
-                );
-            }
-
             // Refund the user's balance for the required deposit
             let mut user_balance = self.user_balances.get(&funder_id).unwrap();
             user_balance += required_deposit;
@@ -182,24 +171,13 @@ impl DropZone {
                 // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
                 for pk in public_keys {
                     self.drop_id_for_pk.remove(&pk.clone());
-
-                    // Remove the pk from the drop's set.
-                    drop.pks.remove(&pk);
-                }
-                
-                // If there are keys still left in the drop, add the drop back in with updated data
-                if !drop.pks.is_empty() {
-                    // Add drop back with the updated data.
-                    self.drop_for_id.insert(
-                        &drop_id, 
-                        &drop
-                    );
                 }
 
                 // Refund the user's balance for the required deposit
                 cur_user_balance += required_deposit;
                 self.user_balances.insert(&funder_id, &cur_user_balance);
 
+                // TODO: delete keys
                 return false;
             }
 
@@ -213,10 +191,26 @@ impl DropZone {
                 &drop
             );
 
-
             // Decrement the user's balance by the extra required and insert back into the map
             cur_user_balance -= extra_storage_required;
             self.user_balances.insert(&funder_id, &cur_user_balance);
+
+            // Create the keys for the contract
+            let promise = env::promise_batch_create(&env::current_account_id());
+            
+            // Loop through each public key and create the access keys
+            for pk in public_keys.clone() {
+                env::promise_batch_action_add_key_with_function_call(
+                    promise, 
+                    &pk, 
+                    0, 
+                    ACCESS_KEY_ALLOWANCE, 
+                    &env::current_account_id(), 
+                    ACCESS_KEY_METHOD_NAMES
+                );
+            }
+
+            env::promise_return(promise);
 
             // Everything went well and we return true
             return true
@@ -224,29 +218,17 @@ impl DropZone {
             // Refund the funder any excess $NEAR
             env::log_str(&format!("Unsuccessful query to get storage. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
             // Remove the drop
-            let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
+            let drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             let funder_id = drop.funder_id.clone();
             
             // Remove the drop ID from the funder's list
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
             
-            // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
+            // Loop through the keys and remove the public keys' mapping
             for pk in public_keys {
                 self.drop_id_for_pk.remove(&pk.clone());
-
-                // Remove the pk from the drop's set.
-                drop.pks.remove(&pk);
             }
             
-            // If there are keys still left in the drop, add the drop back in with updated data
-            if !drop.pks.is_empty() {
-                // Add drop back with the updated data.
-                self.drop_for_id.insert(
-                    &drop_id, 
-                    &drop
-                );
-            }
-
             // Refund the user's balance for the required deposit
             let mut user_balance = self.user_balances.get(&funder_id).unwrap();
             user_balance += required_deposit;

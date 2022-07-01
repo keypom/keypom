@@ -11,7 +11,7 @@ pub struct JsonDrop {
 
     // Specific data associated with this drop
     pub ft_data: Option<FTData>, 
-    pub nft_data: Option<NFTData>, 
+    pub nft_data: Option<JsonNFTData>, 
     pub fc_data: Option<FCData>,
     // How much storage was used for EACH key and not the entire drop as a whole 
     pub storage_used_per_key: U128,
@@ -19,6 +19,15 @@ pub struct JsonDrop {
     pub keys_registered: u64,
 }
 
+/// Keep track of nft data 
+#[near_bindgen]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct JsonNFTData {
+    pub nft_sender: AccountId,
+    pub nft_contract: AccountId,
+    pub longest_token_id: String,
+}
 
 /// Struct to return in views to query for specific data related to an access key.
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]
@@ -32,7 +41,7 @@ pub struct JsonKeyInfo {
 
     // Specific data associated with this drop
     pub ft_data: Option<FTData>, 
-    pub nft_data: Option<NFTData>, 
+    pub nft_data: Option<JsonNFTData>, 
     pub fc_data: Option<FCData>,
     // How much storage was used for EACH key and not the entire drop as a whole 
     pub storage_used_per_key: U128,
@@ -86,13 +95,18 @@ impl DropZone {
     ) -> JsonKeyInfo {
         let drop_id = self.drop_id_for_pk.get(&key).expect("no drop ID found for key");
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found for drop ID");
+        let nft_data = drop.nft_data.unwrap();
 
         JsonKeyInfo { 
             pk: key,
             funder_id: drop.funder_id,
             balance: drop.balance,
             ft_data: drop.ft_data,
-            nft_data: drop.nft_data,
+            nft_data: Some(JsonNFTData{
+                nft_sender: nft_data.nft_sender,
+                nft_contract: nft_data.nft_contract,
+                longest_token_id: nft_data.longest_token_id,
+            }),
             fc_data: drop.fc_data,
             storage_used_per_key: drop.storage_used_per_key,
         }
@@ -104,12 +118,17 @@ impl DropZone {
         drop_id: DropId
     ) -> JsonDrop {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found for drop ID");
+        let nft_data = drop.nft_data.unwrap();
 
         JsonDrop { 
             funder_id: drop.funder_id,
             balance: drop.balance,
             ft_data: drop.ft_data,
-            nft_data: drop.nft_data,
+            nft_data: Some(JsonNFTData{
+                nft_sender: nft_data.nft_sender,
+                nft_contract: nft_data.nft_contract,
+                longest_token_id: nft_data.longest_token_id,
+            }),
             fc_data: drop.fc_data,
             storage_used_per_key: drop.storage_used_per_key,
             keys_registered: drop.keys_registered

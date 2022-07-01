@@ -1,6 +1,6 @@
 use near_sdk::{Balance, require};
 
-use crate::*;
+use crate::{*, views::JsonNFTData};
 
 #[near_bindgen]
 impl DropZone {
@@ -15,9 +15,9 @@ impl DropZone {
     pub fn create_drop(
         &mut self, 
         public_keys: Vec<PublicKey>, 
-        balance: U128, 
+        balance: U128,
         ft_data: Option<FTData>,
-        nft_data: Option<NFTData>,
+        nft_data: Option<JsonNFTData>,
         fc_data: Option<FCData>
     ) -> DropId {
         // Ensure the user has only specified one type of callback data
@@ -45,26 +45,77 @@ impl DropZone {
             //we get a new unique prefix for the collection
             account_id_hash: hash_account_id(&format!("{}{}", self.nonce, funder_id)),
         });
-
-        // Add this drop ID to the funder's set of drops
-        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &drop_id);
-
+        
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         for pk in public_keys.clone() {
             key_set.insert(&pk);
-            self.drop_id_for_pk.insert(&pk, &drop_id);
+            require!(self.drop_id_for_pk.insert(&pk, &drop_id).is_none(), "Keys cannot belong to another drop");
         }
 
+        // Create drop object 
         let mut drop = Drop { 
             funder_id: env::predecessor_account_id(), 
             balance, 
             pks: key_set,
-            ft_data: ft_data.clone(), 
-            nft_data: nft_data.clone(),
+            ft_data: ft_data.clone(),
+            nft_data: None, // Defaulting to None
             fc_data: fc_data.clone(),
             storage_used_per_key: U128(u128::max_value()),
             keys_registered: 0
         };
+
+        // For NFT drops, measure the storage for adding the longest token ID
+        let mut storage_per_longest = 0;
+
+        // If NFT data was provided, we need to build the set of token IDs
+        if nft_data.is_some() {
+            let JsonNFTData{nft_sender, nft_contract, longest_token_id} = nft_data.unwrap();
+
+            // Create the token ID set and insert the longest token ID
+            let mut token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
+                //we get a new unique prefix for the collection
+                account_id_hash: hash_account_id(&format!("nft-{}{}", self.nonce, funder_id)),
+            });
+            token_ids.insert(&longest_token_id);
+
+            // Create the NFT data
+            let actual_nft_data = NFTData {
+                nft_sender,
+                nft_contract,
+                longest_token_id: longest_token_id,
+                storage_for_longest: u128::MAX,
+                token_ids: Some(token_ids)
+            };
+            
+            // Measure how much storage it costs to insert the 1 longest token ID
+            let initial_nft_storage = env::storage_usage();
+            drop.nft_data = Some(actual_nft_data);
+
+            // Add drop with the longest possible token ID and max storage
+            self.drop_for_id.insert(
+                &drop_id, 
+                &drop
+            );
+
+            let final_nft_storage = env::storage_usage();
+            // Measure the storage per single longest token ID
+            storage_per_longest = Balance::from(final_nft_storage - initial_nft_storage);
+
+            // Clear the token IDs so it's an empty set and put the storage in the drop's nft data
+            if let Some(mut data) = drop.nft_data {
+                if let Some(mut ids) = data.token_ids {
+                    ids.clear();
+                    data.token_ids = Some(ids);
+                }
+
+                data.storage_for_longest = storage_per_longest;
+                drop.nft_data = Some(data);
+            }
+        }
+
+        // Add this drop ID to the funder's set of drops
+        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &drop_id);
+
 
         // Add drop with largest possible storage used and keys registered for now.
         self.drop_for_id.insert(
@@ -75,10 +126,12 @@ impl DropZone {
         // TODO: add storage for access keys * num of public keys
         // Calculate the storage being used for the entire drop and add it to the drop.
         let final_storage = env::storage_usage();
-        let total_required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
+        let total_required_storage = (Balance::from(final_storage - initial_storage) + storage_per_longest) * env::storage_byte_cost();
 
         // Insert the drop back with the storage
         drop.storage_used_per_key = U128(total_required_storage / len);
+
+        // Overwrite the drop with the correct info now that storage has been measured
         self.drop_for_id.insert(
             &drop_id, 
             &drop
@@ -122,28 +175,31 @@ impl DropZone {
         // Increment our fees earned
         self.fees_collected += self.drop_fee + self.key_fee * len;
         
-        // Create a new promise batch to create all the access keys
         let current_account_id = env::current_account_id();
-        let promise = env::promise_batch_create(&current_account_id);
         
-        // Loop through each public key and create the access keys
-        for pk in public_keys.clone() {
-            // Must assert in the loop so no access keys are made?
-            env::promise_batch_action_add_key_with_function_call(
-                promise, 
-                &pk, 
-                0, 
-                ACCESS_KEY_ALLOWANCE, 
-                &current_account_id, 
-                ACCESS_KEY_METHOD_NAMES
-            );
-        }
+        /*
+            Only add the access keys if it's not a FT drop. If it is,
+            keys will be added in the FT resolver
+        */
+        if ft_data.is_none() {
+            // Create a new promise batch to create all the access keys
+            let promise = env::promise_batch_create(&current_account_id);
+            
+            // Loop through each public key and create the access keys
+            for pk in public_keys.clone() {
+                // Must assert in the loop so no access keys are made?
+                env::promise_batch_action_add_key_with_function_call(
+                    promise, 
+                    &pk, 
+                    0, 
+                    ACCESS_KEY_ALLOWANCE, 
+                    &current_account_id, 
+                    ACCESS_KEY_METHOD_NAMES
+                );
+            }
 
-        env::promise_return(promise);
-
-        // Check if user will attach fungible tokens
-        if ft_data.is_some() {
-
+            env::promise_return(promise);
+        } else {
             /*
                 Get the storage required by the FT contract and ensure the user has attached enough
                 deposit to cover the storage and perform refunds if they overpayed.
@@ -155,7 +211,7 @@ impl DropZone {
                 .with_unused_gas_weight(0)
                 .storage_balance_bounds()
             .then(
-                Self::ext(env::current_account_id())
+                Self::ext(current_account_id)
                     // Resolve the promise with the min GAS. All unspent GAS will be added to this call.
                     .with_static_gas(MIN_GAS_FOR_RESOLVE_STORAGE_CHECK)
                     .resolve_storage_check(
@@ -184,13 +240,51 @@ impl DropZone {
 
         require!(funder == &env::predecessor_account_id(), "only funder can add to drops");
 
+        /*
+            Add data to storage
+        */
+        // get the existing key set and add new PKs
+        let mut exiting_key_set = drop.pks;
+        // Loop through and add each drop ID to the public keys. Also populate the key set.
+        for pk in public_keys.clone() {
+            exiting_key_set.insert(&pk);
+            require!(self.drop_id_for_pk.insert(&pk, &drop_id).is_none(), "Keys cannot belong to another drop");
+        }
+
+        // Set the drop's PKs to the newly populated set
+        drop.pks = exiting_key_set;
+
+        // Add the drop back in for the drop ID 
+        self.drop_for_id.insert(
+            &drop_id, 
+            &drop
+        );
+
         let len = public_keys.len() as u128;
 
+        let fc_cost = if let Some(data) = drop.fc_data.clone() {
+            data.deposit.0
+        } else {
+            0
+        };
+
+        let ft_cost = if let Some(data) = drop.ft_data.clone() {
+            data.ft_storage.unwrap().0
+        } else {
+            0
+        };
+    
+        let nft_cost = if let Some(data) = drop.nft_data {
+            data.storage_for_longest * env::storage_byte_cost()
+        } else {
+            0
+        };
+        
         // Get the current balance of the funder. 
         let mut current_user_balance = self.user_balances.get(&funder).expect("No user balance found");
 
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
-        let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + if drop.fc_data.is_some() {drop.fc_data.clone().unwrap().deposit.0} else {0} + if drop.ft_data.is_some() {drop.ft_data.clone().unwrap().ft_storage.unwrap().0} else {0}) * len;
+        let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
         env::log_str(&format!(
             "Current User Balance: {}, 
             Required Deposit: {}, 
@@ -199,7 +293,9 @@ impl DropZone {
             ACCESS_KEY_ALLOWANCE: {},
             ACCESS_KEY_STORAGE: {}, 
             Balance per key: {}, 
-            function call deposits (if applicable): {}, 
+            function call costs: {}, 
+            FT costs: {}, 
+            NFT costs: {}, 
             length: {}", 
             yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
@@ -208,7 +304,9 @@ impl DropZone {
             yocto_to_near(ACCESS_KEY_ALLOWANCE), 
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(drop.balance.0), 
-            yocto_to_near(if drop.fc_data.is_some() {drop.fc_data.clone().unwrap().deposit.0} else {0}), 
+            yocto_to_near(fc_cost), 
+            yocto_to_near(ft_cost), 
+            yocto_to_near(nft_cost), 
             len)
         );
         /*
@@ -221,26 +319,6 @@ impl DropZone {
 
         // Increment our fees earned
         self.fees_collected += self.key_fee * len;
-
-        /*
-            Add data to storage
-        */
-        // get the existing key set and add new PKs
-        let mut exiting_key_set = drop.pks;
-        // Loop through and add each drop ID to the public keys. Also populate the key set.
-        for pk in public_keys.clone() {
-            exiting_key_set.insert(&pk);
-            self.drop_id_for_pk.insert(&pk, &drop_id);
-        }
-
-        // Set the drop's PKs to the newly populated set
-        drop.pks = exiting_key_set;
-
-        // Add the drop back in for the drop ID 
-        self.drop_for_id.insert(
-            &drop_id, 
-            &drop
-        );
         
         // Create a new promise batch to create all the access keys
         let current_account_id = env::current_account_id();
