@@ -37,6 +37,8 @@ impl DropZone {
         // Increment the keys registered
         drop.keys_registered += 1;
 
+        env::log_str(&format!("drop.keys_registered {}", drop.keys_registered));
+
         // Ensure that the number of keys registered cannot exceed the drop length
         if drop.keys_registered > drop.pks.len() {
             drop.keys_registered = drop.pks.len()
@@ -52,6 +54,8 @@ impl DropZone {
         
         let final_storage = env::storage_usage();
         let net_storage = Balance::from(final_storage - initial_storage);
+        env::log_str(&format!("net_storage {}", yocto_to_near(net_storage)));
+
 
         // If the token ID frees up storage, refund the funder
         if storage_per_longest > net_storage {
@@ -60,6 +64,7 @@ impl DropZone {
             let mut balance = self.user_balances.get(&funder_id).unwrap();
             balance += refund_amount;
             self.user_balances.insert(&funder_id, &balance);
+            env::log_str(&format!("new user balance {}", yocto_to_near(balance)));
         }
 
         // Everything went well and we don't need to return the token.

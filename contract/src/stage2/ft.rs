@@ -42,6 +42,7 @@ impl DropZone {
         // Get the number of keys to register with the amount that is sent.
         let keys_to_register = (amount.0 / ft_balance.0) as u64;
         drop.keys_registered += keys_to_register;
+        env::log_str(&format!("New keys registered {}", keys_to_register));
 
         // Ensure that the keys to register can't exceed the number of keys in the drop
         if drop.keys_registered > drop.pks.len() {

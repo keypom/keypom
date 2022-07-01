@@ -22,6 +22,7 @@ impl DropZone {
     ) -> DropId {
         // Ensure the user has only specified one type of callback data
         let num_cbs_specified = if ft_data.is_some() {1} else {0} + if nft_data.is_some() {1} else {0} + if fc_data.is_some() {1} else {0};
+        env::log_str(&format!("Num CBs {}", num_cbs_specified));
         require!(num_cbs_specified <= 1, "You cannot specify more than one callback data");
 
         // Ensure the balance for each drop is larger than the minimum
@@ -37,7 +38,7 @@ impl DropZone {
 
         // Get the current balance of the funder. 
         let mut current_user_balance = self.user_balances.get(&funder_id).expect("No user balance found");
-
+        env::log_str(&format!("Cur User balance {}", yocto_to_near(current_user_balance)));
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
 
@@ -101,6 +102,7 @@ impl DropZone {
             // Measure the storage per single longest token ID
             storage_per_longest = Balance::from(final_nft_storage - initial_nft_storage);
 
+            env::log_str(&format!("Storage per longest {}", storage_per_longest));
             // Clear the token IDs so it's an empty set and put the storage in the drop's nft data
             if let Some(mut data) = drop.nft_data {
                 if let Some(mut ids) = data.token_ids {
@@ -116,7 +118,6 @@ impl DropZone {
         // Add this drop ID to the funder's set of drops
         self.internal_add_drop_to_funder(&env::predecessor_account_id(), &drop_id);
 
-
         // Add drop with largest possible storage used and keys registered for now.
         self.drop_for_id.insert(
             &drop_id, 
@@ -127,6 +128,7 @@ impl DropZone {
         // Calculate the storage being used for the entire drop and add it to the drop.
         let final_storage = env::storage_usage();
         let total_required_storage = (Balance::from(final_storage - initial_storage) + storage_per_longest) * env::storage_byte_cost();
+        env::log_str(&format!("Total required storage {}", yocto_to_near(total_required_storage)));
 
         // Insert the drop back with the storage
         drop.storage_used_per_key = U128(total_required_storage / len);
@@ -170,11 +172,12 @@ impl DropZone {
         // Decrement the user's balance by the required deposit and insert back into the map
         current_user_balance -= required_deposit;
         self.user_balances.insert(&funder_id, &current_user_balance);
-        
-        
+        env::log_str(&format!("New user balance {}", yocto_to_near(current_user_balance)));
+
         // Increment our fees earned
         self.fees_collected += self.drop_fee + self.key_fee * len;
-        
+        env::log_str(&format!("Fees collected {}", yocto_to_near(self.drop_fee + self.key_fee * len)));
+
         let current_account_id = env::current_account_id();
         
         /*
@@ -282,6 +285,7 @@ impl DropZone {
         
         // Get the current balance of the funder. 
         let mut current_user_balance = self.user_balances.get(&funder).expect("No user balance found");
+        env::log_str(&format!("Cur user balance {}", yocto_to_near(current_user_balance)));
 
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
         let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
@@ -316,9 +320,11 @@ impl DropZone {
         // Decrement the user's balance by the required deposit and insert back into the map
         current_user_balance -= required_deposit;
         self.user_balances.insert(&funder, &current_user_balance);
+        env::log_str(&format!("New user balance {}", yocto_to_near(current_user_balance)));
 
         // Increment our fees earned
         self.fees_collected += self.key_fee * len;
+        env::log_str(&format!("Fees collected {}", yocto_to_near(self.key_fee * len)));
         
         // Create a new promise batch to create all the access keys
         let current_account_id = env::current_account_id();

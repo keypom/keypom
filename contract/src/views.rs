@@ -95,18 +95,22 @@ impl DropZone {
     ) -> JsonKeyInfo {
         let drop_id = self.drop_id_for_pk.get(&key).expect("no drop ID found for key");
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found for drop ID");
-        let nft_data = drop.nft_data.unwrap();
+        let nft_data_json = if let Some(data) = drop.nft_data {
+            Some(JsonNFTData{
+                nft_sender: data.nft_sender,
+                nft_contract: data.nft_contract,
+                longest_token_id: data.longest_token_id,
+            })
+        } else {
+            None
+        };
 
         JsonKeyInfo { 
             pk: key,
             funder_id: drop.funder_id,
             balance: drop.balance,
             ft_data: drop.ft_data,
-            nft_data: Some(JsonNFTData{
-                nft_sender: nft_data.nft_sender,
-                nft_contract: nft_data.nft_contract,
-                longest_token_id: nft_data.longest_token_id,
-            }),
+            nft_data: nft_data_json,
             fc_data: drop.fc_data,
             storage_used_per_key: drop.storage_used_per_key,
         }
@@ -118,17 +122,21 @@ impl DropZone {
         drop_id: DropId
     ) -> JsonDrop {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found for drop ID");
-        let nft_data = drop.nft_data.unwrap();
+        let nft_data_json = if let Some(data) = drop.nft_data {
+            Some(JsonNFTData{
+                nft_sender: data.nft_sender,
+                nft_contract: data.nft_contract,
+                longest_token_id: data.longest_token_id,
+            })
+        } else {
+            None
+        };
 
         JsonDrop { 
             funder_id: drop.funder_id,
             balance: drop.balance,
             ft_data: drop.ft_data,
-            nft_data: Some(JsonNFTData{
-                nft_sender: nft_data.nft_sender,
-                nft_contract: nft_data.nft_contract,
-                longest_token_id: nft_data.longest_token_id,
-            }),
+            nft_data: nft_data_json,
             fc_data: drop.fc_data,
             storage_used_per_key: drop.storage_used_per_key,
             keys_registered: drop.keys_registered

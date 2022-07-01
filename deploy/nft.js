@@ -94,7 +94,7 @@ async function start() {
 			nft_data.push({
 				nft_sender: FUNDING_ACCOUNT_ID,
 				nft_contract: NFT_CONTRACT_ID,
-				nft_token_id: keyPair.publicKey.toString()
+				longest_token_id: keyPair.publicKey.toString()
 			});
 		}
 		console.log("Finished.");
