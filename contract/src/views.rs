@@ -56,6 +56,7 @@ impl DropZone {
         (drop.balance.0).into()
     }
 
+    //TODO: create function for contains and paginate through token IDS for NFT drops
     /*
         CUSTOM
     */

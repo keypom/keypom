@@ -39,18 +39,19 @@ impl DropZone {
         // Get the current balance of the funder. 
         let mut current_user_balance = self.user_balances.get(&funder_id).expect("No user balance found");
         env::log_str(&format!("Cur User balance {}", yocto_to_near(current_user_balance)));
+        
+        
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
-
         let mut key_set: UnorderedSet<PublicKey> = UnorderedSet::new(StorageKey::DropIdsForFunderInner {
             //we get a new unique prefix for the collection
             account_id_hash: hash_account_id(&format!("{}{}", self.nonce, funder_id)),
         });
-        
+
         // Loop through and add each drop ID to the public keys. Also populate the key set.
-        for pk in public_keys.clone() {
-            key_set.insert(&pk);
-            require!(self.drop_id_for_pk.insert(&pk, &drop_id).is_none(), "Keys cannot belong to another drop");
+        for pk in &public_keys {
+            key_set.insert(pk);
+            require!(self.drop_id_for_pk.insert(pk, &drop_id).is_none(), "Keys cannot belong to another drop");
         }
 
         // Create drop object 
@@ -103,15 +104,14 @@ impl DropZone {
             storage_per_longest = Balance::from(final_nft_storage - initial_nft_storage);
 
             env::log_str(&format!("Storage per longest {}", storage_per_longest));
+
             // Clear the token IDs so it's an empty set and put the storage in the drop's nft data
-            if let Some(mut data) = drop.nft_data {
-                if let Some(mut ids) = data.token_ids {
+            if let Some(data) = &mut drop.nft_data {
+                if let Some(ids) = &mut data.token_ids {
                     ids.clear();
-                    data.token_ids = Some(ids);
                 }
 
                 data.storage_for_longest = storage_per_longest;
-                drop.nft_data = Some(data);
             }
         }
 
@@ -262,31 +262,17 @@ impl DropZone {
             &drop_id, 
             &drop
         );
-
-        let len = public_keys.len() as u128;
-
-        let fc_cost = if let Some(data) = drop.fc_data.clone() {
-            data.deposit.0
-        } else {
-            0
-        };
-
-        let ft_cost = if let Some(data) = drop.ft_data.clone() {
-            data.ft_storage.unwrap().0
-        } else {
-            0
-        };
-    
-        let nft_cost = if let Some(data) = drop.nft_data {
-            data.storage_for_longest * env::storage_byte_cost()
-        } else {
-            0
-        };
         
         // Get the current balance of the funder. 
         let mut current_user_balance = self.user_balances.get(&funder).expect("No user balance found");
         env::log_str(&format!("Cur user balance {}", yocto_to_near(current_user_balance)));
-
+        
+        // Get optional costs if the drop is not simple
+        let fc_cost = drop.fc_data.as_ref().map(|data| data.deposit.0).unwrap_or(0);
+        let ft_cost = drop.ft_data.as_ref().map(|data| data.ft_storage.unwrap().0).unwrap_or(0);
+        let nft_cost = drop.nft_data.as_ref().map(|data| data.storage_for_longest * env::storage_byte_cost()).unwrap_or(0);
+        
+        let len = public_keys.len() as u128;
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
         let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
         env::log_str(&format!(
