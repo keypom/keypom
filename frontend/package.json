@@ -1,0 +1,36 @@
+{
+	"name": "react-parcel-boilerplate",
+	"version": "1.0.0",
+	"description": "React Parcel Boilerplate",
+	"author": "Matt Lockyer",
+	"license": "ISC",
+	"dependencies": {
+		"near-api-js": "^0.45.1",
+		"parcel": "^2.6.2",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"react-router-dom": "^6.3.0"
+	},
+	"devDependencies": {
+		"@parcel/transformer-sass": "2.6.2",
+		"ava": "^4.3.0",
+		"eslint": "^8.19.0",
+		"process": "^0.11.10",
+		"rimraf": "^3.0.2"
+	},
+	"browserslist": [
+		"last 2 Chrome versions"
+	],
+	"scripts": {
+		"prebuild": "yarn clean",
+		"build": "parcel build src/index.html --no-source-maps",
+		"clean": "rimraf ./dist",
+		"start": "parcel src/index.html --open",
+		"build-contract": "cd contract && ./build.sh && cd ..",
+		"patch-config": "node ./utils/patch-config.js",
+		"dev-deploy": "rm -rf neardev && (near dev-deploy || exit 0) && yarn patch-config",
+		"test-deploy": "yarn build-contract && yarn dev-deploy && yarn test",
+		"test": "ava test/contract.test.js -vs --timeout=5m",
+		"fix": "eslint test/ --fix"
+	}
+}
