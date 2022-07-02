@@ -9,6 +9,7 @@ let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
 let OFFSET = 0.1;
+let DROP_FEE = 1;
 let KEY_FEE = 0.005;
 let NUM_KEYS = 3;
 
@@ -16,6 +17,25 @@ let NETWORK_ID = "testnet";
 let near;
 let config;
 let keyStore;
+
+/*
+	Hard coding NFT contract and metadata. Change this if you want.
+*/
+let NFT_CONTRACT_ID = "nft.examples.testnet";
+const METADATA = {
+	"title": "Linkdropped Go Team NFT",
+	"description": "Testing Linkdrop NFT Go Team Token",
+	"media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif",
+	"media_hash": null,
+	"copies": 10000,
+	"issued_at": null,
+	"expires_at": null,
+	"starts_at": null,
+	"updated_at": null,
+	"extra": null,
+	"reference": null,
+	"reference_hash": null
+};
 
 // set up near
 const initiateNear = async () => {
@@ -54,7 +74,23 @@ async function start() {
 		throw "must specify funding account and linkdrop near amount";
 	}
 
+	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
+
+	console.log(`initializing contract for account ${LINKDROP_PROXY_CONTRACT_ID}`);
+	try {
+		await contractAccount.functionCall(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'new', 
+			{
+				linkdrop_contract: "testnet",
+				owner_id: LINKDROP_PROXY_CONTRACT_ID
+			}, 
+			"300000000000000", 
+		);
+	} catch(e) {
+		console.log('error initializing contract: ', e);
+	}
 
 	let keyPairs = [];
 	let pubKeys = [];
@@ -68,14 +104,10 @@ async function start() {
 	}
 	console.log("Finished.");
 
-	let dropId = await fundingAccount.viewFunction(
+	const dropId = await fundingAccount.viewFunction(
 		LINKDROP_PROXY_CONTRACT_ID, 
 		'get_nonce',
 	);
-
-	dropId -= 1;
-	
-	console.log('dropId: ', dropId);
 
 	try {
 		await fundingAccount.functionCall(
@@ -84,7 +116,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length + DROP_FEE).toString()
 			)
 		);
 	} catch(e) {
@@ -92,14 +124,27 @@ async function start() {
 	}
 
 	try {
+		let fc_data = {
+			receiver: "nft.examples.testnet",
+			method: "nft_mint",
+			args: JSON.stringify({
+				token_id: pubKeys[0],
+				metadata: METADATA,
+			}),
+			deposit: parseNearAmount("1"),
+			refund_to_deposit: true,
+			claimed_account_field: "receiver_id"
+		}
+
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'add_to_drop', 
+			'create_drop', 
 			{
 				public_keys: pubKeys,
-				drop_id: dropId
+				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+				fc_data
 			}, 
-			"300000000000000", 
+			"300000000000000"
 		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);
@@ -181,14 +226,13 @@ async function start() {
 		);
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
-
-		await writeFile(path.resolve(__dirname, `views-add.json`), JSON.stringify(viewData));
+		;
+		await writeFile(path.resolve(__dirname, `views.json`), JSON.stringify(viewData));
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
-
-	let curPksBuff = await readFile(path.resolve(__dirname, `pks.json`));
-	let curPks = JSON.parse(curPksBuff);
+	
+	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
 		curPks[keyPairs[i].publicKey.toString()] = `https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`;
 		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);

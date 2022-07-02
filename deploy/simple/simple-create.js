@@ -4,7 +4,7 @@ const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
   
-let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
+let LINKDROP_PROXY_CONTRACT_ID = process.env.CONTRACT_NAME;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
@@ -42,8 +42,17 @@ async function start() {
 	//deployed linkdrop proxy contract
 	await initiateNear();
 
-	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
-		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount and whether to send multiple";
+	if(!LINKDROP_PROXY_CONTRACT_ID) {
+		const dev_account = await readFile(`neardev/dev-account`);
+		LINKDROP_PROXY_CONTRACT_ID = dev_account.toString();
+	}
+
+	console.log('LINKDROP_PROXY_CONTRACT_ID: ', LINKDROP_PROXY_CONTRACT_ID);
+	console.log('FUNDING_ACCOUNT_ID: ', FUNDING_ACCOUNT_ID);
+	console.log('LINKDROP_NEAR_AMOUNT: ', LINKDROP_NEAR_AMOUNT);
+
+	if(!FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
+		throw "must specify funding account and linkdrop near amount";
 	}
 
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
@@ -185,18 +194,21 @@ async function start() {
 		);
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
-
-		await writeFile(`./views.json`, JSON.stringify(viewData));
+		;
+		await writeFile(path.resolve(__dirname, `views.json`), JSON.stringify(viewData));
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
-
-
-    
+	
+	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
+		curPks[keyPairs[i].publicKey.toString()] = `https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`;
 		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);
 		console.log("Pub Key: ", keyPairs[i].publicKey.toString());
 	}
+
+	console.log('curPks: ', curPks)
+	await writeFile(path.resolve(__dirname, `pks.json`), JSON.stringify(curPks));
 }
 
 

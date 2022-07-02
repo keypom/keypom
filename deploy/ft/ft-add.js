@@ -7,6 +7,7 @@ const { writeFile, mkdir, readFile } = require('fs/promises');
 let LINKDROP_PROXY_CONTRACT_ID = process.env.CONTRACT_NAME;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
+let FT_CONTRACT_ID = "ft.examples.benjiman.testnet";
 
 let OFFSET = 0.1;
 let KEY_FEE = 0.005;
@@ -106,6 +107,23 @@ async function start() {
 	}
 
 	try {
+		console.log(`Transferring ${25 * NUM_KEYS_IF_SEND_MULTIPLE} FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
+		await fundingAccount.functionCall(
+			FT_CONTRACT_ID, 
+			'ft_transfer_call', 
+			{
+				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
+				amount: (25 * NUM_KEYS_IF_SEND_MULTIPLE).toString(),
+				msg: dropId.toString(),
+			}, 
+			"300000000000000", 
+			'1'
+		);
+	} catch(e) {
+		console.log('error sending FTs: ', e);
+	}
+
+	try {
 		let viewData = {};
 		const totalSupply = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
@@ -196,6 +214,7 @@ async function start() {
 	}
 
 	await writeFile(path.resolve(__dirname, `pks.json`), JSON.stringify(curPks));
+
 }
 
 

@@ -17,6 +17,22 @@ let near;
 let config;
 let keyStore;
 
+let NFT_CONTRACT_ID = "nft.examples.testnet";
+const METADATA = {
+	"title": "Linkdropped Go Team NFT",
+	"description": "Testing Linkdrop NFT Go Team Token",
+	"media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif",
+	"media_hash": null,
+	"copies": 10000,
+	"issued_at": null,
+	"expires_at": null,
+	"starts_at": null,
+	"updated_at": null,
+	"extra": null,
+	"reference": null,
+	"reference_hash": null
+};
+
 // set up near
 const initiateNear = async () => {
 	const CREDENTIALS_DIR = ".near-credentials";
@@ -84,7 +100,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length).toString()
 			)
 		);
 	} catch(e) {
@@ -103,6 +119,36 @@ async function start() {
 		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);
+	}
+
+	try {
+		console.log(`minting NFT with token ID ${pubKeys[0]} on contract ${NFT_CONTRACT_ID} with receiver: ${FUNDING_ACCOUNT_ID}`);
+		await fundingAccount.functionCall(
+			NFT_CONTRACT_ID, 
+			'nft_mint', 
+			{
+				token_id: pubKeys[0],
+				receiver_id: FUNDING_ACCOUNT_ID,
+				metadata: METADATA,
+			}, 
+			"300000000000000", 
+			parseNearAmount('1')
+		);
+
+		console.log(`transferring NFT to linkdrop proxy contract with nft_transfer_call`);
+		await fundingAccount.functionCall(
+			NFT_CONTRACT_ID, 
+			'nft_transfer_call', 
+			{
+				token_id: pubKeys[0],
+				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
+				msg: dropId.toString(),
+			}, 
+			"300000000000000", 
+			'1'
+		);
+	} catch(e) {
+		console.log('error sending FTs: ', e);
 	}
 
 	try {
@@ -196,6 +242,7 @@ async function start() {
 	}
 
 	await writeFile(path.resolve(__dirname, `pks.json`), JSON.stringify(curPks));
+
 }
 
 

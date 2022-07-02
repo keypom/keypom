@@ -4,13 +4,16 @@ const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
   
-let LINKDROP_PROXY_CONTRACT_ID = process.env.LINKDROP_PROXY_CONTRACT_ID;
+let LINKDROP_PROXY_CONTRACT_ID = process.env.CONTRACT_NAME;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
-let FT_CONTRACT_ID = process.env.FT_CONTRACT_ID;
+let FT_CONTRACT_ID = "ft.examples.benjiman.testnet";
 
-let NUM_KEYS_IF_SEND_MULTIPLE = 100;
-let OFFSET = 2;
+let OFFSET = 0.1;
+let DROP_FEE = 1;
+let KEY_FEE = 0.005;
+let NUM_KEYS = 3;
+
 let NETWORK_ID = "testnet";
 let near;
 let config;
@@ -40,22 +43,46 @@ async function start() {
 	//deployed linkdrop proxy contract
 	await initiateNear();
 
-	if(!LINKDROP_PROXY_CONTRACT_ID || !FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !SEND_MULTIPLE) {
-		throw "must specify proxy contract ID, funding account ID, linkdrop $NEAR amount and whether to send multiple";
+	if(!LINKDROP_PROXY_CONTRACT_ID) {
+		const dev_account = await readFile(`neardev/dev-account`);
+		LINKDROP_PROXY_CONTRACT_ID = dev_account.toString();
+	}
+
+	console.log('LINKDROP_PROXY_CONTRACT_ID: ', LINKDROP_PROXY_CONTRACT_ID);
+	console.log('FUNDING_ACCOUNT_ID: ', FUNDING_ACCOUNT_ID);
+	console.log('LINKDROP_NEAR_AMOUNT: ', LINKDROP_NEAR_AMOUNT);
+
+	if(!FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT) {
+		throw "must specify funding account and linkdrop near amount";
 	}
 
 	const contractAccount = await near.account(LINKDROP_PROXY_CONTRACT_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
-	
+
+	console.log(`initializing contract for account ${LINKDROP_PROXY_CONTRACT_ID}`);
+	try {
+		await contractAccount.functionCall(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'new', 
+			{
+				linkdrop_contract: "testnet",
+				owner_id: LINKDROP_PROXY_CONTRACT_ID
+			}, 
+			"300000000000000", 
+		);
+	} catch(e) {
+		console.log('error initializing contract: ', e);
+	}
+
 	let keyPairs = [];
 	let pubKeys = [];
 
 	console.log("BATCH Creating keypairs");
-	for(var i = 0; i < NUM_KEYS_IF_SEND_MULTIPLE; i++) {
+	for(var i = 0; i < NUM_KEYS; i++) {
 		console.log('i: ', i);
 		let keyPair = await KeyPair.fromRandom('ed25519'); 
 		keyPairs.push(keyPair);   
-		pubKeys.push(keyPair.publicKey.toString());  
+		pubKeys.push(keyPair.publicKey.toString());   
 	}
 	console.log("Finished.");
 
@@ -70,13 +97,14 @@ async function start() {
 			'add_to_balance', 
 			{},
 			"300000000000000", 
-			parseNearAmount(((parseFloat(LINKDROP_NEAR_AMOUNT) + OFFSET) * pubKeys.length).toString())
+			parseNearAmount(
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length + DROP_FEE).toString()
+			)
 		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
 
-	console.log(`sending ${LINKDROP_NEAR_AMOUNT} $NEAR as ${FUNDING_ACCOUNT_ID}`);
 	try {
 		let ft_data = {};
 		ft_data["ft_contract"] = FT_CONTRACT_ID;
@@ -90,7 +118,7 @@ async function start() {
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
 				ft_data
 			}, 
-			"300000000000000", 
+			"300000000000000"
 		);
 	} catch(e) {
 		console.log('error initializing contract: ', e);
@@ -199,24 +227,21 @@ async function start() {
 		);
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
-
-		const getNonce = await fundingAccount.viewFunction(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'get_nonce',
-		);
-		viewData.get_nonce = getNonce;
-		console.log('getNonce: ', getNonce);
-
-		await writeFile(`./views.json`, JSON.stringify(viewData));
+		;
+		await writeFile(path.resolve(__dirname, `views.json`), JSON.stringify(viewData));
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}
-
 	
+	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
+		curPks[keyPairs[i].publicKey.toString()] = `https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`;
 		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);
 		console.log("Pub Key: ", keyPairs[i].publicKey.toString());
 	}
+
+	await writeFile(path.resolve(__dirname, `pks.json`), JSON.stringify(curPks));
 }
+
 
 start();

@@ -1,1 +1,0 @@
-near call $DEV new '{"linkdrop_contract": "testnet"}' --accountId $DEV
