@@ -5,7 +5,8 @@ import { initNear } from './near';
 // example
 const initialState = {
 	app: {
-		mounted: false
+		mounted: false,
+		menu: false,
 	}
 };
 

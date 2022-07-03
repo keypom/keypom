@@ -15,8 +15,6 @@ import './App.scss';
 const App = () => {
 	const { state, dispatch, update } = useContext(appStore);
 
-	console.log('state', state);
-
 	const { wallet, account } = state
 
 	const onMount = () => {
@@ -30,7 +28,7 @@ const App = () => {
 
 	return (
 		<div>
-			<Header />
+			<Header {...{ menu: state.app.menu, update }} />
 			<main>
 				<Routes>
 					<Route path="/wallet" element={

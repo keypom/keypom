@@ -2,6 +2,10 @@
     box-sizing: border-box;
 }
 
+img {
+    width: 100%;
+}
+
 body {
     margin: 0;
 }
@@ -12,8 +16,8 @@ header {
     left: 0;
     background: white;
     border-bottom: 1px solid #ddd;
-    height: 64px;
     padding: 16px;
+    min-height: 64px;
     width: 100%;
     display: flex;
     align-items: center;
@@ -22,11 +26,24 @@ header {
         display: inline-block;
         width: 50%;
         line-height: 32px;
-        > nav {
+        > svg, p {
+            vertical-align: middle;
+            margin: 0;
+            padding: 0;
+        }
+        &:nth-child(2) {
             text-align:right;
-            > a {
-                margin-left: 16px;
-            }
+        }
+        > nav {
+            display: none;
+        }
+    }
+    > nav {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+        > a {
+            margin-top: 16px;
         }
     }
 }
@@ -34,4 +51,25 @@ header {
 main {
     margin-top: 64px;
     padding: 16px;
+}
+
+/// not mobile
+@media only screen and (min-device-width: 768px) {
+    header {
+        height: 64px;
+        > nav {
+            display: none;
+        }
+        > div {
+            > nav {
+                display: block;
+                > a {
+                    margin-left: 16px;
+                }
+            }
+            > svg {
+                display: none;
+            }
+        }
+    }
 }
