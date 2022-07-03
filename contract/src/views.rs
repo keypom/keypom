@@ -27,6 +27,7 @@ pub struct JsonNFTData {
     pub nft_sender: AccountId,
     pub nft_contract: AccountId,
     pub longest_token_id: String,
+    pub storage_for_longest: Option<U128>
 }
 
 /// Struct to return in views to query for specific data related to an access key.
@@ -101,6 +102,7 @@ impl DropZone {
                 nft_sender: data.nft_sender,
                 nft_contract: data.nft_contract,
                 longest_token_id: data.longest_token_id,
+                storage_for_longest: Some(U128(data.storage_for_longest))
             })
         } else {
             None
@@ -128,6 +130,7 @@ impl DropZone {
                 nft_sender: data.nft_sender,
                 nft_contract: data.nft_contract,
                 longest_token_id: data.longest_token_id,
+                storage_for_longest: Some(U128(data.storage_for_longest))
             })
         } else {
             None
@@ -235,6 +238,45 @@ impl DropZone {
             return vec![];
         }
     }
+
+    /// Returns if the current token ID lives in the NFT drop
+    pub fn drop_contains_token_id(
+        &self, 
+        drop_id: DropId,
+        token_id: String
+    ) -> bool {
+        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
+        let nft_data = drop.nft_data.expect("no NFT drop found");
+        nft_data.token_ids.expect("no token IDs found").contains(&token_id)   
+    }
+
+    /// Paginate through token IDs in a drop
+    pub fn get_token_ids_for_drop(
+        &self, 
+        drop_id: DropId,
+        from_index: Option<U128>, 
+        limit: Option<u64>
+    ) -> Vec<String> {
+        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
+        let token_ids = drop.nft_data.expect("no NFT drop found").token_ids;
+
+        if token_ids.is_none() {
+            return vec![];
+        }
+
+        // Where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
+        let start = u128::from(from_index.unwrap_or(U128(0)));
+
+        // Iterate through each token ID using an iterator
+        token_ids.unwrap().iter()
+            //skip to the index we specified in the start variable
+            .skip(start as usize) 
+            //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
+            .take(limit.unwrap_or(50) as usize) 
+            //since we turned the keys into an iterator, we need to turn it back into a vector to return
+            .collect()
+    }
+
 
     /// Returns the current nonce on the contract
     pub fn get_nonce(&self) -> u128 {

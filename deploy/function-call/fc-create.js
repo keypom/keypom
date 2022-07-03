@@ -227,7 +227,7 @@ async function start() {
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
 		;
-		await writeFile(path.resolve(__dirname, `views.json`), JSON.stringify(viewData));
+		await writeFile(path.resolve(__dirname, `views-create.json`), JSON.stringify(viewData));
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}

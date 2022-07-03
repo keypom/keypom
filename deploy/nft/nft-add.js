@@ -74,6 +74,7 @@ async function start() {
 
 	let keyPairs = [];
 	let pubKeys = [];
+	let viewData = {};
 
 	console.log("BATCH Creating keypairs");
 	for(var i = 0; i < NUM_KEYS; i++) {
@@ -152,7 +153,6 @@ async function start() {
 	}
 
 	try {
-		let viewData = {};
 		const totalSupply = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'key_total_supply', 
@@ -227,6 +227,16 @@ async function start() {
 		);
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
+
+		const tokens = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_token_ids_for_drop',
+			{
+				drop_id: dropId
+			}
+		);
+		viewData.token_ids_for_drop_after = tokens; 
+		console.log('tokens after: ', tokens);
 
 		await writeFile(path.resolve(__dirname, `views-add.json`), JSON.stringify(viewData));
 	} catch(e) {

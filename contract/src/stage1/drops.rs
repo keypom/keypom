@@ -71,39 +71,49 @@ impl DropZone {
 
         // If NFT data was provided, we need to build the set of token IDs
         if nft_data.is_some() {
-            let JsonNFTData{nft_sender, nft_contract, longest_token_id} = nft_data.unwrap();
+            let JsonNFTData{nft_sender, nft_contract, longest_token_id, storage_for_longest: _} = nft_data.unwrap();
 
             // Create the token ID set and insert the longest token ID
-            let mut token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
+            let token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("nft-{}{}", self.nonce, funder_id)),
             });
-            token_ids.insert(&longest_token_id);
 
             // Create the NFT data
             let actual_nft_data = NFTData {
                 nft_sender,
                 nft_contract,
-                longest_token_id: longest_token_id,
+                longest_token_id: longest_token_id.clone(),
                 storage_for_longest: u128::MAX,
                 token_ids: Some(token_ids)
             };
+
+            drop.nft_data = Some(actual_nft_data);
+            // Add the drop with the empty token IDs
+            self.drop_for_id.insert(
+                &drop_id, 
+                &drop
+            );
             
             // Measure how much storage it costs to insert the 1 longest token ID
-            let initial_nft_storage = env::storage_usage();
-            drop.nft_data = Some(actual_nft_data);
-
+            let initial_nft_storage_one = env::storage_usage();
+            // Now that the drop has been added, insert the longest token ID and measure storage
+            if let Some(data) = &mut drop.nft_data {
+                if let Some(ids) = &mut data.token_ids {
+                    ids.insert(&longest_token_id);
+                }
+            }
             // Add drop with the longest possible token ID and max storage
             self.drop_for_id.insert(
                 &drop_id, 
                 &drop
             );
+            let final_nft_storage_one = env::storage_usage();
+            env::log_str(&format!("i1: {} f1: {}", initial_nft_storage_one, final_nft_storage_one));
 
-            let final_nft_storage = env::storage_usage();
             // Measure the storage per single longest token ID
-            storage_per_longest = Balance::from(final_nft_storage - initial_nft_storage);
-
-            env::log_str(&format!("Storage per longest {}", storage_per_longest));
+            storage_per_longest = Balance::from(final_nft_storage_one - initial_nft_storage_one);
+            env::log_str(&format!("TOKS BEFORE {:?}", self.get_token_ids_for_drop(self.nonce, None, None)));
 
             // Clear the token IDs so it's an empty set and put the storage in the drop's nft data
             if let Some(data) = &mut drop.nft_data {

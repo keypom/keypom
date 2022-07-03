@@ -56,7 +56,6 @@ impl DropZone {
         let net_storage = Balance::from(final_storage - initial_storage);
         env::log_str(&format!("net_storage {}", yocto_to_near(net_storage)));
 
-
         // If the token ID frees up storage, refund the funder
         if storage_per_longest > net_storage {
             let refund_amount = (storage_per_longest - net_storage) * env::storage_byte_cost();

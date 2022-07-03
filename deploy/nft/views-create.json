@@ -1,5 +1,6 @@
 {
-    "key_total_supply": "6",
+    "token_ids_for_drop_before": [],
+    "key_total_supply": "3",
     "get_keys": [
         {
             "pk": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
@@ -42,52 +43,10 @@
             },
             "fc_data": null,
             "storage_used_per_key": "8186666666666666666666"
-        },
-        {
-            "pk": "ed25519:4nTgdTmrNAhK1rAbh7SFmjfL76Eu4Xu4grqaD493Sgrf",
-            "funder_id": "benjiman.testnet",
-            "balance": "5000000000000000000000",
-            "ft_data": null,
-            "nft_data": {
-                "nft_sender": "benjiman.testnet",
-                "nft_contract": "nft.examples.testnet",
-                "longest_token_id": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
-                "storage_for_longest": "276"
-            },
-            "fc_data": null,
-            "storage_used_per_key": "8186666666666666666666"
-        },
-        {
-            "pk": "ed25519:DU1KLwWJFPGp918K7GbACRCjDE2ngExuVzjTpQPWSGeL",
-            "funder_id": "benjiman.testnet",
-            "balance": "5000000000000000000000",
-            "ft_data": null,
-            "nft_data": {
-                "nft_sender": "benjiman.testnet",
-                "nft_contract": "nft.examples.testnet",
-                "longest_token_id": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
-                "storage_for_longest": "276"
-            },
-            "fc_data": null,
-            "storage_used_per_key": "8186666666666666666666"
-        },
-        {
-            "pk": "ed25519:8BKffcb9LHTrYk6j8Qv5GnDmhkxAVwonvJaU8wxsZaqg",
-            "funder_id": "benjiman.testnet",
-            "balance": "5000000000000000000000",
-            "ft_data": null,
-            "nft_data": {
-                "nft_sender": "benjiman.testnet",
-                "nft_contract": "nft.examples.testnet",
-                "longest_token_id": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
-                "storage_for_longest": "276"
-            },
-            "fc_data": null,
-            "storage_used_per_key": "8186666666666666666666"
         }
     ],
     "get_key_information": {
-        "pk": "ed25519:4nTgdTmrNAhK1rAbh7SFmjfL76Eu4Xu4grqaD493Sgrf",
+        "pk": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
         "funder_id": "benjiman.testnet",
         "balance": "5000000000000000000000",
         "ft_data": null,
@@ -112,7 +71,7 @@
         },
         "fc_data": null,
         "storage_used_per_key": "8186666666666666666666",
-        "keys_registered": 2
+        "keys_registered": 1
     },
     "get_keys_for_drop": [
         {
@@ -156,51 +115,9 @@
             },
             "fc_data": null,
             "storage_used_per_key": "8186666666666666666666"
-        },
-        {
-            "pk": "ed25519:4nTgdTmrNAhK1rAbh7SFmjfL76Eu4Xu4grqaD493Sgrf",
-            "funder_id": "benjiman.testnet",
-            "balance": "5000000000000000000000",
-            "ft_data": null,
-            "nft_data": {
-                "nft_sender": "benjiman.testnet",
-                "nft_contract": "nft.examples.testnet",
-                "longest_token_id": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
-                "storage_for_longest": "276"
-            },
-            "fc_data": null,
-            "storage_used_per_key": "8186666666666666666666"
-        },
-        {
-            "pk": "ed25519:DU1KLwWJFPGp918K7GbACRCjDE2ngExuVzjTpQPWSGeL",
-            "funder_id": "benjiman.testnet",
-            "balance": "5000000000000000000000",
-            "ft_data": null,
-            "nft_data": {
-                "nft_sender": "benjiman.testnet",
-                "nft_contract": "nft.examples.testnet",
-                "longest_token_id": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
-                "storage_for_longest": "276"
-            },
-            "fc_data": null,
-            "storage_used_per_key": "8186666666666666666666"
-        },
-        {
-            "pk": "ed25519:8BKffcb9LHTrYk6j8Qv5GnDmhkxAVwonvJaU8wxsZaqg",
-            "funder_id": "benjiman.testnet",
-            "balance": "5000000000000000000000",
-            "ft_data": null,
-            "nft_data": {
-                "nft_sender": "benjiman.testnet",
-                "nft_contract": "nft.examples.testnet",
-                "longest_token_id": "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
-                "storage_for_longest": "276"
-            },
-            "fc_data": null,
-            "storage_used_per_key": "8186666666666666666666"
         }
     ],
-    "key_supply_for_funder": 6,
+    "key_supply_for_funder": 3,
     "drop_supply_for_funder": 1,
     "drops_for_funder": [
         {
@@ -215,11 +132,10 @@
             },
             "fc_data": null,
             "storage_used_per_key": "8186666666666666666666",
-            "keys_registered": 2
+            "keys_registered": 1
         }
     ],
     "token_ids_for_drop_after": [
-        "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1",
-        "ed25519:4nTgdTmrNAhK1rAbh7SFmjfL76Eu4Xu4grqaD493Sgrf"
+        "ed25519:Ebx79Frzvvh4GZt7tPb4ih2DvZHycCu4ZunCMMk69pN1"
     ]
 }

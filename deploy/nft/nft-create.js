@@ -94,6 +94,7 @@ async function start() {
 
 	let keyPairs = [];
 	let pubKeys = [];
+	let viewData = {};
 
 	console.log("BATCH Creating keypairs");
 	for(var i = 0; i < NUM_KEYS; i++) {
@@ -144,6 +145,20 @@ async function start() {
 	}
 
 	try {
+		const tokens = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_token_ids_for_drop',
+			{
+				drop_id: dropId
+			}
+		);
+		viewData.token_ids_for_drop_before = tokens; 
+		console.log('tokens: ', tokens);
+	} catch(e) {
+		console.log("Error getting tokens: ", e);
+	}
+
+	try {
 		console.log(`minting NFT with token ID ${pubKeys[0]} on contract ${NFT_CONTRACT_ID} with receiver: ${FUNDING_ACCOUNT_ID}`);
 		await fundingAccount.functionCall(
 			NFT_CONTRACT_ID, 
@@ -174,7 +189,6 @@ async function start() {
 	}
 
 	try {
-		let viewData = {};
 		const totalSupply = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'key_total_supply', 
@@ -249,8 +263,18 @@ async function start() {
 		);
 		viewData.drops_for_funder = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
-		;
-		await writeFile(path.resolve(__dirname, `views.json`), JSON.stringify(viewData));
+
+		const tokens = await fundingAccount.viewFunction(
+			LINKDROP_PROXY_CONTRACT_ID, 
+			'get_token_ids_for_drop',
+			{
+				drop_id: dropId
+			}
+		);
+		viewData.token_ids_for_drop_after = tokens; 
+		console.log('tokens after: ', tokens);
+
+		await writeFile(path.resolve(__dirname, `views-create.json`), JSON.stringify(viewData));
 	} catch(e) {
 		console.log('error initializing contract: ', e);
 	}

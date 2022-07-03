@@ -11,8 +11,8 @@ impl DropZone {
 
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return drop data.
-        let drop_data = self.process_claim();
+        // Delete the access key and remove / return drop data and optional token ID for nft drops.
+        let (drop_data, token_id) = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -47,8 +47,6 @@ impl DropZone {
                 )
             );
         } else if let Some(nft_data) = drop_data.nft_data {
-            // Get the next token ID
-            let token_id = nft_data.token_ids.unwrap().iter().next().unwrap();
             promise.then(
                 // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
@@ -67,7 +65,7 @@ impl DropZone {
                     // Contract where the NFT is stored
                     nft_data.nft_contract,
                     // Token ID for the NFT
-                    token_id
+                    token_id.expect("no token ID found")
                 )
             );
         } else if let Some(fc_data) = drop_data.fc_data {
@@ -131,8 +129,8 @@ impl DropZone {
 
         env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return drop data.
-        let drop_data = self.process_claim();
+        // Delete the access key and remove / return drop data and optional token ID for nft drops.
+        let (drop_data, token_id) = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -175,8 +173,6 @@ impl DropZone {
                 )
             );
         } else if let Some(nft_data) = drop_data.nft_data {
-            // Get the next token ID
-            let token_id = nft_data.token_ids.unwrap().iter().next().unwrap();
             promise.then(
                 // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
                 Self::ext(env::current_account_id())
@@ -195,7 +191,7 @@ impl DropZone {
                     // Contract where the NFT is stored
                     nft_data.nft_contract,
                     // Token ID for the NFT
-                    token_id
+                    token_id.expect("no token ID found")
                 )
             );
         } else if let Some(fc_data) = drop_data.fc_data {
@@ -250,7 +246,7 @@ impl DropZone {
     }
 
     /// Internal method for deleting the used key and removing / returning linkdrop data.
-    fn process_claim(&mut self) -> Drop {
+    fn process_claim(&mut self) -> (Drop, Option<String>) {
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
             env::predecessor_account_id(),
@@ -263,13 +259,14 @@ impl DropZone {
 
         // By default, every key should have a drop ID
         let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("No drop ID found for PK");
-
         // Remove the drop
         let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
-
+        
         // Remove the pk from the drop's set.
         drop.pks.remove(&signer_pk);
 
+        // Default the token ID to none and return / remove the next token ID if it's an NFT drop
+        let mut token_id = None;
         // If it's an NFT or FT drop, decrement the registered keys
         if drop.ft_data.is_some() || drop.nft_data.is_some() {
             if drop.keys_registered == 0 {
@@ -277,6 +274,14 @@ impl DropZone {
             }
 
             drop.keys_registered -= 1;
+
+            // get the token ID and remove it from the set
+            if let Some(data) = &mut drop.nft_data {
+                if let Some(ids) = &mut data.token_ids {
+                    token_id = ids.iter().next();
+                    ids.remove(token_id.as_ref().unwrap());
+                }
+            }
         }
         
         // If there are keys still left in the drop, add the drop back in with updated data
@@ -294,8 +299,8 @@ impl DropZone {
         // Delete the key
         Promise::new(env::current_account_id()).delete_key(signer_pk);
         
-        // Return the drop
-        drop
+        // Return the drop and optional token ID
+        (drop, token_id)
     }
 
     /// self callback for simple linkdrops with no FTs, NFTs, or FCs.
