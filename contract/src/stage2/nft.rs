@@ -29,6 +29,9 @@ impl DropZone {
 
         require!(nft_data.nft_sender == sender_id && nft_data.nft_contract == contract_id, "NFT data must match what was sent");
         require!(token_id.len() <= nft_data.longest_token_id.len(), "token ID must be less than largest token specified");
+        
+        // Measure the storage cost for inserting the token to see how it compares to the largest token ID the user paid for
+        let initial_storage = env::storage_usage();
         require!(token_ids.insert(&token_id) == true, "token ID already registered");
 
         // Re-insert the token IDs into the NFT Data struct 
@@ -47,14 +50,12 @@ impl DropZone {
         // Add the nft data back with the updated set
         drop.nft_data = Some(nft_data);
 
-        // Measure the storage cost for inserting the token to see how it compares to the largest token ID the user paid for
-        let initial_storage = env::storage_usage();
         // Insert the drop with the updated data
         self.drop_for_id.insert(&msg.0, &drop);
         
         let final_storage = env::storage_usage();
         let net_storage = Balance::from(final_storage - initial_storage);
-        env::log_str(&format!("net_storage {}", yocto_to_near(net_storage)));
+        env::log_str(&format!("net_storage {} final {} initial {}", yocto_to_near(net_storage), final_storage, initial_storage));
 
         // If the token ID frees up storage, refund the funder
         if storage_per_longest > net_storage {
