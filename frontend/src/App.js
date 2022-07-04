@@ -2,11 +2,12 @@ import React, { useContext, useEffect } from 'react';
 import {
 	Routes,
 	Route,
-	Link
+	useLocation,
 } from "react-router-dom";
 
 import { appStore, onAppMount } from './state/app';
 import { Header } from './components/Header';
+import { Home } from './components/Home';
 
 import './css/normalize.css';
 import './css/skeleton.css';
@@ -15,41 +16,55 @@ import './App.scss';
 const App = () => {
 	const { state, dispatch, update } = useContext(appStore);
 
-	const { wallet, account } = state
+	const { app, wallet, account } = state
+	const { menu } = app
+	const { pathname } = useLocation();
 
 	const onMount = () => {
 		dispatch(onAppMount());
 	};
 	useEffect(onMount, []);
 
-	const handleClick = () => {
-		update('clicked', !state.clicked);
-	};
+	const routeArgs = {
+		state, update
+	}
 
 	return (
 		<div>
-			<Header {...{ menu: state.app.menu, update }} />
-			<main>
-				<Routes>
-					<Route path="/wallet" element={
-						account ? <>
-							<p>{ account.accountId }</p>
-							<button onClick={() => wallet.signOut()}>Sign Out</button>
-						</> :
-						<>
-							<p>Not Signed In</p>
-							<button onClick={() => wallet.signIn()}>Sign In</button>
-						</>
-					} />
-					<Route path="/" element={
-						<>
-							<img src="https://musicart.xboxlive.com/7/660e1100-0000-0000-0000-000000000002/504/image.jpg?w=1920&h=1080" />
-							<p>clicked: {JSON.stringify(state.clicked)}</p>
-							<button onClick={handleClick}>Click Me</button>
-						</>
-					} />
-				</Routes>
-			</main>
+			<Header {...{ pathname, menu, account, update }} />
+			{
+				account ?
+					/* Account Paths */
+					<main>
+						<Routes>
+							<Route path="/account" element={
+								<>
+									<p>{account.accountId}</p>
+									<button onClick={() => wallet.signOut()}>Sign Out</button>
+								</>
+							} />
+							<Route path="/" element={<Home {...routeArgs} />} />
+						</Routes>
+					</main>
+					:
+					/* Public Paths */
+					<main>
+						<Routes>
+							<Route path="/about" element={
+								<>
+									<p>Drop Zone is dope</p>
+								</>
+							} />
+							<Route path="/" element={
+								<>
+									<p>Please sign in to get started</p>
+									<button onClick={() => wallet.signIn()}>Sign In</button>
+								</>
+							} />
+						</Routes>
+					</main>
+			}
+
 		</div>
 	);
 };
