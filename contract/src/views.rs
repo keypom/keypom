@@ -4,6 +4,8 @@ use crate::*;
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonDrop {
+    // Drop ID for the specific drop
+    pub drop_id: DropId,
     // Funder of this specific drop
     pub funder_id: AccountId,
     // Balance for all linkdrops of this drop
@@ -34,6 +36,8 @@ pub struct JsonNFTData {
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonKeyInfo {
+    // Drop ID for the specific drop
+    pub drop_id: DropId,
     pub pk: PublicKey,
     // Funder of this specific drop
     pub funder_id: AccountId,
@@ -109,6 +113,7 @@ impl DropZone {
         };
 
         JsonKeyInfo { 
+            drop_id,
             pk: key,
             funder_id: drop.funder_id,
             balance: drop.balance,
@@ -137,6 +142,7 @@ impl DropZone {
         };
 
         JsonDrop { 
+            drop_id,
             funder_id: drop.funder_id,
             balance: drop.balance,
             ft_data: drop.ft_data,
