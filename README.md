@@ -155,13 +155,13 @@ pub struct NFTData {
 An example of creating an NFT linkdrop can be seen:
 
 ```bash
-near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "nft_data": {"nft_sender": "benjiman.testnet", "nft_contract": "example-nft.testnet", "nft_token_id": "token1"}}' --accountId "benjiman.testnet" --amount 1
+near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "nft_data": {"nft_sender": "benjiman.testnet", "nft_contract": "nft.examples.testnet", "nft_token_id": "token1"}}' --accountId "benjiman.testnet" --amount 1
 ```
 
 - Once the regular linkdrop has been created with the specified NFT Data, execute the `nft_transfer_call` funtion on the NFT contract and you *must* pass in `pubKey1` (the public key of the keypair created locally and passed into the `send` function) into the `msg` parameter. If the linkdrop is claimed before activation, it will act as a regular linkdrop with no NFT. 
 
 ```bash
-near call example-nft.testnet nft_transfer_call '{"token_id": "token1", "receiver_id": "linkdrop-proxy.testnet", "msg": "ed25519:4iwBf6eAXZ4bcN6TWPikSqu3UJ2HUwF8wNNkGZrgDYqE"}' --accountId "benjiman.testnet" --depositYocto 1
+near call nft.examples.testnet nft_transfer_call '{"token_id": "token1", "receiver_id": "linkdrop-proxy.testnet", "msg": "ed25519:4iwBf6eAXZ4bcN6TWPikSqu3UJ2HUwF8wNNkGZrgDYqE"}' --accountId "benjiman.testnet" --depositYocto 1
 ```
 
 > **NOTE:** you must send the NFT after the linkdrop has been created. You cannot send an NFT with a public key that isn't on the contract yet. The NFT must match exactly what was specified in the NFT data when creating the linkdrop.
@@ -262,10 +262,10 @@ If there was a different NFT contract where the parameter was `nft_contract_id` 
 - create a linkdrop either through `send` or `send_multiple` and specify the FC (function call) data for the function that will be called upon claim
 
 ```bash
-near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "fc_data": {"receiver": "example-nft.testnet", "method": "nft_mint", "args": "{\"token_id\":\"ed25519:Db3ALuBMU2ruMNroZfwFC5ZGMXK3bRX12UjRAbH19LZL\",\"token_metadata\":{\"title\":\"My Linkdrop Called This Function!\",\"description\":\"Linkdrop NFT that was lazy minted when the linkdrop was claimed\",\"media\":\"https://bafybeicek3skoaae4p5chsutjzytls5dmnj5fbz6iqsd2uej334sy46oge.ipfs.nftstorage.link/\",\"media_hash\":null,\"copies\":10000,\"issued_at\":null,\"expires_at\":null,\"starts_at\":null,\"updated_at\":null,\"extra\":null,\"reference\":null,\"reference_hash\":null}}", "deposit": "1000000000000000000000000", "refund_to_deposit": true, "claimed_account_field": "receiver_id" }}' --accountId "benjiman.testnet" --amount 1
+near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "fc_data": {"receiver": "nft.examples.testnet", "method": "nft_mint", "args": "{\"token_id\":\"ed25519:Db3ALuBMU2ruMNroZfwFC5ZGMXK3bRX12UjRAbH19LZL\",\"token_metadata\":{\"title\":\"My Linkdrop Called This Function!\",\"description\":\"Linkdrop NFT that was lazy minted when the linkdrop was claimed\",\"media\":\"https://bafybeicek3skoaae4p5chsutjzytls5dmnj5fbz6iqsd2uej334sy46oge.ipfs.nftstorage.link/\",\"media_hash\":null,\"copies\":10000,\"issued_at\":null,\"expires_at\":null,\"starts_at\":null,\"updated_at\":null,\"extra\":null,\"reference\":null,\"reference_hash\":null}}", "deposit": "1000000000000000000000000", "refund_to_deposit": true, "claimed_account_field": "receiver_id" }}' --accountId "benjiman.testnet" --amount 1
 ```
 
-This will create a linkdrop for `0.00284 $NEAR` and specify that once the linkdrop is claimed, the method `nft_mint` should be called on the contract `example-nft.testnet` with a set of arguments that are stringified JSON. In addition, an **extra field called receiver_id** should be **added to the args** and the claiming account ID will be set for that field in the arguments.
+This will create a linkdrop for `0.00284 $NEAR` and specify that once the linkdrop is claimed, the method `nft_mint` should be called on the contract `nft.examples.testnet` with a set of arguments that are stringified JSON. In addition, an **extra field called receiver_id** should be **added to the args** and the claiming account ID will be set for that field in the arguments.
 
 > **NOTE:** you must attach enough $NEAR to cover the attached deposit. If the linkdrop claim fails, your $NEAR will be refunded and the function call will NOT execute.
 
@@ -384,13 +384,13 @@ export LINKDROP_NEAR_AMOUNT="INSERT_HERE"
 export SEND_MULTIPLE="false"
 ```
 
-If you ran the script now, it would mint a predefined NFT on the contract `example-nft.testnet`. If you wish to change the NFT contract or the metadata for the token, simply open the `deploy/nft.js` script and change the following lines:
+If you ran the script now, it would mint a predefined NFT on the contract `nft.examples.testnet`. If you wish to change the NFT contract or the metadata for the token, simply open the `deploy/nft.js` script and change the following lines:
 
 ```js
 /*
 	Hard coding NFT contract and metadata. Change this if you want.
 */
-let NFT_CONTRACT_ID = "example-nft.testnet";
+let NFT_CONTRACT_ID = "nft.examples.testnet";
 const METADATA = {
 	"title": "Linkdropped Go Team NFT",
 	"description": "Testing Linkdrop NFT Go Team Token",

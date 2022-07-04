@@ -57,8 +57,6 @@ trait ExtThis {
         balance: U128, 
         // How much storage was used to store linkdrop info
         storage_used: U128,
-        // Did the sender end up sending the FTs to the contract
-        did_send_fts: bool,
         // Who sent the FTs?
         ft_sender: AccountId,
         // Where are the FTs stored
@@ -79,8 +77,6 @@ trait ExtThis {
         balance: U128, 
         // How much storage was used to store linkdrop info
         storage_used: U128,
-        // Did the sender end up sending the NFT to the contract
-        did_send_nft: bool,
         // Sender of the NFT
         nft_sender: AccountId,
         // Contract where the NFT is stored

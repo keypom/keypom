@@ -6,6 +6,7 @@ use near_sdk::serde_json::{json};
 use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
     Promise, PromiseResult, PublicKey, PromiseOrValue, promise_result_as_success, CryptoHash,
+    require, Balance
 };
 
 /* 
@@ -66,19 +67,20 @@ const ONE_GIGGA_GAS: u64 = 1_000_000_000;
 /// Methods callable by the function call access key
 const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
 
-mod claim;
-mod send;
-mod ext_traits;
-mod nft;
-mod ft;
-mod function_call;
-mod views;
-mod helpers;
+/*
+    FEES
+*/
+const DROP_CREATION_FEE: u128 = 1_000_000_000_000_000_000_000_000; // 0.1 N 
+const KEY_ADDITION_FEE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N 
 
-use crate::ext_traits::*;
-use crate::nft::*;
-use crate::ft::*;
-use crate::function_call::*;
+mod internals;
+mod stage1;
+mod stage2;
+mod stage3;
+mod views;
+
+use internals::*;
+use stage2::*;
 
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
@@ -88,86 +90,84 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
+pub type DropId = u128;
+
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct AccountData {
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct Drop {
+    // Funder of this specific drop
     pub funder_id: AccountId,
+    // Balance for all linkdrops of this drop
     pub balance: U128,
-    pub storage_used: U128,
+    // Set of public keys associated with this drop
+    pub pks: UnorderedSet<PublicKey>,
 
-    /*
-        EXTRA
-    */
-    pub cb_id: Option<u64>, //nonce - if set, becomes lookup to all NFT, FT, CD 
-    pub cb_data_sent: bool,
-    
-}
-
-/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize)]
-#[serde(crate = "near_sdk::serde")]
-pub struct KeyInfo {
-    pub pk: Option<PublicKey>,
-    pub account_data: Option<AccountData>, 
+    // Specific data associated with this drop
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<NFTData>, 
-    pub fc_data: Option<FCData>
-    
+    pub fc_data: Option<FCData>,
+    // How much storage was used for EACH key and not the entire drop as a whole 
+    pub storage_used_per_key: U128,
+    // How many keys are registered (assets such as FTs sent)
+    pub keys_registered: u64,
 }
+
 
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
-    DataForPublicKey,
-    KeysForFunder,
-    KeysPerFunderInner { account_id_hash: CryptoHash },
-    NFTData,
-    FTData,
-    FCData,
+    DropIdForPk,
+    DropsForId,
+    DropIdsForFunder,
+    DropIdsForFunderInner { account_id_hash: CryptoHash },
+    TokenIdsForDrop { account_id_hash: CryptoHash },
+    UserBalances
 }
 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
-pub struct LinkDropProxy {
+pub struct DropZone {
+    pub owner_id: AccountId,
+    // Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
     pub linkdrop_contract: AccountId,
-    pub data_for_pk: UnorderedMap<PublicKey, AccountData>,
-    pub keys_for_funder: LookupMap<AccountId, UnorderedSet<PublicKey>>,
+    
+    // Map each key to a nonce rather than repeating each drop data in memory
+    pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
+    // Map the nonce to a specific drop
+    pub drop_for_id: LookupMap<DropId, Drop>,    
+    // Keep track of the drop ids for each funder for pagination
+    pub drop_ids_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
 
-    pub nonce: u64,
+    // Fees taken by the contract. One is for creating a drop, the other is for each key in the drop.
+    pub drop_fee: u128,
+    pub key_fee: u128,
+    pub fees_collected: u128,
 
-    /*
-        EXTRA
-    */
-    pub nft: LookupMap<u64, NFTData>,
-    pub ft: LookupMap<u64, FTData>,
-    pub fc: LookupMap<u64, FCData>
+    // keep track of the balances for each user. This is to prepay for drop creations
+    pub user_balances: LookupMap<AccountId, Balance>,
+    
+    // Keep track of a nonce used for the drop IDs
+    pub nonce: DropId,
 }
 
 #[near_bindgen]
-impl LinkDropProxy {
-    /// Initialize proxy hub contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
+impl DropZone {
+    /// Initialize contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
     #[init]
-    pub fn new(linkdrop_contract: AccountId) -> Self {
+    pub fn new(linkdrop_contract: AccountId, owner_id: AccountId) -> Self {
         Self {
+            owner_id,
             linkdrop_contract,
-            data_for_pk: UnorderedMap::new(StorageKey::DataForPublicKey),
-            keys_for_funder: LookupMap::new(StorageKey::KeysForFunder),
-            nft: LookupMap::new(StorageKey::NFTData),
-            ft: LookupMap::new(StorageKey::FTData),
-            fc: LookupMap::new(StorageKey::FCData),
+            drop_id_for_pk: UnorderedMap::new(StorageKey::DropIdForPk),
+            drop_for_id: LookupMap::new(StorageKey::DropsForId),
+            drop_ids_for_funder: LookupMap::new(StorageKey::DropIdsForFunder),
+            user_balances: LookupMap::new(StorageKey::UserBalances),
             nonce: 0,
+            /*
+                FEES
+            */
+            drop_fee: DROP_CREATION_FEE,
+            key_fee: KEY_ADDITION_FEE,
+            fees_collected: 0,
         }
     }
-
-    /// Set the desired linkdrop contract to interact with
-	pub fn set_contract(&mut self, linkdrop_contract: AccountId) {
-		assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
-		self.linkdrop_contract = linkdrop_contract;
-	}
 }
