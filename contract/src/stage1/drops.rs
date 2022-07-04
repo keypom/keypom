@@ -152,7 +152,7 @@ impl DropZone {
         // Increment the drop ID nonce
         self.nonce += 1;
 
-        let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + ACCESS_KEY_STORAGE + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}) * len;
+        let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + ACCESS_KEY_STORAGE + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0} + storage_per_longest * env::storage_byte_cost()) * len;
         env::log_str(&format!(
             "Current balance: {}, 
             Required Deposit: {}, 
@@ -163,6 +163,7 @@ impl DropZone {
             ACCESS_KEY_ALLOWANCE: {}, 
             Linkdrop Balance: {}, 
             total function call deposits (if applicable): {}, 
+            Storage for longest token ID (if applicable): {},
             length: {}", 
             yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
@@ -173,6 +174,7 @@ impl DropZone {
             yocto_to_near(ACCESS_KEY_ALLOWANCE), 
             yocto_to_near(balance.0), 
             yocto_to_near(if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}), 
+            yocto_to_near(storage_per_longest * env::storage_byte_cost()), 
             len)
         );
         /*
