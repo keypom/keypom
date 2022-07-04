@@ -153,6 +153,15 @@ impl DropZone {
         }
     }
 
+    /// Returns the total supply of active keys for a given drop
+    pub fn key_supply_for_drop(
+        &self, 
+        drop_id: DropId,
+    ) -> u64 {
+        // Get the drop object and return the length
+        self.drop_for_id.get(&drop_id).expect("no drop found").pks.len()
+    }
+
     /// Paginate through keys in a specific drop
     pub fn get_keys_for_drop(
         &self,

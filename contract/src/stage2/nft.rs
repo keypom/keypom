@@ -71,6 +71,48 @@ impl DropZone {
         PromiseOrValue::Value(false)
     }
 
+    #[private]
+    /// self callback checks if NFT was successfully transferred to the new account. If yes, do nothing. If no, refund original sender
+    pub fn nft_resolve_refund(
+        &mut self, 
+        drop_id: U128,
+        token_ids: Vec<String>, 
+    ) -> bool {
+        let used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("Beginning of resolve refund used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+
+        assert_eq!(env::promise_results_count(), 1, "no promise result");
+        let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        
+        // If not successful, the length of the token IDs needs to be added back to the drop.
+        if !transfer_succeeded {
+            let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
+            drop.keys_registered += token_ids.len() as u64;
+            self.drop_for_id.insert(&drop_id.0, &drop);
+
+            env::log_str(&format!("Transfer failed. Adding {} back to drop's keys registered", token_ids.len() as u64));
+
+            return false
+        }
+
+        // Loop through and remove each token ID from the drop's NFT data token IDs
+        let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
+        let mut nft_data = drop.nft_data.unwrap();
+        let mut ids = nft_data.token_ids.unwrap();
+
+        for id in token_ids {
+            env::log_str(&format!("Removing {}. Present: {}", id, ids.remove(&id)));
+        }
+
+        nft_data.token_ids = Some(ids);
+        drop.nft_data = Some(nft_data);
+
+        return true
+    }
+
+    #[private]
     /// self callback checks if NFT was successfully transferred to the new account. If yes, do nothing. If no, refund original sender
     pub fn nft_resolve_transfer(
         &mut self, 
@@ -83,11 +125,6 @@ impl DropZone {
 
         env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
         assert_eq!(env::promise_results_count(), 1, "no promise result");
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
         

@@ -393,7 +393,7 @@ impl DropZone {
         */
         // Only send the fungible tokens to the new account if the claim was successful. We return the FTs if it wasn't successful in the else case.
         if claim_succeeded {
-            // Create a new batch promise to pay storage and transfer NFTs to the new account ID
+            // Create a new batch promise to pay storage and transfer FTs to the new account ID
             let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
 
             // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
