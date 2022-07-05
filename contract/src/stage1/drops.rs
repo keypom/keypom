@@ -40,7 +40,6 @@ impl DropZone {
         let mut current_user_balance = self.user_balances.get(&funder_id).expect("No user balance found");
         env::log_str(&format!("Cur User balance {}", yocto_to_near(current_user_balance)));
         
-        
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
         let mut key_set: UnorderedSet<PublicKey> = UnorderedSet::new(StorageKey::DropIdsForFunderInner {
@@ -62,7 +61,6 @@ impl DropZone {
             ft_data: ft_data.clone(),
             nft_data: None, // Defaulting to None
             fc_data: fc_data.clone(),
-            storage_used_per_key: U128(u128::max_value()),
             keys_registered: 0
         };
 
@@ -135,19 +133,10 @@ impl DropZone {
         );
 
         // TODO: add storage for access keys * num of public keys
-        // Calculate the storage being used for the entire drop and add it to the drop.
+        // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
         let total_required_storage = (Balance::from(final_storage - initial_storage) + storage_per_longest) * env::storage_byte_cost();
         env::log_str(&format!("Total required storage {}", yocto_to_near(total_required_storage)));
-
-        // Insert the drop back with the storage
-        drop.storage_used_per_key = U128(total_required_storage / len);
-
-        // Overwrite the drop with the correct info now that storage has been measured
-        self.drop_for_id.insert(
-            &drop_id, 
-            &drop
-        );
 
         // Increment the drop ID nonce
         self.nonce += 1;
@@ -157,8 +146,8 @@ impl DropZone {
             "Current balance: {}, 
             Required Deposit: {}, 
             Drop Fee: {}, 
-            Key Fee: {}, 
             Total Required Storage: {}, 
+            Key Fee: {}, 
             ACCESS_KEY_STORAGE: {},
             ACCESS_KEY_ALLOWANCE: {}, 
             Linkdrop Balance: {}, 
@@ -168,8 +157,8 @@ impl DropZone {
             yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
             yocto_to_near(self.drop_fee),
-            yocto_to_near(self.key_fee),
             yocto_to_near(total_required_storage), 
+            yocto_to_near(self.key_fee),
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(ACCESS_KEY_ALLOWANCE), 
             yocto_to_near(balance.0), 
@@ -258,6 +247,8 @@ impl DropZone {
         /*
             Add data to storage
         */
+        // Pessimistically measure storage
+        let initial_storage = env::storage_usage();
         // get the existing key set and add new PKs
         let mut exiting_key_set = drop.pks;
         // Loop through and add each drop ID to the public keys. Also populate the key set.
@@ -285,12 +276,17 @@ impl DropZone {
         let nft_cost = drop.nft_data.as_ref().map(|data| data.storage_for_longest * env::storage_byte_cost()).unwrap_or(0);
         
         let len = public_keys.len() as u128;
+        
+        // Calculate the storage being used for the entire drop
+        let final_storage = env::storage_usage();
+        let total_required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
+        
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
-        let required_deposit = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
+        let required_deposit = total_required_storage + (self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
         env::log_str(&format!(
             "Current User Balance: {}, 
             Required Deposit: {}, 
-            Storage per key: {}, 
+            Total required storage: {}, 
             Key fee: {}, 
             ACCESS_KEY_ALLOWANCE: {},
             ACCESS_KEY_STORAGE: {}, 
@@ -301,7 +297,7 @@ impl DropZone {
             length: {}", 
             yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
-            yocto_to_near(drop.storage_used_per_key.0),
+            yocto_to_near(total_required_storage),
             yocto_to_near(self.key_fee), 
             yocto_to_near(ACCESS_KEY_ALLOWANCE), 
             yocto_to_near(ACCESS_KEY_STORAGE), 

@@ -106,8 +106,6 @@ pub struct Drop {
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<NFTData>, 
     pub fc_data: Option<FCData>,
-    // How much storage was used for EACH key and not the entire drop as a whole 
-    pub storage_used_per_key: U128,
     // How many keys are registered (assets such as FTs sent)
     pub keys_registered: u64,
 }

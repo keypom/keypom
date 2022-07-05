@@ -15,8 +15,6 @@ pub struct JsonDrop {
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<JsonNFTData>, 
     pub fc_data: Option<FCData>,
-    // How much storage was used for EACH key and not the entire drop as a whole 
-    pub storage_used_per_key: U128,
     // How many keys are registered (assets such as FTs sent)
     pub keys_registered: u64,
 }
@@ -48,8 +46,6 @@ pub struct JsonKeyInfo {
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<JsonNFTData>, 
     pub fc_data: Option<FCData>,
-    // How much storage was used for EACH key and not the entire drop as a whole 
-    pub storage_used_per_key: U128,
 }
 
 #[near_bindgen]
@@ -120,7 +116,6 @@ impl DropZone {
             ft_data: drop.ft_data,
             nft_data: nft_data_json,
             fc_data: drop.fc_data,
-            storage_used_per_key: drop.storage_used_per_key,
         }
     }
 
@@ -148,7 +143,6 @@ impl DropZone {
             ft_data: drop.ft_data,
             nft_data: nft_data_json,
             fc_data: drop.fc_data,
-            storage_used_per_key: drop.storage_used_per_key,
             keys_registered: drop.keys_registered
         }
     }
