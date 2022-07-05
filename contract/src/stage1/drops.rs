@@ -21,7 +21,7 @@ impl DropZone {
         fc_data: Option<FCData>
     ) -> DropId {
         // Ensure the user has only specified one type of callback data
-        let num_cbs_specified = if ft_data.is_some() {1} else {0} + if nft_data.is_some() {1} else {0} + if fc_data.is_some() {1} else {0};
+        let num_cbs_specified = ft_data.is_some() as u8 + nft_data.is_some() as u8 + fc_data.is_some() as u8;        
         env::log_str(&format!("Num CBs {}", num_cbs_specified));
         require!(num_cbs_specified <= 1, "You cannot specify more than one callback data");
 

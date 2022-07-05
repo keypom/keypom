@@ -68,11 +68,8 @@ impl DropZone {
         let mut prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-        assert_eq!(env::promise_results_count(), 1, "no promise result");
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
         
-
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
         env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
@@ -118,7 +115,6 @@ impl DropZone {
         drop_id: DropId,
         num_to_refund: u64
     ) -> bool {
-        assert_eq!(env::promise_results_count(), 1, "no promise result");
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
     
         // Everything went well so we return true since the keys registered have already been decremented

@@ -303,6 +303,7 @@ impl DropZone {
         (drop, token_id)
     }
 
+    #[private]
     /// self callback for simple linkdrops with no FTs, NFTs, or FCs.
     pub fn on_claim_simple(
         &mut self,
@@ -314,7 +315,7 @@ impl DropZone {
         storage_used: U128,
     ) -> bool {        
         // Get the status of the cross contract call
-        let claim_succeeded = self.assert_success(); 
+        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -342,6 +343,7 @@ impl DropZone {
         claim_succeeded
     }
 
+    #[private]
     /// self callback for FT linkdrop
     pub fn on_claim_ft(
         &mut self, 
@@ -368,7 +370,7 @@ impl DropZone {
         env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
        // Get the status of the cross contract call
-       let claim_succeeded = self.assert_success(); 
+       let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
@@ -467,6 +469,7 @@ impl DropZone {
         claim_succeeded
     }
 
+    #[private]
     /// self callback for a linkdrop loaded with an NFT
     pub fn on_claim_nft(&mut self, 
         // Account ID that claimed the linkdrop
@@ -490,7 +493,7 @@ impl DropZone {
         env::log_str(&format!("Beginning of on claim NFT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Get the status of the cross contract call
-        let claim_succeeded = self.assert_success(); 
+        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
@@ -553,6 +556,7 @@ impl DropZone {
         claim_succeeded
     }
 
+    #[private]
     /// self callback checks if account was created successfully or not. If yes, refunds excess storage, sends NFTs, FTs etc..
     pub fn on_claim_fc(&mut self, 
         // Account ID that claimed the linkdrop
@@ -582,7 +586,7 @@ impl DropZone {
         env::log_str(&format!("Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Get the status of the cross contract call
-        let claim_succeeded = self.assert_success(); 
+        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS since balance was sent to new account.
         let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;

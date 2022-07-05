@@ -82,8 +82,6 @@ impl DropZone {
         let prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of resolve refund used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-        assert_eq!(env::promise_results_count(), 1, "no promise result");
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
         
         // If not successful, the length of the token IDs needs to be added back to the drop.
@@ -124,10 +122,7 @@ impl DropZone {
         let mut prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-        assert_eq!(env::promise_results_count(), 1, "no promise result");
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
-        
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();

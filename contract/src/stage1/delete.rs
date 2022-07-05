@@ -170,6 +170,7 @@ impl DropZone {
             let token_ids: Vec<String> = data.token_ids.unwrap().iter().take(num_to_refund.try_into().unwrap()).collect();
             require!(token_ids.len() as u64 == num_to_refund, "not enough token IDs");
 
+            // TODO: delete token IDs from unordered set as mentioned in this discussion: https://github.com/mattlockyer/linkdrop/pull/6#discussion_r913345144
             // Loop through each token ID and add a transfer to the batch
             for token_id in token_ids.clone() {
                 // Send the NFTs back to the sender
