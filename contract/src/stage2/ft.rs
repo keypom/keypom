@@ -5,7 +5,7 @@ use crate::*;
 
 /// Keep track fungible token data for an access key
 #[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FTData {
     pub ft_contract: AccountId,

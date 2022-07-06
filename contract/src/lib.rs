@@ -24,7 +24,7 @@ allowance for the access key to cover GAS fees when the account is claimed. This
     If this is lower, wallet will throw the following error:
     Access Key {account_id}:{public_key} does not have enough balance 0.01 for transaction costing 0.018742491841859367297184
 */  
-const ACCESS_KEY_ALLOWANCE: u128 = 20_000_000_000_000_000_000_000; // 0.02 N (200 TGas)
+const ACCESS_KEY_ALLOWANCE: u128 = 18_800_000_000_000_000_000_000; // 0.0188 N (200 TGas)
 
 /* 
     minimum amount of NEAR that a new account (with longest possible name) must have when created 

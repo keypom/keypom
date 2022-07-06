@@ -136,7 +136,7 @@ impl DropZone {
         // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
         let total_required_storage = (Balance::from(final_storage - initial_storage) + storage_per_longest) * env::storage_byte_cost();
-        env::log_str(&format!("Total required storage {}", yocto_to_near(total_required_storage)));
+        env::log_str(&format!("Total required storage Yocto {}", total_required_storage));
 
         // Increment the drop ID nonce
         self.nonce += 1;
@@ -280,7 +280,8 @@ impl DropZone {
         // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
         let total_required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
-        
+        env::log_str(&format!("Total required storage Yocto {}", total_required_storage));
+
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
         let required_deposit = total_required_storage + (self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
         env::log_str(&format!(
