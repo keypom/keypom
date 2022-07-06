@@ -128,7 +128,7 @@ impl DropZone {
             DropType::FT(data) => {
                 JsonDropType::FT(data)
             },
-            _Simple => {JsonDropType::Simple}
+            _simple => {JsonDropType::Simple}
         };
 
         JsonKeyInfo { 
@@ -166,7 +166,7 @@ impl DropZone {
             DropType::FT(data) => {
                 JsonDropType::FT(data)
             },
-            _Simple => {JsonDropType::Simple}
+            _simple => {JsonDropType::Simple}
         };
 
         JsonDrop { 

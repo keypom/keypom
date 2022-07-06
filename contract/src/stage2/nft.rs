@@ -30,35 +30,38 @@ impl DropZone {
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
-        let DropType::NFT(mut nft_data) = drop.drop_type;
-        let mut token_ids = nft_data.token_ids;
+        if let DropType::NFT(mut nft_data) = drop.drop_type {
+            let mut token_ids = nft_data.token_ids;
 
-        require!(nft_data.nft_sender == sender_id && nft_data.nft_contract == contract_id, "NFT data must match what was sent");
-        require!(token_id.len() <= nft_data.longest_token_id.len(), "token ID must be less than largest token specified");
+            require!(nft_data.nft_sender == sender_id && nft_data.nft_contract == contract_id, "NFT data must match what was sent");
+            require!(token_id.len() <= nft_data.longest_token_id.len(), "token ID must be less than largest token specified");
+        
+            require!(token_ids.insert(&token_id) == true, "token ID already registered");
     
-        require!(token_ids.insert(&token_id) == true, "token ID already registered");
-
-        // Re-insert the token IDs into the NFT Data struct 
-        nft_data.token_ids = token_ids;
-
-        // Increment the claims registered
-        drop.num_claims_registered += 1;
-        env::log_str(&format!("drop.num_claims_registered {}", drop.num_claims_registered));
-
-        // Ensure that the keys to register can't exceed the number of keys in the drop.
-        if drop.num_claims_registered > drop.pks.len() * drop.drop_config.max_claims_per_key {
-            env::log_str("Too many NFTs sent. Contract is keeping the rest.");
-            drop.num_claims_registered = drop.pks.len() * drop.drop_config.max_claims_per_key;
-        }
-
-        // Add the nft data back with the updated set
-        drop.drop_type = DropType::NFT(nft_data);
-
-        // Insert the drop with the updated data
-        self.drop_for_id.insert(&msg.0, &drop);
-
-        // Everything went well and we don't need to return the token.
-        PromiseOrValue::Value(false)
+            // Re-insert the token IDs into the NFT Data struct 
+            nft_data.token_ids = token_ids;
+    
+            // Increment the claims registered
+            drop.num_claims_registered += 1;
+            env::log_str(&format!("drop.num_claims_registered {}", drop.num_claims_registered));
+    
+            // Ensure that the keys to register can't exceed the number of keys in the drop.
+            if drop.num_claims_registered > drop.pks.len() * drop.drop_config.max_claims_per_key {
+                env::log_str("Too many NFTs sent. Contract is keeping the rest.");
+                drop.num_claims_registered = drop.pks.len() * drop.drop_config.max_claims_per_key;
+            }
+    
+            // Add the nft data back with the updated set
+            drop.drop_type = DropType::NFT(nft_data);
+    
+            // Insert the drop with the updated data
+            self.drop_for_id.insert(&msg.0, &drop);
+    
+            // Everything went well and we don't need to return the token.
+            PromiseOrValue::Value(false);
+        } {
+            env::panic_str("drop type isn't NFT");
+        }  
     }
 
     #[private]
@@ -87,17 +90,19 @@ impl DropZone {
 
         // Loop through and remove each token ID from the drop's NFT data token IDs
         let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
-        let DropType::NFT(mut nft_data) = drop.drop_type;
-        let mut ids = nft_data.token_ids;
+        if let DropType::NFT(mut nft_data) = drop.drop_type {
+            let mut ids = nft_data.token_ids;
 
-        for id in token_ids {
-            env::log_str(&format!("Removing {}. Present: {}", id, ids.remove(&id)));
-        }
-
-        nft_data.token_ids = ids;
-        drop.drop_type = DropType::NFT(nft_data);
-
-        return true
+            for id in token_ids {
+                env::log_str(&format!("Removing {}. Present: {}", id, ids.remove(&id)));
+            }
+    
+            nft_data.token_ids = ids;
+            drop.drop_type = DropType::NFT(nft_data);
+    
+            return true
+        };
+        false
     }
 
     #[private]

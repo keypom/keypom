@@ -137,7 +137,7 @@ impl DropZone {
             balance, 
             pks: key_map,
             drop_type: DropType::Simple, // Default to simple but will overwrite if not
-            drop_config,
+            drop_config: drop_config.clone(),
             num_claims_registered: 0
         };
 
@@ -149,16 +149,16 @@ impl DropZone {
             let NFTDataConfig{nft_sender, nft_contract, longest_token_id} = data;
 
             // Create the token ID set and insert the longest token ID
-            let mut token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
+            let token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("nft-{}{}", self.nonce, funder_id)),
             });
 
             // Create the NFT data
-            let mut actual_nft_data = NFTData {
+            let actual_nft_data = NFTData {
                 nft_sender,
                 nft_contract,
-                longest_token_id: longest_token_id,
+                longest_token_id: longest_token_id.clone(),
                 storage_for_longest: u128::MAX,
                 token_ids,
             };
@@ -176,9 +176,9 @@ impl DropZone {
             // Measure how much storage it costs to insert the 1 longest token ID
             let initial_nft_storage_one = env::storage_usage();
             // Now that the drop has been added, insert the longest token ID and measure storage
-            token_ids.insert(&longest_token_id);
-            actual_nft_data.token_ids = token_ids;
-            drop.drop_type = DropType::NFT(actual_nft_data);
+            if let DropType::NFT(data) = &mut drop.drop_type {
+                data.token_ids.insert(&longest_token_id);
+            }
 
             // Add drop with the longest possible token ID and max storage
             self.drop_for_id.insert(
@@ -193,21 +193,21 @@ impl DropZone {
             env::log_str(&format!("TOKS BEFORE {:?}", self.get_token_ids_for_drop(self.nonce, None, None)));
 
             // Clear the token IDs so it's an empty set and put the storage in the drop's nft data
-            token_ids.clear();
-            actual_nft_data.token_ids = token_ids;
-            actual_nft_data.storage_for_longest = storage_per_longest;
-            drop.drop_type = DropType::NFT(actual_nft_data);
+            if let DropType::NFT(data) = &mut drop.drop_type {
+                data.token_ids.clear();
+                data.storage_for_longest = storage_per_longest;
+            }
 
             self.drop_for_id.insert(
                 &drop_id, 
                 &drop
             );
-        } else if let Some(data) = ft_data {
+        } else if let Some(data) = ft_data.clone() {
             // If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type
             let FTDataConfig{ft_sender, ft_contract, ft_balance} = data;
 
             // Create the NFT data
-            let mut actual_ft_data = FTData {
+            let actual_ft_data = FTData {
                 ft_contract,
                 ft_sender,
                 ft_balance,
@@ -223,7 +223,7 @@ impl DropZone {
                 &drop_id, 
                 &drop
             );
-        } else if let Some(data) = fc_data {
+        } else if let Some(data) = fc_data.clone() {
             // If FC Data was provided, we need to set the drop type to be FC
             require!(data.gas_to_attach.unwrap_or(Gas(0)) <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE, &format!("cannot attach more than {:?} GAS.", ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE));
             drop.drop_type = DropType::FC(data);
@@ -297,9 +297,9 @@ impl DropZone {
         */
         if ft_data.is_none() {
             // Decide what methods the access keys can call
-            let mut ACCESS_KEY_METHOD_NAMES = ACCESS_KEY_BOTH_METHOD_NAMES;
+            let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
             if drop_config.only_call_claim.is_some() {
-                ACCESS_KEY_METHOD_NAMES = ACCESS_KEY_CLAIM_METHOD_NAME;
+                access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
             }
 
             // Create a new promise batch to create all the access keys
@@ -314,7 +314,7 @@ impl DropZone {
                     0, 
                     ACCESS_KEY_ALLOWANCE, 
                     &current_account_id, 
-                    ACCESS_KEY_METHOD_NAMES
+                    access_key_method_names
                 );
             }
 
@@ -356,7 +356,7 @@ impl DropZone {
         drop_id: DropId
     ) -> DropId {
         let mut drop = self.drop_for_id.get(&drop_id).expect("no drop found for ID");
-        let drop_config = drop.drop_config;
+        let drop_config = &drop.drop_config;
         let funder = &drop.funder_id;
 
         require!(funder == &env::predecessor_account_id(), "only funder can add to drops");
@@ -465,9 +465,9 @@ impl DropZone {
         // Loop through each public key and create the access keys
         for pk in public_keys.clone() {
             // Decide what methods the access keys can call
-            let mut ACCESS_KEY_METHOD_NAMES = ACCESS_KEY_BOTH_METHOD_NAMES;
+            let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
             if drop_config.only_call_claim.is_some() {
-                ACCESS_KEY_METHOD_NAMES = ACCESS_KEY_CLAIM_METHOD_NAME;
+                access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
             }
             
             // Must assert in the loop so no access keys are made?
@@ -477,7 +477,7 @@ impl DropZone {
                 0, 
                 ACCESS_KEY_ALLOWANCE, 
                 &current_account_id, 
-                ACCESS_KEY_METHOD_NAMES
+                access_key_method_names
             );
         }
 

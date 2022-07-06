@@ -23,10 +23,11 @@ impl DropZone {
         // get the drop object
         let mut drop = self.drop_for_id.remove(&drop_id).expect("No drop found");
         let funder_id = drop.funder_id.clone();
+        let drop_type = &drop.drop_type;
         require!(funder_id == env::predecessor_account_id(), "only drop funder can delete keys");
         
         // ensure that there are no FTs or NFTs left to be refunded
-        match drop.drop_type {
+        match drop_type {
             DropType::NFT(_) => {
                 require!(drop.num_claims_registered == 0, "NFTs must be refunded before keys are deleted");
             },
@@ -71,7 +72,7 @@ impl DropZone {
                 - FT storage registration cost for each key * claims / key
             */ 
             // Get optional costs for the drop
-            let optional_refund = match drop.drop_type {
+            let optional_refund = match drop_type {
                 DropType::FC(data) => {
                     data.deposit.0
                 },
@@ -127,7 +128,7 @@ impl DropZone {
                 - FT storage registration cost for each key * claims / key
             */ 
             // Get optional costs for the drop
-            let optional_refund = match drop.drop_type {
+            let optional_refund = match drop_type {
                 DropType::FC(data) => {
                     data.deposit.0
                 },
