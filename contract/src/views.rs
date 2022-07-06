@@ -19,16 +19,16 @@ pub struct JsonDrop {
     pub keys_registered: u64,
 }
 
-/// Keep track of nft data 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct JsonNFTData {
-    pub nft_sender: AccountId,
-    pub nft_contract: AccountId,
-    pub longest_token_id: String,
-    pub storage_for_longest: Option<U128>
-}
+// /// Keep track of nft data 
+// #[near_bindgen]
+// #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+// #[serde(crate = "near_sdk::serde")]
+// pub struct JsonNFTData {
+//     pub nft_sender: AccountId,
+//     pub nft_contract: AccountId,
+//     pub longest_token_id: String,
+//     pub storage_for_longest: Option<U128>
+// }
 
 /// Struct to return in views to query for specific data related to an access key.
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]

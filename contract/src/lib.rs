@@ -9,6 +9,8 @@ use near_sdk::{
     require, Balance
 };
 
+// TODO: Receipt cost for FCs.
+
 /* 
     minimum amount of storage required to store an access key on the contract
     1_330_000_000_000_000_000_000 Simple linkdrop: 0.00133 $NEAR
@@ -55,8 +57,11 @@ const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000); // 5 TGas
 const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000); // 5 TGas
 const MIN_GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + MIN_GAS_FOR_FT_TRANSFER.0 + MIN_GAS_FOR_STORAGE_DEPOSIT.0); // 13 TGas + 5 TGas + 5 TGas = 23 TGas
 
-// Function Calls
-const MIN_GAS_FOR_CALLBACK_FUNCTION_CALL: Gas = Gas(30_000_000_000_000); // 30 TGas
+// Specifies the GAS being attached from the wallet site
+const ATTACHED_GAS_FROM_WALLET: Gas = Gas(100_000_000_000_000); // 100 TGas
+
+// Specifies the amount of GAS to attach on top of the FC Gas if executing a regular function call in claim
+const GAS_OFFSET_IF_FC_EXECUTE: Gas = Gas(10_000_000_000_000); // 10 TGas
 
 // Actual amount of GAS to attach when creating a new account. No unspent GAS will be attached on top of this (weight of 0)
 const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
@@ -64,8 +69,11 @@ const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
 // Utils
 const ONE_GIGGA_GAS: u64 = 1_000_000_000;
 
-/// Methods callable by the function call access key
-const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
+/// Both methods callable by the function call access key
+const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim";
+
+/// Only the claim method is callable by the access key
+const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim";
 
 /*
     FEES
@@ -98,6 +106,7 @@ enum StorageKey {
     DropsForId,
     DropIdsForFunder,
     DropIdsForFunderInner { account_id_hash: CryptoHash },
+    PksForDrop { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
     UserBalances
 }
