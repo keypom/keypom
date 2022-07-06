@@ -11,8 +11,8 @@ impl DropZone {
 
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return drop data and optional token ID for nft drops.
-        let (drop_data, token_id) = self.process_claim();
+        // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
+        let (drop_data, storage_freed, token_id, storage_for_longest) = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -34,8 +34,8 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
                     // Who sent the FTs?
                     ft_data.ft_sender,
                     // Where are the FTs stored
@@ -58,8 +58,10 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
+                    // How much storage was prepaid to cover the longest token ID being inserted.
+                    storage_for_longest.expect("no storage for longest token Id found"),
                     // Sender of the NFT
                     nft_data.nft_sender,
                     // Contract where the NFT is stored
@@ -80,8 +82,8 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
                     // Receiver of the function call
                     fc_data.receiver,
                     // Method to call on the contract
@@ -106,8 +108,8 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
                 )
             );
         }
@@ -129,8 +131,8 @@ impl DropZone {
 
         env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Delete the access key and remove / return drop data and optional token ID for nft drops.
-        let (drop_data, token_id) = self.process_claim();
+        // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
+        let (drop_data, storage_freed, token_id, storage_for_longest) = self.process_claim();
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
@@ -160,8 +162,8 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
                     // Who sent the FTs?
                     ft_data.ft_sender,
                     // Where are the FTs stored
@@ -184,8 +186,10 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
+                    // How much storage was prepaid to cover the longest token ID being inserted.
+                    storage_for_longest.expect("no storage for longest token Id found"),
                     // Sender of the NFT
                     nft_data.nft_sender,
                     // Contract where the NFT is stored
@@ -206,8 +210,8 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
                     // Receiver of the function call
                     fc_data.receiver,
                     // Method to call on the contract
@@ -232,8 +236,8 @@ impl DropZone {
                     drop_data.funder_id, 
                     // Balance associated with the linkdrop
                     drop_data.balance, 
-                    // How much storage was used to store linkdrop info
-                    drop_data.storage_used_per_key,
+                    // How much storage was freed when the key was claimed
+                    storage_freed,
                 )
             );
         }
@@ -246,7 +250,9 @@ impl DropZone {
     }
 
     /// Internal method for deleting the used key and removing / returning linkdrop data.
-    fn process_claim(&mut self) -> (Drop, Option<String>) {
+    fn process_claim(&mut self) -> (Drop, Balance, Option<String>, Option<Balance>) {
+        // Pessimistically measure storage
+        let initial_storage = env::storage_usage();
         // Ensure only the current contract is calling the method using the access key
         assert_eq!(
             env::predecessor_account_id(),
@@ -267,6 +273,8 @@ impl DropZone {
 
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
         let mut token_id = None;
+        // Default the storage for longest to be none and return the actual value if it's an NFT drop
+        let mut storage_for_longest = None;
         // If it's an NFT or FT drop, decrement the registered keys
         if drop.ft_data.is_some() || drop.nft_data.is_some() {
             if drop.keys_registered == 0 {
@@ -281,6 +289,7 @@ impl DropZone {
                     token_id = ids.iter().next();
                     ids.remove(token_id.as_ref().unwrap());
                 }
+                storage_for_longest = Some(data.storage_for_longest);
             }
         }
         
@@ -296,11 +305,15 @@ impl DropZone {
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
         }
 
+        // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
+        let final_storage = env::storage_usage();
+        let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
+
         // Delete the key
         Promise::new(env::current_account_id()).delete_key(signer_pk);
         
-        // Return the drop and optional token ID
-        (drop, token_id)
+        // Return the drop and optional token ID with how much storage was freed
+        (drop, total_storage_freed, token_id, storage_for_longest)
     }
 
     #[private]
@@ -311,8 +324,8 @@ impl DropZone {
         funder_id: AccountId, 
         // Balance contained within the linkdrop
         balance: U128, 
-        // How much storage was used up for the linkdrop
-        storage_used: U128,
+        // How much storage was freed when the key was claimed
+        storage_used: Balance,
     ) -> bool {        
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
@@ -323,9 +336,9 @@ impl DropZone {
         env::log_str(&format!("Simple on claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
+        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used.0), yocto_to_near(BURNT_GAS)));
+        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
@@ -353,8 +366,8 @@ impl DropZone {
         funder_id: AccountId, 
         // Balance associated with the linkdrop
         balance: U128, 
-        // How much storage was used to store linkdrop info
-        storage_used: U128,
+        // How much storage was freed when the key was claimed
+        storage_used: Balance,
         // Who sent the FTs?
         ft_sender: AccountId,
         // Where are the FTs stored
@@ -373,9 +386,9 @@ impl DropZone {
        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
+        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used.0), yocto_to_near(BURNT_GAS)));
+        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
@@ -478,8 +491,10 @@ impl DropZone {
         funder_id: AccountId, 
         // Balance associated with the linkdrop
         balance: U128, 
-        // How much storage was used to store linkdrop info
-        storage_used: U128,
+        // How much storage was freed when the key was claimed
+        storage_used: Balance,
+        // How much storage was prepaid to cover the longest token ID being inserted.
+        storage_for_longest: Balance,
         // Sender of the NFT
         nft_sender: AccountId,
         // Contract where the NFT is stored
@@ -496,9 +511,10 @@ impl DropZone {
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
+        // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
+        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost() - BURNT_GAS;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used.0), yocto_to_near(BURNT_GAS)));
+        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Storage for longest: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(storage_for_longest * env::storage_byte_cost()), yocto_to_near(BURNT_GAS)));
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
@@ -565,8 +581,8 @@ impl DropZone {
         funder_id: AccountId, 
         // Balance associated with the linkdrop
         balance: U128, 
-        // How much storage was used to store linkdrop info
-        storage_used: U128,
+        // How much storage was freed when the key was claimed
+        storage_used: Balance,
         // Receiver of the function call
         receiver: AccountId,
         // Method to call on the contract
@@ -589,9 +605,9 @@ impl DropZone {
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used.0 - BURNT_GAS;
+        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used.0), yocto_to_near(BURNT_GAS)));
+        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
 
         // If not successful, the balance and deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {

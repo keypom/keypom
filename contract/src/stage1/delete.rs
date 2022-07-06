@@ -17,6 +17,9 @@ impl DropZone {
         public_keys: Option<Vec<PublicKey>>,
         drop_id: DropId
     ) {
+        // Measure initial storage before doing any operations
+        let initial_storage = env::storage_usage();
+
         // get the drop object
         let mut drop = self.drop_for_id.remove(&drop_id).expect("No drop found");
         let funder_id = drop.funder_id.clone();
@@ -61,8 +64,7 @@ impl DropZone {
             let ft_cost = drop.ft_data.as_ref().map(|data| data.ft_storage.unwrap().0).unwrap_or(0);
             let nft_cost = drop.nft_data.as_ref().map(|data| data.storage_for_longest * env::storage_byte_cost()).unwrap_or(0);
             
-            total_refund_amount = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
-
+            
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 {
                 env::log_str("Drop empty. Removing from funder");
@@ -71,6 +73,12 @@ impl DropZone {
                 env::log_str(&format!("Drop non empty. Adding back. Len: {}", drop.pks.len()));
                 self.drop_for_id.insert(&drop_id, &drop);
             }
+            
+            // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
+            let final_storage = env::storage_usage();
+            let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
+            
+            total_refund_amount = total_storage_freed + if drop.pks.len() == 0 {self.drop_fee} else {0} + (self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
         } else {
             // If no PKs were passed in, attempt to remove 100 keys at a time
             keys_to_delete = drop.pks.iter().take(100).collect();
@@ -100,8 +108,6 @@ impl DropZone {
             let fc_cost = drop.fc_data.as_ref().map(|data| data.deposit.0).unwrap_or(0);
             let ft_cost = drop.ft_data.as_ref().map(|data| data.ft_storage.unwrap().0).unwrap_or(0);
             let nft_cost = drop.nft_data.as_ref().map(|data| data.storage_for_longest * env::storage_byte_cost()).unwrap_or(0);
-            
-            total_refund_amount = (drop.storage_used_per_key.0 + self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 {
@@ -111,6 +117,11 @@ impl DropZone {
                 env::log_str(&format!("Drop non empty. Adding back. Len: {}", drop.pks.len()));
                 self.drop_for_id.insert(&drop_id, &drop);
             }
+
+            // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
+            let final_storage = env::storage_usage();
+            let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
+            total_refund_amount = total_storage_freed + if drop.pks.len() == 0 {self.drop_fee} else {0} + (self.key_fee + ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + fc_cost + ft_cost + nft_cost) * len;
         }
 
         // Refund the user
