@@ -81,6 +81,8 @@ mod views;
 
 use internals::*;
 use stage2::*;
+use stage1::*;
+use views::*;
 
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
@@ -89,27 +91,6 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
 
     near
 }
-
-pub type DropId = u128;
-
-/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct Drop {
-    // Funder of this specific drop
-    pub funder_id: AccountId,
-    // Balance for all linkdrops of this drop
-    pub balance: U128,
-    // Set of public keys associated with this drop
-    pub pks: UnorderedSet<PublicKey>,
-
-    // Specific data associated with this drop
-    pub ft_data: Option<FTData>, 
-    pub nft_data: Option<NFTData>, 
-    pub fc_data: Option<FCData>,
-    // How many keys are registered (assets such as FTs sent)
-    pub keys_registered: u64,
-}
-
 
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {

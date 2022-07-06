@@ -1,7 +1,6 @@
 use crate::*;
 
 /// Keep track of nft data 
-#[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct NFTData {
     pub nft_sender: AccountId,
@@ -9,6 +8,8 @@ pub struct NFTData {
     pub longest_token_id: String,
     pub storage_for_longest: Balance,
     pub token_ids: Option<UnorderedSet<String>>,
+    // How many keys are registered (NFTs sent)
+    pub keys_registered: u64,
 }
 
 #[near_bindgen]

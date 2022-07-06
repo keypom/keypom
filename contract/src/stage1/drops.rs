@@ -1,6 +1,44 @@
+use crate::*;
 use near_sdk::{Balance, require};
 
-use crate::{*, views::JsonNFTData};
+pub type DropId = u128;
+
+#[derive(BorshSerialize, BorshDeserialize)]
+pub enum DropType {
+    Simple,
+    NFT(NFTData),
+    FT(FTData),
+    FC(FCData),
+}
+
+/// Keep track of different configuration options for each key in a drop
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct KeyConfiguration {
+    // Number of uses for each key in the drop. If None, unlimited uses
+    pub num_uses: Option<u64>,
+
+    // Minimum block timestamp that keys can be used. If None, keys can be used immediately
+    pub start_timestamp: Option<u64>,
+
+    // How often can a key be used 
+    pub usage_interval: Option<u64>,
+}
+
+/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct Drop {
+    // Funder of this specific drop
+    pub funder_id: AccountId,
+    // Set of public keys associated with this drop
+    pub pks: UnorderedSet<PublicKey>,
+
+    // Balance for all keys of this drop. Can be 0 if specified.
+    pub balance: U128,
+
+    // Every drop must have a type
+    pub drop_type: DropType,
+
+}
 
 #[near_bindgen]
 impl DropZone {

@@ -4,7 +4,6 @@ use crate::*;
 
 
 /// Keep track fungible token data for an access key
-#[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FTData {
@@ -12,6 +11,8 @@ pub struct FTData {
     pub ft_sender: AccountId,
     pub ft_balance: U128,
     pub ft_storage: Option<U128>,
+    // How many keys are registered (FTs sent)
+    pub keys_registered: u64,
 }
 
 // Returned from the storage balance bounds cross contract call on the FT contract
