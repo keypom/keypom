@@ -23,12 +23,51 @@ impl DropZone {
         // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
         let account_to_transfer = if drop_data.drop_config.refund_if_claim.unwrap_or(false) == true {drop_data.funder_id} else {account_id};
 
+        // TODO: only transfer if balance is > 0
         // Send the account ID the desired balance.
         let promise = Promise::new(account_to_transfer).transfer(drop_data.balance.0);
         
         // Determine what callback we should use depending on the drop type
         match drop_data.drop_type {
             DropType::FC(data) => {
+                if let Some(gas) = data.gas_to_attach {
+                    // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS
+                    let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_freed - (gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128;
+                    
+                    env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_freed), yocto_to_near((gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128)));
+                    
+                    // Add the refund to the deposit
+                    if !data.refund_to_deposit.unwrap_or(false) {
+                        // Refunding
+                        env::log_str(&format!("Refunding funder: {:?} balance For amount: {:?}", drop_data.funder_id, yocto_to_near(amount_to_refund)));
+                        // Get the funder's balance and increment it by the amount to refund
+                        let mut cur_funder_balance = self.user_balances.get(&drop_data.funder_id).expect("No funder balance found");
+                        cur_funder_balance += amount_to_refund;
+                        self.user_balances.insert(&drop_data.funder_id, &cur_funder_balance);
+                    } else {
+                        env::log_str(&format!("Skipping the refund to funder: {:?} refund to deposit?: {:?}", drop_data.funder_id, data.refund_to_deposit.unwrap_or(false)));
+                    }
+
+                    let mut final_args = data.args.clone();
+
+                    // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
+                    if let Some(account_field) = data.claimed_account_field {
+                        final_args.insert_str(final_args.len()-1, &format!(",\"{}\":\"{}\"", account_field, account_id));
+                        env::log_str(&format!("Adding claimed account ID to specified field: {:?} in args: {:?}", account_field, data.args));
+                    }
+                
+                    env::log_str(&format!("Attaching Total: {:?} Deposit: {:?} Should Refund?: {:?} Amount To Refund: {:?} With args: {:?}", yocto_to_near(data.deposit.0 + if data.refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}), yocto_to_near(data.deposit.0), data.refund_to_deposit.unwrap_or(false), yocto_to_near(amount_to_refund), final_args));
+
+                    // Call function with the min GAS and deposit. all unspent GAS will be added on top
+                    Promise::new(data.receiver).function_call_weight(
+                        data.method, 
+                        final_args.as_bytes().to_vec(), 
+                        // The claim is successful so attach the amount to refund to the deposit instead of refunding the funder.
+                        data.deposit.0 + if data.refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}, 
+                        gas,
+                        GasWeight(1)
+                    );
+                }
                 promise.then(
                     // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                     Self::ext(env::current_account_id())
@@ -695,7 +734,7 @@ impl DropZone {
                 final_args.as_bytes().to_vec(), 
                 // The claim is successful so attach the amount to refund to the deposit instead of refunding the funder.
                 deposit.0 + if add_refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}, 
-                MIN_GAS_FOR_CALLBACK_FUNCTION_CALL,
+                Gas(0),
                 GasWeight(1)
             );
         }

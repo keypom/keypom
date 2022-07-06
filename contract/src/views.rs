@@ -1,22 +1,24 @@
 use crate::*;
 
+
 /// Struct to return in views to query for drop info
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonDrop {
-    // Drop ID for the specific drop
-    pub drop_id: DropId,
     // Funder of this specific drop
     pub funder_id: AccountId,
-    // Balance for all linkdrops of this drop
+
+    // Balance for all keys of this drop. Can be 0 if specified.
     pub balance: U128,
 
-    // Specific data associated with this drop
-    pub ft_data: Option<FTData>, 
-    pub nft_data: Option<JsonNFTData>, 
-    pub fc_data: Option<FCData>,
-    // How many keys are registered (assets such as FTs sent)
-    pub keys_registered: u64,
+    // Every drop must have a type
+    pub drop_type: DropType,
+
+    // The drop as a whole can have a config as well
+    pub drop_config: DropConfig,
+
+    // How many claims
+    pub num_claims_registered: u64,
 }
 
 // /// Keep track of nft data 
