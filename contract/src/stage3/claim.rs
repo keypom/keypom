@@ -6,9 +6,9 @@ use crate::*;
 impl DropZone {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
-        // TODO: assert attached GAS is 100 TGas
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
+        require!(prepaid_gas <= ATTACHED_GAS_FROM_WALLET, &format!("cannot attach more than {:?} GAS", ATTACHED_GAS_FROM_WALLET));
 
         env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 

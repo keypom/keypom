@@ -225,6 +225,7 @@ impl DropZone {
             );
         } else if let Some(data) = fc_data {
             // If FC Data was provided, we need to set the drop type to be FC
+            require!(data.gas_to_attach.unwrap_or(Gas(0)) <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE, &format!("cannot attach more than {:?} GAS.", ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE));
             drop.drop_type = DropType::FC(data);
             
             // Add the drop with the empty token IDs
@@ -240,7 +241,6 @@ impl DropZone {
             );
         }
 
-        // TODO: add storage for access keys * num of public keys
         // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
         let total_required_storage = (Balance::from(final_storage - initial_storage) + storage_per_longest) * env::storage_byte_cost();
@@ -477,7 +477,7 @@ impl DropZone {
                 0, 
                 ACCESS_KEY_ALLOWANCE, 
                 &current_account_id, 
-                ACCESS_KEY_METHOD_NAMES // TODO: can change access key methods based on can_only_claim bool
+                ACCESS_KEY_METHOD_NAMES
             );
         }
 

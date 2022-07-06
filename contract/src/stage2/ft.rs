@@ -207,7 +207,6 @@ impl DropZone {
                 cur_user_balance += required_deposit;
                 self.user_balances.insert(&funder_id, &cur_user_balance);
 
-                // TODO: delete keys
                 return false;
             }
 

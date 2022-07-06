@@ -9,8 +9,6 @@ use near_sdk::{
     require, Balance
 };
 
-// TODO: Receipt cost for FCs.
-
 /* 
     minimum amount of storage required to store an access key on the contract
     1_330_000_000_000_000_000_000 Simple linkdrop: 0.00133 $NEAR
