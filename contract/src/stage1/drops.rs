@@ -149,7 +149,7 @@ impl DropZone {
             let NFTDataConfig{nft_sender, nft_contract, longest_token_id} = data;
 
             // Create the token ID set and insert the longest token ID
-            let token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
+            let mut token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("nft-{}{}", self.nonce, funder_id)),
             });

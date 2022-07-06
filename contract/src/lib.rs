@@ -88,7 +88,6 @@ mod views;
 use internals::*;
 use stage2::*;
 use stage1::*;
-use views::*;
 
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
