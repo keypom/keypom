@@ -27,7 +27,7 @@ impl DropZone {
         // Determine what callback we should use depending on the drop type
         match drop_data.drop_type {
             DropType::FC(data) => {
-                if let Some(gas) = data.gas_to_attach {
+                if let Some(gas) = data.gas_if_straight_execute {
                     // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS
                     let burnt_gas = (gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128 * GAS_PRICE;
                     let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, drop_data.drop_config.max_claims_per_key);
@@ -211,7 +211,7 @@ impl DropZone {
         // Determine what callback we should use depending on the drop type
         match drop_data.drop_type {
             DropType::FC(data) => {
-                require!(data.gas_to_attach.is_none(), "cannot call create account if executing FC with specified attached GAS");
+                require!(data.gas_if_straight_execute.is_none(), "cannot call create account if executing FC with specified attached GAS");
                 promise.then(
                     // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                     Self::ext(env::current_account_id())

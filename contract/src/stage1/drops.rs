@@ -141,9 +141,13 @@ impl DropZone {
             num_claims_registered: num_claims_per_key * len as u64
         };
 
+        // Decide what methods the access keys can call
+        let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
+        if drop_config.only_call_claim.is_some() {
+            access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+        }
         // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
         let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
-
         // For NFT drops, measure the storage for adding the longest token ID
         let mut storage_per_longest = 0;
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
@@ -227,10 +231,11 @@ impl DropZone {
             );
         } else if let Some(data) = fc_data.clone() {
             // If FC Data was provided, we need to set the drop type to be FC
-            require!(data.gas_to_attach.unwrap_or(Gas(0)) <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE, &format!("cannot attach more than {:?} GAS.", ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE));
-            // If GAS is specified, set the GAS to attach for allowance calculations
-            if let Some(gas) = data.gas_to_attach {
+            require!(data.gas_if_straight_execute.unwrap_or(Gas(0)) <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE, &format!("cannot attach more than {:?} GAS.", ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE));
+            // If GAS is specified, set the GAS to attach for allowance calculations and set the method name to only claim
+            if let Some(gas) = data.gas_if_straight_execute {
                 gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
+                access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
             }
             
             drop.drop_type = DropType::FC(data);
@@ -310,12 +315,6 @@ impl DropZone {
             keys will be added in the FT resolver
         */
         if ft_data.is_none() {
-            // Decide what methods the access keys can call
-            let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-            if drop_config.only_call_claim.is_some() {
-                access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
-            }
-
             // Create a new promise batch to create all the access keys
             let promise = env::promise_batch_create(&current_account_id);
             
@@ -406,6 +405,11 @@ impl DropZone {
         // Set the drop's PKs to the newly populated set
         drop.pks = exiting_key_map;
 
+        // Decide what methods the access keys can call
+        let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
+        if drop_config.only_call_claim.is_some() {
+            access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+        }
         // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
         let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
         // Increment the claims registered if drop is FC or Simple
@@ -414,8 +418,9 @@ impl DropZone {
                 drop.num_claims_registered += num_claims_per_key * len as u64;
                 
                 // If GAS is specified, set the GAS to attach for allowance calculations
-                if let Some(gas) = data.gas_to_attach {
+                if let Some(gas) = data.gas_if_straight_execute {
                     gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
+                    access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
             },
             DropType::Simple => {
@@ -502,12 +507,6 @@ impl DropZone {
         
         // Loop through each public key and create the access keys
         for pk in public_keys.clone() {
-            // Decide what methods the access keys can call
-            let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-            if drop_config.only_call_claim.is_some() {
-                access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
-            }
-            
             // Must assert in the loop so no access keys are made?
             env::promise_batch_action_add_key_with_function_call(
                 promise, 

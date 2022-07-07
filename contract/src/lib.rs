@@ -129,6 +129,9 @@ pub struct DropZone {
     
     // Keep track of a nonce used for the drop IDs
     pub nonce: DropId,
+
+    // Keep track of the price of 1 GAS per 1 yocto
+    pub yocto_per_gas: u128
 }
 
 #[near_bindgen]
@@ -150,6 +153,7 @@ impl DropZone {
             drop_fee: DROP_CREATION_FEE,
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
+            yocto_per_gas: 100000000
         }
     }
 }
