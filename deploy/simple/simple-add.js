@@ -17,6 +17,15 @@ let near;
 let config;
 let keyStore;
 
+let drop_config = {
+	max_claims_per_key: 2,
+
+	// start_timestamp: 0,
+	// usage_interval: 6e10,
+	// refund_if_claim: true,
+	// only_call_claim: true
+}
+
 // set up near
 const initiateNear = async () => {
 	const CREDENTIALS_DIR = ".near-credentials";

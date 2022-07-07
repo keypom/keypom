@@ -1,9 +1,20 @@
 use crate::*;
 
+// const GAS_PER_CCC: u128 = 500_000_000_000_000_000_000; // 5 TGas
+// const RECEIPT_GAS_COST: u128 = 250_000_000_000_000_000_000; // 2.5 TGas
+
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
+
+// /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
+// pub(crate) fn calculate_allowance(attached_gas: &Balance) -> Balance {
+//     require!(attached_gas % GAS_PER_CCC == 0, "attached GAS must be a multiple of the GAS per CCC");
+//     let mul_constant =  1.03_f32.powf((attached_gas / GAS_PER_CCC) as f32);
+//     let allowance = 
+//     (attached_gas + RECEIPT_GAS_COST) 
+// }
 
 impl DropZone {
     /// Add a drop ID to the set of drops a funder has

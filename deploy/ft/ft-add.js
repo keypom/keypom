@@ -11,7 +11,7 @@ let FT_CONTRACT_ID = "ft.examples.benjiman.testnet";
 
 let OFFSET = 0.1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 100;
+let NUM_KEYS = 1;
 
 let NETWORK_ID = "testnet";
 let near;

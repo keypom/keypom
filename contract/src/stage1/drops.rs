@@ -141,9 +141,11 @@ impl DropZone {
             num_claims_registered: num_claims_per_key * len as u64
         };
 
+        // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
+        let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
+
         // For NFT drops, measure the storage for adding the longest token ID
         let mut storage_per_longest = 0;
-
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
         if let Some(data) = nft_data {
             let NFTDataConfig{nft_sender, nft_contract, longest_token_id} = data;
@@ -226,7 +228,13 @@ impl DropZone {
         } else if let Some(data) = fc_data.clone() {
             // If FC Data was provided, we need to set the drop type to be FC
             require!(data.gas_to_attach.unwrap_or(Gas(0)) <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE, &format!("cannot attach more than {:?} GAS.", ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE));
+            // If GAS is specified, set the GAS to attach for allowance calculations
+            if let Some(gas) = data.gas_to_attach {
+                gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
+            }
+            
             drop.drop_type = DropType::FC(data);
+            
             
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(
@@ -249,7 +257,10 @@ impl DropZone {
         // Increment the drop ID nonce
         self.nonce += 1;
 
-        let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + (ACCESS_KEY_STORAGE + ACCESS_KEY_ALLOWANCE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0} + storage_per_longest * env::storage_byte_cost()) * num_claims_per_key as u128) * len;
+        // Dynamically calculate the access key allowance based on the base + number of claims per key * GAS to attach
+        let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (num_claims_per_key - 1) as u128 * gas_to_attach.0 as u128 * GAS_PRICE;
+
+        let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + access_key_allowance + (ACCESS_KEY_STORAGE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0} + storage_per_longest * env::storage_byte_cost()) * num_claims_per_key as u128) * len;
         env::log_str(&format!(
             "Current balance: {}, 
             Required Deposit: {}, 
@@ -262,19 +273,21 @@ impl DropZone {
             total function call deposits (if applicable): {}, 
             Storage for longest token ID (if applicable): {},
             Num claims per key: {}
-            length: {}", 
+            length: {}
+            GAS to attach: {}", 
             yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
             yocto_to_near(self.drop_fee),
             yocto_to_near(total_required_storage), 
             yocto_to_near(self.key_fee),
             yocto_to_near(ACCESS_KEY_STORAGE), 
-            yocto_to_near(ACCESS_KEY_ALLOWANCE), 
+            yocto_to_near(access_key_allowance), 
             yocto_to_near(balance.0), 
             yocto_to_near(if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0}), 
             yocto_to_near(storage_per_longest * env::storage_byte_cost()), 
             num_claims_per_key,
-            len)
+            len,
+            yocto_to_near(gas_to_attach.0 as u128))
         );
         /*
             Ensure the attached deposit can cover: 
@@ -312,7 +325,7 @@ impl DropZone {
                     promise, 
                     &pk, 
                     0, 
-                    ACCESS_KEY_ALLOWANCE, 
+                    access_key_allowance, 
                     &current_account_id, 
                     access_key_method_names
                 );
@@ -392,10 +405,17 @@ impl DropZone {
         // Set the drop's PKs to the newly populated set
         drop.pks = exiting_key_map;
 
+        // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
+        let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
         // Increment the claims registered if drop is FC or Simple
         match &drop.drop_type {
-            DropType::FC(_) => {
+            DropType::FC(data) => {
                 drop.num_claims_registered += num_claims_per_key * len as u64;
+                
+                // If GAS is specified, set the GAS to attach for allowance calculations
+                if let Some(gas) = data.gas_to_attach {
+                    gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
+                }
             },
             DropType::Simple => {
                 drop.num_claims_registered += num_claims_per_key * len as u64;
@@ -432,8 +452,11 @@ impl DropZone {
         let total_required_storage = Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
         env::log_str(&format!("Total required storage Yocto {}", total_required_storage));
 
+        // Dynamically calculate the access key allowance based on the base + number of claims per key * GAS to attach
+        let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (num_claims_per_key - 1) as u128 * gas_to_attach.0 as u128 * GAS_PRICE;
+
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
-        let required_deposit = total_required_storage + (self.key_fee + (ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + drop.balance.0 + optional_costs) * num_claims_per_key as u128) * len;
+        let required_deposit = total_required_storage + (self.key_fee + access_key_allowance + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_costs) * num_claims_per_key as u128) * len;
         env::log_str(&format!(
             "Current User Balance: {}, 
             Required Deposit: {}, 
@@ -444,17 +467,19 @@ impl DropZone {
             Balance per key: {}, 
             optional costs: {}, 
             Number of claims per key: {},
-            length: {}", 
+            length: {}
+            GAS to attach: {}", 
             yocto_to_near(current_user_balance), 
             yocto_to_near(required_deposit),
             yocto_to_near(total_required_storage),
             yocto_to_near(self.key_fee), 
-            yocto_to_near(ACCESS_KEY_ALLOWANCE), 
+            yocto_to_near(access_key_allowance), 
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(drop.balance.0), 
             yocto_to_near(optional_costs), 
             num_claims_per_key,
-            len)
+            len,
+            yocto_to_near(gas_to_attach.0 as u128))
         );
         /*
             Ensure the attached deposit can cover: 
@@ -486,7 +511,7 @@ impl DropZone {
                 promise, 
                 &pk, 
                 0, 
-                ACCESS_KEY_ALLOWANCE, 
+                access_key_allowance, 
                 &current_account_id, 
                 access_key_method_names
             );

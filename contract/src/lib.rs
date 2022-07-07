@@ -18,14 +18,13 @@ const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N
 
 
 /* 
-allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
+    Base allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
     available when GAS is burnt using the access key. The burnt GAS will not be refunded but any unburnt GAS that remains can be refunded.
 
     If this is lower, wallet will throw the following error:
     Access Key {account_id}:{public_key} does not have enough balance 0.01 for transaction costing 0.018742491841859367297184
 */  
-const ACCESS_KEY_ALLOWANCE: u128 = 18_800_000_000_000_000_000_000; // 0.0188 N (200 TGas)
-
+const BASE_ACCESS_KEY_ALLOWANCE: u128 = 18_800_000_000_000_000_000_000; // 0.0188 N
 /* 
     minimum amount of NEAR that a new account (with longest possible name) must have when created 
     If this is less, it will throw a lack balance for state error (assuming you have the same account ID length)
@@ -34,9 +33,6 @@ const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000; // 0.00284 N
 
 /// Indicates there are no deposit for a callback for better readability.
 const NO_DEPOSIT: u128 = 0;
-
-// Defaulting burnt GAS to be 100 TGas (0.01 $NEAR)
-const BURNT_GAS: u128 = 10_000_000_000_000_000_000_000;
 
 /*
     GAS Constants (outlines the minimum to attach. Any unspent GAS will be added according to the weights)
@@ -66,6 +62,7 @@ const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
 
 // Utils
 const ONE_GIGGA_GAS: u64 = 1_000_000_000;
+const GAS_PRICE: u128 = 100000000;
 
 /// Both methods callable by the function call access key
 const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim";

@@ -234,14 +234,17 @@ impl DropZone {
                 if drop.drop_config.only_call_claim.is_some() {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
-    
+
+                // Dynamically calculate the access key allowance based on the base + number of claims per key * 100 TGas
+                let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+
                 // Loop through each public key and create the access keys
                 for pk in public_keys.clone() {
                     env::promise_batch_action_add_key_with_function_call(
                         promise, 
                         &pk, 
                         0, 
-                        ACCESS_KEY_ALLOWANCE, 
+                        access_key_allowance, 
                         &env::current_account_id(), 
                         access_key_method_names
                     );

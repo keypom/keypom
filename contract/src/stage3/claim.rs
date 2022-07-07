@@ -32,9 +32,26 @@ impl DropZone {
             DropType::FC(data) => {
                 if let Some(gas) = data.gas_to_attach {
                     // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS
-                    let amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_freed - (gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128;
+                    let burnt_gas = (gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128;
+                    let total_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop_data.drop_config.max_claims_per_key - 1) as u128 * burnt_gas;
+                    let allowance_refund_per_key = (total_allowance - burnt_gas*drop_data.drop_config.max_claims_per_key as u128) / drop_data.drop_config.max_claims_per_key as u128;
                     
-                    env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_freed), yocto_to_near((gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128)));
+                    let amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_freed;
+                    
+                    env::log_str(&format!(
+                        "Refund Amount: {}, 
+                        Allowance refund per key: {},
+                        Total allowance: {},
+                        Burnt GAS: {}, 
+                        Access Key Storage: {}, 
+                        Storage Used: {}", 
+                        yocto_to_near(amount_to_refund), 
+                        yocto_to_near(allowance_refund_per_key),
+                        yocto_to_near(total_allowance),
+                        yocto_to_near(burnt_gas), 
+                        yocto_to_near(ACCESS_KEY_STORAGE), 
+                        yocto_to_near(storage_freed))
+                    );
                     
                     // Add the refund to the deposit
                     if !data.refund_to_deposit.unwrap_or(false) {
@@ -93,6 +110,8 @@ impl DropZone {
                         data.refund_to_deposit,
                         // Should we add the account ID as part of the args and what key should it live in
                         data.claimed_account_field,
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             },
@@ -118,6 +137,8 @@ impl DropZone {
                         data.nft_contract,
                         // Token ID for the NFT
                         token_id.expect("no token ID found"),
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             },
@@ -143,6 +164,8 @@ impl DropZone {
                         data.ft_balance,
                         // How much storage does it cost to register the new account
                         data.ft_storage,
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             },
@@ -158,6 +181,8 @@ impl DropZone {
                         drop_data.balance, 
                         // How much storage was freed when the key was claimed
                         storage_freed,
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             }
@@ -227,6 +252,8 @@ impl DropZone {
                         data.refund_to_deposit,
                         // Should we add the account ID as part of the args and what key should it live in
                         data.claimed_account_field,
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             },
@@ -252,6 +279,8 @@ impl DropZone {
                         data.nft_contract,
                         // Token ID for the NFT
                         token_id.expect("no token ID found"),
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             },
@@ -277,6 +306,8 @@ impl DropZone {
                         data.ft_balance,
                         // How much storage does it cost to register the new account
                         data.ft_storage,
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             },
@@ -292,6 +323,8 @@ impl DropZone {
                         drop_data.balance, 
                         // How much storage was freed when the key was claimed
                         storage_freed,
+                        // How many claims per key
+                        drop_data.drop_config.max_claims_per_key as u128
                     )
                 );
             }
@@ -318,9 +351,9 @@ impl DropZone {
         // Get the PK of the signer which should be the contract's function call access key
         let signer_pk = env::signer_account_pk();
 
-        // By default, every key should have a drop ID
-        let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("No drop ID found for PK");
-        // Remove the drop
+        // By default, every key should have a drop ID. If we need to remove the key, remove later.
+        let drop_id = self.drop_id_for_pk.get(&signer_pk).expect("No drop ID found for PK");
+        // Remove the drop. If the drop shouldn't be removed, we re-insert later.
         let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
         
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
@@ -350,6 +383,8 @@ impl DropZone {
             _ => {}
         };
 
+        // Default the should delete variable to true. If there's a case where it shouldn't, change the bool.
+        let mut should_delete = true;
         if let Some(mut usage) = key_usage {
             env::log_str(&format!("Key usage found. Last used: {:?} Num uses: {:?} (before)", usage.last_used, usage.num_uses));
             
@@ -363,10 +398,12 @@ impl DropZone {
             // No uses left! The key should be deleted
             if usage.num_uses == 1 {
                 env::log_str("Key has no uses left. It will be deleted");
+                self.drop_id_for_pk.remove(&signer_pk);
             } else {
                 usage.num_uses -= 1;
                 env::log_str(&format!("Key has {} uses left", usage.num_uses));
                 drop.pks.insert(&signer_pk, &Some(usage));
+                should_delete = false;
             }
         }
         
@@ -386,8 +423,10 @@ impl DropZone {
         let final_storage = env::storage_usage();
         let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
 
-        // Delete the key
-        Promise::new(env::current_account_id()).delete_key(signer_pk);
+        if should_delete {
+            // Delete the key
+            Promise::new(env::current_account_id()).delete_key(signer_pk);
+        }
         
         // Return the drop and optional token ID with how much storage was freed
         (drop, total_storage_freed, token_id, storage_for_longest)
@@ -403,6 +442,8 @@ impl DropZone {
         balance: U128, 
         // How much storage was freed when the key was claimed
         storage_used: Balance,
+        // How many claims can each key have
+        max_claims_per_key: u128
     ) -> bool {        
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
@@ -412,10 +453,26 @@ impl DropZone {
 
         env::log_str(&format!("Simple on claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
+        let total_allowance = BASE_ACCESS_KEY_ALLOWANCE + (max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let allowance_refund_per_key = (total_allowance - ATTACHED_GAS_FROM_WALLET.0 as u128 * max_claims_per_key * GAS_PRICE) / max_claims_per_key;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
+        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
+        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used ;
+        
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Allowance refund per key: {},
+            Total allowance: {},
+            Burnt GAS: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(allowance_refund_per_key),
+            yocto_to_near(total_allowance),
+            yocto_to_near(ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used))
+        );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
@@ -453,20 +510,38 @@ impl DropZone {
         ft_balance: U128,
         // How much storage does it cost to register the new account
         ft_storage: U128,
+        // How many claims can each key have
+        max_claims_per_key: u128
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-       // Get the status of the cross contract call
-       let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        // Get the status of the cross contract call
+        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
+        let total_allowance = BASE_ACCESS_KEY_ALLOWANCE + (max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let allowance_refund_per_key = (total_allowance - ATTACHED_GAS_FROM_WALLET.0 as u128 * max_claims_per_key * GAS_PRICE) / max_claims_per_key;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
-
+        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
+        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used ;
+        
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Allowance refund per key: {},
+            Total allowance: {},
+            Burnt GAS: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(allowance_refund_per_key),
+            yocto_to_near(total_allowance),
+            yocto_to_near(ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used))
+        );
+        
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance as well: {}", balance.0));
@@ -578,6 +653,8 @@ impl DropZone {
         nft_contract: AccountId,
         // Token ID for the NFT
         token_id: String, 
+        // How many claims can each key have
+        max_claims_per_key: u128
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -589,10 +666,29 @@ impl DropZone {
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost() - BURNT_GAS;
+        let total_allowance = BASE_ACCESS_KEY_ALLOWANCE + (max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let allowance_refund_per_key = (total_allowance - ATTACHED_GAS_FROM_WALLET.0 as u128 * max_claims_per_key * GAS_PRICE) / max_claims_per_key;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Storage for longest: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(storage_for_longest * env::storage_byte_cost()), yocto_to_near(BURNT_GAS)));
-
+        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
+        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost();
+        
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Allowance refund per key: {},
+            Total allowance: {},
+            Burnt GAS: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}
+            Storage for longest: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(allowance_refund_per_key),
+            yocto_to_near(total_allowance),
+            yocto_to_near(ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used),
+            yocto_to_near(storage_for_longest * env::storage_byte_cost()))
+        );
+    
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance as well: {}", balance.0));
@@ -672,6 +768,8 @@ impl DropZone {
         add_refund_to_deposit: Option<bool>,
         // Should we add the account ID as part of the args and what key should it live in
         claimed_account_field: Option<String>,
+        // How many claims can each key have
+        max_claims_per_key: u128
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -681,11 +779,27 @@ impl DropZone {
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
+        let total_allowance = BASE_ACCESS_KEY_ALLOWANCE + (max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let allowance_refund_per_key = (total_allowance - ATTACHED_GAS_FROM_WALLET.0 as u128 * max_claims_per_key * GAS_PRICE) / max_claims_per_key;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
-
+        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
+        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used ;
+        
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Allowance refund per key: {},
+            Total allowance: {},
+            Burnt GAS: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(allowance_refund_per_key),
+            yocto_to_near(total_allowance),
+            yocto_to_near(ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used))
+        );
+        
         // If not successful, the balance and deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance: {} and deposit: {}", balance.0, deposit.0));
