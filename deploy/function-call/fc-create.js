@@ -142,7 +142,9 @@ async function start() {
 			}),
 			deposit: parseNearAmount("1"),
 			refund_to_deposit: true,
-			claimed_account_field: "receiver_id"
+			claimed_account_field: "receiver_id",
+			// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
+			gas_to_attach: "25000000000000"
 		}
 
 		await fundingAccount.functionCall(

@@ -211,6 +211,7 @@ impl DropZone {
         // Determine what callback we should use depending on the drop type
         match drop_data.drop_type {
             DropType::FC(data) => {
+                require!(data.gas_to_attach.is_none(), "cannot call create account if executing FC with specified attached GAS");
                 promise.then(
                     // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                     Self::ext(env::current_account_id())
@@ -374,6 +375,7 @@ impl DropZone {
             
             // Ensure the key is within the interval if specified
             if let Some(interval) = drop.drop_config.usage_interval {
+                env::log_str(&format!("Current timestamp {} last used: {} subs: {} interval: {}", current_timestamp, usage.last_used, current_timestamp - usage.last_used, interval));
                 require!((current_timestamp - usage.last_used) >= interval, "Not enough time has passed since the key was last used.");
                 env::log_str(&format!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp));
                 usage.last_used = current_timestamp;
