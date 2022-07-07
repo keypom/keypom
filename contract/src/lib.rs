@@ -152,7 +152,7 @@ impl DropZone {
             drop_fee: DROP_CREATION_FEE,
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
-            yocto_per_gas: 100000000
+            yocto_per_gas: 100_000_000
         }
     }
 }

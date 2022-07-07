@@ -76,12 +76,12 @@ impl DropZone {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
         
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
-        env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         if transfer_succeeded {
             return true

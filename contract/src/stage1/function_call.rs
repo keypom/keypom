@@ -41,6 +41,8 @@ impl DropZone {
         claimed_account_field: Option<String>,
         // Should the refund be sent to the funder or attached to the deposit
         add_refund_to_deposit: Option<bool>,
+        // How much GAS to attach. If None, default to 0 and attach all unused GAS
+        gas: Option<Gas>,
         amount_to_refund: u128,
         account_id: AccountId,
     ) {
@@ -65,7 +67,7 @@ impl DropZone {
                 final_args.as_bytes().to_vec(), 
                 // The claim is successful so attach the amount to refund to the deposit instead of refunding the funder.
                 deposit.0 + if add_refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}, 
-                Gas(0),
+                gas.unwrap_or(Gas(0)),
                 GasWeight(1)
             );
         }

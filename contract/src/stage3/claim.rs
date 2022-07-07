@@ -4,19 +4,15 @@ use crate::*;
 impl DropZone {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
-        let mut used_gas = env::used_gas();
-        let mut prepaid_gas = env::prepaid_gas();
-        require!(prepaid_gas <= ATTACHED_GAS_FROM_WALLET, &format!("cannot attach more than {:?} GAS", ATTACHED_GAS_FROM_WALLET));
-
-        env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
-        let (drop_data, storage_freed, token_id, storage_for_longest) = self.process_claim();
+        let (drop_data_option, storage_freed_option, token_id, storage_for_longest) = self.process_claim();
 
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
-
-        env::log_str(&format!("in regular claim right before transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        if drop_data_option.is_none() {
+            env::log_str("Invalid claim. Returning.");
+            return;
+        }
+        let drop_data = drop_data_option.unwrap();
+        let storage_freed = storage_freed_option.unwrap();
 
         // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
         let account_to_transfer = if drop_data.drop_config.refund_if_claim.unwrap_or(false) == true {drop_data.funder_id.clone()} else {account_id.clone()};
@@ -28,19 +24,14 @@ impl DropZone {
         match drop_data.drop_type {
             DropType::FC(data) => {
                 if let Some(gas) = data.gas_if_straight_execute {
-                    // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS
-                    let burnt_gas = (gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128 * self.yocto_per_gas;
-                    let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, drop_data.drop_config.max_claims_per_key);
-                    
-                    let amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_freed;
+                    // Allowance has already been freed
+                    let amount_to_refund = ACCESS_KEY_STORAGE + storage_freed;
                     
                     env::log_str(&format!(
                         "Refund Amount: {}, 
-                        Allowance refund per key: {},
                         Access Key Storage: {}, 
                         Storage Used: {}", 
                         yocto_to_near(amount_to_refund), 
-                        yocto_to_near(allowance_refund_per_key),
                         yocto_to_near(ACCESS_KEY_STORAGE), 
                         yocto_to_near(storage_freed)
                     ));
@@ -65,6 +56,7 @@ impl DropZone {
                         data.deposit.clone(), 
                         data.claimed_account_field.clone(), 
                         data.refund_to_deposit, 
+                        Some(gas),
                         amount_to_refund, 
                         account_id.clone()
                     );
@@ -94,8 +86,6 @@ impl DropZone {
                         data.refund_to_deposit,
                         // Should we add the account ID as part of the args and what key should it live in
                         data.claimed_account_field,
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             },
@@ -121,8 +111,6 @@ impl DropZone {
                         data.nft_contract,
                         // Token ID for the NFT
                         token_id.expect("no token ID found"),
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             },
@@ -148,8 +136,6 @@ impl DropZone {
                         data.ft_balance,
                         // How much storage does it cost to register the new account
                         data.ft_storage,
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             },
@@ -165,17 +151,15 @@ impl DropZone {
                         drop_data.balance, 
                         // How much storage was freed when the key was claimed
                         storage_freed,
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             }
         };
 
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
+        let used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("End of regular claim function: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("End of regular claim function: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
     }
 
     /// Create new account and and claim tokens to it.
@@ -184,19 +168,15 @@ impl DropZone {
         new_account_id: AccountId,
         new_public_key: PublicKey,
     ) {
-        let mut used_gas = env::used_gas();
-        let mut prepaid_gas = env::prepaid_gas();
+        let (drop_data_option, storage_freed_option, token_id, storage_for_longest) = self.process_claim();
 
-        env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        if drop_data_option.is_none() {
+            env::log_str("Invalid claim. Returning.");
+            return;
+        }
+        let drop_data = drop_data_option.unwrap();
+        let storage_freed = storage_freed_option.unwrap();
 
-        // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
-        let (drop_data, storage_freed, token_id, storage_for_longest) = self.process_claim();
-
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
-
-        env::log_str(&format!("In CAAC after process claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-        
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
         let promise = ext_linkdrop::ext(self.linkdrop_contract.clone())
             // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
@@ -237,8 +217,6 @@ impl DropZone {
                         data.refund_to_deposit,
                         // Should we add the account ID as part of the args and what key should it live in
                         data.claimed_account_field,
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             },
@@ -264,8 +242,6 @@ impl DropZone {
                         data.nft_contract,
                         // Token ID for the NFT
                         token_id.expect("no token ID found"),
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             },
@@ -291,8 +267,6 @@ impl DropZone {
                         data.ft_balance,
                         // How much storage does it cost to register the new account
                         data.ft_storage,
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             },
@@ -308,113 +282,16 @@ impl DropZone {
                         drop_data.balance, 
                         // How much storage was freed when the key was claimed
                         storage_freed,
-                        // How many claims per key
-                        drop_data.drop_config.max_claims_per_key
                     )
                 );
             }
         };
 
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
+        let used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("End of on CAAC function: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("End of on CAAC function: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
-    }
-
-    /// Internal method for deleting the used key and removing / returning linkdrop data.
-    fn process_claim(&mut self) -> (Drop, Balance, Option<String>, Option<Balance>) {
-        // Pessimistically measure storage
-        let initial_storage = env::storage_usage();
-        // Ensure only the current contract is calling the method using the access key
-        assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
-
-        // Get the PK of the signer which should be the contract's function call access key
-        let signer_pk = env::signer_account_pk();
-
-        // By default, every key should have a drop ID. If we need to remove the key, remove later.
-        let drop_id = self.drop_id_for_pk.get(&signer_pk).expect("No drop ID found for PK");
-        // Remove the drop. If the drop shouldn't be removed, we re-insert later.
-        let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
-        
-        // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
-        require!(drop.num_claims_registered >= 1, "Not enough claims left for the drop.");
-        drop.num_claims_registered -= 1;
-
-        // Ensure enough time has passed if a start timestamp was specified in the config.
-        let current_timestamp = env::block_timestamp();
-        let desired_timestamp = drop.drop_config.start_timestamp.unwrap_or(current_timestamp);
-        require!(current_timestamp >= desired_timestamp, &format!("Drop isn't claimable until {}. Current timestamp is {}", desired_timestamp, current_timestamp));
-        
-        // Remove the pk from the drop's set and check for key usage
-        let mut key_usage = drop.pks.remove(&signer_pk).unwrap();
-        
-        // Default the token ID to none and return / remove the next token ID if it's an NFT drop
-        let mut token_id = None;
-        // Default the storage for longest to be none and return the actual value if it's an NFT drop
-        let mut storage_for_longest = None;
-
-        // If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
-        match &mut drop.drop_type {
-            DropType::NFT(data) => {
-                token_id = data.token_ids.iter().next();
-                data.token_ids.remove(token_id.as_ref().unwrap());
-                storage_for_longest = Some(data.storage_for_longest);
-            },
-            _ => {}
-        };
-
-        // Default the should delete variable to true. If there's a case where it shouldn't, change the bool.
-        let mut should_delete = true;
-        env::log_str(&format!("Key usage last used: {:?} Num uses: {:?} (before)", key_usage.last_used, key_usage.num_uses));
-        
-        // Ensure the key is within the interval if specified
-        if let Some(interval) = drop.drop_config.usage_interval {
-            env::log_str(&format!("Current timestamp {} last used: {} subs: {} interval: {}", current_timestamp, key_usage.last_used, current_timestamp - key_usage.last_used, interval));
-            require!((current_timestamp - key_usage.last_used) >= interval, "Not enough time has passed since the key was last used.");
-            env::log_str(&format!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp));
-            key_usage.last_used = current_timestamp;
-        }
-        
-        // No uses left! The key should be deleted
-        if key_usage.num_uses == 1 {
-            env::log_str("Key has no uses left. It will be deleted");
-            self.drop_id_for_pk.remove(&signer_pk);
-        } else {
-            key_usage.num_uses -= 1;
-            env::log_str(&format!("Key has {} uses left", key_usage.num_uses));
-            drop.pks.insert(&signer_pk, &key_usage);
-            should_delete = false;
-        }
-        
-        
-        // If there are keys still left in the drop, add the drop back in with updated data
-        if !drop.pks.is_empty() {
-            // Add drop back with the updated data.
-            self.drop_for_id.insert(
-                &drop_id, 
-                &drop
-            );
-        } else {
-            // Remove the drop ID from the funder's list if the drop is now empty
-            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
-        }
-
-        // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
-        let final_storage = env::storage_usage();
-        let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
-
-        if should_delete {
-            // Delete the key
-            Promise::new(env::current_account_id()).delete_key(signer_pk);
-        }
-        
-        // Return the drop and optional token ID with how much storage was freed
-        (drop, total_storage_freed, token_id, storage_for_longest)
     }
 
     #[private]
@@ -427,8 +304,6 @@ impl DropZone {
         balance: U128, 
         // How much storage was freed when the key was claimed
         storage_used: Balance,
-        // How many claims can each key have
-        max_claims_per_key: u64
     ) -> bool {        
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
@@ -436,21 +311,16 @@ impl DropZone {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Simple on claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Simple on claim used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
-        let allowance_refund_per_key =calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
-        
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used ;
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
         
         env::log_str(&format!(
             "Refund Amount: {}, 
-            Allowance refund per key: {}, 
             Access Key Storage: {}, 
             Storage Used: {}", 
             yocto_to_near(amount_to_refund), 
-            yocto_to_near(allowance_refund_per_key),
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(storage_used))
         );
@@ -491,29 +361,22 @@ impl DropZone {
         ft_balance: U128,
         // How much storage does it cost to register the new account
         ft_storage: U128,
-        // How many claims can each key have
-        max_claims_per_key: u64
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
-        env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
-        let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
-        
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used ;
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
         
         env::log_str(&format!(
             "Refund Amount: {}, 
-            Allowance refund per key: {},
             Access Key Storage: {}, 
             Storage Used: {}", 
             yocto_to_near(amount_to_refund), 
-            yocto_to_near(allowance_refund_per_key),
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(storage_used)
         ));
@@ -555,32 +418,25 @@ impl DropZone {
         nft_contract: AccountId,
         // Token ID for the NFT
         token_id: String, 
-        // How many claims can each key have
-        max_claims_per_key: u64
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Beginning of on claim NFT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Beginning of on claim NFT used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
-        let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
-        
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
-        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost();
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost();
         
         env::log_str(&format!(
             "Refund Amount: {}, 
-            Allowance refund per key: {},
             Access Key Storage: {}, 
             Storage Used: {}
             Storage for longest: {}", 
             yocto_to_near(amount_to_refund), 
-            yocto_to_near(allowance_refund_per_key),
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(storage_used),
             yocto_to_near(storage_for_longest * env::storage_byte_cost())
@@ -626,30 +482,23 @@ impl DropZone {
         add_refund_to_deposit: Option<bool>,
         // Should we add the account ID as part of the args and what key should it live in
         claimed_account_field: Option<String>,
-        // How many claims can each key have
-        max_claims_per_key: u64
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
-        let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
-        
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_used ;
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
         
         env::log_str(&format!(
             "Refund Amount: {}, 
-            Allowance refund per key: {},
             Access Key Storage: {}, 
             Storage Used: {}", 
             yocto_to_near(amount_to_refund), 
-            yocto_to_near(allowance_refund_per_key),
             yocto_to_near(ACCESS_KEY_STORAGE), 
             yocto_to_near(storage_used))
         );
@@ -681,7 +530,153 @@ impl DropZone {
             env::log_str(&format!("Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}", funder_id, claim_succeeded, add_refund_to_deposit.unwrap_or(false)));
         }
 
-        self.internal_fc_execute(claim_succeeded, receiver, method, args, deposit, claimed_account_field, add_refund_to_deposit, amount_to_refund, account_id);
+        self.internal_fc_execute(claim_succeeded, receiver, method, args, deposit, claimed_account_field, add_refund_to_deposit, None, amount_to_refund, account_id);
         claim_succeeded
+    }
+
+    /// Internal method for deleting the used key and removing / returning linkdrop data.
+    /// If drop is none, simulate a panic.
+    fn process_claim(&mut self) -> (Option<Drop>, Option<Balance>, Option<String>, Option<Balance>) {
+        let mut used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("Beginning of process claim used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
+
+        // Pessimistically measure storage
+        let initial_storage = env::storage_usage();
+        // Ensure only the current contract is calling the method using the access key
+        // Panic doesn't affect allowance
+        assert_eq!(
+            env::predecessor_account_id(),
+            env::current_account_id(),
+            "predecessor != current"
+        );
+
+        // Get the PK of the signer which should be the contract's function call access key
+        let signer_pk = env::signer_account_pk();
+
+        // By default, every key should have a drop ID. If we need to remove the key, remove later.
+        // Panic doesn't affect allowance
+        let drop_id = self.drop_id_for_pk.get(&signer_pk).expect("No drop ID found for PK");
+        // Remove the drop. If the drop shouldn't be removed, we re-insert later.
+        // Panic doesn't affect allowance
+        let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
+        // Remove the pk from the drop's set and check for key usage.
+        // Panic doesn't affect allowance
+        let mut key_usage = drop.pks.remove(&signer_pk).unwrap();
+
+        // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
+        if drop.num_claims_registered < 1 || prepaid_gas != drop.required_gas_attached {
+            used_gas = env::used_gas();
+            
+            let amount_to_decrement = used_gas.0 as u128 * self.yocto_per_gas;
+            if drop.num_claims_registered < 1 {
+                env::log_str(&format!("Not enough claims left for the drop. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0));
+            } else {
+                env::log_str(&format!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop.required_gas_attached.0, amount_to_decrement, used_gas.0));
+            }
+            
+            key_usage.allowance -= amount_to_decrement;
+            env::log_str(&format!("Allowance is now {}", key_usage.allowance));
+            drop.pks.insert(&signer_pk, &key_usage);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return (None, None, None, None);
+        }
+
+        drop.num_claims_registered -= 1;
+
+        // Ensure enough time has passed if a start timestamp was specified in the config.
+        let current_timestamp = env::block_timestamp();
+        let desired_timestamp = drop.drop_config.start_timestamp.unwrap_or(current_timestamp);
+        
+        if current_timestamp < desired_timestamp {
+            used_gas = env::used_gas();
+            
+            let amount_to_decrement = used_gas.0 as u128 * self.yocto_per_gas;
+            env::log_str(&format!("Drop isn't claimable until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}", desired_timestamp, current_timestamp, amount_to_decrement, used_gas.0));
+            
+            key_usage.allowance -= amount_to_decrement;
+            env::log_str(&format!("Allowance is now {}", key_usage.allowance));
+            drop.pks.insert(&signer_pk, &key_usage);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return (None, None, None, None);
+        }
+                
+        // Default the token ID to none and return / remove the next token ID if it's an NFT drop
+        let mut token_id = None;
+        // Default the storage for longest to be none and return the actual value if it's an NFT drop
+        let mut storage_for_longest = None;
+
+        // If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
+        match &mut drop.drop_type {
+            DropType::NFT(data) => {
+                token_id = data.token_ids.iter().next();
+                data.token_ids.remove(token_id.as_ref().unwrap());
+                storage_for_longest = Some(data.storage_for_longest);
+            },
+            _ => {}
+        };
+
+        // Default the should delete variable to true. If there's a case where it shouldn't, change the bool.
+        let mut should_delete = true;
+        env::log_str(&format!("Key usage last used: {:?} Num uses: {:?} (before)", key_usage.last_used, key_usage.num_uses));
+        
+        // Ensure the key is within the interval if specified
+        if let Some(interval) = drop.drop_config.usage_interval {
+            env::log_str(&format!("Current timestamp {} last used: {} subs: {} interval: {}", current_timestamp, key_usage.last_used, current_timestamp - key_usage.last_used, interval));
+            
+            if (current_timestamp - key_usage.last_used) < interval {
+                used_gas = env::used_gas();
+                
+                let amount_to_decrement = used_gas.0 as u128 * self.yocto_per_gas;
+                env::log_str(&format!("Not enough time has passed since the key was last used. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0));
+                
+                key_usage.allowance -= amount_to_decrement;
+                env::log_str(&format!("Allowance is now {}", key_usage.allowance));
+                drop.pks.insert(&signer_pk, &key_usage);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return (None, None, None, None);
+            }
+            
+            env::log_str(&format!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp));
+            key_usage.last_used = current_timestamp;
+        }
+        
+        // No uses left! The key should be deleted
+        if key_usage.num_uses == 1 {
+            env::log_str("Key has no uses left. It will be deleted");
+            self.drop_id_for_pk.remove(&signer_pk);
+        } else {
+            key_usage.num_uses -= 1;
+            env::log_str(&format!("Key has {} uses left", key_usage.num_uses));
+            drop.pks.insert(&signer_pk, &key_usage);
+            should_delete = false;
+        }
+        
+        
+        // If there are keys still left in the drop, add the drop back in with updated data
+        if !drop.pks.is_empty() {
+            // Add drop back with the updated data.
+            self.drop_for_id.insert(
+                &drop_id, 
+                &drop
+            );
+        } else {
+            // Remove the drop ID from the funder's list if the drop is now empty
+            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+        }
+
+        // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
+        let final_storage = env::storage_usage();
+        let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
+
+        if should_delete {
+            env::log_str(&format!("Key being deleted. Allowance Currently: {}", key_usage.allowance));
+            // Delete the key
+            Promise::new(env::current_account_id()).delete_key(signer_pk);
+        }
+        
+        // Return the drop and optional token ID with how much storage was freed
+        (Some(drop), Some(total_storage_freed), token_id, storage_for_longest)
     }
 }
