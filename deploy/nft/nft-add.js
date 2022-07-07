@@ -10,7 +10,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
 let OFFSET = 0.1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 3;
+let NUM_KEYS = 1;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -101,7 +101,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length * drop_config.max_claims_per_key).toString()
 			)
 		);
 	} catch(e) {

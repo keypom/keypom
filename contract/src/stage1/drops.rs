@@ -138,7 +138,7 @@ impl DropZone {
             pks: key_map,
             drop_type: DropType::Simple, // Default to simple but will overwrite if not
             drop_config: drop_config.clone(),
-            num_claims_registered: 0
+            num_claims_registered: num_claims_per_key * len as u64
         };
 
         // For NFT drops, measure the storage for adding the longest token ID
@@ -361,6 +361,8 @@ impl DropZone {
 
         require!(funder == &env::predecessor_account_id(), "only funder can add to drops");
 
+        let len = public_keys.len() as u128;
+
         /*
             Add data to storage
         */
@@ -390,6 +392,17 @@ impl DropZone {
         // Set the drop's PKs to the newly populated set
         drop.pks = exiting_key_map;
 
+        // Increment the claims registered if drop is FC or Simple
+        match &drop.drop_type {
+            DropType::FC(_) => {
+                drop.num_claims_registered += num_claims_per_key * len as u64;
+            },
+            DropType::Simple => {
+                drop.num_claims_registered += num_claims_per_key * len as u64;
+            },
+            _ => {}
+        };
+
         // Add the drop back in for the drop ID 
         self.drop_for_id.insert(
             &drop_id, 
@@ -413,8 +426,6 @@ impl DropZone {
             },
             _ => {0}
         };
-
-        let len = public_keys.len() as u128;
         
         // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
