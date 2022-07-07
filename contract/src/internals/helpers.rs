@@ -1,45 +1,28 @@
 use crate::*;
 
-// const GAS_PER_CCC: u128 = 500_000_000_000_000_000_000; // 5 TGas
-// const RECEIPT_GAS_COST: u128 = 250_000_000_000_000_000_000; // 2.5 TGas
+const GAS_PER_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas
+const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
 
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
 
-// /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
-// pub(crate) fn calculate_allowance(attached_gas: &Balance) -> Balance {
-//     require!(attached_gas % GAS_PER_CCC == 0, "attached GAS must be a multiple of the GAS per CCC");
-//     let mul_constant =  1.03_f32.powf((attached_gas / GAS_PER_CCC) as f32);
-//     let allowance = 
-//     (attached_gas + RECEIPT_GAS_COST) 
-// }
-
-/// Calculate the allowance refund per key. 
-pub(crate) fn calculate_allowance_refund_per_key(burnt_gas: u128, claims_per_key: u64) -> u128 {
-    /*
-        Allowance per key is equal to: 
-        Total allowance for the key less all the burnt GAS divided by the number of claims per key
-    */
-    let total_allowance = BASE_ACCESS_KEY_ALLOWANCE + (claims_per_key - 1) as u128 * burnt_gas;
-    let allowance_refund_per_key = (total_allowance - burnt_gas * claims_per_key as u128) / claims_per_key as u128;
-
-    env::log_str(&format!(
-        "Calculating allowance refund per key: {},
-        Total allowance: {},
-        Burnt GAS: {}
-        Claims per key: {}",
-        yocto_to_near(allowance_refund_per_key),
-        yocto_to_near(total_allowance),
-        yocto_to_near(burnt_gas), 
-        claims_per_key
-    ));
-
-    allowance_refund_per_key
-}
-
 impl DropZone {
+    /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
+    pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {    
+        // Get the number of CCCs you can make with the attached GAS
+        let calls_with_gas = (attached_gas.0 / GAS_PER_CCC.0) as f32;
+        // Get the constant used to pessimistically calculate the required allowance
+        let pow_outcome = 1.03_f32.powf(calls_with_gas);
+        
+        // Get the required GAS based on the calculated constant
+        let required_allowance = ((attached_gas.0 + RECEIPT_GAS_COST.0) as f32 * pow_outcome + RECEIPT_GAS_COST.0 as f32) as u128 * self.yocto_per_gas;
+        env::log_str(&format!("{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}", calls_with_gas, attached_gas.0, pow_outcome, required_allowance));
+
+        required_allowance
+    }
+
     /// Add a drop ID to the set of drops a funder has
     pub(crate) fn internal_add_drop_to_funder(
         &mut self,

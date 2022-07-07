@@ -29,6 +29,9 @@ pub struct JsonDrop {
 
     // How many claims
     pub num_claims_registered: u64,
+
+    // Ensure this drop can only be used when the function has the required gas to attach
+    pub required_gas_attached: Gas,
 }
 
 /// Keep track of nft data 
@@ -176,6 +179,7 @@ impl DropZone {
             drop_type,
             drop_config: drop.drop_config,
             num_claims_registered: drop.num_claims_registered,
+            required_gas_attached: drop.required_gas_attached,
         }
     }
 

@@ -76,12 +76,12 @@ impl DropZone {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
         
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
-        env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         if transfer_succeeded {
             return true
@@ -231,12 +231,12 @@ impl DropZone {
             
                 // Decide what methods the access keys can call
                 let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-                if drop.drop_config.only_call_claim.is_some() {
+                if drop.drop_config.only_call_claim.unwrap_or(false) {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
 
-                // Dynamically calculate the access key allowance based on the base + number of claims per key * 100 TGas
-                let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
+                // Dynamically calculate the access key allowance
+                let access_key_allowance = self.calculate_base_allowance(drop.required_gas_attached);
 
                 // Loop through each public key and create the access keys
                 for pk in public_keys.clone() {

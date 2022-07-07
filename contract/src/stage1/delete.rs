@@ -41,7 +41,8 @@ impl DropZone {
         let total_refund_amount;
         // Default the keys to use to be the public keys or an empty vector. We'll populate it if no PKs are passed in.
         let keys_to_delete;
-        
+        let mut total_allowance_left = 0;
+
         // If the user passed in public keys, loop through and remove them from the drop
         if let Some(keys) = public_keys {
             // Set the keys to delete equal to the keys passed in
@@ -56,13 +57,15 @@ impl DropZone {
                 // Unlink key to drop ID
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
-                require!(drop.pks.remove(key).is_some() == true, "public key must be in drop");
+                let key_usage = drop.pks.remove(key).expect("public key must be in drop");
+                // Increment the allowance left by whatever is left on the key
+                total_allowance_left += key_usage.allowance;
             }
 
             /*
                 Refund amount consists of:
                 - Storage freed
-                - Access key allowance for each key (taking into consideration the number of claims per key)
+                - Total access key allowance left across all keys deleted
                 - Access key storage for each key * claims / key
                 - Balance for linkdrop for each key * claims / key
                 
@@ -99,10 +102,7 @@ impl DropZone {
             let final_storage = env::storage_usage();
             let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
             
-            // Dynamically calculate the access key allowance based on the base + number of claims per key * 100 TGas
-            let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key  - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
-
-            total_refund_amount = total_storage_freed + (access_key_allowance + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund) * drop.num_claims_registered as u128) * len;
+            total_refund_amount = total_storage_freed + total_allowance_left + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund) * drop.num_claims_registered as u128 * len;
         } else {
             // If no PKs were passed in, attempt to remove 100 keys at a time
             keys_to_delete = drop.pks.keys().take(100).collect();
@@ -114,14 +114,16 @@ impl DropZone {
             for key in &keys_to_delete {
                 // Unlink key to drop ID
                 self.drop_id_for_pk.remove(key);
-                // Remove the PK from the unordered set
-                drop.pks.remove(key);
+                // Attempt to remove the public key. panic if it didn't exist
+                let key_usage = drop.pks.remove(key).expect("public key must be in drop");
+                // Increment the allowance left by whatever is left on the key
+                total_allowance_left += key_usage.allowance;
             }
 
             /*
                 Refund amount consists of:
                 - Storage freed
-                - Access key allowance for each key (taking into consideration the number of claims per key)
+                - Total access key allowance left across all keys deleted
                 - Access key storage for each key * claims / key
                 - Balance for linkdrop for each key * claims / key
                 
@@ -156,15 +158,14 @@ impl DropZone {
             // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
             let final_storage = env::storage_usage();
             let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
-            // Dynamically calculate the access key allowance based on the base + number of claims per key * 100 TGas
-            let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
-
-            total_refund_amount = total_storage_freed + (access_key_allowance + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund) * drop.num_claims_registered as u128) * len;
+            env::log_str(&format!("Storage freed: {} bytes: {}", yocto_to_near(total_storage_freed), total_storage_freed));
+            
+            total_refund_amount = total_storage_freed + total_allowance_left + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund) * drop.num_claims_registered as u128 * len;
         }
 
         // Refund the user
         let mut cur_balance = self.user_balances.get(&funder_id).unwrap_or(0);
-        env::log_str(&format!("Refunding user {} old balance: {}", yocto_to_near(total_refund_amount), yocto_to_near(cur_balance)));
+        env::log_str(&format!("Refunding user {} old balance: {}. Total allowance left: {}", yocto_to_near(total_refund_amount), yocto_to_near(cur_balance), yocto_to_near(total_allowance_left)));
         cur_balance += total_refund_amount;
         self.user_balances.insert(&funder_id, &cur_balance);
 

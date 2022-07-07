@@ -22,9 +22,9 @@ let drop_config = {
 	max_claims_per_key: 2,
 
 	start_timestamp: 0,
-	usage_interval: 6e10,
-	refund_if_claim: true,
-	only_call_claim: true
+	usage_interval: 6e11, // 10 minutes
+	refund_if_claim: false,
+	only_call_claim: false
 }
 
 /*
@@ -144,7 +144,7 @@ async function start() {
 			refund_to_deposit: true,
 			claimed_account_field: "receiver_id",
 			// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
-			gas_to_attach: "25000000000000"
+			gas_if_straight_execute: "90000000000000"
 		}
 
 		await fundingAccount.functionCall(

@@ -21,9 +21,9 @@ let drop_config = {
 	max_claims_per_key: 2,
 
 	start_timestamp: 0,
-	usage_interval: 6e10,
-	refund_if_claim: true,
-	only_call_claim: true
+	usage_interval: 6e11, // 10 minutes
+	refund_if_claim: false,
+	only_call_claim: false
 }
 
 let NFT_CONTRACT_ID = "nft.examples.testnet";
