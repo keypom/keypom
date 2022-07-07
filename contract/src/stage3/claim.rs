@@ -351,7 +351,7 @@ impl DropZone {
         require!(current_timestamp >= desired_timestamp, &format!("Drop isn't claimable until {}. Current timestamp is {}", desired_timestamp, current_timestamp));
         
         // Remove the pk from the drop's set and check for key usage
-        let key_usage = drop.pks.remove(&signer_pk).unwrap();
+        let mut key_usage = drop.pks.remove(&signer_pk).unwrap();
         
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
         let mut token_id = None;
@@ -370,28 +370,27 @@ impl DropZone {
 
         // Default the should delete variable to true. If there's a case where it shouldn't, change the bool.
         let mut should_delete = true;
-        if let Some(mut usage) = key_usage {
-            env::log_str(&format!("Key usage found. Last used: {:?} Num uses: {:?} (before)", usage.last_used, usage.num_uses));
-            
-            // Ensure the key is within the interval if specified
-            if let Some(interval) = drop.drop_config.usage_interval {
-                env::log_str(&format!("Current timestamp {} last used: {} subs: {} interval: {}", current_timestamp, usage.last_used, current_timestamp - usage.last_used, interval));
-                require!((current_timestamp - usage.last_used) >= interval, "Not enough time has passed since the key was last used.");
-                env::log_str(&format!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp));
-                usage.last_used = current_timestamp;
-            }
-            
-            // No uses left! The key should be deleted
-            if usage.num_uses == 1 {
-                env::log_str("Key has no uses left. It will be deleted");
-                self.drop_id_for_pk.remove(&signer_pk);
-            } else {
-                usage.num_uses -= 1;
-                env::log_str(&format!("Key has {} uses left", usage.num_uses));
-                drop.pks.insert(&signer_pk, &Some(usage));
-                should_delete = false;
-            }
+        env::log_str(&format!("Key usage last used: {:?} Num uses: {:?} (before)", key_usage.last_used, key_usage.num_uses));
+        
+        // Ensure the key is within the interval if specified
+        if let Some(interval) = drop.drop_config.usage_interval {
+            env::log_str(&format!("Current timestamp {} last used: {} subs: {} interval: {}", current_timestamp, key_usage.last_used, current_timestamp - key_usage.last_used, interval));
+            require!((current_timestamp - key_usage.last_used) >= interval, "Not enough time has passed since the key was last used.");
+            env::log_str(&format!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp));
+            key_usage.last_used = current_timestamp;
         }
+        
+        // No uses left! The key should be deleted
+        if key_usage.num_uses == 1 {
+            env::log_str("Key has no uses left. It will be deleted");
+            self.drop_id_for_pk.remove(&signer_pk);
+        } else {
+            key_usage.num_uses -= 1;
+            env::log_str(&format!("Key has {} uses left", key_usage.num_uses));
+            drop.pks.insert(&signer_pk, &key_usage);
+            should_delete = false;
+        }
+        
         
         // If there are keys still left in the drop, add the drop back in with updated data
         if !drop.pks.is_empty() {

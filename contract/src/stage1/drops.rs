@@ -49,7 +49,7 @@ pub struct Drop {
     // Funder of this specific drop
     pub funder_id: AccountId,
     // Set of public keys associated with this drop mapped to their usages
-    pub pks: UnorderedMap<PublicKey, Option<KeyUsage>>,
+    pub pks: UnorderedMap<PublicKey, KeyUsage>,
 
     // Balance for all keys of this drop. Can be 0 if specified.
     pub balance: U128,
@@ -85,7 +85,6 @@ impl DropZone {
     ) -> DropId {
         // Ensure the user has only specified one type of callback data
         let num_cbs_specified = ft_data.is_some() as u8 + nft_data.is_some() as u8 + fc_data.is_some() as u8;        
-        env::log_str(&format!("Num CBs {}", num_cbs_specified));
         require!(num_cbs_specified <= 1, "You cannot specify more than one callback data");
 
         // Warn if the balance for each drop is less than the minimum
@@ -97,6 +96,9 @@ impl DropZone {
         let funder_id = env::predecessor_account_id();
         let len = public_keys.len() as u128;
         let drop_id = self.nonce;
+        // Get the number of claims per key to dictate what key usage data we should put in the map
+        let num_claims_per_key = drop_config.max_claims_per_key;
+        require!(num_claims_per_key > 0, "cannot have less than 1 claim per key");
 
         // Get the current balance of the funder. 
         let mut current_user_balance = self.user_balances.get(&funder_id).expect("No user balance found");
@@ -104,27 +106,17 @@ impl DropZone {
         
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
-        let mut key_map: UnorderedMap<PublicKey, Option<KeyUsage>> = UnorderedMap::new(StorageKey::PksForDrop {
+        let mut key_map: UnorderedMap<PublicKey, KeyUsage> = UnorderedMap::new(StorageKey::PksForDrop {
             // We get a new unique prefix for the collection
             account_id_hash: hash_account_id(&format!("{}{}", self.nonce, funder_id)),
         });
 
-        // Get the number of claims per key to dictate what key usage data we should put in the map
-        let num_claims_per_key = drop_config.max_claims_per_key;
-        require!(num_claims_per_key > 0, "cannot have less than 1 claim per key");
-        // Create the key usage data structure based on whether the number of claims is more than 1
-        let key_usage = if num_claims_per_key > 1 {
-            Some(KeyUsage {
-                num_uses: num_claims_per_key,
-                last_used: 0 // Set to 0 since this will make the key always claimable.
-            })
-        } else {
-            None
-        };
-
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         for pk in &public_keys {
-            key_map.insert(pk, &key_usage);
+            key_map.insert(pk, &KeyUsage {
+                num_uses: num_claims_per_key,
+                last_used: 0 // Set to 0 since this will make the key always claimable.
+            });
             require!(self.drop_id_for_pk.insert(pk, &drop_id).is_none(), "Keys cannot belong to another drop");
         }
 
@@ -384,21 +376,15 @@ impl DropZone {
         
         // Get the number of claims per key
         let num_claims_per_key = drop_config.max_claims_per_key;
-        // Create the key usage data structure based on whether the number of claims is more than 1
-        let key_usage = if num_claims_per_key > 1 {
-            Some(KeyUsage {
-                num_uses: num_claims_per_key,
-                last_used: 0 // Set to 0 since this will make the key always claimable.
-            })
-        } else {
-            None
-        };
 
         // get the existing key set and add new PKs
         let mut exiting_key_map = drop.pks;
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         for pk in public_keys.clone() {
-            exiting_key_map.insert(&pk, &key_usage);
+            exiting_key_map.insert(&pk, &KeyUsage {
+                num_uses: num_claims_per_key,
+                last_used: 0 // Set to 0 since this will make the key always claimable.
+            });
             require!(self.drop_id_for_pk.insert(&pk, &drop_id).is_none(), "Keys cannot belong to another drop");
         }
 

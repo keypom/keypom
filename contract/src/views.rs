@@ -48,7 +48,7 @@ pub struct JsonKeyInfo {
     // Drop ID for the specific drop
     pub drop_id: DropId,
     pub pk: PublicKey,
-    pub key_usage: Option<KeyUsage>,
+    pub key_usage: KeyUsage,
     // Funder of this specific drop
     pub funder_id: AccountId,
     // Balance for all linkdrops of this drop
