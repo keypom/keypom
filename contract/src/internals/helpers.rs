@@ -16,6 +16,29 @@ pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
 //     (attached_gas + RECEIPT_GAS_COST) 
 // }
 
+/// Calculate the allowance refund per key. 
+pub(crate) fn calculate_allowance_refund_per_key(burnt_gas: u128, claims_per_key: u64) -> u128 {
+    /*
+        Allowance per key is equal to: 
+        Total allowance for the key less all the burnt GAS divided by the number of claims per key
+    */
+    let total_allowance = BASE_ACCESS_KEY_ALLOWANCE + (claims_per_key - 1) as u128 * burnt_gas;
+    let allowance_refund_per_key = (total_allowance - burnt_gas * claims_per_key as u128) / claims_per_key as u128;
+
+    env::log_str(&format!(
+        "Calculating allowance refund per key: {},
+        Total allowance: {},
+        Burnt GAS: {}
+        Claims per key: {}",
+        yocto_to_near(allowance_refund_per_key),
+        yocto_to_near(total_allowance),
+        yocto_to_near(burnt_gas), 
+        claims_per_key
+    ));
+
+    allowance_refund_per_key
+}
+
 impl DropZone {
     /// Add a drop ID to the set of drops a funder has
     pub(crate) fn internal_add_drop_to_funder(

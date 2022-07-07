@@ -140,4 +140,55 @@ impl DropZone {
 
         transfer_succeeded
     }
+
+    // Internal method for transfer NFTs. Whether the claim was successful or not is passed in
+    pub(crate) fn internal_nft_transfer(
+        &mut self,
+        claim_succeeded: bool,
+        nft_contract: AccountId,
+        token_id: String,
+        nft_sender: AccountId,
+        account_id: AccountId
+    ) {
+        /*
+            Non Fungible Tokens
+        */
+        // Only send the NFT to the new account if the claim was successful. We return the NFT if it wasn't successful in the else case.
+        if claim_succeeded {
+            // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
+            ext_nft_contract::ext(nft_contract.clone())
+                // Call nft transfer with the min GAS and 1 yoctoNEAR. 1/2 unspent GAS will be added on top
+                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
+                .with_attached_deposit(1)
+                .nft_transfer(
+                    account_id.clone(), 
+                    token_id.clone(),
+                    None,
+                    Some("Linkdropped NFT".to_string()),
+                )
+            // We then resolve the promise and call nft_resolve_transfer on our own contract
+            .then(
+                // Call resolve transfer with the min GAS and no deposit. 1/2 unspent GAS will be added on top
+                Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_RESOLVE_TRANSFER)
+                    .nft_resolve_transfer(
+                        token_id,
+                        nft_sender,
+                        nft_contract,
+                    )
+            );
+        } else {
+            // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
+            ext_nft_contract::ext(nft_contract)
+                // Call nft transfer with the min GAS and 1 yoctoNEAR. all unspent GAS will be added on top
+                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
+                .with_attached_deposit(1)
+                .nft_transfer(
+                    nft_sender, 
+                    token_id,
+                    None,
+                    Some("Linkdropped NFT".to_string()),
+                );
+        }
+    }
 }
