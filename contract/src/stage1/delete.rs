@@ -100,7 +100,7 @@ impl DropZone {
             let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
             
             // Dynamically calculate the access key allowance based on the base + number of claims per key * 100 TGas
-            let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key  - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+            let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key  - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
 
             total_refund_amount = total_storage_freed + (access_key_allowance + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund) * drop.num_claims_registered as u128) * len;
         } else {
@@ -157,7 +157,7 @@ impl DropZone {
             let final_storage = env::storage_usage();
             let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
             // Dynamically calculate the access key allowance based on the base + number of claims per key * 100 TGas
-            let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+            let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
 
             total_refund_amount = total_storage_freed + (access_key_allowance + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund) * drop.num_claims_registered as u128) * len;
         }

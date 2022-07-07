@@ -263,7 +263,7 @@ impl DropZone {
         self.nonce += 1;
 
         // Dynamically calculate the access key allowance based on the base + number of claims per key * GAS to attach
-        let burnt_gas = gas_to_attach.0 as u128 * GAS_PRICE;
+        let burnt_gas = gas_to_attach.0 as u128 * self.yocto_per_gas;
         let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (num_claims_per_key - 1) as u128 * burnt_gas;
 
         let required_deposit = self.drop_fee + total_required_storage + (self.key_fee + access_key_allowance + (ACCESS_KEY_STORAGE + balance.0 + if fc_data.is_some() {fc_data.clone().unwrap().deposit.0} else {0} + storage_per_longest * env::storage_byte_cost()) * num_claims_per_key as u128) * len;
@@ -459,7 +459,7 @@ impl DropZone {
         env::log_str(&format!("Total required storage Yocto {}", total_required_storage));
 
         // Dynamically calculate the access key allowance based on the base + number of claims per key * GAS to attach
-        let burnt_gas = gas_to_attach.0 as u128 * GAS_PRICE;
+        let burnt_gas = gas_to_attach.0 as u128 * self.yocto_per_gas;
         let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (num_claims_per_key - 1) as u128 * burnt_gas;
 
         // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)

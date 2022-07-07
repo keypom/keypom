@@ -29,7 +29,7 @@ impl DropZone {
             DropType::FC(data) => {
                 if let Some(gas) = data.gas_if_straight_execute {
                     // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS
-                    let burnt_gas = (gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128 * GAS_PRICE;
+                    let burnt_gas = (gas.0 + GAS_OFFSET_IF_FC_EXECUTE.0) as u128 * self.yocto_per_gas;
                     let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, drop_data.drop_config.max_claims_per_key);
                     
                     let amount_to_refund =  allowance_refund_per_key + ACCESS_KEY_STORAGE + storage_freed;
@@ -439,7 +439,7 @@ impl DropZone {
 
         env::log_str(&format!("Simple on claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
         let allowance_refund_per_key =calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
         
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
@@ -502,7 +502,7 @@ impl DropZone {
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
         let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
         
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
@@ -567,7 +567,7 @@ impl DropZone {
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
         let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
         
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
@@ -638,7 +638,7 @@ impl DropZone {
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+        let burnt_gas = ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
         let allowance_refund_per_key = calculate_allowance_refund_per_key(burnt_gas, max_claims_per_key);
         
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.

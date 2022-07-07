@@ -62,7 +62,6 @@ const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
 
 // Utils
 const ONE_GIGGA_GAS: u64 = 1_000_000_000;
-const GAS_PRICE: u128 = 100000000;
 
 /// Both methods callable by the function call access key
 const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim";

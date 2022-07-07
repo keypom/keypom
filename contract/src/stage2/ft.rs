@@ -236,7 +236,7 @@ impl DropZone {
                 }
 
                 // Dynamically calculate the access key allowance based on the base + number of claims per key * 100 TGas
-                let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * GAS_PRICE;
+                let access_key_allowance = BASE_ACCESS_KEY_ALLOWANCE + (drop.drop_config.max_claims_per_key - 1) as u128 * ATTACHED_GAS_FROM_WALLET.0 as u128 * self.yocto_per_gas;
 
                 // Loop through each public key and create the access keys
                 for pk in public_keys.clone() {
