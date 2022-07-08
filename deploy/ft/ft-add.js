@@ -11,7 +11,7 @@ let FT_CONTRACT_ID = "ft.examples.benjiman.testnet";
 
 let OFFSET = 0.1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 3;
+let NUM_KEYS = 100;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -107,13 +107,13 @@ async function start() {
 	}
 
 	try {
-		console.log(`Transferring ${25 * NUM_KEYS_IF_SEND_MULTIPLE} FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
+		console.log(`Transferring ${25 * NUM_KEYS} FTs from ${FUNDING_ACCOUNT_ID} to ${LINKDROP_PROXY_CONTRACT_ID}`);
 		await fundingAccount.functionCall(
 			FT_CONTRACT_ID, 
 			'ft_transfer_call', 
 			{
 				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
-				amount: (25 * NUM_KEYS_IF_SEND_MULTIPLE).toString(),
+				amount: (25 * NUM_KEYS).toString(),
 				msg: dropId.toString(),
 			}, 
 			"300000000000000", 

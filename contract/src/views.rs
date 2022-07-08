@@ -4,6 +4,8 @@ use crate::*;
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonDrop {
+    // Drop ID for the specific drop
+    pub drop_id: DropId,
     // Funder of this specific drop
     pub funder_id: AccountId,
     // Balance for all linkdrops of this drop
@@ -13,8 +15,6 @@ pub struct JsonDrop {
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<JsonNFTData>, 
     pub fc_data: Option<FCData>,
-    // How much storage was used for EACH key and not the entire drop as a whole 
-    pub storage_used_per_key: U128,
     // How many keys are registered (assets such as FTs sent)
     pub keys_registered: u64,
 }
@@ -34,6 +34,8 @@ pub struct JsonNFTData {
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonKeyInfo {
+    // Drop ID for the specific drop
+    pub drop_id: DropId,
     pub pk: PublicKey,
     // Funder of this specific drop
     pub funder_id: AccountId,
@@ -44,8 +46,6 @@ pub struct JsonKeyInfo {
     pub ft_data: Option<FTData>, 
     pub nft_data: Option<JsonNFTData>, 
     pub fc_data: Option<FCData>,
-    // How much storage was used for EACH key and not the entire drop as a whole 
-    pub storage_used_per_key: U128,
 }
 
 #[near_bindgen]
@@ -109,13 +109,13 @@ impl DropZone {
         };
 
         JsonKeyInfo { 
+            drop_id,
             pk: key,
             funder_id: drop.funder_id,
             balance: drop.balance,
             ft_data: drop.ft_data,
             nft_data: nft_data_json,
             fc_data: drop.fc_data,
-            storage_used_per_key: drop.storage_used_per_key,
         }
     }
 
@@ -137,14 +137,23 @@ impl DropZone {
         };
 
         JsonDrop { 
+            drop_id,
             funder_id: drop.funder_id,
             balance: drop.balance,
             ft_data: drop.ft_data,
             nft_data: nft_data_json,
             fc_data: drop.fc_data,
-            storage_used_per_key: drop.storage_used_per_key,
             keys_registered: drop.keys_registered
         }
+    }
+
+    /// Returns the total supply of active keys for a given drop
+    pub fn key_supply_for_drop(
+        &self, 
+        drop_id: DropId,
+    ) -> u64 {
+        // Get the drop object and return the length
+        self.drop_for_id.get(&drop_id).expect("no drop found").pks.len()
     }
 
     /// Paginate through keys in a specific drop

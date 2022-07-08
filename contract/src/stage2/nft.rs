@@ -22,16 +22,12 @@ impl DropZone {
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
-        let funder_id = drop.funder_id.clone();
         let mut nft_data = drop.nft_data.expect("No NFT data found for drop");
-        let storage_per_longest = nft_data.storage_for_longest;
         let mut token_ids = nft_data.token_ids.unwrap();
 
         require!(nft_data.nft_sender == sender_id && nft_data.nft_contract == contract_id, "NFT data must match what was sent");
         require!(token_id.len() <= nft_data.longest_token_id.len(), "token ID must be less than largest token specified");
-        
-        // Measure the storage cost for inserting the token to see how it compares to the largest token ID the user paid for
-        let initial_storage = env::storage_usage();
+    
         require!(token_ids.insert(&token_id) == true, "token ID already registered");
 
         // Re-insert the token IDs into the NFT Data struct 
@@ -52,25 +48,51 @@ impl DropZone {
 
         // Insert the drop with the updated data
         self.drop_for_id.insert(&msg.0, &drop);
-        
-        let final_storage = env::storage_usage();
-        let net_storage = Balance::from(final_storage - initial_storage);
-        env::log_str(&format!("net_storage {} final {} initial {}", yocto_to_near(net_storage), final_storage, initial_storage));
-
-        // If the token ID frees up storage, refund the funder
-        if storage_per_longest > net_storage {
-            let refund_amount = (storage_per_longest - net_storage) * env::storage_byte_cost();
-            env::log_str(&format!("Refunding {} for freeing up storage on smaller token ID: {}", funder_id, yocto_to_near(refund_amount)));
-            let mut balance = self.user_balances.get(&funder_id).unwrap();
-            balance += refund_amount;
-            self.user_balances.insert(&funder_id, &balance);
-            env::log_str(&format!("new user balance {}", yocto_to_near(balance)));
-        }
 
         // Everything went well and we don't need to return the token.
         PromiseOrValue::Value(false)
     }
 
+    #[private]
+    /// self callback checks if NFT was successfully transferred to the new account. If yes, do nothing. If no, refund original sender
+    pub fn nft_resolve_refund(
+        &mut self, 
+        drop_id: U128,
+        token_ids: Vec<String>, 
+    ) -> bool {
+        let used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("Beginning of resolve refund used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        
+        // If not successful, the length of the token IDs needs to be added back to the drop.
+        if !transfer_succeeded {
+            let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
+            drop.keys_registered += token_ids.len() as u64;
+            self.drop_for_id.insert(&drop_id.0, &drop);
+
+            env::log_str(&format!("Transfer failed. Adding {} back to drop's keys registered", token_ids.len() as u64));
+
+            return false
+        }
+
+        // Loop through and remove each token ID from the drop's NFT data token IDs
+        let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
+        let mut nft_data = drop.nft_data.unwrap();
+        let mut ids = nft_data.token_ids.unwrap();
+
+        for id in token_ids {
+            env::log_str(&format!("Removing {}. Present: {}", id, ids.remove(&id)));
+        }
+
+        nft_data.token_ids = Some(ids);
+        drop.nft_data = Some(nft_data);
+
+        return true
+    }
+
+    #[private]
     /// self callback checks if NFT was successfully transferred to the new account. If yes, do nothing. If no, refund original sender
     pub fn nft_resolve_transfer(
         &mut self, 
@@ -82,15 +104,7 @@ impl DropZone {
         let mut prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-        assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
-        assert_eq!(env::promise_results_count(), 1, "no promise result");
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
-        
 
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();

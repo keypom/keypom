@@ -5,7 +5,7 @@ use crate::*;
 
 /// Keep track fungible token data for an access key
 #[near_bindgen]
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FTData {
     pub ft_contract: AccountId,
@@ -56,6 +56,7 @@ impl DropZone {
         PromiseOrValue::Value(U128(0))
     }
 
+    #[private]
     /// Self callback checks if fungible tokens were successfully transferred to the new account. If yes, do nothing. If no, refund original sender
     pub fn ft_resolve_batch(
         &mut self, 
@@ -67,16 +68,8 @@ impl DropZone {
         let mut prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-        assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
-        assert_eq!(env::promise_results_count(), 1, "no promise result");
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
         
-
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
         env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
@@ -115,7 +108,32 @@ impl DropZone {
         false
     }
 
+    #[private]
+    /// Self callback checks if fungible tokens were successfully refunded. If yes, set keys registered to 0.
+    pub fn ft_resolve_refund(
+        &mut self, 
+        drop_id: DropId,
+        num_to_refund: u64
+    ) -> bool {
+        let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+    
+        // Everything went well so we return true since the keys registered have already been decremented
+        if transfer_succeeded {
+            env::log_str(&format!("Successfully refunded FTs for drop ID {}. {} keys unregistered. Returning true.", drop_id, num_to_refund));
+            return true
+        }
+
+        // Transfer failed so we need to increment the keys registered and return false
+        let mut drop = self.drop_for_id.get(&drop_id).expect("no drop for ID");
+        drop.keys_registered += num_to_refund;
+        self.drop_for_id.insert(&drop_id, &drop);
+
+        env::log_str(&format!("Unsuccessful refund for drop ID {}. {} keys added back as registered. Returning false.", drop_id, num_to_refund));
+        false
+    }
+
     #[payable]
+    #[private]
     /// self callback gets the storage balance bounds and inserts that into account data for each public key passed in
     pub fn resolve_storage_check(
         &mut self,
