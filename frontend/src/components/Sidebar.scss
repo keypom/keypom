@@ -1,0 +1,25 @@
+.sidebar {
+    z-index: 500;
+	display: none;
+	position: fixed;
+	top: 64px;
+	left: 0;
+	min-width: 256px;
+	background: #efefef;
+	border-right: 1px solid #ddd;
+	height: 100vh;
+	padding: 16px;
+	> nav {
+		display: flex;
+		flex-direction: column;
+		> a {
+			margin-bottom: 16px;
+		}
+	}
+}
+/// not mobile
+@media only screen and (min-device-width: 768px) {
+	.sidebar {
+		display: block;
+	}
+}

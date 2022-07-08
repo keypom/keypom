@@ -7,6 +7,8 @@ import {
 
 import { appStore, onAppMount } from './state/app';
 import { Header } from './components/Header';
+import { Sidebar, SidebarLinks } from './components/Sidebar';
+import { Deploy } from './components/Deploy';
 import { Home } from './components/Home';
 
 import './css/normalize.css';
@@ -26,12 +28,13 @@ const App = () => {
 	useEffect(onMount, []);
 
 	const routeArgs = {
-		state, update
+		state, update, account
 	}
 
 	return (
 		<div>
-			<Header {...{ pathname, menu, account, update }} />
+			<Header {...{ pathname, menu, account, update, SidebarLinks }} />
+			<Sidebar {...{ pathname, account, update }} />
 			{
 				account ?
 					/* Account Paths */
@@ -43,6 +46,7 @@ const App = () => {
 									<button onClick={() => wallet.signOut()}>Sign Out</button>
 								</>
 							} />
+							<Route path="/deploy" element={<Deploy {...routeArgs} />} />
 							<Route path="/" element={<Home {...routeArgs} />} />
 						</Routes>
 					</main>

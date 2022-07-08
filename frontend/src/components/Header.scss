@@ -1,4 +1,5 @@
 header {
+    z-index: 1000;
     p {
         font-size: 16px;
     }
@@ -30,13 +31,22 @@ header {
             display: none;
         }
     }
-    > nav {
-		width: 100%;
+    .mobile {
+        width: 100%;
         display: flex;
-        flex-direction: column;
-        text-align: right;
-        > a {
-            margin-top: 16px;
+        flex-wrap: no-wrap;
+        align-items: center;
+        justify-content: space-between;
+        > nav {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            > a {
+                margin-top: 16px;
+            }
+            &:nth-child(2) {
+                text-align: right;
+            }
         }
     }
 }

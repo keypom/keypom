@@ -24,15 +24,7 @@
 		"last 2 Chrome versions"
 	],
 	"scripts": {
-		"prebuild": "yarn clean",
-		"build": "parcel build src/index.html --no-source-maps",
-		"clean": "rimraf ./dist",
 		"start": "parcel src/index.html --open",
-		"build-contract": "cd contract && ./build.sh && cd ..",
-		"patch-config": "node ./utils/patch-config.js",
-		"dev-deploy": "rm -rf neardev && (near dev-deploy || exit 0) && yarn patch-config",
-		"test-deploy": "yarn build-contract && yarn dev-deploy && yarn test",
-		"test": "ava test/contract.test.js -vs --timeout=5m",
 		"fix": "eslint test/ --fix"
 	}
 }
