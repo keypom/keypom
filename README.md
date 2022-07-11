@@ -315,7 +315,7 @@ near deploy --wasmFile out/main.wasm --accountId YOUR_CONTRACT_ID.testnet
 Once deployed, you need to initialize the contract with the external linkdrop contract you want to interact with. In most cases, this will be `near` or `testnet` since you'll want to create sub-accounts of `.testnet` (i.e `benjiman.testnet`).
 
 ```
-near call YOUR_CONTRACT_ID.testnet new '{"linkdrop_contract": "testnet"}' --accountId YOUR_CONTRACT_ID.testnet
+near call YOUR_CONTRACT_ID.testnet new '{"linkdrop_contract": "testnet", "owner_id": "YOUR_CONTRACT_ID.testnet"}' --accountId YOUR_CONTRACT_ID.testnet
 ```
 
 You're now ready to create custom linkdrops! You can either interact with the contract directly using the CLI or use one of the pre-deployed scripts.
