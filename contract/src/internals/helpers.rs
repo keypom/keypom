@@ -9,7 +9,7 @@ pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
 }
 
 impl DropZone {
-    /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
+    /// Used to calculate the base allowance needed given attached GAS
     pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {    
         // Get the number of CCCs you can make with the attached GAS
         let calls_with_gas = (attached_gas.0 / GAS_PER_CCC.0) as f32;
