@@ -13,6 +13,16 @@ impl DropZone {
         self.linkdrop_contract = linkdrop_contract;
     }
 
+    /// Set the desired linkdrop contract to interact with
+    pub fn set_gas_price(&mut self, yocto_per_gas: u128) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.owner_id,
+            "predecessor != owner"
+        );
+        self.yocto_per_gas = yocto_per_gas;
+    }
+
     /// Withdraw the fees collected to the passed in Account Id
     pub fn withdraw_fees(&mut self, withdraw_to: AccountId) -> Promise {
         assert_eq!(

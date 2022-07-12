@@ -1,33 +1,47 @@
 use crate::*;
 
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub enum JsonDropType {
+    Simple,
+    NFT(JsonNFTData),
+    FT(FTData),
+    FC(FCData),
+}
+
 /// Struct to return in views to query for drop info
 #[derive(BorshDeserialize, BorshSerialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonDrop {
-    // Drop ID for the specific drop
+    // Drop ID for this drop
     pub drop_id: DropId,
     // Funder of this specific drop
     pub funder_id: AccountId,
-    // Balance for all linkdrops of this drop
+
+    // Balance for all keys of this drop. Can be 0 if specified.
     pub balance: U128,
 
-    // Specific data associated with this drop
-    pub ft_data: Option<FTData>, 
-    pub nft_data: Option<JsonNFTData>, 
-    pub fc_data: Option<FCData>,
-    // How many keys are registered (assets such as FTs sent)
-    pub keys_registered: u64,
+    // Every drop must have a type
+    pub drop_type: JsonDropType,
+
+    // The drop as a whole can have a config as well
+    pub drop_config: DropConfig,
+
+    // How many claims
+    pub num_claims_registered: u64,
+
+    // Ensure this drop can only be used when the function has the required gas to attach
+    pub required_gas_attached: Gas,
 }
 
 /// Keep track of nft data 
-#[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonNFTData {
     pub nft_sender: AccountId,
     pub nft_contract: AccountId,
     pub longest_token_id: String,
-    pub storage_for_longest: Option<U128>
+    pub storage_for_longest: U128
 }
 
 /// Struct to return in views to query for specific data related to an access key.
@@ -37,15 +51,17 @@ pub struct JsonKeyInfo {
     // Drop ID for the specific drop
     pub drop_id: DropId,
     pub pk: PublicKey,
+    pub key_usage: KeyUsage,
     // Funder of this specific drop
     pub funder_id: AccountId,
     // Balance for all linkdrops of this drop
     pub balance: U128,
 
-    // Specific data associated with this drop
-    pub ft_data: Option<FTData>, 
-    pub nft_data: Option<JsonNFTData>, 
-    pub fc_data: Option<FCData>,
+    // Every drop must have a type
+    pub drop_type: JsonDropType,
+
+    // The drop as a whole can have a config as well
+    pub drop_config: DropConfig,
 }
 
 #[near_bindgen]
@@ -57,7 +73,6 @@ impl DropZone {
         (drop.balance.0).into()
     }
 
-    //TODO: create function for contains and paginate through token IDS for NFT drops
     /*
         CUSTOM
     */
@@ -97,25 +112,36 @@ impl DropZone {
     ) -> JsonKeyInfo {
         let drop_id = self.drop_id_for_pk.get(&key).expect("no drop ID found for key");
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found for drop ID");
-        let nft_data_json = if let Some(data) = drop.nft_data {
-            Some(JsonNFTData{
-                nft_sender: data.nft_sender,
-                nft_contract: data.nft_contract,
-                longest_token_id: data.longest_token_id,
-                storage_for_longest: Some(U128(data.storage_for_longest))
-            })
-        } else {
-            None
+        let key_usage = drop.pks.get(&key).unwrap();
+
+        let drop_type: JsonDropType = match drop.drop_type {
+            DropType::FC(data) => {
+                JsonDropType::FC(data)
+            },
+            DropType::NFT(data) => {
+                 JsonDropType::NFT(
+                    JsonNFTData{
+                        nft_contract: data.nft_contract,
+                        nft_sender: data.nft_sender,
+                        longest_token_id: data.longest_token_id,
+                        storage_for_longest: U128(data.storage_for_longest)
+                    }
+                )
+            },
+            DropType::FT(data) => {
+                JsonDropType::FT(data)
+            },
+            _simple => {JsonDropType::Simple}
         };
 
         JsonKeyInfo { 
+            key_usage,
+            drop_type,
+            drop_config: drop.drop_config,
             drop_id,
             pk: key,
             funder_id: drop.funder_id,
             balance: drop.balance,
-            ft_data: drop.ft_data,
-            nft_data: nft_data_json,
-            fc_data: drop.fc_data,
         }
     }
 
@@ -125,25 +151,35 @@ impl DropZone {
         drop_id: DropId
     ) -> JsonDrop {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found for drop ID");
-        let nft_data_json = if let Some(data) = drop.nft_data {
-            Some(JsonNFTData{
-                nft_sender: data.nft_sender,
-                nft_contract: data.nft_contract,
-                longest_token_id: data.longest_token_id,
-                storage_for_longest: Some(U128(data.storage_for_longest))
-            })
-        } else {
-            None
+        
+        let drop_type: JsonDropType = match drop.drop_type {
+            DropType::FC(data) => {
+                JsonDropType::FC(data)
+            },
+            DropType::NFT(data) => {
+                 JsonDropType::NFT(
+                    JsonNFTData{
+                        nft_contract: data.nft_contract,
+                        nft_sender: data.nft_sender,
+                        longest_token_id: data.longest_token_id,
+                        storage_for_longest: U128(data.storage_for_longest)
+                    }
+                )
+            },
+            DropType::FT(data) => {
+                JsonDropType::FT(data)
+            },
+            _simple => {JsonDropType::Simple}
         };
 
         JsonDrop { 
             drop_id,
             funder_id: drop.funder_id,
             balance: drop.balance,
-            ft_data: drop.ft_data,
-            nft_data: nft_data_json,
-            fc_data: drop.fc_data,
-            keys_registered: drop.keys_registered
+            drop_type,
+            drop_config: drop.drop_config,
+            num_claims_registered: drop.num_claims_registered,
+            required_gas_attached: drop.required_gas_attached,
         }
     }
 
@@ -167,7 +203,7 @@ impl DropZone {
         let start = u128::from(from_index.unwrap_or(U128(0)));
 
         //iterate through each key using an iterator
-        self.drop_for_id.get(&drop_id).expect("No drop for given ID").pks.iter()
+        self.drop_for_id.get(&drop_id).expect("No drop for given ID").pks.keys()
             //skip to the index we specified in the start variable
             .skip(start as usize) 
             //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
@@ -255,8 +291,11 @@ impl DropZone {
         token_id: String
     ) -> bool {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        let nft_data = drop.nft_data.expect("no NFT drop found");
-        nft_data.token_ids.expect("no token IDs found").contains(&token_id)   
+        if let DropType::NFT(nft_data) = drop.drop_type {
+            nft_data.token_ids.contains(&token_id)   
+        } else {
+            false
+        }
     }
 
     /// Paginate through token IDs in a drop
@@ -267,23 +306,23 @@ impl DropZone {
         limit: Option<u64>
     ) -> Vec<String> {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        let token_ids = drop.nft_data.expect("no NFT drop found").token_ids;
+        if let DropType::NFT(nft_data) = drop.drop_type {
+            let token_ids = nft_data.token_ids;
 
-        if token_ids.is_none() {
+            // Where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
+            let start = u128::from(from_index.unwrap_or(U128(0)));
+    
+            // Iterate through each token ID using an iterator
+            token_ids.iter()
+                //skip to the index we specified in the start variable
+                .skip(start as usize) 
+                //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
+                .take(limit.unwrap_or(50) as usize) 
+                //since we turned the keys into an iterator, we need to turn it back into a vector to return
+                .collect()
+        } else {
             return vec![];
         }
-
-        // Where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
-        let start = u128::from(from_index.unwrap_or(U128(0)));
-
-        // Iterate through each token ID using an iterator
-        token_ids.unwrap().iter()
-            //skip to the index we specified in the start variable
-            .skip(start as usize) 
-            //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
-            .take(limit.unwrap_or(50) as usize) 
-            //since we turned the keys into an iterator, we need to turn it back into a vector to return
-            .collect()
     }
 
 

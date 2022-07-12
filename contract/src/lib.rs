@@ -16,16 +16,6 @@ use near_sdk::{
 */
 const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N 
 
-
-/* 
-allowance for the access key to cover GAS fees when the account is claimed. This amount is will not be "reserved" on the contract but must be 
-    available when GAS is burnt using the access key. The burnt GAS will not be refunded but any unburnt GAS that remains can be refunded.
-
-    If this is lower, wallet will throw the following error:
-    Access Key {account_id}:{public_key} does not have enough balance 0.01 for transaction costing 0.018742491841859367297184
-*/  
-const ACCESS_KEY_ALLOWANCE: u128 = 18_800_000_000_000_000_000_000; // 0.0188 N (200 TGas)
-
 /* 
     minimum amount of NEAR that a new account (with longest possible name) must have when created 
     If this is less, it will throw a lack balance for state error (assuming you have the same account ID length)
@@ -34,9 +24,6 @@ const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000; // 0.00284 N
 
 /// Indicates there are no deposit for a callback for better readability.
 const NO_DEPOSIT: u128 = 0;
-
-// Defaulting burnt GAS to be 100 TGas (0.01 $NEAR)
-const BURNT_GAS: u128 = 10_000_000_000_000_000_000_000;
 
 /*
     GAS Constants (outlines the minimum to attach. Any unspent GAS will be added according to the weights)
@@ -55,23 +42,28 @@ const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000); // 5 TGas
 const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000); // 5 TGas
 const MIN_GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + MIN_GAS_FOR_FT_TRANSFER.0 + MIN_GAS_FOR_STORAGE_DEPOSIT.0); // 13 TGas + 5 TGas + 5 TGas = 23 TGas
 
-// Function Calls
-const MIN_GAS_FOR_CALLBACK_FUNCTION_CALL: Gas = Gas(30_000_000_000_000); // 30 TGas
+// Specifies the GAS being attached from the wallet site
+const ATTACHED_GAS_FROM_WALLET: Gas = Gas(100_000_000_000_000); // 100 TGas
+
+// Specifies the amount of GAS to attach on top of the FC Gas if executing a regular function call in claim
+const GAS_OFFSET_IF_FC_EXECUTE: Gas = Gas(10_000_000_000_000); // 10 TGas
 
 // Actual amount of GAS to attach when creating a new account. No unspent GAS will be attached on top of this (weight of 0)
 const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
 
-// Utils
-const ONE_GIGGA_GAS: u64 = 1_000_000_000;
+/// Both methods callable by the function call access key
+const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim";
 
-/// Methods callable by the function call access key
-const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim";
+/// Only the claim method is callable by the access key
+const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim";
 
 /*
     FEES
 */
 const DROP_CREATION_FEE: u128 = 1_000_000_000_000_000_000_000_000; // 0.1 N 
 const KEY_ADDITION_FEE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N 
+
+const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000); // 10 TGas
 
 mod internals;
 mod stage1;
@@ -81,6 +73,7 @@ mod views;
 
 use internals::*;
 use stage2::*;
+use stage1::*;
 
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
@@ -90,33 +83,13 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
-pub type DropId = u128;
-
-/// Keep track of specific data related to an access key. This allows us to optionally refund funders later. 
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct Drop {
-    // Funder of this specific drop
-    pub funder_id: AccountId,
-    // Balance for all linkdrops of this drop
-    pub balance: U128,
-    // Set of public keys associated with this drop
-    pub pks: UnorderedSet<PublicKey>,
-
-    // Specific data associated with this drop
-    pub ft_data: Option<FTData>, 
-    pub nft_data: Option<NFTData>, 
-    pub fc_data: Option<FCData>,
-    // How many keys are registered (assets such as FTs sent)
-    pub keys_registered: u64,
-}
-
-
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
     DropIdForPk,
     DropsForId,
     DropIdsForFunder,
     DropIdsForFunderInner { account_id_hash: CryptoHash },
+    PksForDrop { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
     UserBalances
 }
@@ -145,6 +118,9 @@ pub struct DropZone {
     
     // Keep track of a nonce used for the drop IDs
     pub nonce: DropId,
+
+    // Keep track of the price of 1 GAS per 1 yocto
+    pub yocto_per_gas: u128
 }
 
 #[near_bindgen]
@@ -166,6 +142,7 @@ impl DropZone {
             drop_fee: DROP_CREATION_FEE,
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
+            yocto_per_gas: 100_000_000
         }
     }
 }

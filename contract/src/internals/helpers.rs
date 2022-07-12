@@ -1,11 +1,28 @@
 use crate::*;
 
+const GAS_PER_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas
+const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
+
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
 
 impl DropZone {
+    /// Used to calculate the base allowance needed given attached GAS
+    pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {    
+        // Get the number of CCCs you can make with the attached GAS
+        let calls_with_gas = (attached_gas.0 / GAS_PER_CCC.0) as f32;
+        // Get the constant used to pessimistically calculate the required allowance
+        let pow_outcome = 1.03_f32.powf(calls_with_gas);
+        
+        // Get the required GAS based on the calculated constant
+        let required_allowance = ((attached_gas.0 + RECEIPT_GAS_COST.0) as f32 * pow_outcome + RECEIPT_GAS_COST.0 as f32) as u128 * self.yocto_per_gas;
+        env::log_str(&format!("{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}", calls_with_gas, attached_gas.0, pow_outcome, required_allowance));
+
+        required_allowance
+    }
+
     /// Add a drop ID to the set of drops a funder has
     pub(crate) fn internal_add_drop_to_funder(
         &mut self,

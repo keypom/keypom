@@ -1,123 +1,168 @@
-use near_sdk::GasWeight;
-
 use crate::*;
 
 #[near_bindgen]
 impl DropZone {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
-        let mut used_gas = env::used_gas();
-        let mut prepaid_gas = env::prepaid_gas();
-
-        env::log_str(&format!("Beginning of regular claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
-        let (drop_data, storage_freed, token_id, storage_for_longest) = self.process_claim();
+        let (drop_data_option, storage_freed_option, token_id, storage_for_longest) = self.process_claim();
 
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
-
-        env::log_str(&format!("in regular claim right before transfer: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-        // Send the existing account ID the desired linkdrop balance.
-        let promise = Promise::new(account_id.clone()).transfer(drop_data.balance.0);
-        
-        if let Some(ft_data) = drop_data.ft_data {
-            promise.then(
-                // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_ft(
-                    // Account ID that claimed the linkdrop
-                    account_id, 
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                    // Who sent the FTs?
-                    ft_data.ft_sender,
-                    // Where are the FTs stored
-                    ft_data.ft_contract,
-                    // How many FTs should we send
-                    ft_data.ft_balance,
-                    // How much storage does it cost to register the new account
-                    ft_data.ft_storage.unwrap(),
-                )
-            );
-        } else if let Some(nft_data) = drop_data.nft_data {
-            promise.then(
-                // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_nft(
-                    // Account ID that claimed the linkdrop
-                    account_id, 
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                    // How much storage was prepaid to cover the longest token ID being inserted.
-                    storage_for_longest.expect("no storage for longest token Id found"),
-                    // Sender of the NFT
-                    nft_data.nft_sender,
-                    // Contract where the NFT is stored
-                    nft_data.nft_contract,
-                    // Token ID for the NFT
-                    token_id.expect("no token ID found")
-                )
-            );
-        } else if let Some(fc_data) = drop_data.fc_data {
-            promise.then(
-                // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_fc(
-                    // Account ID that claimed the linkdrop
-                    account_id, 
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                    // Receiver of the function call
-                    fc_data.receiver,
-                    // Method to call on the contract
-                    fc_data.method,
-                    // What args to pass in
-                    fc_data.args,
-                    // What deposit should we attach
-                    fc_data.deposit,
-                    // Should the refund be sent to the funder or attached to the deposit
-                    fc_data.refund_to_deposit,
-                    // Should we add the account ID as part of the args and what key should it live in
-                    fc_data.claimed_account_field,
-                )
-            );
-        } else {
-            promise.then(
-                // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_simple(
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                )
-            );
+        if drop_data_option.is_none() {
+            env::log_str("Invalid claim. Returning.");
+            return;
         }
+        let drop_data = drop_data_option.unwrap();
+        let storage_freed = storage_freed_option.unwrap();
 
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
+        // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
+        let account_to_transfer = if drop_data.drop_config.refund_if_claim.unwrap_or(false) == true {drop_data.funder_id.clone()} else {account_id.clone()};
 
-        env::log_str(&format!("End of regular claim function: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        // Send the account ID the desired balance.
+        let promise = Promise::new(account_to_transfer).transfer(drop_data.balance.0);
+        
+        // Determine what callback we should use depending on the drop type
+        match drop_data.drop_type {
+            DropType::FC(data) => {
+                if let Some(gas) = data.gas_if_straight_execute {
+                    // Allowance has already been freed
+                    let amount_to_refund = ACCESS_KEY_STORAGE + storage_freed;
+                    
+                    env::log_str(&format!(
+                        "Refund Amount: {}, 
+                        Access Key Storage: {}, 
+                        Storage Used: {}, 
+                        GAS for execute: {}",
+                        yocto_to_near(amount_to_refund), 
+                        yocto_to_near(ACCESS_KEY_STORAGE), 
+                        yocto_to_near(storage_freed),
+                        gas.0
+                    ));
+                    
+                    // Add the refund to the deposit
+                    if !data.refund_to_deposit.unwrap_or(false) {
+                        // Refunding
+                        env::log_str(&format!("Refunding funder: {:?} balance For amount: {:?}", drop_data.funder_id, yocto_to_near(amount_to_refund)));
+                        // Get the funder's balance and increment it by the amount to refund
+                        let mut cur_funder_balance = self.user_balances.get(&drop_data.funder_id).expect("No funder balance found");
+                        cur_funder_balance += amount_to_refund;
+                        self.user_balances.insert(&drop_data.funder_id, &cur_funder_balance);
+                    } else {
+                        env::log_str(&format!("Skipping the refund to funder: {:?} refund to deposit?: {:?}", drop_data.funder_id, data.refund_to_deposit.unwrap_or(false)));
+                    }
+
+                    self.internal_fc_execute(
+                        true, 
+                        data.receiver.clone(), 
+                        data.method.clone(), 
+                        data.args.clone(), 
+                        data.deposit.clone(), 
+                        data.claimed_account_field.clone(), 
+                        data.refund_to_deposit, 
+                        Some(gas),
+                        amount_to_refund, 
+                        account_id.clone()
+                    );
+                } else {
+                    promise.then(
+                        // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
+                        Self::ext(env::current_account_id())
+                        .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                        .on_claim_fc(
+                            // Account ID that claimed the linkdrop
+                            account_id, 
+                            // Account ID that funded the linkdrop
+                            drop_data.funder_id, 
+                            // Balance associated with the linkdrop
+                            drop_data.balance, 
+                            // How much storage was freed when the key was claimed
+                            storage_freed,
+                            // Receiver of the function call
+                            data.receiver,
+                            // Method to call on the contract
+                            data.method,
+                            // What args to pass in
+                            data.args,
+                            // What deposit should we attach
+                            data.deposit,
+                            // Should the refund be sent to the funder or attached to the deposit
+                            data.refund_to_deposit,
+                            // Should we add the account ID as part of the args and what key should it live in
+                            data.claimed_account_field,
+                        )
+                    );
+                }
+            },
+            DropType::NFT(data) => {
+                promise.then(
+                    // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_nft(
+                        // Account ID that claimed the linkdrop
+                        account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // How much storage was prepaid to cover the longest token ID being inserted.
+                        storage_for_longest.expect("no storage for longest token Id found"),
+                        // Sender of the NFT
+                        data.nft_sender,
+                        // Contract where the NFT is stored
+                        data.nft_contract,
+                        // Token ID for the NFT
+                        token_id.expect("no token ID found"),
+                    )
+                );
+            },
+            DropType::FT(data) => {
+                promise.then(
+                    // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_ft(
+                        // Account ID that claimed the linkdrop
+                        account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // Who sent the FTs?
+                        data.ft_sender,
+                        // Where are the FTs stored
+                        data.ft_contract,
+                        // How many FTs should we send
+                        data.ft_balance,
+                        // How much storage does it cost to register the new account
+                        data.ft_storage,
+                    )
+                );
+            },
+            DropType::Simple => {
+                promise.then(
+                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_simple(
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                    )
+                );
+            }
+        };
+
+        let used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("End of regular claim function: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
     }
 
     /// Create new account and and claim tokens to it.
@@ -126,19 +171,15 @@ impl DropZone {
         new_account_id: AccountId,
         new_public_key: PublicKey,
     ) {
-        let mut used_gas = env::used_gas();
-        let mut prepaid_gas = env::prepaid_gas();
+        let (drop_data_option, storage_freed_option, token_id, storage_for_longest) = self.process_claim();
 
-        env::log_str(&format!("Beginning of CAAC used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        if drop_data_option.is_none() {
+            env::log_str("Invalid claim. Returning.");
+            return;
+        }
+        let drop_data = drop_data_option.unwrap();
+        let storage_freed = storage_freed_option.unwrap();
 
-        // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
-        let (drop_data, storage_freed, token_id, storage_for_longest) = self.process_claim();
-
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
-
-        env::log_str(&format!("In CAAC after process claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-        
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
         let promise = ext_linkdrop::ext(self.linkdrop_contract.clone())
             // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
@@ -150,170 +191,110 @@ impl DropZone {
                 new_public_key,  
             );
 
-        if let Some(ft_data) = drop_data.ft_data {
-            promise.then(
-                // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_ft(
-                    // Account ID that claimed the linkdrop
-                    new_account_id, 
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                    // Who sent the FTs?
-                    ft_data.ft_sender,
-                    // Where are the FTs stored
-                    ft_data.ft_contract,
-                    // How many FTs should we send
-                    ft_data.ft_balance,
-                    // How much storage does it cost to register the new account
-                    ft_data.ft_storage.unwrap(),
-                )
-            );
-        } else if let Some(nft_data) = drop_data.nft_data {
-            promise.then(
-                // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_nft(
-                    // Account ID that claimed the linkdrop
-                    new_account_id, 
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                    // How much storage was prepaid to cover the longest token ID being inserted.
-                    storage_for_longest.expect("no storage for longest token Id found"),
-                    // Sender of the NFT
-                    nft_data.nft_sender,
-                    // Contract where the NFT is stored
-                    nft_data.nft_contract,
-                    // Token ID for the NFT
-                    token_id.expect("no token ID found")
-                )
-            );
-        } else if let Some(fc_data) = drop_data.fc_data {
-            promise.then(
-                // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_fc(
-                    // Account ID that claimed the linkdrop
-                    new_account_id, 
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                    // Receiver of the function call
-                    fc_data.receiver,
-                    // Method to call on the contract
-                    fc_data.method,
-                    // What args to pass in
-                    fc_data.args,
-                    // What deposit should we attach
-                    fc_data.deposit,
-                    // Should the refund be sent to the funder or attached to the deposit
-                    fc_data.refund_to_deposit,
-                    // Should we add the account ID as part of the args and what key should it live in
-                    fc_data.claimed_account_field,
-                )
-            );
-        } else {
-            promise.then(
-                // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
-                Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                .on_claim_simple(
-                    // Account ID that funded the linkdrop
-                    drop_data.funder_id, 
-                    // Balance associated with the linkdrop
-                    drop_data.balance, 
-                    // How much storage was freed when the key was claimed
-                    storage_freed,
-                )
-            );
-        }
-
-        used_gas = env::used_gas();
-        prepaid_gas = env::prepaid_gas();
-
-        env::log_str(&format!("End of on CAAC function: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-    }
-
-    /// Internal method for deleting the used key and removing / returning linkdrop data.
-    fn process_claim(&mut self) -> (Drop, Balance, Option<String>, Option<Balance>) {
-        // Pessimistically measure storage
-        let initial_storage = env::storage_usage();
-        // Ensure only the current contract is calling the method using the access key
-        assert_eq!(
-            env::predecessor_account_id(),
-            env::current_account_id(),
-            "predecessor != current"
-        );
-
-        // Get the PK of the signer which should be the contract's function call access key
-        let signer_pk = env::signer_account_pk();
-
-        // By default, every key should have a drop ID
-        let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("No drop ID found for PK");
-        // Remove the drop
-        let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
-        
-        // Remove the pk from the drop's set.
-        drop.pks.remove(&signer_pk);
-
-        // Default the token ID to none and return / remove the next token ID if it's an NFT drop
-        let mut token_id = None;
-        // Default the storage for longest to be none and return the actual value if it's an NFT drop
-        let mut storage_for_longest = None;
-        // If it's an NFT or FT drop, decrement the registered keys
-        if drop.ft_data.is_some() || drop.nft_data.is_some() {
-            if drop.keys_registered == 0 {
-                env::panic_str("Key not registered. Assets must be sent")
+        // Determine what callback we should use depending on the drop type
+        match drop_data.drop_type {
+            DropType::FC(data) => {
+                require!(data.gas_if_straight_execute.is_none(), "cannot call create account if executing FC with specified attached GAS");
+                promise.then(
+                    // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_fc(
+                        // Account ID that claimed the linkdrop
+                        new_account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // Receiver of the function call
+                        data.receiver,
+                        // Method to call on the contract
+                        data.method,
+                        // What args to pass in
+                        data.args,
+                        // What deposit should we attach
+                        data.deposit,
+                        // Should the refund be sent to the funder or attached to the deposit
+                        data.refund_to_deposit,
+                        // Should we add the account ID as part of the args and what key should it live in
+                        data.claimed_account_field,
+                    )
+                );
+            },
+            DropType::NFT(data) => {
+                promise.then(
+                    // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_nft(
+                        // Account ID that claimed the linkdrop
+                        new_account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // How much storage was prepaid to cover the longest token ID being inserted.
+                        storage_for_longest.expect("no storage for longest token Id found"),
+                        // Sender of the NFT
+                        data.nft_sender,
+                        // Contract where the NFT is stored
+                        data.nft_contract,
+                        // Token ID for the NFT
+                        token_id.expect("no token ID found"),
+                    )
+                );
+            },
+            DropType::FT(data) => {
+                promise.then(
+                    // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_ft(
+                        // Account ID that claimed the linkdrop
+                        new_account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // Who sent the FTs?
+                        data.ft_sender,
+                        // Where are the FTs stored
+                        data.ft_contract,
+                        // How many FTs should we send
+                        data.ft_balance,
+                        // How much storage does it cost to register the new account
+                        data.ft_storage,
+                    )
+                );
+            },
+            DropType::Simple => {
+                promise.then(
+                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_simple(
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                    )
+                );
             }
+        };
 
-            drop.keys_registered -= 1;
+        let used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
 
-            // get the token ID and remove it from the set
-            if let Some(data) = &mut drop.nft_data {
-                if let Some(ids) = &mut data.token_ids {
-                    token_id = ids.iter().next();
-                    ids.remove(token_id.as_ref().unwrap());
-                }
-                storage_for_longest = Some(data.storage_for_longest);
-            }
-        }
-        
-        // If there are keys still left in the drop, add the drop back in with updated data
-        if !drop.pks.is_empty() {
-            // Add drop back with the updated data.
-            self.drop_for_id.insert(
-                &drop_id, 
-                &drop
-            );
-        } else {
-            // Remove the drop ID from the funder's list if the drop is now empty
-            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
-        }
+        env::log_str(&format!("End of on CAAC function: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
-        // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
-        let final_storage = env::storage_usage();
-        let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
-
-        // Delete the key
-        Promise::new(env::current_account_id()).delete_key(signer_pk);
-        
-        // Return the drop and optional token ID with how much storage was freed
-        (drop, total_storage_freed, token_id, storage_for_longest)
     }
 
     #[private]
@@ -333,12 +314,19 @@ impl DropZone {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Simple on claim used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Simple on claim used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used))
+        );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
@@ -379,17 +367,23 @@ impl DropZone {
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
+        env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
-        env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
-
-       // Get the status of the cross contract call
-       let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        // Get the status of the cross contract call
+        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
-
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used)
+        ));
+        
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance as well: {}", balance.0));
@@ -402,82 +396,8 @@ impl DropZone {
         cur_funder_balance += amount_to_refund;
         self.user_balances.insert(&funder_id, &cur_funder_balance);
 
-        /*
-            Fungible Tokens. 
-            - Only send the FTs if the sender ended up sending the contract the tokens.
-        */
-        // Only send the fungible tokens to the new account if the claim was successful. We return the FTs if it wasn't successful in the else case.
-        if claim_succeeded {
-            // Create a new batch promise to pay storage and transfer FTs to the new account ID
-            let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
-
-            // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
-            // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
-            env::promise_batch_action_function_call_weight(
-                batch_ft_promise_id,
-                "storage_deposit",
-                json!({ "account_id": account_id }).to_string().as_bytes(),
-                ft_storage.0,
-                MIN_GAS_FOR_STORAGE_DEPOSIT,
-                GasWeight(1)
-            );  
-
-            // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-            // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
-            env::promise_batch_action_function_call_weight(
-                batch_ft_promise_id,
-                "ft_transfer",
-                json!({ "receiver_id": account_id, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
-                1,
-                MIN_GAS_FOR_FT_TRANSFER,
-                GasWeight(1)
-            );
-
-            // Create the second batch promise to execute after the batch_ft_promise_id batch is finished executing.
-            // It will execute on the current account ID (this contract)
-            let batch_ft_resolve_promise_id = env::promise_batch_then(batch_ft_promise_id, &env::current_account_id());
-
-            // Execute a function call as part of the resolved promise index created in promise_batch_then
-            // Callback after both the storage was deposited and the fungible tokens were sent
-            // Call the function with the min GAS and then attach 3/5 of the unspent GAS to the call
-            env::promise_batch_action_function_call_weight(
-                batch_ft_resolve_promise_id,
-                "ft_resolve_batch",
-                json!({ "amount": ft_balance, "token_sender": ft_sender, "token_contract": ft_contract }).to_string().as_bytes(),
-                NO_DEPOSIT,
-                MIN_GAS_FOR_RESOLVE_BATCH,
-                GasWeight(3)
-            );
-
-        } else {
-            // Create a new batch promise to pay storage and refund the FTs to the original sender 
-            let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
-
-            // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-            // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
-            env::promise_batch_action_function_call_weight(
-                batch_ft_promise_id,
-                "storage_deposit",
-                json!({ "account_id": ft_sender }).to_string().as_bytes(),
-                ft_storage.0,
-                MIN_GAS_FOR_STORAGE_DEPOSIT,
-                GasWeight(1)
-            );
-
-            // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
-            // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
-            env::promise_batch_action_function_call_weight(
-                batch_ft_promise_id,
-                "ft_transfer",
-                json!({ "receiver_id": ft_sender, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
-                1,
-                MIN_GAS_FOR_FT_TRANSFER,
-                GasWeight(1)
-            );
-
-            // Return the result of the batch as the return of the function
-            env::promise_return(batch_ft_promise_id);
-        }
+        // Perform the FT transfer functionality
+        self.internal_ft_transfer(claim_succeeded, ft_contract, ft_balance, ft_storage, ft_sender, account_id);
 
         claim_succeeded
     }
@@ -505,17 +425,26 @@ impl DropZone {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Beginning of on claim NFT used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Beginning of on claim NFT used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost() - BURNT_GAS;
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost();
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Storage for longest: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(storage_for_longest * env::storage_byte_cost()), yocto_to_near(BURNT_GAS)));
-
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}
+            Storage for longest: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used),
+            yocto_to_near(storage_for_longest * env::storage_byte_cost())
+        ));
+    
         // If not successful, the balance is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance as well: {}", balance.0));
@@ -528,47 +457,8 @@ impl DropZone {
         cur_funder_balance += amount_to_refund;
         self.user_balances.insert(&funder_id, &cur_funder_balance);
 
-        /*
-            Non Fungible Tokens
-        */
-        // Only send the NFT to the new account if the claim was successful. We return the NFT if it wasn't successful in the else case.
-        if claim_succeeded {
-            // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
-            ext_nft_contract::ext(nft_contract.clone())
-                // Call nft transfer with the min GAS and 1 yoctoNEAR. 1/2 unspent GAS will be added on top
-                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
-                .with_attached_deposit(1)
-                .nft_transfer(
-                    account_id.clone(), 
-                    token_id.clone(),
-                    None,
-                    Some("Linkdropped NFT".to_string()),
-                )
-            // We then resolve the promise and call nft_resolve_transfer on our own contract
-            .then(
-                // Call resolve transfer with the min GAS and no deposit. 1/2 unspent GAS will be added on top
-                Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_RESOLVE_TRANSFER)
-                    .nft_resolve_transfer(
-                        token_id,
-                        nft_sender,
-                        nft_contract,
-                    )
-            );
-        } else {
-            // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
-            ext_nft_contract::ext(nft_contract)
-                // Call nft transfer with the min GAS and 1 yoctoNEAR. all unspent GAS will be added on top
-                .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
-                .with_attached_deposit(1)
-                .nft_transfer(
-                    nft_sender, 
-                    token_id,
-                    None,
-                    Some("Linkdropped NFT".to_string()),
-                );
-        }
-
+        // Transfer the NFT
+        self.internal_nft_transfer(claim_succeeded, nft_contract, token_id, nft_sender, account_id);
         claim_succeeded
     }
 
@@ -599,16 +489,23 @@ impl DropZone {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?}", used_gas.0 / ONE_GIGGA_GAS, prepaid_gas.0 / ONE_GIGGA_GAS));
+        env::log_str(&format!("Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
-        // Default amount to refund to be everything except balance (and FC deposit) and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund =  ACCESS_KEY_ALLOWANCE + ACCESS_KEY_STORAGE + storage_used - BURNT_GAS;
+        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
+        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
         
-        env::log_str(&format!("Refund Amount: {}, Access Key Allowance: {}, Access Key Storage: {}, Storage Used: {}, Burnt GAS: {}", yocto_to_near(amount_to_refund), yocto_to_near(ACCESS_KEY_ALLOWANCE), yocto_to_near(ACCESS_KEY_STORAGE), yocto_to_near(storage_used), yocto_to_near(BURNT_GAS)));
-
+        env::log_str(&format!(
+            "Refund Amount: {}, 
+            Access Key Storage: {}, 
+            Storage Used: {}", 
+            yocto_to_near(amount_to_refund), 
+            yocto_to_near(ACCESS_KEY_STORAGE), 
+            yocto_to_near(storage_used))
+        );
+        
         // If not successful, the balance and deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance: {} and deposit: {}", balance.0, deposit.0));
@@ -636,32 +533,166 @@ impl DropZone {
             env::log_str(&format!("Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}", funder_id, claim_succeeded, add_refund_to_deposit.unwrap_or(false)));
         }
 
-        /*
-            Function Calls
-        */
-        // Only call the function if the claim was successful.
-        if claim_succeeded {
-            let mut final_args = args.clone();
+        self.internal_fc_execute(claim_succeeded, receiver, method, args, deposit, claimed_account_field, add_refund_to_deposit, None, amount_to_refund, account_id);
+        claim_succeeded
+    }
 
-            // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
-            if let Some(account_field) = claimed_account_field {
-                final_args.insert_str(final_args.len()-1, &format!(",\"{}\":\"{}\"", account_field, account_id));
-                env::log_str(&format!("Adding claimed account ID to specified field: {:?} in args: {:?}", account_field, args));
+    /// Internal method for deleting the used key and removing / returning linkdrop data.
+    /// If drop is none, simulate a panic.
+    fn process_claim(&mut self) -> (Option<Drop>, Option<Balance>, Option<String>, Option<Balance>) {
+        let mut used_gas = env::used_gas();
+        let prepaid_gas = env::prepaid_gas();
+
+        env::log_str(&format!("Beginning of process claim used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
+
+        // Pessimistically measure storage
+        let initial_storage = env::storage_usage();
+        // Ensure only the current contract is calling the method using the access key
+        // Panic doesn't affect allowance
+        assert_eq!(
+            env::predecessor_account_id(),
+            env::current_account_id(),
+            "predecessor != current"
+        );
+
+        // Get the PK of the signer which should be the contract's function call access key
+        let signer_pk = env::signer_account_pk();
+
+        // By default, every key should have a drop ID. If we need to remove the key, remove later.
+        // Panic doesn't affect allowance
+        let drop_id = self.drop_id_for_pk.get(&signer_pk).expect("No drop ID found for PK");
+        // Remove the drop. If the drop shouldn't be removed, we re-insert later.
+        // Panic doesn't affect allowance
+        let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
+        // Remove the pk from the drop's set and check for key usage.
+        // Panic doesn't affect allowance
+        let mut key_usage = drop.pks.remove(&signer_pk).unwrap();
+
+        // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
+        if drop.num_claims_registered < 1 || prepaid_gas != drop.required_gas_attached {
+            used_gas = env::used_gas();
+            
+            let amount_to_decrement = (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            if drop.num_claims_registered < 1 {
+                env::log_str(&format!("Not enough claims left for the drop. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0));
+            } else {
+                env::log_str(&format!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop.required_gas_attached.0, amount_to_decrement, used_gas.0));
             }
-        
-            env::log_str(&format!("Attaching Total: {:?} Deposit: {:?} Should Refund?: {:?} Amount To Refund: {:?} With args: {:?}", yocto_to_near(deposit.0 + if add_refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}), yocto_to_near(deposit.0), add_refund_to_deposit.unwrap_or(false), yocto_to_near(amount_to_refund), final_args));
-
-            // Call function with the min GAS and deposit. all unspent GAS will be added on top
-            Promise::new(receiver).function_call_weight(
-                method, 
-                final_args.as_bytes().to_vec(), 
-                // The claim is successful so attach the amount to refund to the deposit instead of refunding the funder.
-                deposit.0 + if add_refund_to_deposit.unwrap_or(false) {amount_to_refund} else {0}, 
-                MIN_GAS_FOR_CALLBACK_FUNCTION_CALL,
-                GasWeight(1)
-            );
+            
+            key_usage.allowance -= amount_to_decrement;
+            env::log_str(&format!("Allowance is now {}", key_usage.allowance));
+            drop.pks.insert(&signer_pk, &key_usage);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return (None, None, None, None);
         }
 
-        claim_succeeded
+        drop.num_claims_registered -= 1;
+
+        // Ensure enough time has passed if a start timestamp was specified in the config.
+        let current_timestamp = env::block_timestamp();
+        let desired_timestamp = drop.drop_config.start_timestamp.unwrap_or(current_timestamp);
+        
+        if current_timestamp < desired_timestamp {
+            used_gas = env::used_gas();
+            
+            let amount_to_decrement = (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            env::log_str(&format!("Drop isn't claimable until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}", desired_timestamp, current_timestamp, amount_to_decrement, used_gas.0));
+            
+            key_usage.allowance -= amount_to_decrement;
+            env::log_str(&format!("Allowance is now {}", key_usage.allowance));
+            drop.pks.insert(&signer_pk, &key_usage);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return (None, None, None, None);
+        }
+                
+        // Default the token ID to none and return / remove the next token ID if it's an NFT drop
+        let mut token_id = None;
+        // Default the storage for longest to be none and return the actual value if it's an NFT drop
+        let mut storage_for_longest = None;
+
+        // If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
+        match &mut drop.drop_type {
+            DropType::NFT(data) => {
+                token_id = data.token_ids.iter().next();
+                data.token_ids.remove(token_id.as_ref().unwrap());
+                storage_for_longest = Some(data.storage_for_longest);
+            },
+            _ => {}
+        };
+
+        // Default the should delete variable to true. If there's a case where it shouldn't, change the bool.
+        let mut should_delete = true;
+        env::log_str(&format!("Key usage last used: {:?} Num uses: {:?} (before)", key_usage.last_used, key_usage.num_uses));
+        
+        // Ensure the key is within the interval if specified
+        if let Some(interval) = drop.drop_config.usage_interval {
+            env::log_str(&format!("Current timestamp {} last used: {} subs: {} interval: {}", current_timestamp, key_usage.last_used, current_timestamp - key_usage.last_used, interval));
+            
+            if (current_timestamp - key_usage.last_used) < interval || key_usage.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas {
+                used_gas = env::used_gas();
+                
+                let amount_to_decrement = (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                if (current_timestamp - key_usage.last_used) < interval {
+                    env::log_str(&format!("Not enough time has passed since the key was last used. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0));
+                } else {
+                    env::log_str(&format!("Not enough allowance on the key {}. Decrementing allowance by {} Used GAS: {}", key_usage.allowance, amount_to_decrement, used_gas.0));
+                }
+                
+                key_usage.allowance -= amount_to_decrement;
+                env::log_str(&format!("Allowance is now {}", key_usage.allowance));
+                drop.pks.insert(&signer_pk, &key_usage);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return (None, None, None, None);
+            }
+            
+            env::log_str(&format!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp));
+            key_usage.last_used = current_timestamp;
+        }
+        
+        // No uses left! The key should be deleted
+        if key_usage.num_uses == 1 {
+            env::log_str("Key has no uses left. It will be deleted");
+            self.drop_id_for_pk.remove(&signer_pk);
+        } else {
+            key_usage.num_uses -= 1;
+            key_usage.allowance -= drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
+            env::log_str(&format!("Key has {} uses left. Decrementing allowance by {}. Allowance left: {}", key_usage.num_uses, drop.required_gas_attached.0 as u128 * self.yocto_per_gas, key_usage.allowance));
+
+            drop.pks.insert(&signer_pk, &key_usage);
+            should_delete = false;
+        }
+        
+        
+        // If there are keys still left in the drop, add the drop back in with updated data
+        if !drop.pks.is_empty() {
+            // Add drop back with the updated data.
+            self.drop_for_id.insert(
+                &drop_id, 
+                &drop
+            );
+        } else {
+            // Remove the drop ID from the funder's list if the drop is now empty
+            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+        }
+
+        // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
+        let final_storage = env::storage_usage();
+        let total_storage_freed = Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
+
+        if should_delete {
+            // Amount to refund is the current allowance less the current execution's max GAS
+            let amount_to_refund = key_usage.allowance - drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
+            env::log_str(&format!("Key being deleted. Allowance Currently: {}. Will refund: {}", key_usage.allowance, amount_to_refund));
+            // Get the funder's balance and increment it by the amount to refund
+            let mut cur_funder_balance = self.user_balances.get(&drop.funder_id).expect("No funder balance found");
+            cur_funder_balance += amount_to_refund;
+            self.user_balances.insert(&drop.funder_id, &cur_funder_balance);
+
+            // Delete the key
+            Promise::new(env::current_account_id()).delete_key(signer_pk);
+        }
+        
+        // Return the drop and optional token ID with how much storage was freed
+        (Some(drop), Some(total_storage_freed), token_id, storage_for_longest)
     }
 }

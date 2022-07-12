@@ -11,12 +11,21 @@ let FT_CONTRACT_ID = "ft.examples.benjiman.testnet";
 
 let OFFSET = 0.1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 100;
+let NUM_KEYS = 1;
 
 let NETWORK_ID = "testnet";
 let near;
 let config;
 let keyStore;
+
+let drop_config = {
+	max_claims_per_key: 2,
+
+	start_timestamp: 0,
+	usage_interval: 6e11, // 10 minutes
+	refund_if_claim: false,
+	only_call_claim: false
+}
 
 // set up near
 const initiateNear = async () => {
