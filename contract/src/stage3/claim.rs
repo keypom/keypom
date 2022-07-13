@@ -17,147 +17,15 @@ impl DropZone {
         // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
         let account_to_transfer = if drop_data.drop_config.refund_if_claim.unwrap_or(false) == true {drop_data.funder_id.clone()} else {account_id.clone()};
 
-        // Send the account ID the desired balance.
-        let promise = Promise::new(account_to_transfer).transfer(drop_data.balance.0);
-        
-        // Determine what callback we should use depending on the drop type
-        match drop_data.drop_type {
-            DropType::FC(data) => {
-                if let Some(gas) = data.gas_if_straight_execute {
-                    // Allowance has already been freed
-                    let amount_to_refund = ACCESS_KEY_STORAGE + storage_freed;
-                    
-                    env::log_str(&format!(
-                        "Refund Amount: {}, 
-                        Access Key Storage: {}, 
-                        Storage Used: {}, 
-                        GAS for execute: {}",
-                        yocto_to_near(amount_to_refund), 
-                        yocto_to_near(ACCESS_KEY_STORAGE), 
-                        yocto_to_near(storage_freed),
-                        gas.0
-                    ));
-                    
-                    // Add the refund to the deposit
-                    if !data.refund_to_deposit.unwrap_or(false) {
-                        // Refunding
-                        env::log_str(&format!("Refunding funder: {:?} balance For amount: {:?}", drop_data.funder_id, yocto_to_near(amount_to_refund)));
-                        // Get the funder's balance and increment it by the amount to refund
-                        let mut cur_funder_balance = self.user_balances.get(&drop_data.funder_id).expect("No funder balance found");
-                        cur_funder_balance += amount_to_refund;
-                        self.user_balances.insert(&drop_data.funder_id, &cur_funder_balance);
-                    } else {
-                        env::log_str(&format!("Skipping the refund to funder: {:?} refund to deposit?: {:?}", drop_data.funder_id, data.refund_to_deposit.unwrap_or(false)));
-                    }
+        let mut promise = None;
+        // Only create a promise to transfer $NEAR if the drop's balance is > 0.
+        if drop_data.balance.0 > 0 {
+            // Send the account ID the desired balance.
+            promise = Some(Promise::new(account_to_transfer).transfer(drop_data.balance.0));
+        }
 
-                    self.internal_fc_execute(
-                        true, 
-                        data.receiver.clone(), 
-                        data.method.clone(), 
-                        data.args.clone(), 
-                        data.deposit.clone(), 
-                        data.claimed_account_field.clone(), 
-                        data.refund_to_deposit, 
-                        Some(gas),
-                        amount_to_refund, 
-                        account_id.clone()
-                    );
-                } else {
-                    promise.then(
-                        // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
-                        Self::ext(env::current_account_id())
-                        .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                        .on_claim_fc(
-                            // Account ID that claimed the linkdrop
-                            account_id, 
-                            // Account ID that funded the linkdrop
-                            drop_data.funder_id, 
-                            // Balance associated with the linkdrop
-                            drop_data.balance, 
-                            // How much storage was freed when the key was claimed
-                            storage_freed,
-                            // Receiver of the function call
-                            data.receiver,
-                            // Method to call on the contract
-                            data.method,
-                            // What args to pass in
-                            data.args,
-                            // What deposit should we attach
-                            data.deposit,
-                            // Should the refund be sent to the funder or attached to the deposit
-                            data.refund_to_deposit,
-                            // Should we add the account ID as part of the args and what key should it live in
-                            data.claimed_account_field,
-                        )
-                    );
-                }
-            },
-            DropType::NFT(data) => {
-                promise.then(
-                    // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
-                    Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                    .on_claim_nft(
-                        // Account ID that claimed the linkdrop
-                        account_id, 
-                        // Account ID that funded the linkdrop
-                        drop_data.funder_id, 
-                        // Balance associated with the linkdrop
-                        drop_data.balance, 
-                        // How much storage was freed when the key was claimed
-                        storage_freed,
-                        // How much storage was prepaid to cover the longest token ID being inserted.
-                        storage_for_longest.expect("no storage for longest token Id found"),
-                        // Sender of the NFT
-                        data.nft_sender,
-                        // Contract where the NFT is stored
-                        data.nft_contract,
-                        // Token ID for the NFT
-                        token_id.expect("no token ID found"),
-                    )
-                );
-            },
-            DropType::FT(data) => {
-                promise.then(
-                    // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
-                    Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                    .on_claim_ft(
-                        // Account ID that claimed the linkdrop
-                        account_id, 
-                        // Account ID that funded the linkdrop
-                        drop_data.funder_id, 
-                        // Balance associated with the linkdrop
-                        drop_data.balance, 
-                        // How much storage was freed when the key was claimed
-                        storage_freed,
-                        // Who sent the FTs?
-                        data.ft_sender,
-                        // Where are the FTs stored
-                        data.ft_contract,
-                        // How many FTs should we send
-                        data.ft_balance,
-                        // How much storage does it cost to register the new account
-                        data.ft_storage,
-                    )
-                );
-            },
-            DropType::Simple => {
-                promise.then(
-                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
-                    Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                    .on_claim_simple(
-                        // Account ID that funded the linkdrop
-                        drop_data.funder_id, 
-                        // Balance associated with the linkdrop
-                        drop_data.balance, 
-                        // How much storage was freed when the key was claimed
-                        storage_freed,
-                    )
-                );
-            }
-        };
+        // Execute the callback depending on the drop type. If the drop balance is 0, the promise will be none and the callback function will just straight up be executed instead of resolving the promise.
+        self.internal_execute(drop_data, account_id, storage_freed, token_id, storage_for_longest, promise);
 
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -190,111 +58,14 @@ impl DropZone {
                 new_account_id.clone(),
                 new_public_key,  
             );
-
-        // Determine what callback we should use depending on the drop type
-        match drop_data.drop_type {
-            DropType::FC(data) => {
-                require!(data.gas_if_straight_execute.is_none(), "cannot call create account if executing FC with specified attached GAS");
-                promise.then(
-                    // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
-                    Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                    .on_claim_fc(
-                        // Account ID that claimed the linkdrop
-                        new_account_id, 
-                        // Account ID that funded the linkdrop
-                        drop_data.funder_id, 
-                        // Balance associated with the linkdrop
-                        drop_data.balance, 
-                        // How much storage was freed when the key was claimed
-                        storage_freed,
-                        // Receiver of the function call
-                        data.receiver,
-                        // Method to call on the contract
-                        data.method,
-                        // What args to pass in
-                        data.args,
-                        // What deposit should we attach
-                        data.deposit,
-                        // Should the refund be sent to the funder or attached to the deposit
-                        data.refund_to_deposit,
-                        // Should we add the account ID as part of the args and what key should it live in
-                        data.claimed_account_field,
-                    )
-                );
-            },
-            DropType::NFT(data) => {
-                promise.then(
-                    // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
-                    Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                    .on_claim_nft(
-                        // Account ID that claimed the linkdrop
-                        new_account_id, 
-                        // Account ID that funded the linkdrop
-                        drop_data.funder_id, 
-                        // Balance associated with the linkdrop
-                        drop_data.balance, 
-                        // How much storage was freed when the key was claimed
-                        storage_freed,
-                        // How much storage was prepaid to cover the longest token ID being inserted.
-                        storage_for_longest.expect("no storage for longest token Id found"),
-                        // Sender of the NFT
-                        data.nft_sender,
-                        // Contract where the NFT is stored
-                        data.nft_contract,
-                        // Token ID for the NFT
-                        token_id.expect("no token ID found"),
-                    )
-                );
-            },
-            DropType::FT(data) => {
-                promise.then(
-                    // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
-                    Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                    .on_claim_ft(
-                        // Account ID that claimed the linkdrop
-                        new_account_id, 
-                        // Account ID that funded the linkdrop
-                        drop_data.funder_id, 
-                        // Balance associated with the linkdrop
-                        drop_data.balance, 
-                        // How much storage was freed when the key was claimed
-                        storage_freed,
-                        // Who sent the FTs?
-                        data.ft_sender,
-                        // Where are the FTs stored
-                        data.ft_contract,
-                        // How many FTs should we send
-                        data.ft_balance,
-                        // How much storage does it cost to register the new account
-                        data.ft_storage,
-                    )
-                );
-            },
-            DropType::Simple => {
-                promise.then(
-                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
-                    Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                    .on_claim_simple(
-                        // Account ID that funded the linkdrop
-                        drop_data.funder_id, 
-                        // Balance associated with the linkdrop
-                        drop_data.balance, 
-                        // How much storage was freed when the key was claimed
-                        storage_freed,
-                    )
-                );
-            }
-        };
+        
+        // Execute the callback depending on the drop type. We'll pass in the promise to resolve
+        self.internal_execute(drop_data, new_account_id, storage_freed, token_id, storage_for_longest, Some(promise));
 
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("End of on CAAC function: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
-
     }
 
     #[private]
@@ -307,7 +78,7 @@ impl DropZone {
         balance: U128, 
         // How much storage was freed when the key was claimed
         storage_used: Balance,
-    ) -> bool {        
+    ) -> bool {
         // Get the status of the cross contract call
         let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
@@ -356,21 +127,22 @@ impl DropZone {
         balance: U128, 
         // How much storage was freed when the key was claimed
         storage_used: Balance,
-        // Who sent the FTs?
-        ft_sender: AccountId,
-        // Where are the FTs stored
-        ft_contract: AccountId,
-        // How many FTs should we send
-        ft_balance: U128,
-        // How much storage does it cost to register the new account
-        ft_storage: U128,
+        // FT Data for the drop
+        ft_data: FTData,
+        // Was this function invoked via an execute (no callback)
+        execute: bool
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
         env::log_str(&format!("Beginning of on claim FT used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
-        // Get the status of the cross contract call
-        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        
+        // Get the status of the cross contract call. If this function is invoked directly via an execute, default the claim succeeded to true 
+        let mut claim_succeeded = true;
+        if !execute {
+            claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        }
+        env::log_str(&format!("Has function been executed via CCC: {}", !execute));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
@@ -397,7 +169,7 @@ impl DropZone {
         self.user_balances.insert(&funder_id, &cur_funder_balance);
 
         // Perform the FT transfer functionality
-        self.internal_ft_transfer(claim_succeeded, ft_contract, ft_balance, ft_storage, ft_sender, account_id);
+        self.internal_ft_transfer(claim_succeeded, ft_data, account_id);
 
         claim_succeeded
     }
@@ -420,15 +192,21 @@ impl DropZone {
         // Contract where the NFT is stored
         nft_contract: AccountId,
         // Token ID for the NFT
-        token_id: String, 
+        token_id: String,
+        // Was this function invoked via an execute (no callback)
+        execute: bool
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of on claim NFT used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
-        // Get the status of the cross contract call
-        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        // Get the status of the cross contract call. If this function is invoked directly via an execute, default the claim succeeded to true 
+        let mut claim_succeeded = true;
+        if !execute {
+            claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        }
+        env::log_str(&format!("Has function been executed via CCC: {}", !execute));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
@@ -473,26 +251,22 @@ impl DropZone {
         balance: U128, 
         // How much storage was freed when the key was claimed
         storage_used: Balance,
-        // Receiver of the function call
-        receiver: AccountId,
-        // Method to call on the contract
-        method: String,
-        // What args to pass in
-        args: String,
-        // What deposit should we attach
-        deposit: U128,
-        // Should the refund be sent to the funder or attached to the deposit
-        add_refund_to_deposit: Option<bool>,
-        // Should we add the account ID as part of the args and what key should it live in
-        claimed_account_field: Option<String>,
+        // FC Data for the drop
+        fc_data: FCData,
+        // Was this function invoked via an execute (no callback)
+        execute: bool
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
 
         env::log_str(&format!("Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
 
-        // Get the status of the cross contract call
-        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        // Get the status of the cross contract call. If this function is invoked directly via an execute, default the claim succeeded to true 
+        let mut claim_succeeded = true;
+        if !execute {
+            claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        }
+        env::log_str(&format!("Has function been executed via CCC: {}", !execute));
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
@@ -508,8 +282,8 @@ impl DropZone {
         
         // If not successful, the balance and deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
-            env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance: {} and deposit: {}", balance.0, deposit.0));
-            amount_to_refund += balance.0 + deposit.0
+            env::log_str(&format!("Claim unsuccessful. Refunding linkdrop balance: {} and deposit: {}", balance.0, fc_data.deposit.0));
+            amount_to_refund += balance.0 + fc_data.deposit.0
         }
 
         /* 
@@ -522,7 +296,7 @@ impl DropZone {
             1 0     No Refund  !success  -> do refund
             1 1     No Refund   Success  -> don't do refund
         */ 
-        if !claim_succeeded || (!add_refund_to_deposit.unwrap_or(false) && claim_succeeded) {
+        if !claim_succeeded || (!fc_data.refund_to_deposit.unwrap_or(false) && claim_succeeded) {
             // Refunding
             env::log_str(&format!("Refunding funder: {:?} balance For amount: {:?}", funder_id, yocto_to_near(amount_to_refund)));
             // Get the funder's balance and increment it by the amount to refund
@@ -530,10 +304,14 @@ impl DropZone {
             cur_funder_balance += amount_to_refund;
             self.user_balances.insert(&funder_id, &cur_funder_balance);
         } else {
-            env::log_str(&format!("Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}", funder_id, claim_succeeded, add_refund_to_deposit.unwrap_or(false)));
+            env::log_str(&format!("Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}", funder_id, claim_succeeded, fc_data.refund_to_deposit.unwrap_or(false)));
         }
 
-        self.internal_fc_execute(claim_succeeded, receiver, method, args, deposit, claimed_account_field, add_refund_to_deposit, None, amount_to_refund, account_id);
+        self.internal_fc_execute(
+            fc_data, 
+            amount_to_refund, 
+            account_id
+        );
         claim_succeeded
     }
 

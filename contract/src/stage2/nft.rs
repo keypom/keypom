@@ -148,7 +148,7 @@ impl DropZone {
         nft_contract: AccountId,
         token_id: String,
         nft_sender: AccountId,
-        account_id: AccountId
+        account_id: AccountId,
     ) {
         /*
             Non Fungible Tokens

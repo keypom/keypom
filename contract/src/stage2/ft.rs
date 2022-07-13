@@ -288,10 +288,7 @@ impl DropZone {
     pub(crate) fn internal_ft_transfer(
         &mut self,
         claim_succeeded: bool,
-        ft_contract: AccountId,
-        ft_balance: U128,
-        ft_storage: U128,
-        ft_sender: AccountId,
+        ft_data: FTData,
         account_id: AccountId
     ) {
         /*
@@ -301,7 +298,7 @@ impl DropZone {
         // Only send the fungible tokens to the new account if the claim was successful. We return the FTs if it wasn't successful in the else case.
         if claim_succeeded {
             // Create a new batch promise to pay storage and transfer FTs to the new account ID
-            let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
+            let batch_ft_promise_id = env::promise_batch_create(&ft_data.ft_contract);
 
             // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
             // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
@@ -309,7 +306,7 @@ impl DropZone {
                 batch_ft_promise_id,
                 "storage_deposit",
                 json!({ "account_id": account_id }).to_string().as_bytes(),
-                ft_storage.0,
+                ft_data.ft_storage.0,
                 MIN_GAS_FOR_STORAGE_DEPOSIT,
                 GasWeight(1)
             );  
@@ -319,7 +316,7 @@ impl DropZone {
             env::promise_batch_action_function_call_weight(
                 batch_ft_promise_id,
                 "ft_transfer",
-                json!({ "receiver_id": account_id, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
+                json!({ "receiver_id": account_id, "amount": ft_data.ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
                 1,
                 MIN_GAS_FOR_FT_TRANSFER,
                 GasWeight(1)
@@ -335,7 +332,7 @@ impl DropZone {
             env::promise_batch_action_function_call_weight(
                 batch_ft_resolve_promise_id,
                 "ft_resolve_batch",
-                json!({ "amount": ft_balance, "token_sender": ft_sender, "token_contract": ft_contract }).to_string().as_bytes(),
+                json!({ "amount": ft_data.ft_balance, "token_sender": ft_data.ft_sender, "token_contract": ft_data.ft_contract }).to_string().as_bytes(),
                 NO_DEPOSIT,
                 MIN_GAS_FOR_RESOLVE_BATCH,
                 GasWeight(3)
@@ -343,15 +340,15 @@ impl DropZone {
 
         } else {
             // Create a new batch promise to pay storage and refund the FTs to the original sender 
-            let batch_ft_promise_id = env::promise_batch_create(&ft_contract);
+            let batch_ft_promise_id = env::promise_batch_create(&ft_data.ft_contract);
 
             // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
             // Call the function with the min GAS and then attach 1/2 of the unspent GAS to the call
             env::promise_batch_action_function_call_weight(
                 batch_ft_promise_id,
                 "storage_deposit",
-                json!({ "account_id": ft_sender }).to_string().as_bytes(),
-                ft_storage.0,
+                json!({ "account_id": ft_data.ft_sender }).to_string().as_bytes(),
+                ft_data.ft_storage.0,
                 MIN_GAS_FOR_STORAGE_DEPOSIT,
                 GasWeight(1)
             );
@@ -361,7 +358,7 @@ impl DropZone {
             env::promise_batch_action_function_call_weight(
                 batch_ft_promise_id,
                 "ft_transfer",
-                json!({ "receiver_id": ft_sender, "amount": ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
+                json!({ "receiver_id": ft_data.ft_sender, "amount": ft_data.ft_balance, "memo": "Linkdropped FT Tokens" }).to_string().as_bytes(),
                 1,
                 MIN_GAS_FOR_FT_TRANSFER,
                 GasWeight(1)
