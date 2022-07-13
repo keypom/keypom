@@ -27,6 +27,9 @@ pub struct JsonDrop {
     // The drop as a whole can have a config as well
     pub drop_config: DropConfig,
 
+    // Metadata for the drop
+    pub drop_metadata: Option<DropMetadata>,
+
     // How many claims
     pub num_claims_registered: u64,
 
@@ -168,6 +171,7 @@ impl DropZone {
             drop_config: drop.drop_config,
             num_claims_registered: drop.num_claims_registered,
             required_gas_attached: drop.required_gas_attached,
+            drop_metadata: drop.drop_metadata
         }
     }
 

@@ -46,6 +46,15 @@ pub struct DropConfig {
     pub only_call_claim: Option<bool>,
 }
 
+/// Keep track of different configuration options for each key in a drop
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct DropMetadata {
+    pub title: Option<String>, // The title of this specific drop.
+    pub description: Option<String>, // A longer description of the drop.
+    pub media: Option<String> // URL to associated media. Preferably to decentralized, content-addressed storage.
+}
+
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Drop {
@@ -57,17 +66,20 @@ pub struct Drop {
     // Balance for all keys of this drop. Can be 0 if specified.
     pub balance: U128,
 
+    // How many claims
+    pub num_claims_registered: u64,
+   
+    // Ensure this drop can only be used when the function has the required gas to attach
+    pub required_gas_attached: Gas,
+    
     // Every drop must have a type
     pub drop_type: DropType,
 
     // The drop as a whole can have a config as well
     pub drop_config: DropConfig,
 
-    // How many claims
-    pub num_claims_registered: u64,
-
-    // Ensure this drop can only be used when the function has the required gas to attach
-    pub required_gas_attached: Gas,
+    // Metadata for the drop
+    pub drop_metadata: Option<DropMetadata>
 }
 
 #[near_bindgen]
@@ -84,10 +96,11 @@ impl DropZone {
         &mut self,
         public_keys: Vec<PublicKey>,
         balance: U128,
+        drop_config: DropConfig,
+        drop_metadata: Option<DropMetadata>,
         ft_data: Option<FTDataConfig>,
         nft_data: Option<NFTDataConfig>,
-        fc_data: Option<FCData>,
-        drop_config: DropConfig,
+        fc_data: Option<FCData>
     ) -> DropId {
         // Ensure the user has only specified one type of callback data
         let num_cbs_specified =
@@ -187,6 +200,7 @@ impl DropZone {
             drop_config: drop_config.clone(),
             num_claims_registered: num_claims_per_key * len as u64,
             required_gas_attached: gas_to_attach,
+            drop_metadata,
         };
 
         // For NFT drops, measure the storage for adding the longest token ID
