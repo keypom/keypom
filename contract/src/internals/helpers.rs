@@ -78,6 +78,7 @@ impl DropZone {
     pub(crate) fn internal_execute(
         &mut self,
         drop_data: Drop,
+        drop_id: DropId,
         account_id: AccountId,
         storage_freed: u128,
         token_id: Option<String>,
@@ -122,6 +123,8 @@ impl DropZone {
                     storage_freed,
                     // FC Data
                     data,
+                    // Drop ID
+                    drop_id,
                 ));
             }
             DropType::NFT(data) => {

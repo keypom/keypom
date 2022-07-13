@@ -5,7 +5,7 @@ impl DropZone {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
-        let (drop_data_option, storage_freed_option, token_id, storage_for_longest) =
+        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest) =
             self.process_claim();
 
         if drop_data_option.is_none() {
@@ -33,6 +33,7 @@ impl DropZone {
         // Execute the callback depending on the drop type. If the drop balance is 0, the promise will be none and the callback function will just straight up be executed instead of resolving the promise.
         self.internal_execute(
             drop_data,
+            drop_id.unwrap(),
             account_id,
             storage_freed,
             token_id,
@@ -56,7 +57,7 @@ impl DropZone {
         new_account_id: AccountId,
         new_public_key: PublicKey,
     ) {
-        let (drop_data_option, storage_freed_option, token_id, storage_for_longest) =
+        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest) =
             self.process_claim();
 
         if drop_data_option.is_none() {
@@ -77,6 +78,7 @@ impl DropZone {
         // Execute the callback depending on the drop type. We'll pass in the promise to resolve
         self.internal_execute(
             drop_data,
+            drop_id.unwrap(),
             new_account_id,
             storage_freed,
             token_id,
@@ -329,6 +331,8 @@ impl DropZone {
         storage_used: Balance,
         // FC Data for the drop
         fc_data: FCData,
+        // Drop ID for the specific drop
+        drop_id: DropId,
         // Was this function invoked via an execute (no callback)
         execute: bool,
     ) -> bool {
@@ -403,7 +407,7 @@ impl DropZone {
             );
         }
 
-        self.internal_fc_execute(fc_data, amount_to_refund, account_id);
+        self.internal_fc_execute(fc_data, amount_to_refund, account_id, drop_id);
         claim_succeeded
     }
 
@@ -413,6 +417,7 @@ impl DropZone {
         &mut self,
     ) -> (
         Option<Drop>,
+        Option<DropId>,
         Option<Balance>,
         Option<String>,
         Option<Balance>,
@@ -468,7 +473,7 @@ impl DropZone {
             near_sdk::log!("Allowance is now {}", key_usage.allowance);
             drop.pks.insert(&signer_pk, &key_usage);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None);
+            return (None, None, None, None, None);
         }
 
         // Ensure enough time has passed if a start timestamp was specified in the config.
@@ -489,7 +494,7 @@ impl DropZone {
             near_sdk::log!("Allowance is now {}", key_usage.allowance);
             drop.pks.insert(&signer_pk, &key_usage);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None);
+            return (None, None, None, None, None);
         }
 
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
@@ -542,7 +547,7 @@ impl DropZone {
                 near_sdk::log!("Allowance is now {}", key_usage.allowance);
                 drop.pks.insert(&signer_pk, &key_usage);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None);
+                return (None, None, None, None, None);
             }
 
             near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
@@ -608,6 +613,7 @@ impl DropZone {
         // Return the drop and optional token ID with how much storage was freed
         (
             Some(drop),
+            Some(drop_id),
             Some(total_storage_freed),
             token_id,
             storage_for_longest,

@@ -18,6 +18,8 @@ pub struct FCData {
     pub refund_to_deposit: Option<bool>,
     // Specifies what field the claiming account should go in when calling the function
     pub claimed_account_field: Option<String>,
+    // Specifies where or not the drop ID should be added as a param to the function call
+    pub attach_drop_id: Option<bool>,
     // How much GAS should be attached to the function call if it's a straight execute. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
     // This makes it so the keys can only call `claim`
     pub gas_if_straight_execute: Option<Gas>,
@@ -31,6 +33,7 @@ impl DropZone {
         fc_data: FCData,
         amount_to_refund: u128,
         account_id: AccountId,
+        drop_id: DropId,
     ) {
         /*
             Function Calls
@@ -48,6 +51,17 @@ impl DropZone {
                 account_field,
                 fc_data.args
             );
+        }
+
+        // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
+        if let Some(should_attach) = fc_data.attach_drop_id {
+            if should_attach {
+                final_args.insert_str(
+                    final_args.len() - 1,
+                    &format!(",\"drop_id\":\"{}\"", drop_id),
+                );
+                near_sdk::log!("Adding drop ID to args {:?}", drop_id,);
+            }
         }
 
         near_sdk::log!(
