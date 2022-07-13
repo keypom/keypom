@@ -568,7 +568,7 @@ impl DropZone {
         }
 
         drop.num_claims_registered -= 1;
-        
+
         // If there are keys still left in the drop, add the drop back in with updated data
         if !drop.pks.is_empty() {
             // Add drop back with the updated data.

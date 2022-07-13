@@ -171,7 +171,7 @@ impl DropZone {
             drop_config: drop.drop_config,
             num_claims_registered: drop.num_claims_registered,
             required_gas_attached: drop.required_gas_attached,
-            drop_metadata: drop.drop_metadata
+            drop_metadata: drop.drop_metadata,
         }
     }
 

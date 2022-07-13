@@ -50,9 +50,9 @@ pub struct DropConfig {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct DropMetadata {
-    pub title: Option<String>, // The title of this specific drop.
+    pub title: Option<String>,       // The title of this specific drop.
     pub description: Option<String>, // A longer description of the drop.
-    pub media: Option<String> // URL to associated media. Preferably to decentralized, content-addressed storage.
+    pub media: Option<String>, // URL to associated media. Preferably to decentralized, content-addressed storage.
 }
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
@@ -68,10 +68,10 @@ pub struct Drop {
 
     // How many claims
     pub num_claims_registered: u64,
-   
+
     // Ensure this drop can only be used when the function has the required gas to attach
     pub required_gas_attached: Gas,
-    
+
     // Every drop must have a type
     pub drop_type: DropType,
 
@@ -79,7 +79,7 @@ pub struct Drop {
     pub drop_config: DropConfig,
 
     // Metadata for the drop
-    pub drop_metadata: Option<DropMetadata>
+    pub drop_metadata: Option<DropMetadata>,
 }
 
 #[near_bindgen]
@@ -100,7 +100,7 @@ impl DropZone {
         drop_metadata: Option<DropMetadata>,
         ft_data: Option<FTDataConfig>,
         nft_data: Option<NFTDataConfig>,
-        fc_data: Option<FCData>
+        fc_data: Option<FCData>,
     ) -> DropId {
         // Ensure the user has only specified one type of callback data
         let num_cbs_specified =
