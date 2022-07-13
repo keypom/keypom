@@ -82,19 +82,27 @@ impl DropZone {
         promise: Option<Promise>,
     ) {
         macro_rules! resolve_promise_or_call {
-            ($($call:tt)*) => {
+            ( $func:ident ( $($call:tt)* ) ) => {
                 if let Some(promise) = promise {
                     promise.then(
                         // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
                         Self::ext(env::current_account_id())
                         .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
-                        .$($call)*
+                        .$func(
+                            $($call)*
+                            // Executing the function and treating it like a callback.
+                            false,
+                        )
                     );
                 } else {
                     // We're not dealing with a promise so we simply execute the function.
-                    self.$($call)*;
+                    self.$func(
+                        $($call)*
+                        // Executing the function and treating it NOT like a callback.
+                        true,
+                    );
                 }
-            };
+            }
         }
         // Determine what callback we should use depending on the drop type
         match drop_data.drop_type {
@@ -111,8 +119,6 @@ impl DropZone {
                     storage_freed,
                     // FC Data
                     data,
-                    // Executing the function and treating it NOT like a callback.
-                    true,
                 ));
             }
             DropType::NFT(data) => {
@@ -133,8 +139,6 @@ impl DropZone {
                     data.nft_contract,
                     // Token ID for the NFT
                     token_id.expect("no token ID found"),
-                    // Executing the function and treating it like a callback.
-                    false,
                 ));
             }
             DropType::FT(data) => {
@@ -149,8 +153,6 @@ impl DropZone {
                     storage_freed,
                     // FT Data to be used
                     data,
-                    // Executing the function and treating it like a callback.
-                    false,
                 ));
             }
             DropType::Simple => {
