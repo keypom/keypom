@@ -71,4 +71,286 @@ impl DropZone {
             self.drop_ids_for_funder.insert(account_id, &drop_set);
         }
     }
+
+    /// Internal function for transferring funds and executing the callback
+    pub(crate) fn internal_transfer_and_execute(
+        &mut self, 
+        drop_data: Drop, 
+        account_id: AccountId, 
+        storage_freed: u128,
+        token_id: Option<String>,
+        storage_for_longest: Option<u128>
+    ) {
+        // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
+        let account_to_transfer = if drop_data.drop_config.refund_if_claim.unwrap_or(false) == true {drop_data.funder_id.clone()} else {account_id.clone()};
+
+        let mut promise = None;
+        // Only create a promise to transfer $NEAR if the drop's balance is > 0.
+        if drop_data.balance.0 > 0 {
+            // Send the account ID the desired balance.
+            promise = Some(Promise::new(account_to_transfer).transfer(drop_data.balance.0));
+        }
+        
+        // Determine what callback we should use depending on the drop type
+        match drop_data.drop_type {
+            DropType::FC(data) => {
+                // If we're dealing with a promise, execute the callback
+                if let Some(promise) = promise {
+                    promise.then(
+                        // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
+                        Self::ext(env::current_account_id())
+                        .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                        .on_claim_fc(
+                            // Account ID that claimed the linkdrop
+                            account_id, 
+                            // Account ID that funded the linkdrop
+                            drop_data.funder_id, 
+                            // Balance associated with the linkdrop
+                            drop_data.balance, 
+                            // How much storage was freed when the key was claimed
+                            storage_freed,
+                            // FC Data
+                            data,
+                            // Executing the function and treating it like a callback. 
+                            false
+                        )
+                    );
+                } else {
+                    // We're not dealing with a promise so we simply execute the function.
+                    self.on_claim_fc(
+                        // Account ID that claimed the linkdrop
+                        account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // FC Data
+                        data,
+                        // Executing the function and treating it NOT like a callback. 
+                        true
+                    );
+                }
+            },
+            DropType::NFT(data) => {
+                // If we're dealing with a promise, execute the callback
+                if let Some(promise) = promise {
+                    promise.then(
+                        // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
+                        Self::ext(env::current_account_id())
+                        .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                        .on_claim_nft(
+                            // Account ID that claimed the linkdrop
+                            account_id, 
+                            // Account ID that funded the linkdrop
+                            drop_data.funder_id, 
+                            // Balance associated with the linkdrop
+                            drop_data.balance, 
+                            // How much storage was freed when the key was claimed
+                            storage_freed,
+                            // How much storage was prepaid to cover the longest token ID being inserted.
+                            storage_for_longest.expect("no storage for longest token Id found"),
+                            // Sender of the NFT
+                            data.nft_sender,
+                            // Contract where the NFT is stored
+                            data.nft_contract,
+                            // Token ID for the NFT
+                            token_id.expect("no token ID found"),
+                            // Executing the function and treating it like a callback. 
+                            false
+                        )
+                    );
+                } else {
+                    // We're not dealing with a promise so we simply execute the function.
+                    self.on_claim_nft(
+                        // Account ID that claimed the linkdrop
+                        account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // How much storage was prepaid to cover the longest token ID being inserted.
+                        storage_for_longest.expect("no storage for longest token Id found"),
+                        // Sender of the NFT
+                        data.nft_sender,
+                        // Contract where the NFT is stored
+                        data.nft_contract,
+                        // Token ID for the NFT
+                        token_id.expect("no token ID found"),
+                        // Executing the function and treating it NOT like a callback. 
+                        true
+                    );
+                }
+            },
+            DropType::FT(data) => {
+                // If we're dealing with a promise, execute the callback
+                if let Some(promise) = promise {
+                    promise.then(
+                        // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
+                        Self::ext(env::current_account_id())
+                        .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                        .on_claim_ft(
+                            // Account ID that claimed the linkdrop
+                            account_id, 
+                            // Account ID that funded the linkdrop
+                            drop_data.funder_id, 
+                            // Balance associated with the linkdrop
+                            drop_data.balance, 
+                            // How much storage was freed when the key was claimed
+                            storage_freed,
+                            // FT Data to be used
+                            data,
+                            // Executing the function and treating it like a callback. 
+                            false
+                        )
+                    );
+                } else {
+                    // We're not dealing with a promise so we simply execute the function.
+                    self.on_claim_ft(
+                        // Account ID that claimed the linkdrop
+                        account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // FT Data to be used
+                        data,
+                        // Executing the function and treating it NOT like a callback. 
+                        true
+                    );
+                }
+            },
+            DropType::Simple => {
+                promise.unwrap().then(
+                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_simple(
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                    )
+                );
+            }
+        };
+    }
+
+    /// Internal function for transferring funds and executing the callback
+    pub(crate) fn internal_create_account_and_execute(
+        &mut self, 
+        drop_data: Drop, 
+        new_account_id: AccountId, 
+        new_public_key: PublicKey,
+        storage_freed: u128,
+        token_id: Option<String>,
+        storage_for_longest: Option<u128>
+    ) {
+        // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
+        let promise = ext_linkdrop::ext(self.linkdrop_contract.clone())
+            // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
+            .with_attached_deposit(drop_data.balance.0)
+            .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
+            .with_unused_gas_weight(0)
+            .create_account(
+                new_account_id.clone(),
+                new_public_key,  
+            );
+
+        // Determine what callback we should use depending on the drop type
+        match drop_data.drop_type {
+            DropType::FC(data) => {
+                require!(data.gas_if_straight_execute.is_none(), "cannot call create account if executing FC with specified attached GAS");
+                promise.then(
+                    // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_fc(
+                        // Account ID that claimed the linkdrop
+                        new_account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // FC Data
+                        data,
+                        // Executing the function and treating it like a callback. 
+                        false
+                    )
+                );
+            },
+            DropType::NFT(data) => {
+                promise.then(
+                    // Call on_claim_nft with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_nft(
+                        // Account ID that claimed the linkdrop
+                        new_account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // How much storage was prepaid to cover the longest token ID being inserted.
+                        storage_for_longest.expect("no storage for longest token Id found"),
+                        // Sender of the NFT
+                        data.nft_sender,
+                        // Contract where the NFT is stored
+                        data.nft_contract,
+                        // Token ID for the NFT
+                        token_id.expect("no token ID found"),
+                        // Executing the function and treating it like a callback. 
+                        false
+                    )
+                );
+            },
+            DropType::FT(data) => {
+                promise.then(
+                    // Call on_claim_ft with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_ft(
+                        // Account ID that claimed the linkdrop
+                        new_account_id, 
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                        // FT Data to be used
+                        data,
+                        // Executing the function and treating it like a callback. 
+                        false
+                    )
+                );
+            },
+            DropType::Simple => {
+                promise.then(
+                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
+                    Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
+                    .on_claim_simple(
+                        // Account ID that funded the linkdrop
+                        drop_data.funder_id, 
+                        // Balance associated with the linkdrop
+                        drop_data.balance, 
+                        // How much storage was freed when the key was claimed
+                        storage_freed,
+                    )
+                );
+            }
+        };
+    }
 }
