@@ -27,6 +27,11 @@ let drop_config = {
 	only_call_claim: false
 }
 
+let drop_metadata = {
+	title: "This is a title",
+	description: "This is a description"
+}
+
 /*
 	Hard coding NFT contract and metadata. Change this if you want.
 */
@@ -146,7 +151,8 @@ async function start() {
 				public_keys: pubKeys,
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
 				nft_data,
-				drop_config
+				drop_config,
+				drop_metadata
 			}, 
 			"300000000000000"
 		);
