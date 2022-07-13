@@ -41,20 +41,26 @@ impl DropZone {
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
         if let DropType::FT(ft_data) = &drop.drop_type {
-            require!(amount.0 % ft_data.ft_balance.0 == 0, "amount must be a multiple of the drop balance");
-            require!(ft_data.ft_contract == contract_id && ft_data.ft_sender == sender_id, "FT data must match what was sent");
-            
+            require!(
+                amount.0 % ft_data.ft_balance.0 == 0,
+                "amount must be a multiple of the drop balance"
+            );
+            require!(
+                ft_data.ft_contract == contract_id && ft_data.ft_sender == sender_id,
+                "FT data must match what was sent"
+            );
+
             // Get the number of claims to register with the amount that is sent.
             let claims_to_register = (amount.0 / ft_data.ft_balance.0) as u64;
             drop.num_claims_registered += claims_to_register;
-            env::log_str(&format!("New claims registered {}", claims_to_register));
-    
+            near_sdk::log!("New claims registered {}", claims_to_register);
+
             // Ensure that the keys to register can't exceed the number of keys in the drop.
             if drop.num_claims_registered > drop.pks.len() * drop.drop_config.max_claims_per_key {
-                env::log_str("Too many FTs sent. Contract is keeping the rest.");
+                near_sdk::log!("Too many FTs sent. Contract is keeping the rest.");
                 drop.num_claims_registered = drop.pks.len() * drop.drop_config.max_claims_per_key;
             }
-    
+
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
 
@@ -68,25 +74,33 @@ impl DropZone {
     #[private]
     /// Self callback checks if fungible tokens were successfully transferred to the new account. If yes, do nothing. If no, refund original sender
     pub fn ft_resolve_batch(
-        &mut self, 
-        amount: U128, 
+        &mut self,
+        amount: U128,
         token_sender: AccountId,
-        token_contract: AccountId
+        token_contract: AccountId,
     ) -> bool {
         let mut used_gas = env::used_gas();
         let mut prepaid_gas = env::prepaid_gas();
 
-        env::log_str(&format!("Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
+        near_sdk::log!(
+            "Beginning of resolve transfer used gas: {:?} prepaid gas: {:?}",
+            used_gas.0,
+            prepaid_gas.0
+        );
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
-        
+
         used_gas = env::used_gas();
         prepaid_gas = env::prepaid_gas();
-        env::log_str(&format!("Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}", used_gas.0, prepaid_gas.0));
+        near_sdk::log!(
+            "Before refunding token sender in resolve transfer: {:?} prepaid gas: {:?}",
+            used_gas.0,
+            prepaid_gas.0
+        );
 
         if transfer_succeeded {
-            return true
+            return true;
         }
-        // Create a new batch promise to pay storage and refund the FTs to the original sender 
+        // Create a new batch promise to pay storage and refund the FTs to the original sender
         let batch_ft_promise_id = env::promise_batch_create(&token_contract);
 
         // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
@@ -97,7 +111,7 @@ impl DropZone {
             json!({ "account_id": token_sender }).to_string().as_bytes(),
             amount.0,
             MIN_GAS_FOR_STORAGE_DEPOSIT,
-            GasWeight(1)
+            GasWeight(1),
         );
 
         // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
@@ -119,17 +133,17 @@ impl DropZone {
 
     #[private]
     /// Self callback checks if fungible tokens were successfully refunded. If yes, set keys registered to 0.
-    pub fn ft_resolve_refund(
-        &mut self, 
-        drop_id: DropId,
-        num_to_refund: u64
-    ) -> bool {
+    pub fn ft_resolve_refund(&mut self, drop_id: DropId, num_to_refund: u64) -> bool {
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
-    
+
         // Everything went well so we return true since the keys registered have already been decremented
         if transfer_succeeded {
-            env::log_str(&format!("Successfully refunded FTs for drop ID {}. {} keys unregistered. Returning true.", drop_id, num_to_refund));
-            return true
+            near_sdk::log!(
+                "Successfully refunded FTs for drop ID {}. {} keys unregistered. Returning true.",
+                drop_id,
+                num_to_refund
+            );
+            return true;
         }
 
         // Transfer failed so we need to increment the claims registered and return false
@@ -137,7 +151,7 @@ impl DropZone {
         drop.num_claims_registered += num_to_refund;
         self.drop_for_id.insert(&drop_id, &drop);
 
-        env::log_str(&format!("Unsuccessful refund for drop ID {}. {} keys added back as registered. Returning false.", drop_id, num_to_refund));
+        near_sdk::log!("Unsuccessful refund for drop ID {}. {} keys added back as registered. Returning false.", drop_id, num_to_refund);
         false
     }
 
@@ -157,21 +171,24 @@ impl DropZone {
         // If things went wrong, we need to delete the data and refund the user.
         if result.is_none() {
             // Refund the funder any excess $NEAR
-            env::log_str(&format!("Unsuccessful query to get storage. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
+            near_sdk::log!(
+                "Unsuccessful query to get storage. Refunding funder's balance: {}",
+                yocto_to_near(required_deposit)
+            );
             // Remove the drop
             let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             // Clear the map
             drop.pks.clear();
             let funder_id = drop.funder_id.clone();
-            
+
             // Remove the drop ID from the funder's list
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
-            
+
             // Loop through the keys and remove the public keys' mapping
             for pk in public_keys {
                 self.drop_id_for_pk.remove(&pk.clone());
             }
-            
+
             // Refund the user's balance for the required deposit
             let mut user_balance = self.user_balances.get(&funder_id).unwrap();
             user_balance += required_deposit;
@@ -181,25 +198,28 @@ impl DropZone {
         }
 
         // Try to get the storage balance bounds from the result of the promise
-		if let Ok(StorageBalanceBounds{ min, max: _ }) = near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result.unwrap()) {
+        if let Ok(StorageBalanceBounds { min, max: _ }) =
+            near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result.unwrap())
+        {
             let mut drop = self.drop_for_id.get(&drop_id).unwrap();
             let funder_id = drop.funder_id.clone();
 
             // Get the current user balance ad ensure that they have the extra $NEAR for covering the FT storage
             let mut cur_user_balance = self.user_balances.get(&funder_id).unwrap();
-            let extra_storage_required =  min.0 * drop.drop_config.max_claims_per_key as u128 * pub_keys_len;
-            
+            let extra_storage_required =
+                min.0 * drop.drop_config.max_claims_per_key as u128 * pub_keys_len;
+
             // Ensure the user's current balance can cover the extra storage required
             if cur_user_balance < extra_storage_required {
-                env::log_str(&format!("Not enough balance to cover FT storage for each key and their claims. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
+                near_sdk::log!("Not enough balance to cover FT storage for each key and their claims. Refunding funder's balance: {}", yocto_to_near(required_deposit));
                 // Remove the drop
                 self.drop_for_id.remove(&drop_id).unwrap();
                 // Clear the map
                 drop.pks.clear();
-                
+
                 // Remove the drop ID from the funder's list
                 self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
-                
+
                 // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
                 for pk in public_keys {
                     self.drop_id_for_pk.remove(&pk.clone());
@@ -216,65 +236,68 @@ impl DropZone {
             if let DropType::FT(mut ft_data) = drop.drop_type {
                 ft_data.ft_storage = min;
                 drop.drop_type = DropType::FT(ft_data);
-    
-                self.drop_for_id.insert(
-                    &drop_id, 
-                    &drop
-                );
-    
+
+                self.drop_for_id.insert(&drop_id, &drop);
+
                 // Decrement the user's balance by the extra required and insert back into the map
                 cur_user_balance -= extra_storage_required;
                 self.user_balances.insert(&funder_id, &cur_user_balance);
-    
+
                 // Create the keys for the contract
                 let promise = env::promise_batch_create(&env::current_account_id());
-            
+
                 // Decide what methods the access keys can call
                 let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
                 if drop.drop_config.only_call_claim.unwrap_or(false) {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
 
-                // Dynamically calculate the access key allowance
-                let access_key_allowance = self.calculate_base_allowance(drop.required_gas_attached);
+                // Get the number of claims per key
+                let num_claims_per_key = drop.drop_config.max_claims_per_key;
+                // Calculate the base allowance to attach
+                let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas_attached);
+                // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
+                let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
 
                 // Loop through each public key and create the access keys
                 for pk in public_keys.clone() {
                     env::promise_batch_action_add_key_with_function_call(
-                        promise, 
-                        &pk, 
-                        0, 
-                        access_key_allowance, 
-                        &env::current_account_id(), 
-                        access_key_method_names
+                        promise,
+                        &pk,
+                        0,
+                        actual_allowance,
+                        &env::current_account_id(),
+                        access_key_method_names,
                     );
                 }
-    
+
                 env::promise_return(promise);
-    
+
                 // Everything went well and we return true
-                return true
+                return true;
             } else {
                 false
             }
-
         } else {
             // Refund the funder any excess $NEAR
-            env::log_str(&format!("Unsuccessful query to get storage. Refunding funder's balance: {}", yocto_to_near(required_deposit)));
+            near_sdk::log!(
+                "Unsuccessful query to get storage. Refunding funder's balance: {}",
+                yocto_to_near(required_deposit)
+            );
             // Remove the drop
             let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
             // Clear the map
             drop.pks.clear();
             let funder_id = drop.funder_id.clone();
-            
+
             // Remove the drop ID from the funder's list
             self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
-            
+
             // Loop through the keys and remove the public keys' mapping
             for pk in public_keys {
                 self.drop_id_for_pk.remove(&pk.clone());
             }
-            
+
             // Refund the user's balance for the required deposit
             let mut user_balance = self.user_balances.get(&funder_id).unwrap();
             user_balance += required_deposit;
@@ -289,10 +312,10 @@ impl DropZone {
         &mut self,
         claim_succeeded: bool,
         ft_data: FTData,
-        account_id: AccountId
+        account_id: AccountId,
     ) {
         /*
-            Fungible Tokens. 
+            Fungible Tokens.
             - Only send the FTs if the sender ended up sending the contract the tokens.
         */
         // Only send the fungible tokens to the new account if the claim was successful. We return the FTs if it wasn't successful in the else case.
@@ -308,8 +331,8 @@ impl DropZone {
                 json!({ "account_id": account_id }).to_string().as_bytes(),
                 ft_data.ft_storage.0,
                 MIN_GAS_FOR_STORAGE_DEPOSIT,
-                GasWeight(1)
-            );  
+                GasWeight(1),
+            );
 
             // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
             // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
@@ -324,7 +347,8 @@ impl DropZone {
 
             // Create the second batch promise to execute after the batch_ft_promise_id batch is finished executing.
             // It will execute on the current account ID (this contract)
-            let batch_ft_resolve_promise_id = env::promise_batch_then(batch_ft_promise_id, &env::current_account_id());
+            let batch_ft_resolve_promise_id =
+                env::promise_batch_then(batch_ft_promise_id, &env::current_account_id());
 
             // Execute a function call as part of the resolved promise index created in promise_batch_then
             // Callback after both the storage was deposited and the fungible tokens were sent
@@ -337,9 +361,8 @@ impl DropZone {
                 MIN_GAS_FOR_RESOLVE_BATCH,
                 GasWeight(3)
             );
-
         } else {
-            // Create a new batch promise to pay storage and refund the FTs to the original sender 
+            // Create a new batch promise to pay storage and refund the FTs to the original sender
             let batch_ft_promise_id = env::promise_batch_create(&ft_data.ft_contract);
 
             // Send the fungible tokens (after the storage deposit is finished since these run sequentially)
@@ -347,10 +370,12 @@ impl DropZone {
             env::promise_batch_action_function_call_weight(
                 batch_ft_promise_id,
                 "storage_deposit",
-                json!({ "account_id": ft_data.ft_sender }).to_string().as_bytes(),
+                json!({ "account_id": ft_data.ft_sender })
+                    .to_string()
+                    .as_bytes(),
                 ft_data.ft_storage.0,
                 MIN_GAS_FOR_STORAGE_DEPOSIT,
-                GasWeight(1)
+                GasWeight(1),
             );
 
             // Send the fungible tokens (after the storage deposit is finished since these run sequentially)

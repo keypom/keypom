@@ -1,5 +1,4 @@
 use crate::*;
-    
 
 #[near_bindgen]
 impl DropZone {
@@ -33,10 +32,9 @@ impl DropZone {
         let amount = self.fees_collected;
         self.fees_collected = 0;
 
-        Promise::new(withdraw_to).transfer(amount).then(
-            Self::ext(env::current_account_id())
-                .on_withdraw_fees(amount)
-        )
+        Promise::new(withdraw_to)
+            .transfer(amount)
+            .then(Self::ext(env::current_account_id()).on_withdraw_fees(amount))
     }
 
     /// Callback for withdrawing fees on the contract
@@ -47,7 +45,7 @@ impl DropZone {
         // If something went wrong, set the fees collected again
         if result.is_none() {
             self.fees_collected += fees_collected;
-            return false
+            return false;
         }
 
         true

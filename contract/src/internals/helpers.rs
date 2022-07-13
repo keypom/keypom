@@ -20,10 +20,13 @@ impl DropZone {
         let required_allowance = ((attached_gas.0 + RECEIPT_GAS_COST.0) as f32 * pow_outcome
             + RECEIPT_GAS_COST.0 as f32) as u128
             * self.yocto_per_gas;
-        env::log_str(&format!(
+        near_sdk::log!(
             "{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}",
-            calls_with_gas, attached_gas.0, pow_outcome, required_allowance
-        ));
+            calls_with_gas,
+            attached_gas.0,
+            pow_outcome,
+            required_allowance
+        );
 
         required_allowance
     }
