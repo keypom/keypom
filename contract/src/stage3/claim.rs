@@ -14,7 +14,18 @@ impl DropZone {
         let drop_data = drop_data_option.unwrap();
         let storage_freed = storage_freed_option.unwrap();
 
-        self.internal_transfer_and_execute(drop_data, account_id, storage_freed, token_id, storage_for_longest);
+        // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
+        let account_to_transfer = if drop_data.drop_config.refund_if_claim.unwrap_or(false) == true {drop_data.funder_id.clone()} else {account_id.clone()};
+
+        let mut promise = None;
+        // Only create a promise to transfer $NEAR if the drop's balance is > 0.
+        if drop_data.balance.0 > 0 {
+            // Send the account ID the desired balance.
+            promise = Some(Promise::new(account_to_transfer).transfer(drop_data.balance.0));
+        }
+
+        // Execute the callback depending on the drop type. If the drop balance is 0, the promise will be none and the callback function will just straight up be executed instead of resolving the promise.
+        self.internal_execute(drop_data, account_id, storage_freed, token_id, storage_for_longest, promise);
 
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -37,7 +48,19 @@ impl DropZone {
         let drop_data = drop_data_option.unwrap();
         let storage_freed = storage_freed_option.unwrap();
 
-        self.internal_create_account_and_execute(drop_data, new_account_id, new_public_key, storage_freed, token_id, storage_for_longest);
+        // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
+        let promise = ext_linkdrop::ext(self.linkdrop_contract.clone())
+            // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
+            .with_attached_deposit(drop_data.balance.0)
+            .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
+            .with_unused_gas_weight(0)
+            .create_account(
+                new_account_id.clone(),
+                new_public_key,  
+            );
+        
+        // Execute the callback depending on the drop type. We'll pass in the promise to resolve
+        self.internal_execute(drop_data, new_account_id, storage_freed, token_id, storage_for_longest, Some(promise));
 
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -120,7 +143,7 @@ impl DropZone {
             claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
         }
         env::log_str(&format!("Has function been executed via CCC: {}", !execute));
-        
+
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
         
