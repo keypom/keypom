@@ -11,12 +11,21 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let OFFSET = 0.1;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 3;
+let NUM_KEYS = 1;
 
 let NETWORK_ID = "testnet";
 let near;
 let config;
 let keyStore;
+
+let drop_config = {
+	max_claims_per_key: 2,
+
+	start_timestamp: 0,
+	usage_interval: 6e11, // 10 minutes
+	refund_if_claim: false,
+	only_call_claim: false
+}
 
 /*
 	Hard coding NFT contract and metadata. Change this if you want.
@@ -117,7 +126,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length + DROP_FEE).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length * drop_config.max_claims_per_key + DROP_FEE).toString()
 			)
 		);
 	} catch(e) {
@@ -136,7 +145,8 @@ async function start() {
 			{
 				public_keys: pubKeys,
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
-				nft_data
+				nft_data,
+				drop_config
 			}, 
 			"300000000000000"
 		);

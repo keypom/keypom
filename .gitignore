@@ -11,6 +11,10 @@
 .cache
 .parcel-cache
 
+**/pks*
+**/views-add*
+**/views-create*
+
 #contracts
 target
 out
