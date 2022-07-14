@@ -94,7 +94,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length * drop_config.max_claims_per_key).toString()
 			)
 		);
 	} catch(e) {

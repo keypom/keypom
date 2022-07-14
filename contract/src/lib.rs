@@ -2,24 +2,24 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::serde_json::{json};
+use near_sdk::serde_json::json;
 use near_sdk::{
-    env, ext_contract, near_bindgen, AccountId, BorshStorageKey, Gas, PanicOnDefault,
-    Promise, PromiseResult, PublicKey, PromiseOrValue, promise_result_as_success, CryptoHash,
-    require, Balance
+    env, ext_contract, near_bindgen, promise_result_as_success, require, AccountId, Balance,
+    BorshStorageKey, CryptoHash, Gas, PanicOnDefault, Promise, PromiseOrValue, PromiseResult,
+    PublicKey,
 };
 
-/* 
+/*
     minimum amount of storage required to store an access key on the contract
     1_330_000_000_000_000_000_000 Simple linkdrop: 0.00133 $NEAR
     2_420_000_000_000_000_000_000 NFT Linkdrop: 0.00242 $NEAR
 */
-const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N 
+const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N
 
-/* 
-    minimum amount of NEAR that a new account (with longest possible name) must have when created 
+/*
+    minimum amount of NEAR that a new account (with longest possible name) must have when created
     If this is less, it will throw a lack balance for state error (assuming you have the same account ID length)
-*/ 
+*/
 const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000; // 0.00284 N
 
 /// Indicates there are no deposit for a callback for better readability.
@@ -32,7 +32,8 @@ const MIN_GAS_FOR_ON_CLAIM: Gas = Gas(55_000_000_000_000); // 55 TGas
 
 // NFTs
 const MIN_GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000); // 10 TGas
-const MIN_GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(15_000_000_000_000 + MIN_GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
+const MIN_GAS_FOR_RESOLVE_TRANSFER: Gas =
+    Gas(15_000_000_000_000 + MIN_GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
 
 // FTs
 // Actual amount of GAS to attach when querying the storage balance bounds. No unspent GAS will be attached on top of this (weight of 0)
@@ -40,7 +41,8 @@ const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000); // 10 TGas
 const MIN_GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000); // 25 TGas
 const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000); // 5 TGas
 const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000); // 5 TGas
-const MIN_GAS_FOR_RESOLVE_BATCH: Gas = Gas(13_000_000_000_000 + MIN_GAS_FOR_FT_TRANSFER.0 + MIN_GAS_FOR_STORAGE_DEPOSIT.0); // 13 TGas + 5 TGas + 5 TGas = 23 TGas
+const MIN_GAS_FOR_RESOLVE_BATCH: Gas =
+    Gas(13_000_000_000_000 + MIN_GAS_FOR_FT_TRANSFER.0 + MIN_GAS_FOR_STORAGE_DEPOSIT.0); // 13 TGas + 5 TGas + 5 TGas = 23 TGas
 
 // Specifies the GAS being attached from the wallet site
 const ATTACHED_GAS_FROM_WALLET: Gas = Gas(100_000_000_000_000); // 100 TGas
@@ -60,8 +62,8 @@ const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim";
 /*
     FEES
 */
-const DROP_CREATION_FEE: u128 = 1_000_000_000_000_000_000_000_000; // 0.1 N 
-const KEY_ADDITION_FEE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N 
+const DROP_CREATION_FEE: u128 = 1_000_000_000_000_000_000_000_000; // 0.1 N
+const KEY_ADDITION_FEE: u128 = 5_000_000_000_000_000_000_000; // 0.005 N
 
 const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000); // 10 TGas
 
@@ -72,8 +74,8 @@ mod stage3;
 mod views;
 
 use internals::*;
-use stage2::*;
 use stage1::*;
+use stage2::*;
 
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
@@ -91,7 +93,7 @@ enum StorageKey {
     DropIdsForFunderInner { account_id_hash: CryptoHash },
     PksForDrop { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
-    UserBalances
+    UserBalances,
 }
 
 #[near_bindgen]
@@ -100,11 +102,11 @@ pub struct DropZone {
     pub owner_id: AccountId,
     // Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
     pub linkdrop_contract: AccountId,
-    
+
     // Map each key to a nonce rather than repeating each drop data in memory
     pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
     // Map the nonce to a specific drop
-    pub drop_for_id: LookupMap<DropId, Drop>,    
+    pub drop_for_id: LookupMap<DropId, Drop>,
     // Keep track of the drop ids for each funder for pagination
     pub drop_ids_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
 
@@ -115,12 +117,12 @@ pub struct DropZone {
 
     // keep track of the balances for each user. This is to prepay for drop creations
     pub user_balances: LookupMap<AccountId, Balance>,
-    
+
     // Keep track of a nonce used for the drop IDs
     pub nonce: DropId,
 
     // Keep track of the price of 1 GAS per 1 yocto
-    pub yocto_per_gas: u128
+    pub yocto_per_gas: u128,
 }
 
 #[near_bindgen]
@@ -142,7 +144,7 @@ impl DropZone {
             drop_fee: DROP_CREATION_FEE,
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
-            yocto_per_gas: 100_000_000
+            yocto_per_gas: 100_000_000,
         }
     }
 }

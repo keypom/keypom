@@ -9,11 +9,15 @@ impl DropZone {
         let deposit = env::attached_deposit();
 
         // Get the balance of the account (if the account isn't in the map we default to a balance of 0)
-        let mut balance: u128 = self.user_balances.get(&env::predecessor_account_id()).unwrap_or(0);
+        let mut balance: u128 = self
+            .user_balances
+            .get(&env::predecessor_account_id())
+            .unwrap_or(0);
         // Add the deposit to their balance
         balance += deposit;
         // Insert the balance back into the map for that account ID
-        self.user_balances.insert(&env::predecessor_account_id(), &balance);
+        self.user_balances
+            .insert(&env::predecessor_account_id(), &balance);
     }
 
     // Allows users to withdraw their balance
