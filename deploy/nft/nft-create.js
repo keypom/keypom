@@ -152,7 +152,7 @@ async function start() {
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
 				nft_data,
 				drop_config,
-				drop_metadata
+				drop_metadata: JSON.stringify(drop_metadata)
 			}, 
 			"300000000000000"
 		);

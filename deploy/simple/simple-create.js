@@ -126,7 +126,7 @@ async function start() {
 				public_keys: pubKeys,
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
 				drop_config,
-				drop_metadata
+				drop_metadata: JSON.stringify(drop_metadata)
 			}, 
 			"300000000000000"
 		);
