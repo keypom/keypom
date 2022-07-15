@@ -46,14 +46,8 @@ pub struct DropConfig {
     pub only_call_claim: Option<bool>,
 }
 
-/// Keep track of different configuration options for each key in a drop
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct DropMetadata {
-    pub title: Option<String>,       // The title of this specific drop.
-    pub description: Option<String>, // A longer description of the drop.
-    pub media: Option<String>, // URL to associated media. Preferably to decentralized, content-addressed storage.
-}
+// Drop Metadata should be a string which can be JSON or anything the users want.
+pub type DropMetadata = String;
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
 #[derive(BorshDeserialize, BorshSerialize)]
