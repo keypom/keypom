@@ -255,7 +255,8 @@ impl DropZone {
                 // Get the number of claims per key
                 let num_claims_per_key = drop.drop_config.max_claims_per_key;
                 // Calculate the base allowance to attach
-                let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas_attached);
+                let calculated_base_allowance =
+                    self.calculate_base_allowance(drop.required_gas_attached);
                 // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
                 let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
 

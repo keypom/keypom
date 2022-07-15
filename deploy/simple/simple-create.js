@@ -27,6 +27,11 @@ let drop_config = {
 	only_call_claim: false
 }
 
+let drop_metadata = {
+	title: "This is a title",
+	description: "This is a description"
+}
+
 // set up near
 const initiateNear = async () => {
 	const CREDENTIALS_DIR = ".near-credentials";
@@ -120,7 +125,8 @@ async function start() {
 			{
 				public_keys: pubKeys,
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
-				drop_config
+				drop_config,
+				drop_metadata: JSON.stringify(drop_metadata)
 			}, 
 			"300000000000000"
 		);
