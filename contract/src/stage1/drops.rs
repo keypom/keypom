@@ -151,7 +151,10 @@ impl DropZone {
             .clone()
             .and_then(|d| d.config.and_then(|c| c.gas_if_straight_execute))
         {
-            require!(balance.0 == 0, "cannot specify gas to attach and have a balance in the linkdrop");
+            require!(
+                balance.0 == 0,
+                "cannot specify gas to attach and have a balance in the linkdrop"
+            );
             require!(
                 gas <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE,
                 &format!(

@@ -596,7 +596,7 @@ impl DropZone {
                 } else {
                     0 as usize
                 };
-                
+
                 should_continue = data
                     .method_data
                     .iter()
