@@ -5,13 +5,19 @@ impl DropZone {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
-        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest) =
+        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest, should_continue) =
             self.process_claim();
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
             return;
         }
+
+        if should_continue == false {
+            near_sdk::log!("Empty function call. Returning.");
+            return;
+        }
+
         let drop_data = drop_data_option.unwrap();
         let storage_freed = storage_freed_option.unwrap();
 
@@ -57,13 +63,19 @@ impl DropZone {
         new_account_id: AccountId,
         new_public_key: PublicKey,
     ) {
-        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest) =
+        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest, should_continue) =
             self.process_claim();
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
             return;
         }
+
+        if should_continue == false {
+            near_sdk::log!("Empty function call. Returning.");
+            return;
+        }
+
         let drop_data = drop_data_option.unwrap();
         let storage_freed = storage_freed_option.unwrap();
 
@@ -420,10 +432,14 @@ impl DropZone {
         Option<Drop>,
         // Drop ID for the drop
         Option<DropId>,
-        // Balance for the 
+        // How much storage was freed
         Option<Balance>,
+        // Next token ID to claim
         Option<String>,
+        // Storage for the longest token ID
         Option<Balance>,
+        // Should we return and not do anything once the drop is claimed (if FC data is none)
+        bool
     ) {
         let mut used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -476,7 +492,7 @@ impl DropZone {
             near_sdk::log!("Allowance is now {}", key_usage.allowance);
             drop.pks.insert(&signer_pk, &key_usage);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None);
+            return (None, None, None, None, None, false);
         }
 
         // Ensure enough time has passed if a start timestamp was specified in the config.
@@ -497,20 +513,29 @@ impl DropZone {
             near_sdk::log!("Allowance is now {}", key_usage.allowance);
             drop.pks.insert(&signer_pk, &key_usage);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None);
+            return (None, None, None, None, None, false);
         }
-
+        
+        /*
+            If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
+            If it's an FC drop, get the next method data and check if it's none (to skip transfer of funds)
+        */ 
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
         let mut token_id = None;
         // Default the storage for longest to be none and return the actual value if it's an NFT drop
         let mut storage_for_longest = None;
-
-        // If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
+        // Default the should continue variable to true. If the next FC method is None, we set it to false
+        let mut should_continue = true;
         match &mut drop.drop_type {
             DropType::NFT(data) => {
                 token_id = data.token_ids.iter().next();
                 data.token_ids.remove(token_id.as_ref().unwrap());
                 storage_for_longest = Some(data.storage_for_longest);
+            }
+            DropType::FC(data) => {
+                // The starting index is the max claims per key - the number of uses left
+                let starting_index = (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
+                should_continue = data.method_data.iter().skip(starting_index).next().unwrap().is_some();
             }
             _ => {}
         };
@@ -550,7 +575,7 @@ impl DropZone {
                 near_sdk::log!("Allowance is now {}", key_usage.allowance);
                 drop.pks.insert(&signer_pk, &key_usage);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, None);
+                return (None, None, None, None, None, false);
             }
 
             near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
@@ -620,6 +645,7 @@ impl DropZone {
             Some(total_storage_freed),
             token_id,
             storage_for_longest,
+            should_continue
         )
     }
 }
