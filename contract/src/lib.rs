@@ -48,7 +48,7 @@ const MIN_GAS_FOR_RESOLVE_BATCH: Gas =
 const ATTACHED_GAS_FROM_WALLET: Gas = Gas(100_000_000_000_000); // 100 TGas
 
 // Specifies the amount of GAS to attach on top of the FC Gas if executing a regular function call in claim
-const GAS_OFFSET_IF_FC_EXECUTE: Gas = Gas(10_000_000_000_000); // 10 TGas
+const GAS_OFFSET_IF_FC_EXECUTE: Gas = Gas(20_000_000_000_000); // 20 TGas
 
 // Actual amount of GAS to attach when creating a new account. No unspent GAS will be attached on top of this (weight of 0)
 const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas

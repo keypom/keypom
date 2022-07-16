@@ -23,7 +23,7 @@ let drop_config = {
 	max_claims_per_key: 2,
 
 	start_timestamp: 0,
-	usage_interval: 6e11, // 10 minutes
+	// usage_interval: 6e11, // 10 minutes
 	refund_if_claim: false,
 	only_call_claim: false
 }

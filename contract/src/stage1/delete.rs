@@ -8,13 +8,18 @@ use crate::*;
 impl DropZone {
     /*
         User can pass in a vector of public keys or a drop ID.
-        If a drop ID is passed in, it will auto delete up to limit. 
-        If limit is not specified, auto assume 100 keys from the drop. 
+        If a drop ID is passed in, it will auto delete up to limit.
+        If limit is not specified, auto assume 100 keys from the drop.
         All keys must be from the same drop ID.
 
         All keys must be unregistered (NFTs / FTs refunded) for the drop.
     */
-    pub fn delete_keys(&mut self, drop_id: DropId, public_keys: Option<Vec<PublicKey>>, limit: Option<u8>) {
+    pub fn delete_keys(
+        &mut self,
+        drop_id: DropId,
+        public_keys: Option<Vec<PublicKey>>,
+        limit: Option<u8>,
+    ) {
         // Measure initial storage before doing any operations
         let initial_storage = env::storage_usage();
 
@@ -68,7 +73,10 @@ impl DropZone {
             keys_to_delete = keys;
 
             let len = keys_to_delete.len() as u128;
-            require!(len <= limit.unwrap_or(100) as u128, "cannot delete more than 100 keys at a time");
+            require!(
+                len <= limit.unwrap_or(100) as u128,
+                "cannot delete more than 100 keys at a time"
+            );
             near_sdk::log!("Removing {} keys from the drop", len);
 
             // Loop through and remove keys
@@ -81,28 +89,37 @@ impl DropZone {
 
                 // If the drop is FC, we need to loop through method data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
-                if let DropType::FC(data) = drop.drop_type {
+                if let DropType::FC(data) = &drop.drop_type {
                     let num_fcs = data.method_data.len() as u64;
-            
+
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
-                    // For all the claims. In this case, we need to tally all the deposits for each claim. 
+                    // For all the claims. In this case, we need to tally all the deposits for each claim.
                     if drop.drop_config.max_claims_per_key > 1 && num_fcs == 1 {
-                        let deposit = data.method_data.iter().next().unwrap().expect("cannot have a single none function call").deposit.0;
+                        let deposit = data
+                            .method_data
+                            .iter()
+                            .next()
+                            .unwrap()
+                            .clone()
+                            .expect("cannot have a single none function call")
+                            .deposit
+                            .0;
                         total_deposit_value += key_usage.num_uses as u128 * deposit;
-                    
+
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index = (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
+                        let starting_index =
+                            (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
                             total_num_none_fcs += method.is_some() as u64;
-                            total_deposit_value += method.map(|m| m.deposit.0).unwrap_or(0);
+                            total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
                         }
                     }
                 }
-    
+
                 // Increment the allowance left by whatever is left on the key
                 total_allowance_left += key_usage.allowance;
             }
@@ -143,10 +160,7 @@ impl DropZone {
                 + ft_optional_costs_per_claim * total_num_claims_left as u128
                 + total_deposit_value
                 + total_allowance_left
-                + (ACCESS_KEY_STORAGE
-                    + nft_optional_costs_per_key
-                )
-                * len;
+                + (ACCESS_KEY_STORAGE + nft_optional_costs_per_key) * len;
 
             near_sdk::log!(
                 "Total refund: {}
@@ -189,28 +203,37 @@ impl DropZone {
 
                 // If the drop is FC, we need to loop through method data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
-                if let DropType::FC(data) = drop.drop_type {
+                if let DropType::FC(data) = &drop.drop_type {
                     let num_fcs = data.method_data.len() as u64;
-            
+
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
-                    // For all the claims. In this case, we need to tally all the deposits for each claim. 
+                    // For all the claims. In this case, we need to tally all the deposits for each claim.
                     if drop.drop_config.max_claims_per_key > 1 && num_fcs == 1 {
-                        let deposit = data.method_data.iter().next().unwrap().expect("cannot have a single none function call").deposit.0;
+                        let deposit = data
+                            .method_data
+                            .iter()
+                            .next()
+                            .unwrap()
+                            .clone()
+                            .expect("cannot have a single none function call")
+                            .deposit
+                            .0;
                         total_deposit_value += key_usage.num_uses as u128 * deposit;
-                    
+
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index = (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
+                        let starting_index =
+                            (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
                             total_num_none_fcs += method.is_some() as u64;
-                            total_deposit_value += method.map(|m| m.deposit.0).unwrap_or(0);
+                            total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
                         }
                     }
                 }
-                
+
                 // Increment the allowance left by whatever is left on the key
                 total_allowance_left += key_usage.allowance;
             }
@@ -251,10 +274,7 @@ impl DropZone {
                 + ft_optional_costs_per_claim * total_num_claims_left as u128
                 + total_deposit_value
                 + total_allowance_left
-                + (ACCESS_KEY_STORAGE
-                    + nft_optional_costs_per_key
-                )
-                * len;
+                + (ACCESS_KEY_STORAGE + nft_optional_costs_per_key) * len;
 
             near_sdk::log!(
                 "Total refund: {}

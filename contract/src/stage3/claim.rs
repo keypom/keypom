@@ -5,8 +5,15 @@ impl DropZone {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
-        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest, should_continue) =
-            self.process_claim();
+        let (
+            drop_data_option,
+            drop_id,
+            storage_freed_option,
+            token_id,
+            storage_for_longest,
+            should_continue,
+            cur_claims_for_key,
+        ) = self.process_claim();
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -40,6 +47,7 @@ impl DropZone {
         self.internal_execute(
             drop_data,
             drop_id.unwrap(),
+            cur_claims_for_key,
             account_id,
             storage_freed,
             token_id,
@@ -63,8 +71,15 @@ impl DropZone {
         new_account_id: AccountId,
         new_public_key: PublicKey,
     ) {
-        let (drop_data_option, drop_id, storage_freed_option, token_id, storage_for_longest, should_continue) =
-            self.process_claim();
+        let (
+            drop_data_option,
+            drop_id,
+            storage_freed_option,
+            token_id,
+            storage_for_longest,
+            should_continue,
+            cur_claims_for_key,
+        ) = self.process_claim();
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -91,6 +106,7 @@ impl DropZone {
         self.internal_execute(
             drop_data,
             drop_id.unwrap(),
+            cur_claims_for_key,
             new_account_id,
             storage_freed,
             token_id,
@@ -345,6 +361,10 @@ impl DropZone {
         fc_data: FCData,
         // Drop ID for the specific drop
         drop_id: DropId,
+        // How many uses the key had left before it was decremented
+        cur_num_claims_left: u64,
+        // How many uses the key had left before it was decremented
+        max_claims_per_key: u64,
         // Was this function invoked via an execute (no callback)
         execute: bool,
     ) -> bool {
@@ -376,14 +396,30 @@ impl DropZone {
             yocto_to_near(storage_used)
         );
 
+        // The starting index is the max claims per key - the number of uses left. If the method data is of size 1, use that instead
+        let cur_len = fc_data.method_data.len() as u16;
+        let starting_index = if cur_len > 1 {
+            (max_claims_per_key - cur_num_claims_left) as usize
+        } else {
+            0 as usize
+        };
+        let cur_method_data = fc_data
+            .method_data
+            .iter()
+            .skip(starting_index)
+            .next()
+            .unwrap()
+            .clone()
+            .unwrap();
+
         // If not successful, the balance and deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             near_sdk::log!(
                 "Claim unsuccessful. Refunding linkdrop balance: {} and deposit: {}",
                 balance.0,
-                fc_data.deposit.0
+                cur_method_data.deposit.0
             );
-            amount_to_refund += balance.0 + fc_data.deposit.0
+            amount_to_refund += balance.0 + cur_method_data.deposit.0
         }
 
         /*
@@ -396,7 +432,14 @@ impl DropZone {
             1 0     No Refund  !success  -> do refund
             1 1     No Refund   Success  -> don't do refund
         */
-        if !claim_succeeded || (!fc_data.refund_to_deposit.unwrap_or(false) && claim_succeeded) {
+        if !claim_succeeded
+            || (!fc_data
+                .config
+                .clone()
+                .and_then(|c| c.refund_to_deposit)
+                .unwrap_or(false)
+                && claim_succeeded)
+        {
             // Refunding
             near_sdk::log!(
                 "Refunding funder: {:?} balance For amount: {:?}",
@@ -415,11 +458,21 @@ impl DropZone {
                 "Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}",
                 funder_id,
                 claim_succeeded,
-                fc_data.refund_to_deposit.unwrap_or(false)
+                fc_data
+                    .config
+                    .clone()
+                    .and_then(|c| c.refund_to_deposit)
+                    .unwrap_or(false)
             );
         }
 
-        self.internal_fc_execute(fc_data, amount_to_refund, account_id, drop_id);
+        self.internal_fc_execute(
+            &cur_method_data,
+            fc_data.config,
+            amount_to_refund,
+            account_id,
+            drop_id,
+        );
         claim_succeeded
     }
 
@@ -439,7 +492,9 @@ impl DropZone {
         // Storage for the longest token ID
         Option<Balance>,
         // Should we return and not do anything once the drop is claimed (if FC data is none)
-        bool
+        bool,
+        // Current number of uses before decrementing
+        u64,
     ) {
         let mut used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -475,7 +530,8 @@ impl DropZone {
         // Remove the pk from the drop's set and check for key usage.
         // Panic doesn't affect allowance
         let mut key_usage = drop.pks.remove(&signer_pk).unwrap();
-
+        // Keep track of the current number of uses so that it can be used to index into FCData Method Data
+        let current_num_uses = key_usage.num_uses;
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
         if drop.num_claims_registered < 1 || prepaid_gas != drop.required_gas_attached {
             used_gas = env::used_gas();
@@ -492,7 +548,7 @@ impl DropZone {
             near_sdk::log!("Allowance is now {}", key_usage.allowance);
             drop.pks.insert(&signer_pk, &key_usage);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None, false);
+            return (None, None, None, None, None, false, 0);
         }
 
         // Ensure enough time has passed if a start timestamp was specified in the config.
@@ -513,13 +569,13 @@ impl DropZone {
             near_sdk::log!("Allowance is now {}", key_usage.allowance);
             drop.pks.insert(&signer_pk, &key_usage);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None, false);
+            return (None, None, None, None, None, false, 0);
         }
-        
+
         /*
             If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
             If it's an FC drop, get the next method data and check if it's none (to skip transfer of funds)
-        */ 
+        */
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
         let mut token_id = None;
         // Default the storage for longest to be none and return the actual value if it's an NFT drop
@@ -533,9 +589,21 @@ impl DropZone {
                 storage_for_longest = Some(data.storage_for_longest);
             }
             DropType::FC(data) => {
-                // The starting index is the max claims per key - the number of uses left
-                let starting_index = (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
-                should_continue = data.method_data.iter().skip(starting_index).next().unwrap().is_some();
+                // The starting index is the max claims per key - the number of uses left. If the method data is of size 1, use that instead
+                let cur_len = data.method_data.len() as u16;
+                let starting_index = if cur_len > 1 {
+                    (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize
+                } else {
+                    0 as usize
+                };
+                
+                should_continue = data
+                    .method_data
+                    .iter()
+                    .skip(starting_index)
+                    .next()
+                    .unwrap()
+                    .is_some();
             }
             _ => {}
         };
@@ -575,7 +643,7 @@ impl DropZone {
                 near_sdk::log!("Allowance is now {}", key_usage.allowance);
                 drop.pks.insert(&signer_pk, &key_usage);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, None, false);
+                return (None, None, None, None, None, false, 0);
             }
 
             near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
@@ -645,7 +713,8 @@ impl DropZone {
             Some(total_storage_freed),
             token_id,
             storage_for_longest,
-            should_continue
+            should_continue,
+            current_num_uses,
         )
     }
 }

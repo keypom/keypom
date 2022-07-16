@@ -22,7 +22,7 @@ let drop_config = {
 	max_claims_per_key: 2,
 
 	start_timestamp: 0,
-	usage_interval: 6e11, // 10 minutes
+	// usage_interval: 6e11, // 10 minutes
 	refund_if_claim: false,
 	only_call_claim: false
 }
@@ -139,18 +139,22 @@ async function start() {
 
 	try {
 		let fc_data = {
-			receiver: "nft.examples.testnet",
-			method: "nft_mint",
-			args: JSON.stringify({
-				token_id: pubKeys[0],
-				metadata: METADATA,
-			}),
-			deposit: parseNearAmount("1"),
-			refund_to_deposit: true,
-			claimed_account_field: "receiver_id",
-			// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
-			gas_if_straight_execute: "90000000000000",
-			attach_drop_id: true
+			method_data: [null, {
+				receiver: "nft.examples.testnet",
+				method: "nft_mint",
+				args: JSON.stringify({
+					token_id: pubKeys[0],
+					metadata: METADATA,
+				}),
+				deposit: parseNearAmount("1")
+			}],
+			config: {
+				refund_to_deposit: true,
+				claimed_account_field: "receiver_id",
+				// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
+				gas_if_straight_execute: "80000000000000",
+				attach_drop_id: true
+			}
 		}
 
 		await fundingAccount.functionCall(

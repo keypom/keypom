@@ -147,7 +147,11 @@ impl DropZone {
         // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
         let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
         // Depending on the FC Data, set the Gas to attach and the access key method names
-        if let Some(gas) = fc_data.and_then(|d| d.config.and_then(|c| c.gas_if_straight_execute)) {
+        if let Some(gas) = fc_data
+            .clone()
+            .and_then(|d| d.config.and_then(|c| c.gas_if_straight_execute))
+        {
+            require!(balance.0 == 0, "cannot specify gas to attach and have a balance in the linkdrop");
             require!(
                 gas <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE,
                 &format!(
@@ -284,24 +288,38 @@ impl DropZone {
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
         } else if let Some(data) = fc_data.clone() {
-            drop.drop_type = DropType::FC(data);
+            drop.drop_type = DropType::FC(data.clone());
 
             // Ensure proper method data is passed in
-            let num_fcs = data.method_data.len() as u64;
+            let num_fcs = data.clone().method_data.len() as u64;
             // If there's 1 claim, there should be 1 method defined
             if num_claims_per_key == 1 {
-                require!(num_fcs == 1, "Cannot have more FCs than the number of claims per key");
+                require!(
+                    num_fcs == 1,
+                    "Cannot have more FCs than the number of claims per key"
+                );
             // If there's more than 1 method defined, the number of methods should equal the number of claims per key
             } else if num_fcs > 1 {
-                require!(num_fcs == num_claims_per_key, "Number of FCs must match number of claims per key if more than 1 is specified");
+                require!(
+                    num_fcs == num_claims_per_key,
+                    "Number of FCs must match number of claims per key if more than 1 is specified"
+                );
             }
 
             // If there's one FC specified and more than 1 claim per key, that FC is to be used
-            // For all the claims. In this case, we need to tally all the deposits for each claim. 
+            // For all the claims. In this case, we need to tally all the deposits for each claim.
             if num_claims_per_key > 1 && num_fcs == 1 {
-                let deposit = data.method_data.iter().next().unwrap().expect("cannot have a single none function call").deposit.0;
+                let deposit = data
+                    .method_data
+                    .iter()
+                    .next()
+                    .unwrap()
+                    .clone()
+                    .expect("cannot have a single none function call")
+                    .deposit
+                    .0;
                 deposit_required_for_fc_deposits = num_claims_per_key as u128 * deposit;
-            
+
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
@@ -310,7 +328,7 @@ impl DropZone {
                     deposit_required_for_fc_deposits += method.map(|m| m.deposit.0).unwrap_or(0);
                 }
             }
-            
+
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
         } else {
@@ -348,9 +366,8 @@ impl DropZone {
                 + ACCESS_KEY_STORAGE
                 + balance.0 * (num_claims_per_key - num_none_fcs) as u128
                 + storage_per_longest * env::storage_byte_cost()
-                + deposit_required_for_fc_deposits
-            )
-            * len;
+                + deposit_required_for_fc_deposits)
+                * len;
         near_sdk::log!(
             "Current balance: {}, 
             Required Deposit: {}, 
@@ -514,7 +531,7 @@ impl DropZone {
                 drop.num_claims_registered += num_claims_per_key * len as u64;
 
                 // If GAS is specified, set the GAS to attach for allowance calculations
-                if let Some(_) = data.config.and_then(|c| c.gas_if_straight_execute) {
+                if let Some(_) = data.config.clone().and_then(|c| c.gas_if_straight_execute) {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
             }
@@ -534,24 +551,31 @@ impl DropZone {
             .expect("No user balance found");
         near_sdk::log!("Cur user balance {}", yocto_to_near(current_user_balance));
 
-
         // Get the required deposit for all the FCs
         let mut deposit_required_for_fc_deposits = 0;
         // Get the number of none FCs in FCData (if there are any)
         let mut num_none_fcs = 0;
-        if let DropType::FC(data) = drop.drop_type {
+        if let DropType::FC(data) = &drop.drop_type {
             let num_fcs = data.method_data.len() as u64;
-            
+
             // If there's one FC specified and more than 1 claim per key, that FC is to be used
-            // For all the claims. In this case, we need to tally all the deposits for each claim. 
+            // For all the claims. In this case, we need to tally all the deposits for each claim.
             if num_claims_per_key > 1 && num_fcs == 1 {
-                let deposit = data.method_data.iter().next().unwrap().expect("cannot have a single none function call").deposit.0;
+                let deposit = data
+                    .method_data
+                    .iter()
+                    .next()
+                    .unwrap()
+                    .clone()
+                    .expect("cannot have a single none function call")
+                    .deposit
+                    .0;
                 deposit_required_for_fc_deposits = num_claims_per_key as u128 * deposit;
-            
+
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
-                for method in data.method_data {
+                for method in data.method_data.clone() {
                     num_none_fcs += method.is_some() as u64;
                     deposit_required_for_fc_deposits += method.map(|m| m.deposit.0).unwrap_or(0);
                 }
@@ -562,9 +586,11 @@ impl DropZone {
         let mut nft_optional_costs_per_key = 0;
         let mut ft_optional_costs_per_claim = 0;
         match drop.drop_type {
-            DropType::NFT(data) => nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost(),
+            DropType::NFT(data) => {
+                nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost()
+            }
             DropType::FT(data) => ft_optional_costs_per_claim = data.ft_storage.0,
-            _ => {},
+            _ => {}
         };
 
         // Calculate the storage being used for the entire drop
@@ -593,9 +619,8 @@ impl DropZone {
                 + drop.balance.0 * (num_claims_per_key - num_none_fcs) as u128
                 + nft_optional_costs_per_key
                 + deposit_required_for_fc_deposits
-                + ft_optional_costs_per_claim * num_claims_per_key as u128
-            )
-            * len;
+                + ft_optional_costs_per_claim * num_claims_per_key as u128)
+                * len;
 
         near_sdk::log!(
             "Current balance: {}, 

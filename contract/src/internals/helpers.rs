@@ -79,6 +79,7 @@ impl DropZone {
         &mut self,
         drop_data: Drop,
         drop_id: DropId,
+        cur_claims_for_key: u64,
         account_id: AccountId,
         storage_freed: u128,
         token_id: Option<String>,
@@ -125,6 +126,10 @@ impl DropZone {
                     data,
                     // Drop ID
                     drop_id,
+                    // Current number of claims left on the key before decrementing
+                    cur_claims_for_key,
+                    // Maximum number of claims
+                    drop_data.drop_config.max_claims_per_key,
                 ));
             }
             DropType::NFT(data) => {
