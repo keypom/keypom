@@ -416,8 +416,11 @@ impl DropZone {
     fn process_claim(
         &mut self,
     ) -> (
+        // Drop containing all data
         Option<Drop>,
+        // Drop ID for the drop
         Option<DropId>,
+        // Balance for the 
         Option<Balance>,
         Option<String>,
         Option<Balance>,

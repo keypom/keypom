@@ -8,12 +8,13 @@ use crate::*;
 impl DropZone {
     /*
         User can pass in a vector of public keys or a drop ID.
-        If a drop ID is passed in, it will auto delete up to 100
-        keys from the drop. All keys must be from the same drop ID.
+        If a drop ID is passed in, it will auto delete up to limit. 
+        If limit is not specified, auto assume 100 keys from the drop. 
+        All keys must be from the same drop ID.
 
         All keys must be unregistered (NFTs / FTs refunded) for the drop.
     */
-    pub fn delete_keys(&mut self, public_keys: Option<Vec<PublicKey>>, drop_id: DropId) {
+    pub fn delete_keys(&mut self, drop_id: DropId, public_keys: Option<Vec<PublicKey>>, limit: Option<u8>) {
         // Measure initial storage before doing any operations
         let initial_storage = env::storage_usage();
 
@@ -26,19 +27,27 @@ impl DropZone {
             "only drop funder can delete keys"
         );
 
+        // Get optional costs
+        let mut nft_optional_costs_per_key = 0;
+        let mut ft_optional_costs_per_claim = 0;
+
         // ensure that there are no FTs or NFTs left to be refunded
         match drop_type {
-            DropType::NFT(_) => {
+            DropType::NFT(data) => {
                 require!(
                     drop.num_claims_registered == 0,
                     "NFTs must be refunded before keys are deleted"
                 );
+
+                nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost();
             }
-            DropType::FT(_) => {
+            DropType::FT(data) => {
                 require!(
                     drop.num_claims_registered == 0,
                     "FTs must be refunded before keys are deleted"
                 );
+
+                ft_optional_costs_per_claim = data.ft_storage.0;
             }
             _ => {}
         };
@@ -49,13 +58,17 @@ impl DropZone {
         let keys_to_delete;
         let mut total_allowance_left = 0;
 
+        // Get the total number of claims and none FCs across all keys being deleted
+        let mut total_num_claims_left = 0;
+        let mut total_num_none_fcs = 0;
+        let mut total_deposit_value = 0;
         // If the user passed in public keys, loop through and remove them from the drop
         if let Some(keys) = public_keys {
             // Set the keys to delete equal to the keys passed in
             keys_to_delete = keys;
 
             let len = keys_to_delete.len() as u128;
-            require!(len <= 100, "cannot delete more than 100 keys at a time");
+            require!(len <= limit.unwrap_or(100) as u128, "cannot delete more than 100 keys at a time");
             near_sdk::log!("Removing {} keys from the drop", len);
 
             // Loop through and remove keys
@@ -64,85 +77,35 @@ impl DropZone {
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
                 let key_usage = drop.pks.remove(key).expect("public key must be in drop");
+                total_num_claims_left += key_usage.num_uses;
+
+                // If the drop is FC, we need to loop through method data for the remaining number of
+                // Claims and get the deposits left along with the total number of None FCs
+                if let DropType::FC(data) = drop.drop_type {
+                    let num_fcs = data.method_data.len() as u64;
+            
+                    // If there's one FC specified and more than 1 claim per key, that FC is to be used
+                    // For all the claims. In this case, we need to tally all the deposits for each claim. 
+                    if drop.drop_config.max_claims_per_key > 1 && num_fcs == 1 {
+                        let deposit = data.method_data.iter().next().unwrap().expect("cannot have a single none function call").deposit.0;
+                        total_deposit_value += key_usage.num_uses as u128 * deposit;
+                    
+                    // In the case where either there's 1 claim per key or the number of FCs is not 1,
+                    // We can simply loop through and manually get this data
+                    } else {
+                        // We need to loop through the remaining methods. This means we should skip and start at the
+                        // MAX - keys left
+                        let starting_index = (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
+                        for method in data.method_data.iter().skip(starting_index) {
+                            total_num_none_fcs += method.is_some() as u64;
+                            total_deposit_value += method.map(|m| m.deposit.0).unwrap_or(0);
+                        }
+                    }
+                }
+    
                 // Increment the allowance left by whatever is left on the key
                 total_allowance_left += key_usage.allowance;
             }
-
-            /*
-                Refund amount consists of:
-                - Storage freed
-                - Total access key allowance left across all keys deleted
-                - Access key storage for each key * claims / key
-                - Balance for linkdrop for each key * claims / key
-
-                Optional:
-                - FC deposit for each key * claims / key
-                - storage for longest token ID for each key * claims / key
-                - FT storage registration cost for each key * claims / key
-            */
-            // Get optional costs for the drop
-            let optional_refund = match drop_type {
-                DropType::FC(data) => data.deposit.0,
-                DropType::NFT(data) => data.storage_for_longest * env::storage_byte_cost(),
-                DropType::FT(data) => data.ft_storage.0,
-                _ => 0,
-            };
-
-            // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
-            if drop.pks.len() == 0 {
-                near_sdk::log!("Drop empty. Removing from funder");
-                self.internal_remove_drop_for_funder(&funder_id, &drop_id);
-            } else {
-                near_sdk::log!("Drop non empty. Adding back. Len: {}", drop.pks.len());
-                self.drop_for_id.insert(&drop_id, &drop);
-            }
-
-            // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
-            let final_storage = env::storage_usage();
-            let total_storage_freed =
-                Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
-
-            total_refund_amount = total_storage_freed
-                + total_allowance_left
-                + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund)
-                    * drop.num_claims_registered as u128
-                    * len;
-        } else {
-            // If no PKs were passed in, attempt to remove 100 keys at a time
-            keys_to_delete = drop.pks.keys().take(100).collect();
-
-            let len = keys_to_delete.len() as u128;
-            near_sdk::log!("Removing {} keys from the drop", len);
-
-            // Loop through and remove keys
-            for key in &keys_to_delete {
-                // Unlink key to drop ID
-                self.drop_id_for_pk.remove(key);
-                // Attempt to remove the public key. panic if it didn't exist
-                let key_usage = drop.pks.remove(key).expect("public key must be in drop");
-                // Increment the allowance left by whatever is left on the key
-                total_allowance_left += key_usage.allowance;
-            }
-
-            /*
-                Refund amount consists of:
-                - Storage freed
-                - Total access key allowance left across all keys deleted
-                - Access key storage for each key * claims / key
-                - Balance for linkdrop for each key * claims / key
-
-                Optional:
-                - FC deposit for each key * claims / key
-                - storage for longest token ID for each key * claims / key
-                - FT storage registration cost for each key * claims / key
-            */
-            // Get optional costs for the drop
-            let optional_refund = match drop_type {
-                DropType::FC(data) => data.deposit.0,
-                DropType::NFT(data) => data.storage_for_longest * env::storage_byte_cost(),
-                DropType::FT(data) => data.ft_storage.0,
-                _ => 0,
-            };
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 {
@@ -163,11 +126,160 @@ impl DropZone {
                 total_storage_freed
             );
 
+            /*
+                Required deposit consists of:
+                - TOTAL Storage freed
+                - Total access key allowance for EACH key
+                - Access key storage for EACH key
+                - Balance for each key * (number of claims - claims with None for FC Data)
+
+                Optional:
+                - total FC deposits
+                - storage for longest token ID for each key
+                - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+            */
             total_refund_amount = total_storage_freed
+                + drop.balance.0 * (total_num_claims_left - total_num_none_fcs) as u128
+                + ft_optional_costs_per_claim * total_num_claims_left as u128
+                + total_deposit_value
                 + total_allowance_left
-                + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_refund)
-                    * drop.num_claims_registered as u128
-                    * len;
+                + (ACCESS_KEY_STORAGE
+                    + nft_optional_costs_per_key
+                )
+                * len;
+
+            near_sdk::log!(
+                "Total refund: {}
+                storage freed: {}
+                drop balance: {}
+                FT costs per claim: {}
+                total deposit value: {}
+                total allowance left: {}
+                access key storage: {}
+                nft optional costs per key: {}
+                total num claims left: {}
+                total num none FCs {}
+                len: {}",
+                yocto_to_near(total_refund_amount),
+                yocto_to_near(total_storage_freed),
+                yocto_to_near(drop.balance.0),
+                yocto_to_near(ft_optional_costs_per_claim),
+                yocto_to_near(total_deposit_value),
+                yocto_to_near(total_allowance_left),
+                yocto_to_near(ACCESS_KEY_STORAGE),
+                yocto_to_near(nft_optional_costs_per_key),
+                total_num_claims_left,
+                total_num_none_fcs,
+                len
+            );
+        } else {
+            // If no PKs were passed in, attempt to remove limit or 100 keys at a time
+            keys_to_delete = drop.pks.keys().take(limit.unwrap_or(100).into()).collect();
+
+            let len = keys_to_delete.len() as u128;
+            near_sdk::log!("Removing {} keys from the drop", len);
+
+            // Loop through and remove keys
+            for key in &keys_to_delete {
+                // Unlink key to drop ID
+                self.drop_id_for_pk.remove(key);
+                // Attempt to remove the public key. panic if it didn't exist
+                let key_usage = drop.pks.remove(key).expect("public key must be in drop");
+                total_num_claims_left += key_usage.num_uses;
+
+                // If the drop is FC, we need to loop through method data for the remaining number of
+                // Claims and get the deposits left along with the total number of None FCs
+                if let DropType::FC(data) = drop.drop_type {
+                    let num_fcs = data.method_data.len() as u64;
+            
+                    // If there's one FC specified and more than 1 claim per key, that FC is to be used
+                    // For all the claims. In this case, we need to tally all the deposits for each claim. 
+                    if drop.drop_config.max_claims_per_key > 1 && num_fcs == 1 {
+                        let deposit = data.method_data.iter().next().unwrap().expect("cannot have a single none function call").deposit.0;
+                        total_deposit_value += key_usage.num_uses as u128 * deposit;
+                    
+                    // In the case where either there's 1 claim per key or the number of FCs is not 1,
+                    // We can simply loop through and manually get this data
+                    } else {
+                        // We need to loop through the remaining methods. This means we should skip and start at the
+                        // MAX - keys left
+                        let starting_index = (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
+                        for method in data.method_data.iter().skip(starting_index) {
+                            total_num_none_fcs += method.is_some() as u64;
+                            total_deposit_value += method.map(|m| m.deposit.0).unwrap_or(0);
+                        }
+                    }
+                }
+                
+                // Increment the allowance left by whatever is left on the key
+                total_allowance_left += key_usage.allowance;
+            }
+
+            // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
+            if drop.pks.len() == 0 {
+                near_sdk::log!("Drop empty. Removing from funder");
+                self.internal_remove_drop_for_funder(&funder_id, &drop_id);
+            } else {
+                near_sdk::log!("Drop non empty. Adding back. Len: {}", drop.pks.len());
+                self.drop_for_id.insert(&drop_id, &drop);
+            }
+
+            // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
+            let final_storage = env::storage_usage();
+            let total_storage_freed =
+                Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
+            near_sdk::log!(
+                "Storage freed: {} bytes: {}",
+                yocto_to_near(total_storage_freed),
+                total_storage_freed
+            );
+
+            /*
+                Required deposit consists of:
+                - TOTAL Storage freed
+                - Total access key allowance for EACH key
+                - Access key storage for EACH key
+                - Balance for each key * (number of claims - claims with None for FC Data)
+
+                Optional:
+                - total FC deposits
+                - storage for longest token ID for each key
+                - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+            */
+            total_refund_amount = total_storage_freed
+                + drop.balance.0 * (total_num_claims_left - total_num_none_fcs) as u128
+                + ft_optional_costs_per_claim * total_num_claims_left as u128
+                + total_deposit_value
+                + total_allowance_left
+                + (ACCESS_KEY_STORAGE
+                    + nft_optional_costs_per_key
+                )
+                * len;
+
+            near_sdk::log!(
+                "Total refund: {}
+                storage freed: {}
+                drop balance: {}
+                FT costs per claim: {}
+                total deposit value: {}
+                total allowance left: {}
+                access key storage: {}
+                nft optional costs per key: {}
+                total num claims left: {}
+                total num none FCs {}
+                len: {}",
+                yocto_to_near(total_refund_amount),
+                yocto_to_near(total_storage_freed),
+                yocto_to_near(drop.balance.0),
+                yocto_to_near(ft_optional_costs_per_claim),
+                yocto_to_near(total_deposit_value),
+                yocto_to_near(total_allowance_left),
+                yocto_to_near(ACCESS_KEY_STORAGE),
+                yocto_to_near(nft_optional_costs_per_key),
+                total_num_claims_left,
+                total_num_none_fcs,
+                len
+            );
         }
 
         // Refund the user
