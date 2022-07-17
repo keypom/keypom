@@ -32,6 +32,13 @@ impl DropZone {
             "only drop funder can delete keys"
         );
 
+        // Get the max claims per key. Default to 1 if not specified in the drop config.
+        let max_claims_per_key = drop
+            .drop_config
+            .clone()
+            .and_then(|c| c.max_claims_per_key)
+            .unwrap_or(1);
+
         // Get optional costs
         let mut nft_optional_costs_per_key = 0;
         let mut ft_optional_costs_per_claim = 0;
@@ -94,7 +101,7 @@ impl DropZone {
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
                     // For all the claims. In this case, we need to tally all the deposits for each claim.
-                    if drop.drop_config.max_claims_per_key > 1 && num_fcs == 1 {
+                    if max_claims_per_key > 1 && num_fcs == 1 {
                         let deposit = data
                             .method_data
                             .iter()
@@ -111,8 +118,7 @@ impl DropZone {
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index =
-                            (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
+                        let starting_index = (max_claims_per_key - key_usage.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
                             total_num_none_fcs += method.is_none() as u64;
                             total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
@@ -208,7 +214,7 @@ impl DropZone {
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
                     // For all the claims. In this case, we need to tally all the deposits for each claim.
-                    if drop.drop_config.max_claims_per_key > 1 && num_fcs == 1 {
+                    if max_claims_per_key > 1 && num_fcs == 1 {
                         let deposit = data
                             .method_data
                             .iter()
@@ -225,8 +231,7 @@ impl DropZone {
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index =
-                            (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
+                        let starting_index = (max_claims_per_key - key_usage.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
                             total_num_none_fcs += method.is_none() as u64;
                             total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);

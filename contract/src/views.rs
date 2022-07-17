@@ -25,7 +25,7 @@ pub struct JsonDrop {
     pub drop_type: JsonDropType,
 
     // The drop as a whole can have a config as well
-    pub drop_config: DropConfig,
+    pub drop_config: Option<DropConfig>,
 
     // Metadata for the drop
     pub drop_metadata: Option<DropMetadata>,
@@ -64,7 +64,7 @@ pub struct JsonKeyInfo {
     pub drop_type: JsonDropType,
 
     // The drop as a whole can have a config as well
-    pub drop_config: DropConfig,
+    pub drop_config: Option<DropConfig>,
 }
 
 #[near_bindgen]

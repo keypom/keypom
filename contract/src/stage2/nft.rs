@@ -47,6 +47,13 @@ impl DropZone {
                 "token ID already registered"
             );
 
+            // Get the max claims per key. Default to 1 if not specified in the drop config.
+            let max_claims_per_key = drop
+                .drop_config
+                .clone()
+                .and_then(|c| c.max_claims_per_key)
+                .unwrap_or(1);
+
             // Re-insert the token IDs into the NFT Data struct
             nft_data.token_ids = token_ids;
 
@@ -55,9 +62,9 @@ impl DropZone {
             near_sdk::log!("drop.num_claims_registered {}", drop.num_claims_registered);
 
             // Ensure that the keys to register can't exceed the number of keys in the drop.
-            if drop.num_claims_registered > drop.pks.len() * drop.drop_config.max_claims_per_key {
+            if drop.num_claims_registered > drop.pks.len() * max_claims_per_key {
                 near_sdk::log!("Too many NFTs sent. Contract is keeping the rest.");
-                drop.num_claims_registered = drop.pks.len() * drop.drop_config.max_claims_per_key;
+                drop.num_claims_registered = drop.pks.len() * max_claims_per_key;
             }
 
             // Add the nft data back with the updated set
