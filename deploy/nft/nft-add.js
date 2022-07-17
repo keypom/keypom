@@ -18,7 +18,7 @@ let config;
 let keyStore;
 
 let drop_config = {
-	max_claims_per_key: 2,
+	// max_claims_per_key: 2,
 
 	start_timestamp: 0,
 	// usage_interval: 6e11, // 10 minutes
@@ -110,7 +110,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length * drop_config.max_claims_per_key).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET) * pubKeys.length * drop_config.max_claims_per_key || 1).toString()
 			)
 		);
 	} catch(e) {

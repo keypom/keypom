@@ -50,15 +50,22 @@ impl DropZone {
                 "FT data must match what was sent"
             );
 
+            // Get the max claims per key. Default to 1 if not specified in the drop config.
+            let max_claims_per_key = drop
+                .drop_config
+                .clone()
+                .and_then(|c| c.max_claims_per_key)
+                .unwrap_or(1);
+
             // Get the number of claims to register with the amount that is sent.
             let claims_to_register = (amount.0 / ft_data.ft_balance.0) as u64;
             drop.num_claims_registered += claims_to_register;
             near_sdk::log!("New claims registered {}", claims_to_register);
 
             // Ensure that the keys to register can't exceed the number of keys in the drop.
-            if drop.num_claims_registered > drop.pks.len() * drop.drop_config.max_claims_per_key {
+            if drop.num_claims_registered > drop.pks.len() * max_claims_per_key {
                 near_sdk::log!("Too many FTs sent. Contract is keeping the rest.");
-                drop.num_claims_registered = drop.pks.len() * drop.drop_config.max_claims_per_key;
+                drop.num_claims_registered = drop.pks.len() * max_claims_per_key;
             }
 
             // Insert the drop with the updated data
@@ -204,10 +211,16 @@ impl DropZone {
             let mut drop = self.drop_for_id.get(&drop_id).unwrap();
             let funder_id = drop.funder_id.clone();
 
+            // Get the max claims per key. Default to 1 if not specified in the drop config.
+            let max_claims_per_key = drop
+                .drop_config
+                .clone()
+                .and_then(|c| c.max_claims_per_key)
+                .unwrap_or(1);
+
             // Get the current user balance ad ensure that they have the extra $NEAR for covering the FT storage
             let mut cur_user_balance = self.user_balances.get(&funder_id).unwrap();
-            let extra_storage_required =
-                min.0 * drop.drop_config.max_claims_per_key as u128 * pub_keys_len;
+            let extra_storage_required = min.0 * max_claims_per_key as u128 * pub_keys_len;
 
             // Ensure the user's current balance can cover the extra storage required
             if cur_user_balance < extra_storage_required {
@@ -248,12 +261,20 @@ impl DropZone {
 
                 // Decide what methods the access keys can call
                 let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-                if drop.drop_config.only_call_claim.unwrap_or(false) {
+                if drop
+                    .drop_config
+                    .clone()
+                    .and_then(|c| c.only_call_claim)
+                    .unwrap_or(false)
+                {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
 
                 // Get the number of claims per key
-                let num_claims_per_key = drop.drop_config.max_claims_per_key;
+                let num_claims_per_key = drop
+                    .drop_config
+                    .and_then(|c| c.max_claims_per_key)
+                    .unwrap_or(1);
                 // Calculate the base allowance to attach
                 let calculated_base_allowance =
                     self.calculate_base_allowance(drop.required_gas_attached);

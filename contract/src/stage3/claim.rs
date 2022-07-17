@@ -29,7 +29,12 @@ impl DropZone {
         let storage_freed = storage_freed_option.unwrap();
 
         // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
-        let account_to_transfer = if drop_data.drop_config.refund_if_claim.unwrap_or(false) == true
+        let account_to_transfer = if drop_data
+            .drop_config
+            .clone()
+            .and_then(|c| c.refund_if_claim)
+            .unwrap_or(false)
+            == true
         {
             drop_data.funder_id.clone()
         } else {
@@ -555,7 +560,8 @@ impl DropZone {
         let current_timestamp = env::block_timestamp();
         let desired_timestamp = drop
             .drop_config
-            .start_timestamp
+            .clone()
+            .and_then(|c| c.start_timestamp)
             .unwrap_or(current_timestamp);
 
         if current_timestamp < desired_timestamp {
@@ -592,7 +598,12 @@ impl DropZone {
                 // The starting index is the max claims per key - the number of uses left. If the method data is of size 1, use that instead
                 let cur_len = data.method_data.len() as u16;
                 let starting_index = if cur_len > 1 {
-                    (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize
+                    (drop
+                        .drop_config
+                        .clone()
+                        .and_then(|c| c.max_claims_per_key)
+                        .unwrap_or(1)
+                        - key_usage.num_uses) as usize
                 } else {
                     0 as usize
                 };
@@ -617,7 +628,7 @@ impl DropZone {
         );
 
         // Ensure the key is within the interval if specified
-        if let Some(interval) = drop.drop_config.usage_interval {
+        if let Some(interval) = drop.drop_config.clone().and_then(|c| c.usage_interval) {
             near_sdk::log!(
                 "Current timestamp {} last used: {} subs: {} interval: {}",
                 current_timestamp,

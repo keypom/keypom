@@ -129,7 +129,10 @@ impl DropZone {
                     // Current number of claims left on the key before decrementing
                     cur_claims_for_key,
                     // Maximum number of claims
-                    drop_data.drop_config.max_claims_per_key,
+                    drop_data
+                        .drop_config
+                        .and_then(|c| c.max_claims_per_key)
+                        .unwrap_or(1),
                 ));
             }
             DropType::NFT(data) => {

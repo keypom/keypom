@@ -29,8 +29,8 @@ pub struct KeyUsage {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct DropConfig {
-    // How many claims can each key have
-    pub max_claims_per_key: u64,
+    // How many claims can each key have. If None, default to 1.
+    pub max_claims_per_key: Option<u64>,
 
     // Minimum block timestamp that keys can be used. If None, keys can be used immediately
     // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
@@ -70,7 +70,7 @@ pub struct Drop {
     pub drop_type: DropType,
 
     // The drop as a whole can have a config as well
-    pub drop_config: DropConfig,
+    pub drop_config: Option<DropConfig>,
 
     // Metadata for the drop
     pub drop_metadata: Option<DropMetadata>,
@@ -90,7 +90,7 @@ impl DropZone {
         &mut self,
         public_keys: Vec<PublicKey>,
         balance: U128,
-        drop_config: DropConfig,
+        drop_config: Option<DropConfig>,
         drop_metadata: Option<DropMetadata>,
         ft_data: Option<FTDataConfig>,
         nft_data: Option<NFTDataConfig>,
@@ -117,7 +117,10 @@ impl DropZone {
         let len = public_keys.len() as u128;
         let drop_id = self.nonce;
         // Get the number of claims per key to dictate what key usage data we should put in the map
-        let num_claims_per_key = drop_config.max_claims_per_key;
+        let num_claims_per_key = drop_config
+            .clone()
+            .and_then(|c| c.max_claims_per_key)
+            .unwrap_or(1);
         require!(
             num_claims_per_key > 0,
             "cannot have less than 1 claim per key"
@@ -140,7 +143,11 @@ impl DropZone {
 
         // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if drop_config.only_call_claim.unwrap_or(false) {
+        if drop_config
+            .clone()
+            .and_then(|c| c.only_call_claim)
+            .unwrap_or(false)
+        {
             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
         }
 
@@ -335,6 +342,7 @@ impl DropZone {
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
         } else {
+            require!(balance.0 > 0, "Cannot have a simple drop with zero balance");
             // In simple case, we just insert the drop with whatever it was initialized with.
             self.drop_for_id.insert(&drop_id, &drop);
         }
@@ -494,7 +502,10 @@ impl DropZone {
         let initial_storage = env::storage_usage();
 
         // Get the number of claims per key
-        let num_claims_per_key = drop_config.max_claims_per_key;
+        let num_claims_per_key = drop_config
+            .clone()
+            .and_then(|c| c.max_claims_per_key)
+            .unwrap_or(1);
 
         // get the existing key set and add new PKs
         let mut exiting_key_map = drop.pks;
@@ -524,7 +535,11 @@ impl DropZone {
 
         // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if drop_config.only_call_claim.unwrap_or(false) {
+        if drop_config
+            .clone()
+            .and_then(|c| c.only_call_claim)
+            .unwrap_or(false)
+        {
             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
         }
 
