@@ -147,18 +147,23 @@ impl DropZone {
         // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
         let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
         // Depending on the FC Data, set the Gas to attach and the access key method names
-        if let Some(data) = fc_data.clone() {
-            if let Some(gas) = data.gas_if_straight_execute {
-                require!(
-                    gas <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE,
-                    &format!(
-                        "cannot attach more than {:?} GAS.",
-                        ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE
-                    )
-                );
-                gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
-                access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
-            }
+        if let Some(gas) = fc_data
+            .clone()
+            .and_then(|d| d.config.and_then(|c| c.gas_if_straight_execute))
+        {
+            require!(
+                balance.0 == 0,
+                "cannot specify gas to attach and have a balance in the linkdrop"
+            );
+            require!(
+                gas <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE,
+                &format!(
+                    "cannot attach more than {:?} GAS.",
+                    ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE
+                )
+            );
+            gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
+            access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
         }
 
         // Calculate the base allowance to attach
@@ -199,6 +204,10 @@ impl DropZone {
 
         // For NFT drops, measure the storage for adding the longest token ID
         let mut storage_per_longest = 0;
+        // Keep track of the total deposit required for the FC data (depending on None and Some cases)
+        let mut deposit_required_for_fc_deposits = 0;
+        // Keep track of the number of none FCs so we don't charge the user
+        let mut num_none_fcs = 0;
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
         if let Some(data) = nft_data {
             let NFTDataConfig {
@@ -282,7 +291,46 @@ impl DropZone {
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
         } else if let Some(data) = fc_data.clone() {
-            drop.drop_type = DropType::FC(data);
+            drop.drop_type = DropType::FC(data.clone());
+
+            // Ensure proper method data is passed in
+            let num_fcs = data.clone().method_data.len() as u64;
+            // If there's 1 claim, there should be 1 method defined
+            if num_claims_per_key == 1 {
+                require!(
+                    num_fcs == 1,
+                    "Cannot have more FCs than the number of claims per key"
+                );
+            // If there's more than 1 method defined, the number of methods should equal the number of claims per key
+            } else if num_fcs > 1 {
+                require!(
+                    num_fcs == num_claims_per_key,
+                    "Number of FCs must match number of claims per key if more than 1 is specified"
+                );
+            }
+
+            // If there's one FC specified and more than 1 claim per key, that FC is to be used
+            // For all the claims. In this case, we need to tally all the deposits for each claim.
+            if num_claims_per_key > 1 && num_fcs == 1 {
+                let deposit = data
+                    .method_data
+                    .iter()
+                    .next()
+                    .unwrap()
+                    .clone()
+                    .expect("cannot have a single none function call")
+                    .deposit
+                    .0;
+                deposit_required_for_fc_deposits = num_claims_per_key as u128 * deposit;
+
+            // In the case where either there's 1 claim per key or the number of FCs is not 1,
+            // We can simply loop through and manually get this data
+            } else {
+                for method in data.method_data {
+                    num_none_fcs += method.is_some() as u64;
+                    deposit_required_for_fc_deposits += method.map(|m| m.deposit.0).unwrap_or(0);
+                }
+            }
 
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
@@ -301,19 +349,27 @@ impl DropZone {
         // Increment the drop ID nonce
         self.nonce += 1;
 
+        /*
+            Required deposit consists of:
+            - Fees
+            - TOTAL Storage
+            - Total access key allowance for EACH key
+            - Access key storage for EACH key
+            - Balance for each key * (number of claims - claims with None for FC Data)
+
+            Optional:
+            - FC deposit for each key * num Some(data) claims
+            - storage for longest token ID for each key
+            - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+        */
         let required_deposit = self.drop_fee
             + total_required_storage
             + (self.key_fee
                 + actual_allowance
-                + (ACCESS_KEY_STORAGE
-                    + balance.0
-                    + if fc_data.is_some() {
-                        fc_data.clone().unwrap().deposit.0
-                    } else {
-                        0
-                    }
-                    + storage_per_longest * env::storage_byte_cost())
-                    * num_claims_per_key as u128)
+                + ACCESS_KEY_STORAGE
+                + balance.0 * (num_claims_per_key - num_none_fcs) as u128
+                + storage_per_longest * env::storage_byte_cost()
+                + deposit_required_for_fc_deposits)
                 * len;
         near_sdk::log!(
             "Current balance: {}, 
@@ -321,12 +377,13 @@ impl DropZone {
             Drop Fee: {}, 
             Total Required Storage: {}, 
             Key Fee: {}, 
-            ACCESS_KEY_STORAGE: {},
             ACCESS_KEY_ALLOWANCE: {}, 
+            ACCESS_KEY_STORAGE: {},
             Linkdrop Balance: {}, 
-            total function call deposits (if applicable): {}, 
             Storage for longest token ID (if applicable): {},
+            total function call deposits (if applicable): {},
             Num claims per key: {}
+            Num none FCs: {},
             length: {}
             GAS to attach: {}",
             yocto_to_near(current_user_balance),
@@ -334,16 +391,13 @@ impl DropZone {
             yocto_to_near(self.drop_fee),
             yocto_to_near(total_required_storage),
             yocto_to_near(self.key_fee),
-            yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(actual_allowance),
+            yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(balance.0),
-            yocto_to_near(if fc_data.is_some() {
-                fc_data.clone().unwrap().deposit.0
-            } else {
-                0
-            }),
             yocto_to_near(storage_per_longest * env::storage_byte_cost()),
+            yocto_to_near(deposit_required_for_fc_deposits),
             num_claims_per_key,
+            num_none_fcs,
             len,
             gas_to_attach.0
         );
@@ -480,7 +534,7 @@ impl DropZone {
                 drop.num_claims_registered += num_claims_per_key * len as u64;
 
                 // If GAS is specified, set the GAS to attach for allowance calculations
-                if let Some(_) = data.gas_if_straight_execute {
+                if let Some(_) = data.config.clone().and_then(|c| c.gas_if_straight_execute) {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
             }
@@ -500,12 +554,46 @@ impl DropZone {
             .expect("No user balance found");
         near_sdk::log!("Cur user balance {}", yocto_to_near(current_user_balance));
 
-        // Get optional costs for the drop
-        let optional_costs = match drop.drop_type {
-            DropType::FC(data) => data.deposit.0,
-            DropType::NFT(data) => data.storage_for_longest * env::storage_byte_cost(),
-            DropType::FT(data) => data.ft_storage.0,
-            _ => 0,
+        // Get the required deposit for all the FCs
+        let mut deposit_required_for_fc_deposits = 0;
+        // Get the number of none FCs in FCData (if there are any)
+        let mut num_none_fcs = 0;
+        if let DropType::FC(data) = &drop.drop_type {
+            let num_fcs = data.method_data.len() as u64;
+
+            // If there's one FC specified and more than 1 claim per key, that FC is to be used
+            // For all the claims. In this case, we need to tally all the deposits for each claim.
+            if num_claims_per_key > 1 && num_fcs == 1 {
+                let deposit = data
+                    .method_data
+                    .iter()
+                    .next()
+                    .unwrap()
+                    .clone()
+                    .expect("cannot have a single none function call")
+                    .deposit
+                    .0;
+                deposit_required_for_fc_deposits = num_claims_per_key as u128 * deposit;
+
+            // In the case where either there's 1 claim per key or the number of FCs is not 1,
+            // We can simply loop through and manually get this data
+            } else {
+                for method in data.method_data.clone() {
+                    num_none_fcs += method.is_some() as u64;
+                    deposit_required_for_fc_deposits += method.map(|m| m.deposit.0).unwrap_or(0);
+                }
+            }
+        }
+
+        // Get optional costs
+        let mut nft_optional_costs_per_key = 0;
+        let mut ft_optional_costs_per_claim = 0;
+        match drop.drop_type {
+            DropType::NFT(data) => {
+                nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost()
+            }
+            DropType::FT(data) => ft_optional_costs_per_claim = data.ft_storage.0,
+            _ => {}
         };
 
         // Calculate the storage being used for the entire drop
@@ -514,23 +602,42 @@ impl DropZone {
             Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
         near_sdk::log!("Total required storage Yocto {}", total_required_storage);
 
-        // Required deposit is the existing storage per key + key fee * length of public keys (plus all other basic stuff)
+        /*
+            Required deposit consists of:
+            - Fees
+            - TOTAL Storage
+            - Total access key allowance for EACH key
+            - Access key storage for EACH key
+            - Balance for each key * (number of claims - claims with None for FC Data)
+
+            Optional:
+            - FC deposit for each key * num Some(data) claims
+            - storage for longest token ID for each key
+            - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+        */
         let required_deposit = total_required_storage
             + (self.key_fee
                 + actual_allowance
-                + (ACCESS_KEY_STORAGE + drop.balance.0 + optional_costs)
-                    * num_claims_per_key as u128)
+                + ACCESS_KEY_STORAGE
+                + drop.balance.0 * (num_claims_per_key - num_none_fcs) as u128
+                + nft_optional_costs_per_key
+                + deposit_required_for_fc_deposits
+                + ft_optional_costs_per_claim * num_claims_per_key as u128)
                 * len;
+
         near_sdk::log!(
-            "Current User Balance: {}, 
-            Required Deposit: {}, 
-            Total required storage: {}, 
-            Key fee: {}, 
-            ACCESS_KEY_ALLOWANCE: {},
-            ACCESS_KEY_STORAGE: {}, 
-            Balance per key: {}, 
-            optional costs: {}, 
-            Number of claims per key: {},
+            "Current balance: {}, 
+            Required Deposit: {},  
+            Total Required Storage: {}, 
+            Key Fee: {}, 
+            ACCESS_KEY_ALLOWANCE: {}, 
+            ACCESS_KEY_STORAGE: {},
+            Linkdrop Balance: {}, 
+            NFT Optional costs per key: {},
+            total function call deposits per key: {},
+            FT Optional costs per claim: {},
+            Num claims per key: {}
+            Num none FCs: {},
             length: {}",
             yocto_to_near(current_user_balance),
             yocto_to_near(required_deposit),
@@ -539,9 +646,12 @@ impl DropZone {
             yocto_to_near(actual_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(drop.balance.0),
-            yocto_to_near(optional_costs),
+            yocto_to_near(nft_optional_costs_per_key),
+            yocto_to_near(deposit_required_for_fc_deposits),
+            yocto_to_near(ft_optional_costs_per_claim),
             num_claims_per_key,
-            len
+            num_none_fcs,
+            len,
         );
         /*
             Ensure the attached deposit can cover:
