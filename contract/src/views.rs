@@ -275,16 +275,6 @@ impl DropZone {
         }
     }
 
-    /// Returns if the current token ID lives in the NFT drop
-    pub fn drop_contains_token_id(&self, drop_id: DropId, token_id: String) -> bool {
-        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        if let DropType::NFT(nft_data) = drop.drop_type {
-            nft_data.token_ids.contains(&token_id)
-        } else {
-            false
-        }
-    }
-
     /// Paginate through token IDs in a drop
     pub fn get_token_ids_for_drop(
         &self,

@@ -1,3 +1,5 @@
+use near_sdk::collections::Vector;
+
 use crate::*;
 
 /// Keep track of nft data. This is stored on the contract
@@ -7,7 +9,7 @@ pub struct NFTData {
     pub nft_contract: AccountId,
     pub longest_token_id: String,
     pub storage_for_longest: Balance,
-    pub token_ids: UnorderedSet<String>,
+    pub token_ids: Vector<String>,
 }
 
 /// Keep track of nft data. This is passed in by the user
@@ -42,10 +44,8 @@ impl DropZone {
                 "token ID must be less than largest token specified"
             );
 
-            require!(
-                token_ids.insert(&token_id) == true,
-                "token ID already registered"
-            );
+            // Push the token ID to the back of the vector
+            token_ids.push(&token_id);
 
             // Get the max claims per key. Default to 1 if not specified in the drop config.
             let max_claims_per_key = drop
@@ -72,13 +72,12 @@ impl DropZone {
 
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
-
-            // Everything went well and we don't need to return the token.
-            PromiseOrValue::Value(false);
-        }
-        {
+        } else {
             env::panic_str("drop type isn't NFT");
         }
+
+        // Everything went well and we don't need to return the token.
+        PromiseOrValue::Value(false)
     }
 
     #[private]
@@ -98,31 +97,24 @@ impl DropZone {
         if !transfer_succeeded {
             let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
             drop.num_claims_registered += token_ids.len() as u64;
+
+            if let DropType::NFT(nft_data) = &mut drop.drop_type {
+                // Loop through and add token IDs back into the vector
+                for token in &token_ids {
+                    nft_data.token_ids.push(token);
+                }
+            };
             self.drop_for_id.insert(&drop_id.0, &drop);
 
             near_sdk::log!(
-                "Transfer failed. Adding {} back to drop's keys registered",
+                "Transfer failed. Adding {} back to drop's keys registered and pushing all token IDs back",
                 token_ids.len() as u64
             );
 
             return false;
         }
 
-        // Loop through and remove each token ID from the drop's NFT data token IDs
-        let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
-        if let DropType::NFT(mut nft_data) = drop.drop_type {
-            let mut ids = nft_data.token_ids;
-
-            for id in token_ids {
-                near_sdk::log!("Removing {}. Present: {}", id, ids.remove(&id));
-            }
-
-            nft_data.token_ids = ids;
-            drop.drop_type = DropType::NFT(nft_data);
-
-            return true;
-        };
-        false
+        true
     }
 
     #[private]

@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use near_sdk::GasWeight;
 
 use crate::*;
@@ -357,7 +355,7 @@ impl DropZone {
         drop.num_claims_registered -= num_to_refund;
         self.drop_for_id.insert(&drop_id, &drop);
 
-        match drop.drop_type {
+        match &mut drop.drop_type {
             DropType::NFT(data) => {
                 /*
                     NFTs need to be batched together. Loop through and transfer all NFTs.
@@ -366,19 +364,12 @@ impl DropZone {
                     keys registered will be added back in the callback for the drop.
                 */
                 let nft_batch_index = env::promise_batch_create(&data.nft_contract);
-                let token_ids: Vec<String> = data
-                    .token_ids
-                    .iter()
-                    .take(num_to_refund.try_into().unwrap())
-                    .collect();
-                require!(
-                    token_ids.len() as u64 == num_to_refund,
-                    "not enough token IDs"
-                );
+                let mut token_ids: Vec<String> = vec![];
 
-                // TODO: delete token IDs from unordered set as mentioned in this discussion: https://github.com/mattlockyer/linkdrop/pull/6#discussion_r913345144
-                // Loop through each token ID and add a transfer to the batch
-                for token_id in token_ids.clone() {
+                // Loop through and pop / transfer all token IDs. If anything goes wrong, we send back all the token IDs, we popped and push them back in the callback.
+                for _ in 0..num_to_refund {
+                    let token_id = data.token_ids.pop().unwrap();
+                    token_ids.push(token_id.clone());
                     // Send the NFTs back to the sender
                     // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
                     env::promise_batch_action_function_call_weight(
@@ -412,11 +403,11 @@ impl DropZone {
             }
             DropType::FT(data) => {
                 // All FTs can be refunded at once. Funder responsible for registering themselves
-                ext_ft_contract::ext(data.ft_contract)
+                ext_ft_contract::ext(data.ft_contract.clone())
                     // Call ft transfer with 1 yoctoNEAR. 1/2 unspent GAS will be added on top
                     .with_attached_deposit(1)
                     .ft_transfer(
-                        data.ft_sender,
+                        data.ft_sender.clone(),
                         U128(data.ft_balance.0 * num_to_refund as u128),
                         None,
                     )
