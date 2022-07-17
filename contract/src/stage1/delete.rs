@@ -114,7 +114,7 @@ impl DropZone {
                         let starting_index =
                             (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
-                            total_num_none_fcs += method.is_some() as u64;
+                            total_num_none_fcs += method.is_none() as u64;
                             total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
                         }
                     }
@@ -228,7 +228,7 @@ impl DropZone {
                         let starting_index =
                             (drop.drop_config.max_claims_per_key - key_usage.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
-                            total_num_none_fcs += method.is_some() as u64;
+                            total_num_none_fcs += method.is_none() as u64;
                             total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
                         }
                     }
