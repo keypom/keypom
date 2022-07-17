@@ -34,7 +34,7 @@ pub struct FCConfig {
 
     // How much GAS should be attached to the function call if it's a straight execute. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
     // This makes it so the keys can only call `claim`
-    pub gas_if_straight_execute: Option<Gas>,
+    pub gas_if_claim_only: Option<Gas>,
 }
 
 /// Keep track of nft data
@@ -113,7 +113,7 @@ impl DropZone {
                     0
                 },
             fc_config
-                .and_then(|c| c.gas_if_straight_execute)
+                .and_then(|c| c.gas_if_claim_only)
                 .unwrap_or(Gas(0)),
             GasWeight(1),
         );
