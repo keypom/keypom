@@ -1,5 +1,5 @@
 use crate::*;
-use near_sdk::{require, Balance};
+use near_sdk::{require, Balance, collections::Vector};
 
 pub type DropId = u128;
 
@@ -223,8 +223,8 @@ impl DropZone {
                 longest_token_id,
             } = data;
 
-            // Create the token ID set and insert the longest token ID
-            let token_ids = UnorderedSet::new(StorageKey::TokenIdsForDrop {
+            // Create the token ID vector and insert the longest token ID
+            let token_ids = Vector::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("nft-{}{}", self.nonce, funder_id)),
             });
@@ -249,7 +249,7 @@ impl DropZone {
             let initial_nft_storage_one = env::storage_usage();
             // Now that the drop has been added, insert the longest token ID and measure storage
             if let DropType::NFT(data) = &mut drop.drop_type {
-                data.token_ids.insert(&longest_token_id);
+                data.token_ids.push(&longest_token_id);
             }
 
             // Add drop with the longest possible token ID and max storage
@@ -268,9 +268,9 @@ impl DropZone {
                 self.get_token_ids_for_drop(self.nonce, None, None)
             );
 
-            // Clear the token IDs so it's an empty set and put the storage in the drop's nft data
+            // Clear the token IDs so it's an empty vector and put the storage in the drop's nft data
             if let DropType::NFT(data) = &mut drop.drop_type {
-                data.token_ids.clear();
+                data.token_ids.pop();
                 data.storage_for_longest = storage_per_longest;
             }
 

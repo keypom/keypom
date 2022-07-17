@@ -590,8 +590,7 @@ impl DropZone {
         let mut should_continue = true;
         match &mut drop.drop_type {
             DropType::NFT(data) => {
-                token_id = data.token_ids.iter().next();
-                data.token_ids.remove(token_id.as_ref().unwrap());
+                token_id = data.token_ids.pop();
                 storage_for_longest = Some(data.storage_for_longest);
             }
             DropType::FC(data) => {
