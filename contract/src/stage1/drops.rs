@@ -149,7 +149,7 @@ impl DropZone {
         // Depending on the FC Data, set the Gas to attach and the access key method names
         if let Some(gas) = fc_data
             .clone()
-            .and_then(|d| d.config.and_then(|c| c.gas_if_straight_execute))
+            .and_then(|d| d.config.and_then(|c| c.gas_if_claim_only))
         {
             require!(
                 balance.0 == 0,
@@ -534,7 +534,7 @@ impl DropZone {
                 drop.num_claims_registered += num_claims_per_key * len as u64;
 
                 // If GAS is specified, set the GAS to attach for allowance calculations
-                if let Some(_) = data.config.clone().and_then(|c| c.gas_if_straight_execute) {
+                if let Some(_) = data.config.clone().and_then(|c| c.gas_if_claim_only) {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
             }

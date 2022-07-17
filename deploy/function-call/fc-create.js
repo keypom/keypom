@@ -152,7 +152,7 @@ async function start() {
 				refund_to_deposit: true,
 				claimed_account_field: "receiver_id",
 				// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
-				gas_if_straight_execute: "80000000000000",
+				gas_if_claim_only: "80000000000000",
 				attach_drop_id: true
 			}
 		}
