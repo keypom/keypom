@@ -104,7 +104,7 @@ async function start() {
 	try {
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'add_to_drop', 
+			'add_keys', 
 			{
 				public_keys: pubKeys,
 				drop_id: dropId

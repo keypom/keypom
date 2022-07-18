@@ -492,7 +492,7 @@ impl DropZone {
         Only the funder can call this method
     */
     #[payable]
-    pub fn add_to_drop(&mut self, public_keys: Vec<PublicKey>, drop_id: DropId) -> DropId {
+    pub fn add_keys(&mut self, public_keys: Vec<PublicKey>, drop_id: DropId) -> DropId {
         let mut drop = self
             .drop_for_id
             .get(&drop_id)
