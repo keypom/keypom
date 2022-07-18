@@ -55,16 +55,6 @@ pub struct JsonKeyInfo {
     pub drop_id: DropId,
     pub pk: PublicKey,
     pub key_usage: KeyUsage,
-    // Funder of this specific drop
-    pub funder_id: AccountId,
-    // Balance for all linkdrops of this drop
-    pub balance: U128,
-
-    // Every drop must have a type
-    pub drop_type: JsonDropType,
-
-    // The drop as a whole can have a config as well
-    pub drop_config: Option<DropConfig>,
 }
 
 #[near_bindgen]
@@ -121,26 +111,10 @@ impl DropZone {
             .expect("no drop found for drop ID");
         let key_usage = drop.pks.get(&key).unwrap();
 
-        let drop_type: JsonDropType = match drop.drop_type {
-            DropType::FC(data) => JsonDropType::FC(data),
-            DropType::NFT(data) => JsonDropType::NFT(JsonNFTData {
-                nft_contract: data.nft_contract,
-                nft_sender: data.nft_sender,
-                longest_token_id: data.longest_token_id,
-                storage_for_longest: U128(data.storage_for_longest),
-            }),
-            DropType::FT(data) => JsonDropType::FT(data),
-            _simple => JsonDropType::Simple,
-        };
-
         JsonKeyInfo {
             key_usage,
-            drop_type,
-            drop_config: drop.drop_config,
             drop_id,
             pk: key,
-            funder_id: drop.funder_id,
-            balance: drop.balance,
         }
     }
 
