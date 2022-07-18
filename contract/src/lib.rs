@@ -92,6 +92,7 @@ enum StorageKey {
     DropIdsForFunder,
     DropIdsForFunderInner { account_id_hash: CryptoHash },
     PksForDrop { account_id_hash: CryptoHash },
+    DropMetadata { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
     UserBalances,
 }

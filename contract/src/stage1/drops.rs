@@ -1,5 +1,8 @@
 use crate::*;
-use near_sdk::{collections::Vector, require, Balance};
+use near_sdk::{
+    collections::{LazyOption, Vector},
+    require, Balance,
+};
 
 pub type DropId = u128;
 
@@ -73,7 +76,7 @@ pub struct Drop {
     pub drop_config: Option<DropConfig>,
 
     // Metadata for the drop
-    pub drop_metadata: Option<DropMetadata>,
+    pub drop_metadata: LazyOption<DropMetadata>,
 }
 
 #[near_bindgen]
@@ -206,7 +209,16 @@ impl DropZone {
             drop_config: drop_config.clone(),
             num_claims_registered: num_claims_per_key * len as u64,
             required_gas_attached: gas_to_attach,
-            drop_metadata,
+            drop_metadata: LazyOption::new(
+                StorageKey::DropMetadata {
+                    // We get a new unique prefix for the collection
+                    account_id_hash: hash_account_id(&format!(
+                        "metadata-{}{}",
+                        self.nonce, funder_id
+                    )),
+                },
+                drop_metadata.as_ref(),
+            ),
         };
 
         // For NFT drops, measure the storage for adding the longest token ID
