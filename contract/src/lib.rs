@@ -77,14 +77,6 @@ use internals::*;
 use stage1::*;
 use stage2::*;
 
-pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
-    //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
-    let formatted_near = yocto / 100_000_000_000_000_000_000;
-    let near = formatted_near as f64 / 10_000_f64;
-
-    near
-}
-
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
     DropIdForPk,
