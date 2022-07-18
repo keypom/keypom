@@ -89,7 +89,7 @@ impl DropZone {
         The balance is the amount of $NEAR the sender wants each linkdrop to contain.
     */
     #[payable]
-    pub fn create_drop(
+    pub fn add_keys(
         &mut self,
         public_keys: Vec<PublicKey>,
         balance: U128,

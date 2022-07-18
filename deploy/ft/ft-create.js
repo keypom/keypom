@@ -126,7 +126,7 @@ async function start() {
 		ft_data["ft_balance"] = "25";
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'create_drop', 
+			'add_keys', 
 			{
 				public_keys: pubKeys,
 				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
