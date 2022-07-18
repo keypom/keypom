@@ -1,5 +1,5 @@
 use crate::*;
-use near_sdk::{require, Balance, collections::Vector};
+use near_sdk::{collections::Vector, require, Balance};
 
 pub type DropId = u128;
 
