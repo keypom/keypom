@@ -118,7 +118,7 @@ impl DropZone {
         }
     }
 
-    /// Returns the JsonDrop corresponding to a drop ID
+    /// Returns the JsonDrop corresponding to a drop ID. If a key is specified, it will return the drop info for that key.
     pub fn get_drop_information(
         &self,
         drop_id: Option<DropId>,
