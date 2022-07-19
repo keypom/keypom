@@ -8,6 +8,15 @@ pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
 
+/// Helper function to convert yoctoNEAR to $NEAR with 4 decimals of precision.
+pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
+    //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
+    let formatted_near = yocto / 100_000_000_000_000_000_000;
+    let near = formatted_near as f64 / 10_000_f64;
+
+    near
+}
+
 impl DropZone {
     /// Used to calculate the base allowance needed given attached GAS
     pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {
