@@ -89,8 +89,8 @@ impl DropZone {
                 // Unlink key to drop ID
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
-                let key_usage = drop.pks.remove(key).expect("public key must be in drop");
-                total_num_claims_left += key_usage.num_uses;
+                let key_info = drop.pks.remove(key).expect("public key must be in drop");
+                total_num_claims_left += key_info.num_uses;
 
                 // If the drop is FC, we need to loop through method data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
@@ -109,14 +109,14 @@ impl DropZone {
                             .expect("cannot have a single none function call")
                             .deposit
                             .0;
-                        total_deposit_value += key_usage.num_uses as u128 * deposit;
+                        total_deposit_value += key_info.num_uses as u128 * deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index = (max_claims_per_key - key_usage.num_uses) as usize;
+                        let starting_index = (max_claims_per_key - key_info.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
                             total_num_none_fcs += method.is_none() as u64;
                             total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
@@ -125,7 +125,7 @@ impl DropZone {
                 }
 
                 // Increment the allowance left by whatever is left on the key
-                total_allowance_left += key_usage.allowance;
+                total_allowance_left += key_info.allowance;
             }
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
@@ -202,8 +202,8 @@ impl DropZone {
                 // Unlink key to drop ID
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
-                let key_usage = drop.pks.remove(key).expect("public key must be in drop");
-                total_num_claims_left += key_usage.num_uses;
+                let key_info = drop.pks.remove(key).expect("public key must be in drop");
+                total_num_claims_left += key_info.num_uses;
 
                 // If the drop is FC, we need to loop through method data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
@@ -222,14 +222,14 @@ impl DropZone {
                             .expect("cannot have a single none function call")
                             .deposit
                             .0;
-                        total_deposit_value += key_usage.num_uses as u128 * deposit;
+                        total_deposit_value += key_info.num_uses as u128 * deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index = (max_claims_per_key - key_usage.num_uses) as usize;
+                        let starting_index = (max_claims_per_key - key_info.num_uses) as usize;
                         for method in data.method_data.iter().skip(starting_index) {
                             total_num_none_fcs += method.is_none() as u64;
                             total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
@@ -238,7 +238,7 @@ impl DropZone {
                 }
 
                 // Increment the allowance left by whatever is left on the key
-                total_allowance_left += key_usage.allowance;
+                total_allowance_left += key_info.allowance;
             }
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.

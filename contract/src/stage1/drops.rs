@@ -17,7 +17,7 @@ pub enum DropType {
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct KeyUsage {
+pub struct KeyInfo {
     // How many usages this key has. Once 0 is reached, the key is deleted
     pub num_uses: u64,
 
@@ -26,6 +26,9 @@ pub struct KeyUsage {
 
     // How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.
     pub allowance: u128,
+
+    // Nonce for the current key.
+    pub nonce: u64,
 }
 
 /// Keep track of different configuration options for each key in a drop
@@ -58,7 +61,7 @@ pub struct Drop {
     // Funder of this specific drop
     pub funder_id: AccountId,
     // Set of public keys associated with this drop mapped to their usages
-    pub pks: UnorderedMap<PublicKey, KeyUsage>,
+    pub pks: UnorderedMap<PublicKey, KeyInfo>,
 
     // Balance for all keys of this drop. Can be 0 if specified.
     pub balance: U128,
@@ -77,6 +80,9 @@ pub struct Drop {
 
     // Metadata for the drop
     pub drop_metadata: LazyOption<DropMetadata>,
+
+    // Keep track of the next nonce to give out to a key
+    pub next_key_nonce: u64,
 }
 
 #[near_bindgen]
@@ -138,7 +144,7 @@ impl DropZone {
 
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
-        let mut key_map: UnorderedMap<PublicKey, KeyUsage> =
+        let mut key_map: UnorderedMap<PublicKey, KeyInfo> =
             UnorderedMap::new(StorageKey::PksForDrop {
                 // We get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("{}{}", self.nonce, funder_id)),
@@ -182,19 +188,22 @@ impl DropZone {
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
 
         // Loop through and add each drop ID to the public keys. Also populate the key set.
+        let mut next_key_nonce = 0;
         for pk in &public_keys {
             key_map.insert(
                 pk,
-                &KeyUsage {
+                &KeyInfo {
                     num_uses: num_claims_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
+                    nonce: next_key_nonce,
                 },
             );
             require!(
                 self.drop_id_for_pk.insert(pk, &drop_id).is_none(),
                 "Keys cannot belong to another drop"
             );
+            next_key_nonce += 1;
         }
 
         // Add this drop ID to the funder's set of drops
@@ -219,6 +228,7 @@ impl DropZone {
                 },
                 drop_metadata.as_ref(),
             ),
+            next_key_nonce,
         };
 
         // For NFT drops, measure the storage for adding the longest token ID
@@ -527,23 +537,28 @@ impl DropZone {
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
         // Loop through and add each drop ID to the public keys. Also populate the key set.
+        let mut next_key_nonce = drop.next_key_nonce;
         for pk in public_keys.clone() {
             exiting_key_map.insert(
                 &pk,
-                &KeyUsage {
+                &KeyInfo {
                     num_uses: num_claims_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
+                    nonce: next_key_nonce,
                 },
             );
             require!(
                 self.drop_id_for_pk.insert(&pk, &drop_id).is_none(),
                 "Keys cannot belong to another drop"
             );
+            next_key_nonce += 1;
         }
 
         // Set the drop's PKs to the newly populated set
         drop.pks = exiting_key_map;
+        // Set the drop's current key nonce
+        drop.next_key_nonce = next_key_nonce;
 
         // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;

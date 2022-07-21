@@ -35,6 +35,9 @@ pub struct JsonDrop {
 
     // Ensure this drop can only be used when the function has the required gas to attach
     pub required_gas_attached: Gas,
+
+    // Keep track of the next nonce to give out to a key
+    pub next_key_nonce: u64,
 }
 
 /// Keep track of nft data
@@ -54,7 +57,7 @@ pub struct JsonKeyInfo {
     // Drop ID for the specific drop
     pub drop_id: DropId,
     pub pk: PublicKey,
-    pub key_usage: KeyUsage,
+    pub key_info: KeyInfo,
 }
 
 #[near_bindgen]
@@ -109,10 +112,10 @@ impl DropZone {
             .drop_for_id
             .get(&drop_id)
             .expect("no drop found for drop ID");
-        let key_usage = drop.pks.get(&key).unwrap();
+        let key_info = drop.pks.get(&key).unwrap();
 
         JsonKeyInfo {
-            key_usage,
+            key_info,
             drop_id,
             pk: key,
         }
@@ -163,6 +166,7 @@ impl DropZone {
             num_claims_registered: drop.num_claims_registered,
             required_gas_attached: drop.required_gas_attached,
             drop_metadata: drop.drop_metadata.get(),
+            next_key_nonce: drop.next_key_nonce,
         }
     }
 

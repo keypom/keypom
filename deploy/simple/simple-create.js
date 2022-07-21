@@ -11,7 +11,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let OFFSET = 0.1;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 1;
+let NUM_KEYS = 5;
 
 let NETWORK_ID = "testnet";
 let near;

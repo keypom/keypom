@@ -534,9 +534,9 @@ impl DropZone {
         let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
         // Remove the pk from the drop's set and check for key usage.
         // Panic doesn't affect allowance
-        let mut key_usage = drop.pks.remove(&signer_pk).unwrap();
+        let mut key_info = drop.pks.remove(&signer_pk).unwrap();
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
-        let current_num_uses = key_usage.num_uses;
+        let current_num_uses = key_info.num_uses;
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
         if drop.num_claims_registered < 1 || prepaid_gas != drop.required_gas_attached {
             used_gas = env::used_gas();
@@ -549,9 +549,9 @@ impl DropZone {
                 near_sdk::log!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop.required_gas_attached.0, amount_to_decrement, used_gas.0);
             }
 
-            key_usage.allowance -= amount_to_decrement;
-            near_sdk::log!("Allowance is now {}", key_usage.allowance);
-            drop.pks.insert(&signer_pk, &key_usage);
+            key_info.allowance -= amount_to_decrement;
+            near_sdk::log!("Allowance is now {}", key_info.allowance);
+            drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
             return (None, None, None, None, None, false, 0);
         }
@@ -571,9 +571,9 @@ impl DropZone {
                 (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
             near_sdk::log!("Drop isn't claimable until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}", desired_timestamp, current_timestamp, amount_to_decrement, used_gas.0);
 
-            key_usage.allowance -= amount_to_decrement;
-            near_sdk::log!("Allowance is now {}", key_usage.allowance);
-            drop.pks.insert(&signer_pk, &key_usage);
+            key_info.allowance -= amount_to_decrement;
+            near_sdk::log!("Allowance is now {}", key_info.allowance);
+            drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
             return (None, None, None, None, None, false, 0);
         }
@@ -602,7 +602,7 @@ impl DropZone {
                         .clone()
                         .and_then(|c| c.max_claims_per_key)
                         .unwrap_or(1)
-                        - key_usage.num_uses) as usize
+                        - key_info.num_uses) as usize
                 } else {
                     0 as usize
                 };
@@ -622,8 +622,8 @@ impl DropZone {
         let mut should_delete = true;
         near_sdk::log!(
             "Key usage last used: {:?} Num uses: {:?} (before)",
-            key_usage.last_used,
-            key_usage.num_uses
+            key_info.last_used,
+            key_info.num_uses
         );
 
         // Ensure the key is within the interval if specified
@@ -631,50 +631,50 @@ impl DropZone {
             near_sdk::log!(
                 "Current timestamp {} last used: {} subs: {} interval: {}",
                 current_timestamp,
-                key_usage.last_used,
-                current_timestamp - key_usage.last_used,
+                key_info.last_used,
+                current_timestamp - key_info.last_used,
                 interval
             );
 
-            if (current_timestamp - key_usage.last_used) < interval
-                || key_usage.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas
+            if (current_timestamp - key_info.last_used) < interval
+                || key_info.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas
             {
                 used_gas = env::used_gas();
 
                 let amount_to_decrement =
                     (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-                if (current_timestamp - key_usage.last_used) < interval {
+                if (current_timestamp - key_info.last_used) < interval {
                     near_sdk::log!("Not enough time has passed since the key was last used. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
                 } else {
-                    near_sdk::log!("Not enough allowance on the key {}. Decrementing allowance by {} Used GAS: {}", key_usage.allowance, amount_to_decrement, used_gas.0);
+                    near_sdk::log!("Not enough allowance on the key {}. Decrementing allowance by {} Used GAS: {}", key_info.allowance, amount_to_decrement, used_gas.0);
                 }
 
-                key_usage.allowance -= amount_to_decrement;
-                near_sdk::log!("Allowance is now {}", key_usage.allowance);
-                drop.pks.insert(&signer_pk, &key_usage);
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
                 return (None, None, None, None, None, false, 0);
             }
 
             near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
-            key_usage.last_used = current_timestamp;
+            key_info.last_used = current_timestamp;
         }
 
         // No uses left! The key should be deleted
-        if key_usage.num_uses == 1 {
+        if key_info.num_uses == 1 {
             near_sdk::log!("Key has no uses left. It will be deleted");
             self.drop_id_for_pk.remove(&signer_pk);
         } else {
-            key_usage.num_uses -= 1;
-            key_usage.allowance -= drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
+            key_info.num_uses -= 1;
+            key_info.allowance -= drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
             near_sdk::log!(
                 "Key has {} uses left. Decrementing allowance by {}. Allowance left: {}",
-                key_usage.num_uses,
+                key_info.num_uses,
                 drop.required_gas_attached.0 as u128 * self.yocto_per_gas,
-                key_usage.allowance
+                key_info.allowance
             );
 
-            drop.pks.insert(&signer_pk, &key_usage);
+            drop.pks.insert(&signer_pk, &key_info);
             should_delete = false;
         }
 
@@ -697,10 +697,10 @@ impl DropZone {
         if should_delete {
             // Amount to refund is the current allowance less the current execution's max GAS
             let amount_to_refund =
-                key_usage.allowance - drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
+                key_info.allowance - drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
             near_sdk::log!(
                 "Key being deleted. Allowance Currently: {}. Will refund: {}",
-                key_usage.allowance,
+                key_info.allowance,
                 amount_to_refund
             );
             // Get the funder's balance and increment it by the amount to refund
