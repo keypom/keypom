@@ -118,8 +118,25 @@ impl DropZone {
         }
     }
 
-    /// Returns the JsonDrop corresponding to a drop ID
-    pub fn get_drop_information(&self, drop_id: DropId) -> JsonDrop {
+    /// Returns the JsonDrop corresponding to a drop ID. If a key is specified, it will return the drop info for that key.
+    pub fn get_drop_information(
+        &self,
+        drop_id: Option<DropId>,
+        key: Option<PublicKey>,
+    ) -> JsonDrop {
+        // If the user doesn't specify a drop ID or a key, panic.
+        if drop_id.is_none() && key.is_none() {
+            env::panic_str("must specify either a drop ID or a public key");
+        }
+
+        // Set the drop ID to be what was passed in. If they didn't pass in a drop ID, get it
+        let mut drop_id = drop_id.unwrap_or(0);
+
+        // If the user specifies a key, use that to get the drop ID.
+        if let Some(key) = key {
+            drop_id = self.drop_id_for_pk.get(&key).expect("no drop ID for PK");
+        }
+
         let drop = self
             .drop_for_id
             .get(&drop_id)
@@ -241,7 +258,7 @@ impl DropZone {
                 // Take the first "limit" elements in the vector. If we didn't specify a limit, use 50
                 .take(limit.unwrap_or(50) as usize)
                 // Convert each ID into a JsonDrop
-                .map(|id| self.get_drop_information(id))
+                .map(|id| self.get_drop_information(Some(id), None))
                 // Collect all JsonDrops into a vector and return it
                 .collect()
         } else {
