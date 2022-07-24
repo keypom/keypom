@@ -84,7 +84,7 @@ impl DropZone {
             if should_attach {
                 final_args.insert_str(
                     final_args.len() - 1,
-                    &format!(",\"drop_id\":\"{}\"", drop_id),
+                    &format!(",\"id\":\"{}\"", drop_id),
                 );
                 near_sdk::log!("Adding drop ID to args {:?}", drop_id,);
             }
