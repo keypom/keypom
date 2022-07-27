@@ -1,6 +1,6 @@
 import { Worker, NearAccount, NEAR } from "near-workspaces";
 import anyTest, { TestFn } from "ava";
-import { defaultCallOptions, DEFAULT_DEPOSIT } from "./utils/args";
+import { assertBalanceChange, defaultCallOptions, DEFAULT_DEPOSIT } from "./utils/utils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -42,14 +42,36 @@ test('Initial nonce is 0', async t => {
     t.is(result, 0);
 });
 
-test('deposit funds to user balance', async t => {
+test('deposit & withdraw to user balance', async t => {
     const { dropzone, ali } = t.context.accounts;
     let result = await dropzone.view('get_user_balance', {account_id: ali});
     t.is(result, '0');
 
-    const foo = await ali.call(dropzone, 'add_to_balance', {}, defaultCallOptions());
-    console.log('foo: ', foo)
+    let b1 = await ali.availableBalance();
+    await ali.call(dropzone, 'add_to_balance', {}, defaultCallOptions());
+    let b2 = await ali.availableBalance();
+    t.assert(assertBalanceChange(b1, b2, new NEAR(DEFAULT_DEPOSIT), 0.01), "balance didn't decrement properly with 1% precision");
 
     result = await dropzone.view('get_user_balance', {account_id: ali});
     t.is(result, DEFAULT_DEPOSIT);
+
+    b1 = await ali.availableBalance();
+    await ali.call(dropzone, 'withdraw_from_balance', {});
+    b2 = await ali.availableBalance();
+    t.assert(assertBalanceChange(b1, b2, new NEAR(DEFAULT_DEPOSIT), 0.01), "balance didn't increment properly with 1% precision");
+
+    result = await dropzone.view('get_user_balance', {account_id: ali});
+    t.is(result, '0');
 });
+
+// test('deposit funds to user balance', async t => {
+//     const { dropzone, ali } = t.context.accounts;
+//     let result = await dropzone.view('get_user_balance', {account_id: ali});
+//     t.is(result, '0');
+
+//     const foo = await ali.call(dropzone, 'add_to_balance', {}, defaultCallOptions());
+//     console.log('foo: ', foo)
+
+//     result = await dropzone.view('get_user_balance', {account_id: ali});
+//     t.is(result, DEFAULT_DEPOSIT);
+// });
