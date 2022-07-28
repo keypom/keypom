@@ -307,4 +307,14 @@ impl DropZone {
     pub fn get_fees_collected(&self) -> U128 {
         U128(self.fees_collected)
     }
+
+    /// Returns the current GAS price stored on the contract
+    pub fn get_gas_price(&self) -> U128 {
+        U128(self.yocto_per_gas)
+    }
+
+    /// Returns the current linkdrop contract
+    pub fn get_linkdrop_contract(&self) -> String {
+        self.linkdrop_contract.to_string()
+    }
 }

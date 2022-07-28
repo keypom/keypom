@@ -24,8 +24,8 @@
 				"fc": "yarn fc-create && yarn fc-add",
 					"fc-create": "node deploy/function-call/fc-create",
 					"fc-add": "node deploy/function-call/fc-add",
-		"test": "yarn test:simple",
-			"test:simple": "ava __tests__/test-simple.ava.ts"
+		"test": "yarn test:internals",
+			"test:internals": "ava __tests__/internals/test-internals.ava.ts"
 	},
 	"dependencies": {},
 	"devDependencies": {
