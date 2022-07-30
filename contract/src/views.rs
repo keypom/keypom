@@ -4,9 +4,9 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 pub enum JsonDropType {
     Simple,
-    NFT(JsonNFTData),
-    FT(FTData),
-    FC(FCData),
+    NonFungibleToken(JsonNFTData),
+    FungibleToken(FTData),
+    FunctionCall(FCData),
 }
 
 /// Struct to return in views to query for drop info
@@ -15,37 +15,37 @@ pub enum JsonDropType {
 pub struct JsonDrop {
     // Drop ID for this drop
     pub drop_id: DropId,
-    // Funder of this specific drop
-    pub funder_id: AccountId,
+    // owner of this specific drop
+    pub owner_id: AccountId,
 
     // Balance for all keys of this drop. Can be 0 if specified.
-    pub balance: U128,
+    pub deposit_per_use: U128,
 
     // Every drop must have a type
     pub drop_type: JsonDropType,
 
     // The drop as a whole can have a config as well
-    pub drop_config: Option<DropConfig>,
+    pub config: Option<DropConfig>,
 
     // Metadata for the drop
-    pub drop_metadata: Option<DropMetadata>,
+    pub metadata: Option<DropMetadata>,
 
     // How many claims
-    pub num_claims_registered: u64,
+    pub registered_uses: u64,
 
     // Ensure this drop can only be used when the function has the required gas to attach
-    pub required_gas_attached: Gas,
+    pub required_gas: Gas,
 
     // Keep track of the next nonce to give out to a key
-    pub next_key_nonce: u64,
+    pub next_key_id: u64,
 }
 
 /// Keep track of nft data
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonNFTData {
-    pub nft_sender: AccountId,
-    pub nft_contract: AccountId,
+    pub sender_id: AccountId,
+    pub contract_id: AccountId,
     pub longest_token_id: String,
     pub storage_for_longest: U128,
 }
@@ -61,7 +61,7 @@ pub struct JsonKeyInfo {
 }
 
 #[near_bindgen]
-impl DropZone {
+impl Keypom {
     /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
     pub fn get_key_balance(&self, key: PublicKey) -> U128 {
         let drop_id = self
@@ -72,14 +72,14 @@ impl DropZone {
             .drop_for_id
             .get(&drop_id)
             .expect("no drop found for drop ID");
-        (drop.balance.0).into()
+        U128(drop.deposit_per_use)
     }
 
     /*
         CUSTOM
     */
     /// Query for the total supply of keys on the contract
-    pub fn key_total_supply(&self) -> U128 {
+    pub fn get_key_total_supply(&self) -> U128 {
         //return the length of the data_for_pk set
         U128(self.drop_id_for_pk.len() as u128)
     }
@@ -146,32 +146,32 @@ impl DropZone {
             .expect("no drop found for drop ID");
 
         let drop_type: JsonDropType = match drop.drop_type {
-            DropType::FC(data) => JsonDropType::FC(data),
-            DropType::NFT(data) => JsonDropType::NFT(JsonNFTData {
-                nft_contract: data.nft_contract,
-                nft_sender: data.nft_sender,
+            DropType::FunctionCall(data) => JsonDropType::FunctionCall(data),
+            DropType::NonFungibleToken(data) => JsonDropType::NonFungibleToken(JsonNFTData {
+                contract_id: data.contract_id,
+                sender_id: data.sender_id,
                 longest_token_id: data.longest_token_id,
                 storage_for_longest: U128(data.storage_for_longest),
             }),
-            DropType::FT(data) => JsonDropType::FT(data),
+            DropType::FungibleToken(data) => JsonDropType::FungibleToken(data),
             _simple => JsonDropType::Simple,
         };
 
         JsonDrop {
             drop_id,
-            funder_id: drop.funder_id,
-            balance: drop.balance,
+            owner_id: drop.owner_id,
+            deposit_per_use: U128(drop.deposit_per_use),
             drop_type,
-            drop_config: drop.drop_config,
-            num_claims_registered: drop.num_claims_registered,
-            required_gas_attached: drop.required_gas_attached,
-            drop_metadata: drop.drop_metadata.get(),
-            next_key_nonce: drop.next_key_nonce,
+            config: drop.config,
+            registered_uses: drop.registered_uses,
+            required_gas: drop.required_gas,
+            metadata: drop.metadata.get(),
+            next_key_id: drop.next_key_id,
         }
     }
 
     /// Returns the total supply of active keys for a given drop
-    pub fn key_supply_for_drop(&self, drop_id: DropId) -> u64 {
+    pub fn get_key_supply_for_drop(&self, drop_id: DropId) -> u64 {
         // Get the drop object and return the length
         self.drop_for_id
             .get(&drop_id)
@@ -206,10 +206,10 @@ impl DropZone {
             .collect()
     }
 
-    /// Returns the total supply of active keys for a given funder
-    pub fn key_supply_for_funder(&self, account_id: AccountId) -> u64 {
-        //get the set of drops for the passed in funder
-        let drops_for_owner = self.drop_ids_for_funder.get(&account_id);
+    /// Returns the total supply of active keys for a given owner
+    pub fn get_key_supply_for_owner(&self, account_id: AccountId) -> u64 {
+        //get the set of drops for the passed in owner
+        let drops_for_owner = self.drop_ids_for_owner.get(&account_id);
         near_sdk::log!("Drops: {:?}", drops_for_owner);
 
         //if there is some set of drops, we'll iterate through and collect all the keys
@@ -227,10 +227,10 @@ impl DropZone {
         }
     }
 
-    /// Returns the total supply of active drops for a given funder
-    pub fn drop_supply_for_funder(&self, account_id: AccountId) -> u64 {
-        //get the set of drops for the passed in funder
-        let drops_for_owner = self.drop_ids_for_funder.get(&account_id);
+    /// Returns the total supply of active drops for a given owner
+    pub fn get_drop_supply_for_owner(&self, account_id: AccountId) -> u64 {
+        //get the set of drops for the passed in owner
+        let drops_for_owner = self.drop_ids_for_owner.get(&account_id);
 
         //if there is some set of drops, we'll return the length
         if let Some(drops_for_owner) = drops_for_owner {
@@ -241,15 +241,15 @@ impl DropZone {
         }
     }
 
-    /// Return a vector of drop information for a funder
-    pub fn drops_for_funder(
+    /// Return a vector of drop information for a owner
+    pub fn get_drops_for_owner(
         &self,
         account_id: AccountId,
         from_index: Option<U128>,
         limit: Option<u64>,
     ) -> Vec<JsonDrop> {
         // Iterate through each drop ID and push JsonDrop to a vector
-        let drop_ids = self.drop_ids_for_funder.get(&account_id);
+        let drop_ids = self.drop_ids_for_owner.get(&account_id);
 
         // If there are IDs, iterate and create the vector of JsonDrops otherwise return empty array.s
         if let Some(ids) = drop_ids {
@@ -278,7 +278,7 @@ impl DropZone {
         limit: Option<u64>,
     ) -> Vec<String> {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        if let DropType::NFT(nft_data) = drop.drop_type {
+        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
             let token_ids = nft_data.token_ids;
 
             // Where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
@@ -299,12 +299,22 @@ impl DropZone {
     }
 
     /// Returns the current nonce on the contract
-    pub fn get_nonce(&self) -> u128 {
-        self.nonce
+    pub fn get_next_drop_id(&self) -> u128 {
+        self.next_drop_id
     }
 
     /// Returns how many fees the contract has collected
     pub fn get_fees_collected(&self) -> U128 {
         U128(self.fees_collected)
+    }
+
+    /// Returns the current GAS price stored on the contract
+    pub fn get_gas_price(&self) -> U128 {
+        U128(self.yocto_per_gas)
+    }
+
+    /// Returns the current linkdrop contract
+    pub fn get_root_account(&self) -> String {
+        self.root_account.to_string()
     }
 }

@@ -9,17 +9,24 @@ pub type DropId = u128;
 #[derive(BorshSerialize, BorshDeserialize)]
 pub enum DropType {
     Simple,
-    NFT(NFTData),
-    FT(FTData),
-    FC(FCData),
+    NonFungibleToken(NFTData),
+    FungibleToken(FTData),
+    FunctionCall(FCData),
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub enum ClaimPermissions {
+    Claim,
+    CreateAccountAndClaim,
 }
 
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct KeyInfo {
-    // How many usages this key has. Once 0 is reached, the key is deleted
-    pub num_uses: u64,
+    // How many uses this key has left. Once 0 is reached, the key is deleted
+    pub remaining_uses: u64,
 
     // When was the last time the key was used
     pub last_used: u64,
@@ -28,7 +35,7 @@ pub struct KeyInfo {
     pub allowance: u128,
 
     // Nonce for the current key.
-    pub nonce: u64,
+    pub key_id: u64,
 }
 
 /// Keep track of different configuration options for each key in a drop
@@ -36,20 +43,24 @@ pub struct KeyInfo {
 #[serde(crate = "near_sdk::serde")]
 pub struct DropConfig {
     // How many claims can each key have. If None, default to 1.
-    pub max_claims_per_key: Option<u64>,
+    pub uses_per_key: Option<u64>,
 
     // Minimum block timestamp that keys can be used. If None, keys can be used immediately
     // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
     pub start_timestamp: Option<u64>,
 
     // How often can a key be used
-    pub usage_interval: Option<u64>,
+    // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub throttle_timestamp: Option<u64>,
 
-    // If regular claim is called and no account is created, should the balance be refunded to the funder
-    pub refund_if_claim: Option<bool>,
+    // If claim is called, refund the deposit to the owner's balance. If None, default to false.
+    pub on_claim_refund_deposit: Option<bool>,
 
-    // Can the access key only call the claim method? Default to both method callable
-    pub only_call_claim: Option<bool>,
+    // Can the access key only call the claim method_name? Default to both method_name callable
+    pub claim_permission: Option<ClaimPermissions>,
+
+    // Root account that all sub-accounts will default to. If None, default to the global drop root.
+    pub drop_root: Option<AccountId>,
 }
 
 // Drop Metadata should be a string which can be JSON or anything the users want.
@@ -59,36 +70,36 @@ pub type DropMetadata = String;
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Drop {
     // Funder of this specific drop
-    pub funder_id: AccountId,
+    pub owner_id: AccountId,
     // Set of public keys associated with this drop mapped to their usages
     pub pks: UnorderedMap<PublicKey, KeyInfo>,
 
     // Balance for all keys of this drop. Can be 0 if specified.
-    pub balance: U128,
+    pub deposit_per_use: u128,
 
-    // How many claims
-    pub num_claims_registered: u64,
+    // How many uses are registered (for FTs and NFTs)
+    pub registered_uses: u64,
 
     // Ensure this drop can only be used when the function has the required gas to attach
-    pub required_gas_attached: Gas,
+    pub required_gas: Gas,
 
     // Every drop must have a type
     pub drop_type: DropType,
 
     // The drop as a whole can have a config as well
-    pub drop_config: Option<DropConfig>,
+    pub config: Option<DropConfig>,
 
     // Metadata for the drop
-    pub drop_metadata: LazyOption<DropMetadata>,
+    pub metadata: LazyOption<DropMetadata>,
 
     // Keep track of the next nonce to give out to a key
-    pub next_key_nonce: u64,
+    pub next_key_id: u64,
 }
 
 #[near_bindgen]
-impl DropZone {
+impl Keypom {
     /*
-        user has created a bunch of keypairs and passed in the public keys and attached some deposit.
+        user has created a bunch of keypairs and passed in the public keys and attached some attached_deposit.
         this will store the account data and allow that keys to call claim and create_account_and_claim
         on this contract.
 
@@ -98,9 +109,9 @@ impl DropZone {
     pub fn create_drop(
         &mut self,
         public_keys: Vec<PublicKey>,
-        balance: U128,
-        drop_config: Option<DropConfig>,
-        drop_metadata: Option<DropMetadata>,
+        deposit_per_use: U128,
+        config: Option<DropConfig>,
+        metadata: Option<DropMetadata>,
         ft_data: Option<FTDataConfig>,
         nft_data: Option<NFTDataConfig>,
         fc_data: Option<FCData>,
@@ -114,7 +125,7 @@ impl DropZone {
         );
 
         // Warn if the balance for each drop is less than the minimum
-        if balance.0 < NEW_ACCOUNT_BASE {
+        if deposit_per_use.0 < NEW_ACCOUNT_BASE {
             near_sdk::log!(
                 "Warning: Balance is less than absolute minimum for creating an account: {}",
                 NEW_ACCOUNT_BASE
@@ -122,23 +133,16 @@ impl DropZone {
         }
 
         // Funder is the predecessor
-        let funder_id = env::predecessor_account_id();
+        let owner_id = env::predecessor_account_id();
         let len = public_keys.len() as u128;
-        let drop_id = self.nonce;
+        let drop_id = self.next_drop_id;
         // Get the number of claims per key to dictate what key usage data we should put in the map
-        let num_claims_per_key = drop_config
-            .clone()
-            .and_then(|c| c.max_claims_per_key)
-            .unwrap_or(1);
-        require!(
-            num_claims_per_key > 0,
-            "cannot have less than 1 claim per key"
-        );
+        let num_claims_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // Get the current balance of the funder.
         let mut current_user_balance = self
             .user_balances
-            .get(&funder_id)
+            .get(&owner_id)
             .expect("No user balance found");
         near_sdk::log!("Cur User balance {}", yocto_to_near(current_user_balance));
 
@@ -147,28 +151,32 @@ impl DropZone {
         let mut key_map: UnorderedMap<PublicKey, KeyInfo> =
             UnorderedMap::new(StorageKey::PksForDrop {
                 // We get a new unique prefix for the collection
-                account_id_hash: hash_account_id(&format!("{}{}", self.nonce, funder_id)),
+                account_id_hash: hash_account_id(&format!("{}{}", self.next_drop_id, owner_id)),
             });
 
         // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if drop_config
-            .clone()
-            .and_then(|c| c.only_call_claim)
-            .unwrap_or(false)
-        {
-            access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+        if let Some(perms) = config.clone().and_then(|c| c.claim_permission) {
+            match perms {
+                // If we have a config, use the config to determine what methods the access keys can call
+                ClaimPermissions::Claim => {
+                    access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+                }
+                ClaimPermissions::CreateAccountAndClaim => {
+                    access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
+                }
+            }
         }
 
         // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
         let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
-        // Depending on the FC Data, set the Gas to attach and the access key method names
+        // Depending on the FC Data, set the Gas to attach and the access key method_name names
         if let Some(gas) = fc_data
             .clone()
-            .and_then(|d| d.config.and_then(|c| c.gas_if_claim_only))
+            .and_then(|d| d.config.and_then(|c| c.attached_gas))
         {
             require!(
-                balance.0 == 0,
+                deposit_per_use.0 == 0,
                 "cannot specify gas to attach and have a balance in the linkdrop"
             );
             require!(
@@ -188,22 +196,22 @@ impl DropZone {
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
 
         // Loop through and add each drop ID to the public keys. Also populate the key set.
-        let mut next_key_nonce = 0;
+        let mut next_key_id = 0;
         for pk in &public_keys {
             key_map.insert(
                 pk,
                 &KeyInfo {
-                    num_uses: num_claims_per_key,
+                    remaining_uses: num_claims_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
-                    nonce: next_key_nonce,
+                    key_id: next_key_id,
                 },
             );
             require!(
                 self.drop_id_for_pk.insert(pk, &drop_id).is_none(),
                 "Keys cannot belong to another drop"
             );
-            next_key_nonce += 1;
+            next_key_id += 1;
         }
 
         // Add this drop ID to the funder's set of drops
@@ -211,58 +219,58 @@ impl DropZone {
 
         // Create drop object
         let mut drop = Drop {
-            funder_id: env::predecessor_account_id(),
-            balance,
+            owner_id: env::predecessor_account_id(),
+            deposit_per_use: deposit_per_use.0,
             pks: key_map,
             drop_type: DropType::Simple, // Default to simple but will overwrite if not
-            drop_config: drop_config.clone(),
-            num_claims_registered: num_claims_per_key * len as u64,
-            required_gas_attached: gas_to_attach,
-            drop_metadata: LazyOption::new(
+            config: config.clone(),
+            registered_uses: num_claims_per_key * len as u64,
+            required_gas: gas_to_attach,
+            metadata: LazyOption::new(
                 StorageKey::DropMetadata {
                     // We get a new unique prefix for the collection
                     account_id_hash: hash_account_id(&format!(
                         "metadata-{}{}",
-                        self.nonce, funder_id
+                        self.next_drop_id, owner_id
                     )),
                 },
-                drop_metadata.as_ref(),
+                metadata.as_ref(),
             ),
-            next_key_nonce,
+            next_key_id,
         };
 
         // For NFT drops, measure the storage for adding the longest token ID
         let mut storage_per_longest = 0;
-        // Keep track of the total deposit required for the FC data (depending on None and Some cases)
+        // Keep track of the total attached_deposit required for the FC data (depending on None and Some cases)
         let mut deposit_required_for_fc_deposits = 0;
         // Keep track of the number of none FCs so we don't charge the user
         let mut num_none_fcs = 0;
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
         if let Some(data) = nft_data {
             let NFTDataConfig {
-                nft_sender,
-                nft_contract,
+                sender_id,
+                contract_id,
                 longest_token_id,
             } = data;
 
             // Create the token ID vector and insert the longest token ID
             let token_ids = Vector::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
-                account_id_hash: hash_account_id(&format!("nft-{}{}", self.nonce, funder_id)),
+                account_id_hash: hash_account_id(&format!("nft-{}{}", self.next_drop_id, owner_id)),
             });
 
             // Create the NFT data
             let actual_nft_data = NFTData {
-                nft_sender,
-                nft_contract,
+                sender_id,
+                contract_id,
                 longest_token_id: longest_token_id.clone(),
                 storage_for_longest: u128::MAX,
                 token_ids,
             };
 
             // The number of claims is 0 until NFTs are sent to the contract
-            drop.num_claims_registered = 0;
-            drop.drop_type = DropType::NFT(actual_nft_data);
+            drop.registered_uses = 0;
+            drop.drop_type = DropType::NonFungibleToken(actual_nft_data);
 
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
@@ -270,7 +278,7 @@ impl DropZone {
             // Measure how much storage it costs to insert the 1 longest token ID
             let initial_nft_storage_one = env::storage_usage();
             // Now that the drop has been added, insert the longest token ID and measure storage
-            if let DropType::NFT(data) = &mut drop.drop_type {
+            if let DropType::NonFungibleToken(data) = &mut drop.drop_type {
                 data.token_ids.push(&longest_token_id);
             }
 
@@ -287,11 +295,11 @@ impl DropZone {
             storage_per_longest = Balance::from(final_nft_storage_one - initial_nft_storage_one);
             near_sdk::log!(
                 "TOKENS BEFORE {:?}",
-                self.get_token_ids_for_drop(self.nonce, None, None)
+                self.get_token_ids_for_drop(self.next_drop_id, None, None)
             );
 
             // Clear the token IDs so it's an empty vector and put the storage in the drop's nft data
-            if let DropType::NFT(data) = &mut drop.drop_type {
+            if let DropType::NonFungibleToken(data) = &mut drop.drop_type {
                 data.token_ids.pop();
                 data.storage_for_longest = storage_per_longest;
             }
@@ -300,37 +308,37 @@ impl DropZone {
         } else if let Some(data) = ft_data.clone() {
             // If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type
             let FTDataConfig {
-                ft_sender,
-                ft_contract,
-                ft_balance,
+                sender_id,
+                contract_id,
+                balance_per_use,
             } = data;
 
             // Create the NFT data
             let actual_ft_data = FTData {
-                ft_contract,
-                ft_sender,
-                ft_balance,
+                contract_id,
+                sender_id,
+                balance_per_use,
                 ft_storage: U128(u128::MAX),
             };
 
             // The number of claims is 0 until FTs are sent to the contract
-            drop.num_claims_registered = 0;
-            drop.drop_type = DropType::FT(actual_ft_data);
+            drop.registered_uses = 0;
+            drop.drop_type = DropType::FungibleToken(actual_ft_data);
 
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
         } else if let Some(data) = fc_data.clone() {
-            drop.drop_type = DropType::FC(data.clone());
+            drop.drop_type = DropType::FunctionCall(data.clone());
 
-            // Ensure proper method data is passed in
-            let num_fcs = data.clone().method_data.len() as u64;
-            // If there's 1 claim, there should be 1 method defined
+            // Ensure proper method_name data is passed in
+            let num_fcs = data.clone().methods.len() as u64;
+            // If there's 1 claim, there should be 1 method_name defined
             if num_claims_per_key == 1 {
                 require!(
                     num_fcs == 1,
                     "Cannot have more FCs than the number of claims per key"
                 );
-            // If there's more than 1 method defined, the number of methods should equal the number of claims per key
+            // If there's more than 1 method_name defined, the number of methods should equal the number of claims per key
             } else if num_fcs > 1 {
                 require!(
                     num_fcs == num_claims_per_key,
@@ -341,30 +349,34 @@ impl DropZone {
             // If there's one FC specified and more than 1 claim per key, that FC is to be used
             // For all the claims. In this case, we need to tally all the deposits for each claim.
             if num_claims_per_key > 1 && num_fcs == 1 {
-                let deposit = data
-                    .method_data
+                let attached_deposit = data
+                    .methods
                     .iter()
                     .next()
                     .unwrap()
                     .clone()
                     .expect("cannot have a single none function call")
-                    .deposit
+                    .attached_deposit
                     .0;
-                deposit_required_for_fc_deposits = num_claims_per_key as u128 * deposit;
+                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
 
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
-                for method in data.method_data {
-                    num_none_fcs += method.is_some() as u64;
-                    deposit_required_for_fc_deposits += method.map(|m| m.deposit.0).unwrap_or(0);
+                for method_name in data.methods {
+                    num_none_fcs += method_name.is_some() as u64;
+                    deposit_required_for_fc_deposits +=
+                        method_name.map(|m| m.attached_deposit.0).unwrap_or(0);
                 }
             }
 
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&drop_id, &drop);
         } else {
-            require!(balance.0 > 0, "Cannot have a simple drop with zero balance");
+            require!(
+                deposit_per_use.0 > 0,
+                "Cannot have a simple drop with zero balance"
+            );
             // In simple case, we just insert the drop with whatever it was initialized with.
             self.drop_for_id.insert(&drop_id, &drop);
         }
@@ -377,10 +389,10 @@ impl DropZone {
         near_sdk::log!("Total required storage Yocto {}", total_required_storage);
 
         // Increment the drop ID nonce
-        self.nonce += 1;
+        self.next_drop_id += 1;
 
         /*
-            Required deposit consists of:
+            Required attached_deposit consists of:
             - Fees
             - TOTAL Storage
             - Total access key allowance for EACH key
@@ -388,7 +400,7 @@ impl DropZone {
             - Balance for each key * (number of claims - claims with None for FC Data)
 
             Optional:
-            - FC deposit for each key * num Some(data) claims
+            - FC attached_deposit for each key * num Some(data) claims
             - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
@@ -397,7 +409,7 @@ impl DropZone {
             + (self.key_fee
                 + actual_allowance
                 + ACCESS_KEY_STORAGE
-                + balance.0 * (num_claims_per_key - num_none_fcs) as u128
+                + deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128
                 + storage_per_longest * env::storage_byte_cost()
                 + deposit_required_for_fc_deposits)
                 * len;
@@ -423,7 +435,7 @@ impl DropZone {
             yocto_to_near(self.key_fee),
             yocto_to_near(actual_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
-            yocto_to_near(balance.0),
+            yocto_to_near(deposit_per_use.0),
             yocto_to_near(storage_per_longest * env::storage_byte_cost()),
             yocto_to_near(deposit_required_for_fc_deposits),
             num_claims_per_key,
@@ -433,15 +445,15 @@ impl DropZone {
         );
 
         /*
-            Ensure the attached deposit can cover:
+            Ensure the attached attached_deposit can cover:
         */
         require!(
             current_user_balance >= required_deposit,
-            "Not enough deposit"
+            "Not enough attached_deposit"
         );
-        // Decrement the user's balance by the required deposit and insert back into the map
+        // Decrement the user's balance by the required attached_deposit and insert back into the map
         current_user_balance -= required_deposit;
-        self.user_balances.insert(&funder_id, &current_user_balance);
+        self.user_balances.insert(&owner_id, &current_user_balance);
         near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
 
         // Increment our fees earned
@@ -478,10 +490,10 @@ impl DropZone {
         } else {
             /*
                 Get the storage required by the FT contract and ensure the user has attached enough
-                deposit to cover the storage and perform refunds if they overpayed.
+                attached_deposit to cover the storage and perform refunds if they overpayed.
             */
 
-            ext_ft_contract::ext(ft_data.unwrap().ft_contract)
+            ext_ft_contract::ext(ft_data.unwrap().contract_id)
                 // Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.
                 .with_static_gas(GAS_FOR_STORAGE_BALANCE_BOUNDS)
                 .with_unused_gas_weight(0)
@@ -499,7 +511,7 @@ impl DropZone {
 
     /*
         Allows users to add to an existing drop.
-        Only the funder can call this method
+        Only the funder can call this method_name
     */
     #[payable]
     pub fn add_keys(&mut self, public_keys: Vec<PublicKey>, drop_id: DropId) -> DropId {
@@ -507,8 +519,8 @@ impl DropZone {
             .drop_for_id
             .get(&drop_id)
             .expect("no drop found for ID");
-        let drop_config = &drop.drop_config;
-        let funder = &drop.funder_id;
+        let config = &drop.config;
+        let funder = &drop.owner_id;
 
         require!(
             funder == &env::predecessor_account_id(),
@@ -524,64 +536,66 @@ impl DropZone {
         let initial_storage = env::storage_usage();
 
         // Get the number of claims per key
-        let num_claims_per_key = drop_config
-            .clone()
-            .and_then(|c| c.max_claims_per_key)
-            .unwrap_or(1);
+        let num_claims_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // get the existing key set and add new PKs
         let mut exiting_key_map = drop.pks;
 
         // Calculate the base allowance to attach
-        let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas_attached);
+        let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
         // Loop through and add each drop ID to the public keys. Also populate the key set.
-        let mut next_key_nonce = drop.next_key_nonce;
+        let mut next_key_id = drop.next_key_id;
         for pk in public_keys.clone() {
             exiting_key_map.insert(
                 &pk,
                 &KeyInfo {
-                    num_uses: num_claims_per_key,
+                    remaining_uses: num_claims_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
-                    nonce: next_key_nonce,
+                    key_id: next_key_id,
                 },
             );
             require!(
                 self.drop_id_for_pk.insert(&pk, &drop_id).is_none(),
                 "Keys cannot belong to another drop"
             );
-            next_key_nonce += 1;
+            next_key_id += 1;
         }
 
         // Set the drop's PKs to the newly populated set
         drop.pks = exiting_key_map;
         // Set the drop's current key nonce
-        drop.next_key_nonce = next_key_nonce;
+        drop.next_key_id = next_key_id;
 
         // Decide what methods the access keys can call
+        // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if drop_config
-            .clone()
-            .and_then(|c| c.only_call_claim)
-            .unwrap_or(false)
-        {
-            access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+        if let Some(perms) = config.clone().and_then(|c| c.claim_permission) {
+            match perms {
+                // If we have a config, use the config to determine what methods the access keys can call
+                ClaimPermissions::Claim => {
+                    access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+                }
+                ClaimPermissions::CreateAccountAndClaim => {
+                    access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
+                }
+            }
         }
 
         // Increment the claims registered if drop is FC or Simple
         match &drop.drop_type {
-            DropType::FC(data) => {
-                drop.num_claims_registered += num_claims_per_key * len as u64;
+            DropType::FunctionCall(data) => {
+                drop.registered_uses += num_claims_per_key * len as u64;
 
                 // If GAS is specified, set the GAS to attach for allowance calculations
-                if let Some(_) = data.config.clone().and_then(|c| c.gas_if_claim_only) {
+                if let Some(_) = data.config.clone().and_then(|c| c.attached_gas) {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
             }
             DropType::Simple => {
-                drop.num_claims_registered += num_claims_per_key * len as u64;
+                drop.registered_uses += num_claims_per_key * len as u64;
             }
             _ => {}
         };
@@ -596,33 +610,34 @@ impl DropZone {
             .expect("No user balance found");
         near_sdk::log!("Cur user balance {}", yocto_to_near(current_user_balance));
 
-        // Get the required deposit for all the FCs
+        // Get the required attached_deposit for all the FCs
         let mut deposit_required_for_fc_deposits = 0;
         // Get the number of none FCs in FCData (if there are any)
         let mut num_none_fcs = 0;
-        if let DropType::FC(data) = &drop.drop_type {
-            let num_fcs = data.method_data.len() as u64;
+        if let DropType::FunctionCall(data) = &drop.drop_type {
+            let num_fcs = data.methods.len() as u64;
 
             // If there's one FC specified and more than 1 claim per key, that FC is to be used
             // For all the claims. In this case, we need to tally all the deposits for each claim.
             if num_claims_per_key > 1 && num_fcs == 1 {
-                let deposit = data
-                    .method_data
+                let attached_deposit = data
+                    .methods
                     .iter()
                     .next()
                     .unwrap()
                     .clone()
                     .expect("cannot have a single none function call")
-                    .deposit
+                    .attached_deposit
                     .0;
-                deposit_required_for_fc_deposits = num_claims_per_key as u128 * deposit;
+                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
 
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
-                for method in data.method_data.clone() {
-                    num_none_fcs += method.is_some() as u64;
-                    deposit_required_for_fc_deposits += method.map(|m| m.deposit.0).unwrap_or(0);
+                for method_name in data.methods.clone() {
+                    num_none_fcs += method_name.is_some() as u64;
+                    deposit_required_for_fc_deposits +=
+                        method_name.map(|m| m.attached_deposit.0).unwrap_or(0);
                 }
             }
         }
@@ -631,10 +646,10 @@ impl DropZone {
         let mut nft_optional_costs_per_key = 0;
         let mut ft_optional_costs_per_claim = 0;
         match drop.drop_type {
-            DropType::NFT(data) => {
+            DropType::NonFungibleToken(data) => {
                 nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost()
             }
-            DropType::FT(data) => ft_optional_costs_per_claim = data.ft_storage.0,
+            DropType::FungibleToken(data) => ft_optional_costs_per_claim = data.ft_storage.0,
             _ => {}
         };
 
@@ -645,7 +660,7 @@ impl DropZone {
         near_sdk::log!("Total required storage Yocto {}", total_required_storage);
 
         /*
-            Required deposit consists of:
+            Required attached_deposit consists of:
             - Fees
             - TOTAL Storage
             - Total access key allowance for EACH key
@@ -653,7 +668,7 @@ impl DropZone {
             - Balance for each key * (number of claims - claims with None for FC Data)
 
             Optional:
-            - FC deposit for each key * num Some(data) claims
+            - FC attached_deposit for each key * num Some(data) claims
             - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
@@ -661,7 +676,7 @@ impl DropZone {
             + (self.key_fee
                 + actual_allowance
                 + ACCESS_KEY_STORAGE
-                + drop.balance.0 * (num_claims_per_key - num_none_fcs) as u128
+                + drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128
                 + nft_optional_costs_per_key
                 + deposit_required_for_fc_deposits
                 + ft_optional_costs_per_claim * num_claims_per_key as u128)
@@ -687,7 +702,7 @@ impl DropZone {
             yocto_to_near(self.key_fee),
             yocto_to_near(actual_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
-            yocto_to_near(drop.balance.0),
+            yocto_to_near(drop.deposit_per_use),
             yocto_to_near(nft_optional_costs_per_key),
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(ft_optional_costs_per_claim),
@@ -696,13 +711,13 @@ impl DropZone {
             len,
         );
         /*
-            Ensure the attached deposit can cover:
+            Ensure the attached attached_deposit can cover:
         */
         require!(
             current_user_balance >= required_deposit,
-            "Not enough deposit"
+            "Not enough attached_deposit"
         );
-        // Decrement the user's balance by the required deposit and insert back into the map
+        // Decrement the user's balance by the required attached_deposit and insert back into the map
         current_user_balance -= required_deposit;
         self.user_balances.insert(&funder, &current_user_balance);
         near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));

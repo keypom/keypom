@@ -5,8 +5,8 @@ use crate::*;
 /// Keep track of nft data. This is stored on the contract
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct NFTData {
-    pub nft_sender: AccountId,
-    pub nft_contract: AccountId,
+    pub sender_id: AccountId,
+    pub contract_id: AccountId,
     pub longest_token_id: String,
     pub storage_for_longest: Balance,
     pub token_ids: Vector<String>,
@@ -16,13 +16,13 @@ pub struct NFTData {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct NFTDataConfig {
-    pub nft_sender: AccountId,
-    pub nft_contract: AccountId,
+    pub sender_id: AccountId,
+    pub contract_id: AccountId,
     pub longest_token_id: String,
 }
 
 #[near_bindgen]
-impl DropZone {
+impl Keypom {
     pub fn nft_on_transfer(
         &mut self,
         token_id: String,
@@ -32,11 +32,11 @@ impl DropZone {
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
-        if let DropType::NFT(mut nft_data) = drop.drop_type {
+        if let DropType::NonFungibleToken(mut nft_data) = drop.drop_type {
             let mut token_ids = nft_data.token_ids;
 
             require!(
-                nft_data.nft_sender == sender_id && nft_data.nft_contract == contract_id,
+                nft_data.sender_id == sender_id && nft_data.contract_id == contract_id,
                 "NFT data must match what was sent"
             );
             require!(
@@ -48,27 +48,27 @@ impl DropZone {
             token_ids.push(&token_id);
 
             // Get the max claims per key. Default to 1 if not specified in the drop config.
-            let max_claims_per_key = drop
-                .drop_config
+            let uses_per_key = drop
+                .config
                 .clone()
-                .and_then(|c| c.max_claims_per_key)
+                .and_then(|c| c.uses_per_key)
                 .unwrap_or(1);
 
             // Re-insert the token IDs into the NFT Data struct
             nft_data.token_ids = token_ids;
 
             // Increment the claims registered
-            drop.num_claims_registered += 1;
-            near_sdk::log!("drop.num_claims_registered {}", drop.num_claims_registered);
+            drop.registered_uses += 1;
+            near_sdk::log!("drop.registered_uses {}", drop.registered_uses);
 
             // Ensure that the keys to register can't exceed the number of keys in the drop.
-            if drop.num_claims_registered > drop.pks.len() * max_claims_per_key {
+            if drop.registered_uses > drop.pks.len() * uses_per_key {
                 near_sdk::log!("Too many NFTs sent. Contract is keeping the rest.");
-                drop.num_claims_registered = drop.pks.len() * max_claims_per_key;
+                drop.registered_uses = drop.pks.len() * uses_per_key;
             }
 
             // Add the nft data back with the updated set
-            drop.drop_type = DropType::NFT(nft_data);
+            drop.drop_type = DropType::NonFungibleToken(nft_data);
 
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
@@ -96,9 +96,9 @@ impl DropZone {
         // If not successful, the length of the token IDs needs to be added back to the drop.
         if !transfer_succeeded {
             let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
-            drop.num_claims_registered += token_ids.len() as u64;
+            drop.registered_uses += token_ids.len() as u64;
 
-            if let DropType::NFT(nft_data) = &mut drop.drop_type {
+            if let DropType::NonFungibleToken(nft_data) = &mut drop.drop_type {
                 // Loop through and add token IDs back into the vector
                 for token in &token_ids {
                     nft_data.token_ids.push(token);
@@ -161,13 +161,13 @@ impl DropZone {
         transfer_succeeded
     }
 
-    // Internal method for transfer NFTs. Whether the claim was successful or not is passed in
+    // Internal method_name for transfer NFTs. Whether the claim was successful or not is passed in
     pub(crate) fn internal_nft_transfer(
         &mut self,
         claim_succeeded: bool,
-        nft_contract: AccountId,
+        contract_id: AccountId,
         token_id: String,
-        nft_sender: AccountId,
+        sender_id: AccountId,
         account_id: AccountId,
     ) {
         /*
@@ -176,7 +176,7 @@ impl DropZone {
         // Only send the NFT to the new account if the claim was successful. We return the NFT if it wasn't successful in the else case.
         if claim_succeeded {
             // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
-            ext_nft_contract::ext(nft_contract.clone())
+            ext_nft_contract::ext(contract_id.clone())
                 // Call nft transfer with the min GAS and 1 yoctoNEAR. 1/2 unspent GAS will be added on top
                 .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
                 .with_attached_deposit(1)
@@ -188,19 +188,19 @@ impl DropZone {
                 )
                 // We then resolve the promise and call nft_resolve_transfer on our own contract
                 .then(
-                    // Call resolve transfer with the min GAS and no deposit. 1/2 unspent GAS will be added on top
+                    // Call resolve transfer with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
                     Self::ext(env::current_account_id())
                         .with_static_gas(MIN_GAS_FOR_RESOLVE_TRANSFER)
-                        .nft_resolve_transfer(token_id, nft_sender, nft_contract),
+                        .nft_resolve_transfer(token_id, sender_id, contract_id),
                 );
         } else {
             // CCC to the NFT contract to transfer the token to the new account. If this is unsuccessful, we transfer to the original token sender in the callback.
-            ext_nft_contract::ext(nft_contract)
+            ext_nft_contract::ext(contract_id)
                 // Call nft transfer with the min GAS and 1 yoctoNEAR. all unspent GAS will be added on top
                 .with_static_gas(MIN_GAS_FOR_SIMPLE_NFT_TRANSFER)
                 .with_attached_deposit(1)
                 .nft_transfer(
-                    nft_sender,
+                    sender_id,
                     token_id,
                     None,
                     Some("Linkdropped NFT".to_string()),

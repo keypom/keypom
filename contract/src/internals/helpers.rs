@@ -17,7 +17,7 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
-impl DropZone {
+impl Keypom {
     /// Used to calculate the base allowance needed given attached GAS
     pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {
         // Get the number of CCCs you can make with the attached GAS
@@ -43,7 +43,7 @@ impl DropZone {
     /// Add a drop ID to the set of drops a funder has
     pub(crate) fn internal_add_drop_to_funder(&mut self, account_id: &AccountId, drop_id: &DropId) {
         //get the set of drops for the given account
-        let mut drop_set = self.drop_ids_for_funder.get(account_id).unwrap_or_else(|| {
+        let mut drop_set = self.drop_ids_for_owner.get(account_id).unwrap_or_else(|| {
             //if the account doesn't have any drops, we create a new unordered set
             UnorderedSet::new(StorageKey::DropIdsForFunderInner {
                 //we get a new unique prefix for the collection
@@ -55,10 +55,10 @@ impl DropZone {
         drop_set.insert(drop_id);
 
         //we insert that set for the given account ID.
-        self.drop_ids_for_funder.insert(account_id, &drop_set);
+        self.drop_ids_for_owner.insert(account_id, &drop_set);
     }
 
-    //remove a drop ID for a funder (internal method and can't be called directly via CLI).
+    //remove a drop ID for a funder (internal method_name and can't be called directly via CLI).
     pub(crate) fn internal_remove_drop_for_funder(
         &mut self,
         account_id: &AccountId,
@@ -66,7 +66,7 @@ impl DropZone {
     ) {
         //we get the set of drop IDs that the funder has
         let mut drop_set = self
-            .drop_ids_for_funder
+            .drop_ids_for_owner
             .get(account_id)
             //if there is no set of drops for the owner, we panic with the following message:
             .expect("No Drops found for the funder");
@@ -74,12 +74,12 @@ impl DropZone {
         //we remove the the drop ID from  the set of drops
         drop_set.remove(drop_id);
 
-        //if the set is now empty, we remove the funder from the drop_ids_for_funder collection
+        //if the set is now empty, we remove the funder from the drop_ids_for_owner collection
         if drop_set.is_empty() {
-            self.drop_ids_for_funder.remove(account_id);
+            self.drop_ids_for_owner.remove(account_id);
         } else {
             //if the key set is not empty, we simply insert it back for the funder ID.
-            self.drop_ids_for_funder.insert(account_id, &drop_set);
+            self.drop_ids_for_owner.insert(account_id, &drop_set);
         }
     }
 
@@ -88,7 +88,7 @@ impl DropZone {
         &mut self,
         drop_data: Drop,
         drop_id: DropId,
-        cur_claims_for_key: u64,
+        cur_key_info: KeyInfo,
         account_id: AccountId,
         storage_freed: u128,
         token_id: Option<String>,
@@ -99,7 +99,7 @@ impl DropZone {
             ( $func:ident ( $($call:tt)* ) ) => {
                 if let Some(promise) = promise {
                     promise.then(
-                        // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached deposit.
+                        // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached attached_deposit.
                         Self::ext(env::current_account_id())
                         .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
                         .$func(
@@ -120,15 +120,15 @@ impl DropZone {
         }
         // Determine what callback we should use depending on the drop type
         match drop_data.drop_type {
-            DropType::FC(data) => {
+            DropType::FunctionCall(data) => {
                 // If we're dealing with a promise, execute the callback
                 resolve_promise_or_call!(on_claim_fc(
                     // Account ID that claimed the linkdrop
                     account_id,
                     // Account ID that funded the linkdrop
-                    drop_data.funder_id,
+                    drop_data.owner_id,
                     // Balance associated with the linkdrop
-                    drop_data.balance,
+                    U128(drop_data.deposit_per_use),
                     // How much storage was freed when the key was claimed
                     storage_freed,
                     // FC Data
@@ -136,42 +136,39 @@ impl DropZone {
                     // Drop ID
                     drop_id,
                     // Current number of claims left on the key before decrementing
-                    cur_claims_for_key,
+                    cur_key_info,
                     // Maximum number of claims
-                    drop_data
-                        .drop_config
-                        .and_then(|c| c.max_claims_per_key)
-                        .unwrap_or(1),
+                    drop_data.config.and_then(|c| c.uses_per_key).unwrap_or(1),
                 ));
             }
-            DropType::NFT(data) => {
+            DropType::NonFungibleToken(data) => {
                 resolve_promise_or_call!(on_claim_nft(
                     // Account ID that claimed the linkdrop
                     account_id,
                     // Account ID that funded the linkdrop
-                    drop_data.funder_id,
+                    drop_data.owner_id,
                     // Balance associated with the linkdrop
-                    drop_data.balance,
+                    U128(drop_data.deposit_per_use),
                     // How much storage was freed when the key was claimed
                     storage_freed,
                     // How much storage was prepaid to cover the longest token ID being inserted.
                     storage_for_longest.expect("no storage for longest token Id found"),
                     // Sender of the NFT
-                    data.nft_sender,
+                    data.sender_id,
                     // Contract where the NFT is stored
-                    data.nft_contract,
+                    data.contract_id,
                     // Token ID for the NFT
                     token_id.expect("no token ID found"),
                 ));
             }
-            DropType::FT(data) => {
+            DropType::FungibleToken(data) => {
                 resolve_promise_or_call!(on_claim_ft(
                     // Account ID that claimed the linkdrop
                     account_id,
                     // Account ID that funded the linkdrop
-                    drop_data.funder_id,
+                    drop_data.owner_id,
                     // Balance associated with the linkdrop
-                    drop_data.balance,
+                    U128(drop_data.deposit_per_use),
                     // How much storage was freed when the key was claimed
                     storage_freed,
                     // FT Data to be used
@@ -180,14 +177,14 @@ impl DropZone {
             }
             DropType::Simple => {
                 promise.unwrap().then(
-                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached deposit.
+                    // Call on_claim_simple with all unspent GAS + min gas for on claim. No attached attached_deposit.
                     Self::ext(env::current_account_id())
                         .with_static_gas(MIN_GAS_FOR_ON_CLAIM)
                         .on_claim_simple(
                             // Account ID that funded the linkdrop
-                            drop_data.funder_id,
+                            drop_data.owner_id,
                             // Balance associated with the linkdrop
-                            drop_data.balance,
+                            U128(drop_data.deposit_per_use),
                             // How much storage was freed when the key was claimed
                             storage_freed,
                         ),
