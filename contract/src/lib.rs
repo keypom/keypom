@@ -11,8 +11,6 @@ use near_sdk::{
 
 /*
     minimum amount of storage required to store an access key on the contract
-    1_330_000_000_000_000_000_000 Simple linkdrop: 0.00133 $NEAR
-    2_420_000_000_000_000_000_000 NFT Linkdrop: 0.00242 $NEAR
 */
 const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N
 
@@ -22,7 +20,7 @@ const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N
 */
 const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000; // 0.00284 N
 
-/// Indicates there are no deposit for a callback for better readability.
+/// Indicates there are no attached_deposit for a callback for better readability.
 const NO_DEPOSIT: u128 = 0;
 
 /*
@@ -56,8 +54,11 @@ const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
 /// Both methods callable by the function call access key
 const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim";
 
-/// Only the claim method is callable by the access key
+/// Only the claim method_name is callable by the access key
 const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim";
+
+/// Only the create_account_and_claim method_name is callable by the access key
+const ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME: &str = "create_account_and_claim";
 
 /*
     FEES
@@ -91,17 +92,17 @@ enum StorageKey {
 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
-pub struct DropZone {
+pub struct Keypom {
     pub owner_id: AccountId,
     // Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
-    pub linkdrop_contract: AccountId,
+    pub root_account: AccountId,
 
     // Map each key to a nonce rather than repeating each drop data in memory
     pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
     // Map the nonce to a specific drop
     pub drop_for_id: LookupMap<DropId, Drop>,
     // Keep track of the drop ids for each funder for pagination
-    pub drop_ids_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
+    pub drop_ids_for_owner: LookupMap<AccountId, UnorderedSet<DropId>>,
 
     // Fees taken by the contract. One is for creating a drop, the other is for each key in the drop.
     pub drop_fee: u128,
@@ -112,25 +113,25 @@ pub struct DropZone {
     pub user_balances: LookupMap<AccountId, Balance>,
 
     // Keep track of a nonce used for the drop IDs
-    pub nonce: DropId,
+    pub next_drop_id: DropId,
 
     // Keep track of the price of 1 GAS per 1 yocto
     pub yocto_per_gas: u128,
 }
 
 #[near_bindgen]
-impl DropZone {
+impl Keypom {
     /// Initialize contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
     #[init]
-    pub fn new(linkdrop_contract: AccountId, owner_id: AccountId) -> Self {
+    pub fn new(root_account: AccountId, owner_id: AccountId) -> Self {
         Self {
             owner_id,
-            linkdrop_contract,
+            root_account,
             drop_id_for_pk: UnorderedMap::new(StorageKey::DropIdForPk),
             drop_for_id: LookupMap::new(StorageKey::DropsForId),
-            drop_ids_for_funder: LookupMap::new(StorageKey::DropIdsForFunder),
+            drop_ids_for_owner: LookupMap::new(StorageKey::DropIdsForFunder),
             user_balances: LookupMap::new(StorageKey::UserBalances),
-            nonce: 0,
+            next_drop_id: 0,
             /*
                 FEES
             */

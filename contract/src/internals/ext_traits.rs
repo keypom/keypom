@@ -32,7 +32,7 @@ trait ExtThis {
     fn on_claim_simple(
         &mut self,
         // Account ID that sent the funds for the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance contained within the linkdrop
         balance: U128,
         // How much storage was used up for the linkdrop
@@ -45,17 +45,17 @@ trait ExtThis {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was used to store linkdrop info
         storage_used: U128,
         // Who sent the FTs?
-        ft_sender: AccountId,
+        sender_id: AccountId,
         // Where are the FTs stored
-        ft_contract: AccountId,
+        contract_id: AccountId,
         // How many FTs should we send
-        ft_balance: U128,
+        balance_per_use: U128,
         // How much storage does it cost to register the new account
         ft_storage: U128,
     ) -> bool;
@@ -66,15 +66,15 @@ trait ExtThis {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was used to store linkdrop info
         storage_used: U128,
         // Sender of the NFT
-        nft_sender: AccountId,
+        sender_id: AccountId,
         // Contract where the NFT is stored
-        nft_contract: AccountId,
+        contract_id: AccountId,
         // Token ID for the NFT
         token_id: String,
     ) -> bool;
@@ -85,23 +85,23 @@ trait ExtThis {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was used to store linkdrop info
         storage_used: U128,
         // Receiver of the function call
-        receiver: AccountId,
+        receiver_id: AccountId,
         // Method to call on the contract
-        method: String,
+        method_name: String,
         // What args to pass in
         args: String,
-        // What deposit should we attach
-        deposit: U128,
-        // Should the refund be sent to the funder or attached to the deposit
+        // What attached_deposit should we attach
+        attached_deposit: U128,
+        // Should the refund be sent to the funder or attached to the attached_deposit
         add_refund_to_deposit: Option<bool>,
         // Should we add the account ID as part of the args and what key should it live in
-        claimed_account_field: Option<String>,
+        account_id_field: Option<String>,
     ) -> bool;
 
     fn nft_resolve_transfer(
@@ -114,7 +114,7 @@ trait ExtThis {
     fn resolve_storage_check(
         &mut self,
         public_keys: Vec<PublicKey>,
-        funder_id: AccountId,
+        owner_id: AccountId,
         balance: U128,
         required_storage: U128,
         cb_ids: Vec<u64>,
