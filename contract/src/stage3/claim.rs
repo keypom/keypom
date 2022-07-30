@@ -1,7 +1,7 @@
 use crate::*;
 
 #[near_bindgen]
-impl DropZone {
+impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
     pub fn claim(&mut self, account_id: AccountId) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
@@ -12,7 +12,7 @@ impl DropZone {
             token_id,
             storage_for_longest,
             should_continue,
-            cur_claims_for_key,
+            cur_key_info,
         ) = self.process_claim();
 
         if drop_data_option.is_none() {
@@ -30,29 +30,29 @@ impl DropZone {
 
         // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
         let account_to_transfer = if drop_data
-            .drop_config
+            .config
             .clone()
-            .and_then(|c| c.refund_if_claim)
+            .and_then(|c| c.on_claim_refund_deposit)
             .unwrap_or(false)
             == true
         {
-            drop_data.funder_id.clone()
+            drop_data.owner_id.clone()
         } else {
             account_id.clone()
         };
 
         let mut promise = None;
         // Only create a promise to transfer $NEAR if the drop's balance is > 0.
-        if drop_data.balance.0 > 0 {
+        if drop_data.deposit_per_use > 0 {
             // Send the account ID the desired balance.
-            promise = Some(Promise::new(account_to_transfer).transfer(drop_data.balance.0));
+            promise = Some(Promise::new(account_to_transfer).transfer(drop_data.deposit_per_use));
         }
 
         // Execute the callback depending on the drop type. If the drop balance is 0, the promise will be none and the callback function will just straight up be executed instead of resolving the promise.
         self.internal_execute(
             drop_data,
             drop_id.unwrap(),
-            cur_claims_for_key,
+            cur_key_info,
             account_id,
             storage_freed,
             token_id,
@@ -83,7 +83,7 @@ impl DropZone {
             token_id,
             storage_for_longest,
             should_continue,
-            cur_claims_for_key,
+            cur_key_info,
         ) = self.process_claim();
 
         if drop_data_option.is_none() {
@@ -98,11 +98,16 @@ impl DropZone {
 
         let drop_data = drop_data_option.unwrap();
         let storage_freed = storage_freed_option.unwrap();
+        let root_account = drop_data
+            .config
+            .clone()
+            .and_then(|c| c.drop_root)
+            .unwrap_or(self.root_account.clone());
 
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
-        let promise = ext_linkdrop::ext(self.linkdrop_contract.clone())
+        let promise = ext_linkdrop::ext(root_account)
             // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
-            .with_attached_deposit(drop_data.balance.0)
+            .with_attached_deposit(drop_data.deposit_per_use)
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
             .with_unused_gas_weight(0)
             .create_account(new_account_id.clone(), new_public_key);
@@ -111,7 +116,7 @@ impl DropZone {
         self.internal_execute(
             drop_data,
             drop_id.unwrap(),
-            cur_claims_for_key,
+            cur_key_info,
             new_account_id,
             storage_freed,
             token_id,
@@ -134,7 +139,7 @@ impl DropZone {
     pub fn on_claim_simple(
         &mut self,
         // Account ID that sent the funds for the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance contained within the linkdrop
         balance: U128,
         // How much storage was freed when the key was claimed
@@ -175,17 +180,17 @@ impl DropZone {
 
         near_sdk::log!(
             "Refunding funder: {:?} For amount: {:?}",
-            funder_id,
+            owner_id,
             yocto_to_near(amount_to_refund)
         );
 
         // Get the funder's balance and increment it by the amount to refund
         let mut cur_funder_balance = self
             .user_balances
-            .get(&funder_id)
+            .get(&owner_id)
             .expect("No funder balance found");
         cur_funder_balance += amount_to_refund;
-        self.user_balances.insert(&funder_id, &cur_funder_balance);
+        self.user_balances.insert(&owner_id, &cur_funder_balance);
 
         claim_succeeded
     }
@@ -197,7 +202,7 @@ impl DropZone {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was freed when the key was claimed
@@ -245,16 +250,16 @@ impl DropZone {
 
         near_sdk::log!(
             "Refunding funder: {:?} balance For amount: {:?}",
-            funder_id,
+            owner_id,
             yocto_to_near(amount_to_refund)
         );
         // Get the funder's balance and increment it by the amount to refund
         let mut cur_funder_balance = self
             .user_balances
-            .get(&funder_id)
+            .get(&owner_id)
             .expect("No funder balance found");
         cur_funder_balance += amount_to_refund;
-        self.user_balances.insert(&funder_id, &cur_funder_balance);
+        self.user_balances.insert(&owner_id, &cur_funder_balance);
 
         // Perform the FT transfer functionality
         self.internal_ft_transfer(claim_succeeded, ft_data, account_id);
@@ -269,7 +274,7 @@ impl DropZone {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was freed when the key was claimed
@@ -277,9 +282,9 @@ impl DropZone {
         // How much storage was prepaid to cover the longest token ID being inserted.
         storage_for_longest: Balance,
         // Sender of the NFT
-        nft_sender: AccountId,
+        sender_id: AccountId,
         // Contract where the NFT is stored
-        nft_contract: AccountId,
+        contract_id: AccountId,
         // Token ID for the NFT
         token_id: String,
         // Was this function invoked via an execute (no callback)
@@ -328,23 +333,23 @@ impl DropZone {
 
         near_sdk::log!(
             "Refunding funder: {:?} balance For amount: {:?}",
-            funder_id,
+            owner_id,
             yocto_to_near(amount_to_refund)
         );
         // Get the funder's balance and increment it by the amount to refund
         let mut cur_funder_balance = self
             .user_balances
-            .get(&funder_id)
+            .get(&owner_id)
             .expect("No funder balance found");
         cur_funder_balance += amount_to_refund;
-        self.user_balances.insert(&funder_id, &cur_funder_balance);
+        self.user_balances.insert(&owner_id, &cur_funder_balance);
 
         // Transfer the NFT
         self.internal_nft_transfer(
             claim_succeeded,
-            nft_contract,
+            contract_id,
             token_id,
-            nft_sender,
+            sender_id,
             account_id,
         );
         claim_succeeded
@@ -357,7 +362,7 @@ impl DropZone {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        funder_id: AccountId,
+        owner_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was freed when the key was claimed
@@ -366,10 +371,10 @@ impl DropZone {
         fc_data: FCData,
         // Drop ID for the specific drop
         drop_id: DropId,
+        // Current key info before uses were decremented
+        cur_key_info: KeyInfo,
         // How many uses the key had left before it was decremented
-        cur_num_claims_left: u64,
-        // How many uses the key had left before it was decremented
-        max_claims_per_key: u64,
+        uses_per_key: u64,
         // Was this function invoked via an execute (no callback)
         execute: bool,
     ) -> bool {
@@ -401,15 +406,15 @@ impl DropZone {
             yocto_to_near(storage_used)
         );
 
-        // The starting index is the max claims per key - the number of uses left. If the method data is of size 1, use that instead
-        let cur_len = fc_data.method_data.len() as u16;
+        // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
+        let cur_len = fc_data.methods.len() as u16;
         let starting_index = if cur_len > 1 {
-            (max_claims_per_key - cur_num_claims_left) as usize
+            (uses_per_key - cur_key_info.remaining_uses) as usize
         } else {
             0 as usize
         };
         let cur_method_data = fc_data
-            .method_data
+            .methods
             .iter()
             .skip(starting_index)
             .next()
@@ -417,71 +422,35 @@ impl DropZone {
             .clone()
             .unwrap();
 
-        // If not successful, the balance and deposit is added to the amount to refund since it was never transferred.
+        // If not successful, the balance and attached_deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
             near_sdk::log!(
-                "Claim unsuccessful. Refunding linkdrop balance: {} and deposit: {}",
+                "Claim unsuccessful. Refunding linkdrop balance: {} and attached_deposit: {}",
                 balance.0,
-                cur_method_data.deposit.0
+                cur_method_data.attached_deposit.0
             );
-            amount_to_refund += balance.0 + cur_method_data.deposit.0
+            amount_to_refund += balance.0 + cur_method_data.attached_deposit.0
         }
 
-        /*
-            If the claim is not successful, we should always refund. The only case where we don't refund is
-            if the claim was successful and the user specified that the refund should go into the
-            deposit.
-
-            0 0     Refund     !success  -> do refund
-            0 1     Refund      success  -> do refund
-            1 0     No Refund  !success  -> do refund
-            1 1     No Refund   Success  -> don't do refund
-        */
-        if !claim_succeeded
-            || (!fc_data
-                .config
-                .clone()
-                .and_then(|c| c.refund_to_deposit)
-                .unwrap_or(false)
-                && claim_succeeded)
-        {
-            // Refunding
-            near_sdk::log!(
-                "Refunding funder: {:?} balance For amount: {:?}",
-                funder_id,
-                yocto_to_near(amount_to_refund)
-            );
-            // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self
-                .user_balances
-                .get(&funder_id)
-                .expect("No funder balance found");
-            cur_funder_balance += amount_to_refund;
-            self.user_balances.insert(&funder_id, &cur_funder_balance);
-        } else {
-            near_sdk::log!(
-                "Skipping the refund to funder: {:?} claim success: {:?} refund to deposit?: {:?}",
-                funder_id,
-                claim_succeeded,
-                fc_data
-                    .config
-                    .clone()
-                    .and_then(|c| c.refund_to_deposit)
-                    .unwrap_or(false)
-            );
-        }
+        // Get the funder's balance and increment it by the amount to refund
+        let mut cur_funder_balance = self
+            .user_balances
+            .get(&owner_id)
+            .expect("No funder balance found");
+        cur_funder_balance += amount_to_refund;
+        self.user_balances.insert(&owner_id, &cur_funder_balance);
 
         self.internal_fc_execute(
             &cur_method_data,
             fc_data.config,
-            amount_to_refund,
+            cur_key_info.key_id,
             account_id,
             drop_id,
         );
         claim_succeeded
     }
 
-    /// Internal method for deleting the used key and removing / returning linkdrop data.
+    /// Internal method_name for deleting the used key and removing / returning linkdrop data.
     /// If drop is none, simulate a panic.
     fn process_claim(
         &mut self,
@@ -498,8 +467,8 @@ impl DropZone {
         Option<Balance>,
         // Should we return and not do anything once the drop is claimed (if FC data is none)
         bool,
-        // Current number of uses before decrementing
-        u64,
+        // Current key info before decrementing
+        KeyInfo,
     ) {
         let mut used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -512,7 +481,7 @@ impl DropZone {
 
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
-        // Ensure only the current contract is calling the method using the access key
+        // Ensure only the current contract is calling the method_name using the access key
         // Panic doesn't affect allowance
         assert_eq!(
             env::predecessor_account_id(),
@@ -536,30 +505,30 @@ impl DropZone {
         // Panic doesn't affect allowance
         let mut key_info = drop.pks.remove(&signer_pk).unwrap();
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
-        let current_num_uses = key_info.num_uses;
+        let current_key_info = key_info.clone();
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
-        if drop.num_claims_registered < 1 || prepaid_gas != drop.required_gas_attached {
+        if drop.registered_uses < 1 || prepaid_gas != drop.required_gas {
             used_gas = env::used_gas();
 
             let amount_to_decrement =
                 (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-            if drop.num_claims_registered < 1 {
+            if drop.registered_uses < 1 {
                 near_sdk::log!("Not enough claims left for the drop. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
             } else {
-                near_sdk::log!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop.required_gas_attached.0, amount_to_decrement, used_gas.0);
+                near_sdk::log!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop.required_gas.0, amount_to_decrement, used_gas.0);
             }
 
             key_info.allowance -= amount_to_decrement;
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None, false, 0);
+            return (None, None, None, None, None, false, current_key_info);
         }
 
         // Ensure enough time has passed if a start timestamp was specified in the config.
         let current_timestamp = env::block_timestamp();
         let desired_timestamp = drop
-            .drop_config
+            .config
             .clone()
             .and_then(|c| c.start_timestamp)
             .unwrap_or(current_timestamp);
@@ -575,40 +544,40 @@ impl DropZone {
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None, false, 0);
+            return (None, None, None, None, None, false, current_key_info);
         }
 
         /*
             If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
-            If it's an FC drop, get the next method data and check if it's none (to skip transfer of funds)
+            If it's an FC drop, get the next method_name data and check if it's none (to skip transfer of funds)
         */
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
         let mut token_id = None;
         // Default the storage for longest to be none and return the actual value if it's an NFT drop
         let mut storage_for_longest = None;
-        // Default the should continue variable to true. If the next FC method is None, we set it to false
+        // Default the should continue variable to true. If the next FC method_name is None, we set it to false
         let mut should_continue = true;
         match &mut drop.drop_type {
-            DropType::NFT(data) => {
+            DropType::NonFungibleToken(data) => {
                 token_id = data.token_ids.pop();
                 storage_for_longest = Some(data.storage_for_longest);
             }
-            DropType::FC(data) => {
-                // The starting index is the max claims per key - the number of uses left. If the method data is of size 1, use that instead
-                let cur_len = data.method_data.len() as u16;
+            DropType::FunctionCall(data) => {
+                // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
+                let cur_len = data.methods.len() as u16;
                 let starting_index = if cur_len > 1 {
                     (drop
-                        .drop_config
+                        .config
                         .clone()
-                        .and_then(|c| c.max_claims_per_key)
+                        .and_then(|c| c.uses_per_key)
                         .unwrap_or(1)
-                        - key_info.num_uses) as usize
+                        - key_info.remaining_uses) as usize
                 } else {
                     0 as usize
                 };
 
                 should_continue = data
-                    .method_data
+                    .methods
                     .iter()
                     .skip(starting_index)
                     .next()
@@ -623,11 +592,11 @@ impl DropZone {
         near_sdk::log!(
             "Key usage last used: {:?} Num uses: {:?} (before)",
             key_info.last_used,
-            key_info.num_uses
+            key_info.remaining_uses
         );
 
         // Ensure the key is within the interval if specified
-        if let Some(interval) = drop.drop_config.clone().and_then(|c| c.usage_interval) {
+        if let Some(interval) = drop.config.clone().and_then(|c| c.throttle_timestamp) {
             near_sdk::log!(
                 "Current timestamp {} last used: {} subs: {} interval: {}",
                 current_timestamp,
@@ -653,7 +622,7 @@ impl DropZone {
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
                 drop.pks.insert(&signer_pk, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, None, false, 0);
+                return (None, None, None, None, None, false, current_key_info);
             }
 
             near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
@@ -661,16 +630,16 @@ impl DropZone {
         }
 
         // No uses left! The key should be deleted
-        if key_info.num_uses == 1 {
+        if key_info.remaining_uses == 1 {
             near_sdk::log!("Key has no uses left. It will be deleted");
             self.drop_id_for_pk.remove(&signer_pk);
         } else {
-            key_info.num_uses -= 1;
-            key_info.allowance -= drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
+            key_info.remaining_uses -= 1;
+            key_info.allowance -= drop.required_gas.0 as u128 * self.yocto_per_gas;
             near_sdk::log!(
                 "Key has {} uses left. Decrementing allowance by {}. Allowance left: {}",
-                key_info.num_uses,
-                drop.required_gas_attached.0 as u128 * self.yocto_per_gas,
+                key_info.remaining_uses,
+                drop.required_gas.0 as u128 * self.yocto_per_gas,
                 key_info.allowance
             );
 
@@ -678,7 +647,7 @@ impl DropZone {
             should_delete = false;
         }
 
-        drop.num_claims_registered -= 1;
+        drop.registered_uses -= 1;
 
         // If there are keys still left in the drop, add the drop back in with updated data
         if !drop.pks.is_empty() {
@@ -686,7 +655,7 @@ impl DropZone {
             self.drop_for_id.insert(&drop_id, &drop);
         } else {
             // Remove the drop ID from the funder's list if the drop is now empty
-            self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+            self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
         }
 
         // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -697,7 +666,7 @@ impl DropZone {
         if should_delete {
             // Amount to refund is the current allowance less the current execution's max GAS
             let amount_to_refund =
-                key_info.allowance - drop.required_gas_attached.0 as u128 * self.yocto_per_gas;
+                key_info.allowance - drop.required_gas.0 as u128 * self.yocto_per_gas;
             near_sdk::log!(
                 "Key being deleted. Allowance Currently: {}. Will refund: {}",
                 key_info.allowance,
@@ -706,11 +675,11 @@ impl DropZone {
             // Get the funder's balance and increment it by the amount to refund
             let mut cur_funder_balance = self
                 .user_balances
-                .get(&drop.funder_id)
+                .get(&drop.owner_id)
                 .expect("No funder balance found");
             cur_funder_balance += amount_to_refund;
             self.user_balances
-                .insert(&drop.funder_id, &cur_funder_balance);
+                .insert(&drop.owner_id, &cur_funder_balance);
 
             // Delete the key
             Promise::new(env::current_account_id()).delete_key(signer_pk);
@@ -724,7 +693,7 @@ impl DropZone {
             token_id,
             storage_for_longest,
             should_continue,
-            current_num_uses,
+            current_key_info,
         )
     }
 }

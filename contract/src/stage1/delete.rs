@@ -3,7 +3,7 @@ use near_sdk::GasWeight;
 use crate::*;
 
 #[near_bindgen]
-impl DropZone {
+impl Keypom {
     /*
         User can pass in a vector of public keys or a drop ID.
         If a drop ID is passed in, it will auto delete up to limit.
@@ -23,18 +23,18 @@ impl DropZone {
 
         // get the drop object
         let mut drop = self.drop_for_id.remove(&drop_id).expect("No drop found");
-        let funder_id = drop.funder_id.clone();
+        let owner_id = drop.owner_id.clone();
         let drop_type = &drop.drop_type;
         require!(
-            funder_id == env::predecessor_account_id(),
+            owner_id == env::predecessor_account_id(),
             "only drop funder can delete keys"
         );
 
         // Get the max claims per key. Default to 1 if not specified in the drop config.
-        let max_claims_per_key = drop
-            .drop_config
+        let uses_per_key = drop
+            .config
             .clone()
-            .and_then(|c| c.max_claims_per_key)
+            .and_then(|c| c.uses_per_key)
             .unwrap_or(1);
 
         // Get optional costs
@@ -43,17 +43,17 @@ impl DropZone {
 
         // ensure that there are no FTs or NFTs left to be refunded
         match drop_type {
-            DropType::NFT(data) => {
+            DropType::NonFungibleToken(data) => {
                 require!(
-                    drop.num_claims_registered == 0,
+                    drop.registered_uses == 0,
                     "NFTs must be refunded before keys are deleted"
                 );
 
                 nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost();
             }
-            DropType::FT(data) => {
+            DropType::FungibleToken(data) => {
                 require!(
-                    drop.num_claims_registered == 0,
+                    drop.registered_uses == 0,
                     "FTs must be refunded before keys are deleted"
                 );
 
@@ -90,36 +90,39 @@ impl DropZone {
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
                 let key_info = drop.pks.remove(key).expect("public key must be in drop");
-                total_num_claims_left += key_info.num_uses;
+                total_num_claims_left += key_info.remaining_uses;
 
-                // If the drop is FC, we need to loop through method data for the remaining number of
+                // If the drop is FC, we need to loop through method_name data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
-                if let DropType::FC(data) = &drop.drop_type {
-                    let num_fcs = data.method_data.len() as u64;
+                if let DropType::FunctionCall(data) = &drop.drop_type {
+                    let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
                     // For all the claims. In this case, we need to tally all the deposits for each claim.
-                    if max_claims_per_key > 1 && num_fcs == 1 {
-                        let deposit = data
-                            .method_data
+                    if uses_per_key > 1 && num_fcs == 1 {
+                        let attached_deposit = data
+                            .methods
                             .iter()
                             .next()
                             .unwrap()
                             .clone()
                             .expect("cannot have a single none function call")
-                            .deposit
+                            .attached_deposit
                             .0;
-                        total_deposit_value += key_info.num_uses as u128 * deposit;
+                        total_deposit_value += key_info.remaining_uses as u128 * attached_deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index = (max_claims_per_key - key_info.num_uses) as usize;
-                        for method in data.method_data.iter().skip(starting_index) {
-                            total_num_none_fcs += method.is_none() as u64;
-                            total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
+                        let starting_index = (uses_per_key - key_info.remaining_uses) as usize;
+                        for method_name in data.methods.iter().skip(starting_index) {
+                            total_num_none_fcs += method_name.is_none() as u64;
+                            total_deposit_value += method_name
+                                .clone()
+                                .map(|m| m.attached_deposit.0)
+                                .unwrap_or(0);
                         }
                     }
                 }
@@ -131,7 +134,7 @@ impl DropZone {
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 {
                 near_sdk::log!("Drop empty. Removing from funder");
-                self.internal_remove_drop_for_funder(&funder_id, &drop_id);
+                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
             } else {
                 near_sdk::log!("Drop non empty. Adding back. Len: {}", drop.pks.len());
                 self.drop_for_id.insert(&drop_id, &drop);
@@ -148,7 +151,7 @@ impl DropZone {
             );
 
             /*
-                Required deposit consists of:
+                Required attached_deposit consists of:
                 - TOTAL Storage freed
                 - Total access key allowance for EACH key
                 - Access key storage for EACH key
@@ -160,7 +163,7 @@ impl DropZone {
                 - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
             */
             total_refund_amount = total_storage_freed
-                + drop.balance.0 * (total_num_claims_left - total_num_none_fcs) as u128
+                + drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128
                 + ft_optional_costs_per_claim * total_num_claims_left as u128
                 + total_deposit_value
                 + total_allowance_left
@@ -171,7 +174,7 @@ impl DropZone {
                 storage freed: {}
                 drop balance: {}
                 FT costs per claim: {}
-                total deposit value: {}
+                total attached_deposit value: {}
                 total allowance left: {}
                 access key storage: {}
                 nft optional costs per key: {}
@@ -180,7 +183,7 @@ impl DropZone {
                 len: {}",
                 yocto_to_near(total_refund_amount),
                 yocto_to_near(total_storage_freed),
-                yocto_to_near(drop.balance.0),
+                yocto_to_near(drop.deposit_per_use),
                 yocto_to_near(ft_optional_costs_per_claim),
                 yocto_to_near(total_deposit_value),
                 yocto_to_near(total_allowance_left),
@@ -203,36 +206,39 @@ impl DropZone {
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
                 let key_info = drop.pks.remove(key).expect("public key must be in drop");
-                total_num_claims_left += key_info.num_uses;
+                total_num_claims_left += key_info.remaining_uses;
 
-                // If the drop is FC, we need to loop through method data for the remaining number of
+                // If the drop is FC, we need to loop through method_name data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
-                if let DropType::FC(data) = &drop.drop_type {
-                    let num_fcs = data.method_data.len() as u64;
+                if let DropType::FunctionCall(data) = &drop.drop_type {
+                    let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
                     // For all the claims. In this case, we need to tally all the deposits for each claim.
-                    if max_claims_per_key > 1 && num_fcs == 1 {
-                        let deposit = data
-                            .method_data
+                    if uses_per_key > 1 && num_fcs == 1 {
+                        let attached_deposit = data
+                            .methods
                             .iter()
                             .next()
                             .unwrap()
                             .clone()
                             .expect("cannot have a single none function call")
-                            .deposit
+                            .attached_deposit
                             .0;
-                        total_deposit_value += key_info.num_uses as u128 * deposit;
+                        total_deposit_value += key_info.remaining_uses as u128 * attached_deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
                     } else {
                         // We need to loop through the remaining methods. This means we should skip and start at the
                         // MAX - keys left
-                        let starting_index = (max_claims_per_key - key_info.num_uses) as usize;
-                        for method in data.method_data.iter().skip(starting_index) {
-                            total_num_none_fcs += method.is_none() as u64;
-                            total_deposit_value += method.clone().map(|m| m.deposit.0).unwrap_or(0);
+                        let starting_index = (uses_per_key - key_info.remaining_uses) as usize;
+                        for method_name in data.methods.iter().skip(starting_index) {
+                            total_num_none_fcs += method_name.is_none() as u64;
+                            total_deposit_value += method_name
+                                .clone()
+                                .map(|m| m.attached_deposit.0)
+                                .unwrap_or(0);
                         }
                     }
                 }
@@ -244,7 +250,7 @@ impl DropZone {
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 {
                 near_sdk::log!("Drop empty. Removing from funder");
-                self.internal_remove_drop_for_funder(&funder_id, &drop_id);
+                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
             } else {
                 near_sdk::log!("Drop non empty. Adding back. Len: {}", drop.pks.len());
                 self.drop_for_id.insert(&drop_id, &drop);
@@ -261,7 +267,7 @@ impl DropZone {
             );
 
             /*
-                Required deposit consists of:
+                Required attached_deposit consists of:
                 - TOTAL Storage freed
                 - Total access key allowance for EACH key
                 - Access key storage for EACH key
@@ -273,7 +279,7 @@ impl DropZone {
                 - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
             */
             total_refund_amount = total_storage_freed
-                + drop.balance.0 * (total_num_claims_left - total_num_none_fcs) as u128
+                + drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128
                 + ft_optional_costs_per_claim * total_num_claims_left as u128
                 + total_deposit_value
                 + total_allowance_left
@@ -284,7 +290,7 @@ impl DropZone {
                 storage freed: {}
                 drop balance: {}
                 FT costs per claim: {}
-                total deposit value: {}
+                total attached_deposit value: {}
                 total allowance left: {}
                 access key storage: {}
                 nft optional costs per key: {}
@@ -293,7 +299,7 @@ impl DropZone {
                 len: {}",
                 yocto_to_near(total_refund_amount),
                 yocto_to_near(total_storage_freed),
-                yocto_to_near(drop.balance.0),
+                yocto_to_near(drop.deposit_per_use),
                 yocto_to_near(ft_optional_costs_per_claim),
                 yocto_to_near(total_deposit_value),
                 yocto_to_near(total_allowance_left),
@@ -306,7 +312,7 @@ impl DropZone {
         }
 
         // Refund the user
-        let mut cur_balance = self.user_balances.get(&funder_id).unwrap_or(0);
+        let mut cur_balance = self.user_balances.get(&owner_id).unwrap_or(0);
         near_sdk::log!(
             "Refunding user {} old balance: {}. Total allowance left: {}",
             yocto_to_near(total_refund_amount),
@@ -314,7 +320,7 @@ impl DropZone {
             yocto_to_near(total_allowance_left)
         );
         cur_balance += total_refund_amount;
-        self.user_balances.insert(&funder_id, &cur_balance);
+        self.user_balances.insert(&owner_id, &cur_balance);
 
         // Loop through and delete keys
         for key in &keys_to_delete {
@@ -334,14 +340,14 @@ impl DropZone {
     pub fn refund_assets(&mut self, drop_id: DropId, assets_to_refund: Option<u64>) {
         // get the drop object
         let mut drop = self.drop_for_id.get(&drop_id).expect("No drop found");
-        let funder_id = drop.funder_id.clone();
+        let owner_id = drop.owner_id.clone();
         require!(
-            funder_id == env::predecessor_account_id(),
+            owner_id == env::predecessor_account_id(),
             "only drop funder can delete keys"
         );
 
         // Get the number of claims registered for the drop.
-        let claims_registered = drop.num_claims_registered;
+        let claims_registered = drop.registered_uses;
         require!(claims_registered > 0, "no claims left to unregister");
 
         // Get the claims to refund. If not specified, this is the number of claims currently registered.
@@ -352,18 +358,18 @@ impl DropZone {
         );
 
         // Decrement the drop's keys registered temporarily. If the transfer is unsuccessful, revert in callback.
-        drop.num_claims_registered -= num_to_refund;
+        drop.registered_uses -= num_to_refund;
         self.drop_for_id.insert(&drop_id, &drop);
 
         match &mut drop.drop_type {
-            DropType::NFT(data) => {
+            DropType::NonFungibleToken(data) => {
                 /*
                     NFTs need to be batched together. Loop through and transfer all NFTs.
                     Keys registered will be decremented and the token IDs will be removed
                     in the callback if everything is successful. If anything fails, the
                     keys registered will be added back in the callback for the drop.
                 */
-                let nft_batch_index = env::promise_batch_create(&data.nft_contract);
+                let nft_batch_index = env::promise_batch_create(&data.contract_id);
                 let mut token_ids: Vec<String> = vec![];
 
                 // Loop through and pop / transfer all token IDs. If anything goes wrong, we send back all the token IDs, we popped and push them back in the callback.
@@ -375,7 +381,7 @@ impl DropZone {
                     env::promise_batch_action_function_call_weight(
                         nft_batch_index,
                         "nft_transfer",
-                        json!({ "receiver_id": data.nft_sender, "token_id": token_id, "memo": "Refund" }).to_string().as_bytes(),
+                        json!({ "receiver_id": data.sender_id, "token_id": token_id, "memo": "Refund" }).to_string().as_bytes(),
                         1,
                         MIN_GAS_FOR_SIMPLE_NFT_TRANSFER,
                         GasWeight(1)
@@ -401,19 +407,19 @@ impl DropZone {
                     GasWeight(10),
                 );
             }
-            DropType::FT(data) => {
+            DropType::FungibleToken(data) => {
                 // All FTs can be refunded at once. Funder responsible for registering themselves
-                ext_ft_contract::ext(data.ft_contract.clone())
+                ext_ft_contract::ext(data.contract_id.clone())
                     // Call ft transfer with 1 yoctoNEAR. 1/2 unspent GAS will be added on top
                     .with_attached_deposit(1)
                     .ft_transfer(
-                        data.ft_sender.clone(),
-                        U128(data.ft_balance.0 * num_to_refund as u128),
+                        data.sender_id.clone(),
+                        U128(data.balance_per_use.0 * num_to_refund as u128),
                         None,
                     )
                     // We then resolve the promise and call nft_resolve_transfer on our own contract
                     .then(
-                        // Call resolve refund with the min GAS and no deposit. 1/2 unspent GAS will be added on top
+                        // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
                         Self::ext(env::current_account_id())
                             .ft_resolve_refund(drop_id, num_to_refund),
                     )

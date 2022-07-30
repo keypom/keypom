@@ -1,15 +1,15 @@
 use crate::*;
 
 #[near_bindgen]
-impl DropZone {
+impl Keypom {
     /// Set the desired linkdrop contract to interact with
-    pub fn set_contract(&mut self, linkdrop_contract: AccountId) {
+    pub fn set_root_account(&mut self, root_account: AccountId) {
         assert_eq!(
             env::predecessor_account_id(),
             self.owner_id,
             "predecessor != owner"
         );
-        self.linkdrop_contract = linkdrop_contract;
+        self.root_account = root_account;
     }
 
     /// Set the desired linkdrop contract to interact with

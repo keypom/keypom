@@ -18,7 +18,7 @@ test.beforeEach(async (t) => {
     const dropzone = await root.devDeploy(`./out/main.wasm`);
 
     // Init the contract
-    await dropzone.call(dropzone, 'new', {linkdrop_contract: 'testnet', owner_id: dropzone});
+    await dropzone.call(dropzone, 'new', {root_account: 'testnet', owner_id: dropzone});
 
     // Test users
     const ali = await root.createSubAccount('ali');
@@ -38,18 +38,18 @@ test.afterEach(async t => {
 
 test('Initial nonce is 0', async t => {
     const { dropzone } = t.context.accounts;
-    const result = await dropzone.view('get_nonce', {});
+    const result = await dropzone.view('get_next_drop_id', {});
     t.is(result, 0);
 });
 
 test('Changing linkdrop contract', async t => {
     const { dropzone } = t.context.accounts;
-    let result = await dropzone.view('get_linkdrop_contract', {});
+    let result = await dropzone.view('get_root_account', {});
     t.is(result, 'testnet');
 
-    await dropzone.call(dropzone, 'set_contract', {linkdrop_contract: 'foo'});
+    await dropzone.call(dropzone, 'set_root_account', {root_account: 'foo'});
     
-    result = await dropzone.view('get_linkdrop_contract', {});
+    result = await dropzone.view('get_root_account', {});
     t.is(result, 'foo');
 });
 
@@ -64,7 +64,7 @@ test('Setting gas price', async t => {
     t.is(result, '100');
 });
 
-test('deposit & withdraw to user balance', async t => {
+test('attached_deposit & withdraw to user balance', async t => {
     const { dropzone, ali } = t.context.accounts;
     let result = await dropzone.view('get_user_balance', {account_id: ali});
     t.is(result, '0');
@@ -92,7 +92,7 @@ test('Withdrawing fees earned', async t => {
     t.is(result, '0');
         
     await ali.call(dropzone, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(dropzone, 'create_drop', {public_keys: [], balance: NEAR.parse('5 mN').toString()})
+    await ali.call(dropzone, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()})
     
     result = await dropzone.view('get_fees_collected', {});
     t.is(result, NEAR.parse("1").toString());

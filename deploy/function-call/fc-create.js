@@ -8,26 +8,25 @@ let LINKDROP_PROXY_CONTRACT_ID = process.env.CONTRACT_NAME;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
-let OFFSET = 0.1;
+let OFFSET = 1;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
 let NUM_KEYS = 1;
 
 let NETWORK_ID = "testnet";
 let near;
-let config;
 let keyStore;
 
-let drop_config = {
-	max_claims_per_key: 2,
-
-	start_timestamp: 0,
-	// usage_interval: 6e11, // 10 minutes
-	refund_if_claim: false,
-	only_call_claim: false
+let config = {
+	uses_per_key: 2,
+	//start_timestamp: 0,
+	//throttle_timestamp: 1e10, // 10 seconds
+	on_claim_refund_deposit: false,
+	//claim_permission: 'Claim',
+	drop_root: 'benjiman.testnet'
 }
 
-let drop_metadata = {
+let metadata = {
 	title: "This is a title",
 	description: "This is a description"
 }
@@ -59,7 +58,7 @@ const initiateNear = async () => {
 	(await path).join;
 	keyStore = new keyStores.UnencryptedFileSystemKeyStore(credentialsPath);
 
-	config = {
+	let nearConfig = {
 		networkId: NETWORK_ID,
 		keyStore,
 		nodeUrl: "https://rpc.testnet.near.org",
@@ -68,7 +67,7 @@ const initiateNear = async () => {
 		explorerUrl: "https://explorer.testnet.near.org",
 	};
 
-	near = await connect(config);
+	near = await connect(nearConfig);
 };
 
 async function start() {
@@ -97,7 +96,7 @@ async function start() {
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'new', 
 			{
-				linkdrop_contract: "testnet",
+				root_account: "testnet",
 				owner_id: LINKDROP_PROXY_CONTRACT_ID
 			}, 
 			"300000000000000", 
@@ -120,7 +119,7 @@ async function start() {
 
 	const dropId = await fundingAccount.viewFunction(
 		LINKDROP_PROXY_CONTRACT_ID, 
-		'get_nonce',
+		'get_next_drop_id',
 	);
 
 	try {
@@ -130,7 +129,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length * drop_config.max_claims_per_key || 1 + DROP_FEE).toString()
+				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length * config.uses_per_key || 1 + DROP_FEE).toString()
 			)
 		);
 	} catch(e) {
@@ -139,21 +138,21 @@ async function start() {
 
 	try {
 		let fc_data = {
-			method_data: [null, {
-				receiver: "nft.examples.testnet",
-				method: "nft_mint",
+			methods: [null, {
+				receiver_id: "nft.examples.testnet",
+				method_name: "nft_mint",
 				args: JSON.stringify({
 					token_id: pubKeys[0],
 					metadata: METADATA,
 				}),
-				deposit: parseNearAmount("1")
+				attached_deposit: parseNearAmount("1")
 			}],
 			config: {
 				refund_to_deposit: true,
-				claimed_account_field: "receiver_id",
+				account_id_field: "receiver_id",
 				// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
-				//gas_if_claim_only: "80000000000000",
-				attached_drop_id_field: "custom_drop_id"
+				//attached_gas: "80000000000000",
+				drop_id_field: "custom_drop_id"
 			}
 		}
 
@@ -162,10 +161,10 @@ async function start() {
 			'create_drop', 
 			{
 				public_keys: pubKeys,
-				balance: parseNearAmount(LINKDROP_NEAR_AMOUNT),
+				deposit_per_use: parseNearAmount(LINKDROP_NEAR_AMOUNT),
 				fc_data,
-				drop_config,
-				drop_metadata: JSON.stringify(drop_metadata)
+				config,
+				metadata: JSON.stringify(metadata)
 			}, 
 			"300000000000000"
 		);
@@ -177,9 +176,9 @@ async function start() {
 		let viewData = {};
 		const totalSupply = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'key_total_supply', 
+			'get_key_total_supply', 
 		);
-		viewData.key_total_supply = totalSupply; 
+		viewData.get_key_total_supply = totalSupply; 
 		console.log('totalSupply: ', totalSupply);
 
 		const getKeys = await fundingAccount.viewFunction(
@@ -222,32 +221,32 @@ async function start() {
 
 		const keySupplyForFunder = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'key_supply_for_funder',
+			'get_key_supply_for_owner',
 			{
 				account_id: FUNDING_ACCOUNT_ID
 			}
 		);
-		viewData.key_supply_for_funder = keySupplyForFunder; 
+		viewData.get_key_supply_for_owner = keySupplyForFunder; 
 		console.log('keySupplyForFunder: ', keySupplyForFunder);
 
 		const dropSupplyForFunder = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'drop_supply_for_funder',
+			'get_drop_supply_for_owner',
 			{
 				account_id: FUNDING_ACCOUNT_ID
 			}
 		);
-		viewData.drop_supply_for_funder = dropSupplyForFunder; 
+		viewData.get_drop_supply_for_owner = dropSupplyForFunder; 
 		console.log('dropSupplyForFunder: ', dropSupplyForFunder);
 
 		const dropsForFunder = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'drops_for_funder',
+			'get_drops_for_owner',
 			{
 				account_id: FUNDING_ACCOUNT_ID
 			}
 		);
-		viewData.drops_for_funder = dropsForFunder; 
+		viewData.get_drops_for_owner = dropsForFunder; 
 		console.log('dropsForFunder: ', dropsForFunder);
 		;
 		await writeFile(path.resolve(__dirname, `views-create.json`), JSON.stringify(viewData));

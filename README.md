@@ -95,7 +95,7 @@ For some background as to how the linkdrop proxy contract works on NEAR:
 * `linkdropKeyPairSecretKey`: The corresponding secret key to the public key sent to the contract.
 * `redirectUrl`: The url that wallet will redirect to after funds are successfully claimed to an existing account. The URL is sent the accountId used to claim the funds as a query param.
 
-*The receiver of the link that is claiming the linkdrop:* 
+*The receiver_id of the link that is claiming the linkdrop:* 
 - Receives the link which includes `privKey1` and sends them to the NEAR wallet.
 - Wallet creates a new keypair `(pubKey2, privKey2)` locally. The blockchain doesn't know of this key's existence yet since it's all local for now.
 - Receiver will then choose an account ID such as `new_account.near`. 
@@ -115,7 +115,7 @@ Example response:
 ```bash
 [
   {
-    funder_id: 'benjiman.testnet',
+    owner_id: 'benjiman.testnet',
     balance: '2840000000000000000000',
     storage_used: '1320000000000000000000',
     cb_id: null,
@@ -146,8 +146,8 @@ With the proxy contract, users can pre-load a linkdrop with **only one** NFT due
 
 ```rust
 pub struct NFTData {
-    pub nft_sender: String,
-    pub nft_contract: String,
+    pub sender_id: String,
+    pub contract_id: String,
     pub nft_token_id: String,
 }
 ```
@@ -155,7 +155,7 @@ pub struct NFTData {
 An example of creating an NFT linkdrop can be seen:
 
 ```bash
-near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "nft_data": {"nft_sender": "benjiman.testnet", "nft_contract": "nft.examples.testnet", "nft_token_id": "token1"}}' --accountId "benjiman.testnet" --amount 1
+near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "nft_data": {"sender_id": "benjiman.testnet", "contract_id": "nft.examples.testnet", "nft_token_id": "token1"}}' --accountId "benjiman.testnet" --amount 1
 ```
 
 - Once the regular linkdrop has been created with the specified NFT Data, execute the `nft_transfer_call` funtion on the NFT contract and you *must* pass in `pubKey1` (the public key of the keypair created locally and passed into the `send` function) into the `msg` parameter. If the linkdrop is claimed before activation, it will act as a regular linkdrop with no NFT. 
@@ -190,9 +190,9 @@ Due to the nature of how fungible token contracts handle storage, the user is re
 
 ```rust
 pub struct FTData {
-    pub ft_contract: String,
-    pub ft_sender: String,
-    pub ft_balance: U128, // String
+    pub contract_id: String,
+    pub sender_id: String,
+    pub balance_per_use: U128, // String
     pub ft_storage: Option<U128>, // String
 }
 ```
@@ -200,7 +200,7 @@ pub struct FTData {
 An example of creating an FT linkdrop can be seen:
 
 ```bash
-near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "ft_data": {"ft_sender": "benjiman.testnet", "ft_contract": "ft.benjiman.testnet", "ft_balance": "25"}}' --accountId "benjiman.testnet" --amount 1
+near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "ft_data": {"sender_id": "benjiman.testnet", "contract_id": "ft.benjiman.testnet", "balance_per_use": "25"}}' --accountId "benjiman.testnet" --amount 1
 ```
 
 Once the regular linkdrop is created with the fungible token data, you can the send the fungible tokens to activate the linkdrop. If the linkdrop is claimed before activation, it will act as a regular linkdrop with no FTs.
@@ -233,27 +233,27 @@ If the linkdrop is successfully claimed, the funder will be refunded for everyth
 ## Function Calls
 
 With the proxy contract, users can specify a function that will be called when the linkdrop is claimed. This function call is highly customizable including:
-- Any method on any contract
-- Any deposit to attach to the call
-- Whether or not the refund that normally goes to the funder should be sent along with the deposit
+- Any method_name on any contract
+- Any attached_deposit to attach to the call
+- Whether or not the refund that normally goes to the funder should be sent along with the attached_deposit
 - Specifying a specific field for the claiming account to be called with.
 
-Let's look at an example to see the power of the proxy contract. If a user wants to be able to lazy mint an NFT to the newly created account (that is unknown at the time of creating the linkdrop) but the mint function takes a parameter `receiver_id` and a deposit of 1 $NEAR, you could specify these parameters. The struct that must be passed in when creating a function call linkdrop is below.
+Let's look at an example to see the power of the proxy contract. If a user wants to be able to lazy mint an NFT to the newly created account (that is unknown at the time of creating the linkdrop) but the mint function takes a parameter `receiver_id` and a attached_deposit of 1 $NEAR, you could specify these parameters. The struct that must be passed in when creating a function call linkdrop is below.
 
 ```rust
 pub struct FCData {
     // Contract that will be called
-    pub receiver: String,
-    // Method to call on receiver contract
-    pub method: String,
+    pub receiver_id: String,
+    // Method to call on receiver_id contract
+    pub method_name: String,
     // Arguments to pass in (stringified JSON)
     pub args: String,
     // Amount of yoctoNEAR to attach along with the call
-    pub deposit: U128,
-    // Should the refund that normally goes to the funder be attached alongside the deposit?
+    pub attached_deposit: U128,
+    // Should the refund that normally goes to the funder be attached alongside the attached_deposit?
     pub refund_to_deposit: Option<bool>,
     // Specifies what field the claiming account should go in when calling the function
-    pub claimed_account_field: Option<String>,
+    pub account_id_field: Option<String>,
 }
 ```
 
@@ -262,12 +262,12 @@ If there was a different NFT contract where the parameter was `nft_contract_id` 
 - create a linkdrop either through `send` or `send_multiple` and specify the FC (function call) data for the function that will be called upon claim
 
 ```bash
-near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "fc_data": {"receiver": "nft.examples.testnet", "method": "nft_mint", "args": "{\"token_id\":\"ed25519:Db3ALuBMU2ruMNroZfwFC5ZGMXK3bRX12UjRAbH19LZL\",\"token_metadata\":{\"title\":\"My Linkdrop Called This Function!\",\"description\":\"Linkdrop NFT that was lazy minted when the linkdrop was claimed\",\"media\":\"https://bafybeicek3skoaae4p5chsutjzytls5dmnj5fbz6iqsd2uej334sy46oge.ipfs.nftstorage.link/\",\"media_hash\":null,\"copies\":10000,\"issued_at\":null,\"expires_at\":null,\"starts_at\":null,\"updated_at\":null,\"extra\":null,\"reference\":null,\"reference_hash\":null}}", "deposit": "1000000000000000000000000", "refund_to_deposit": true, "claimed_account_field": "receiver_id" }}' --accountId "benjiman.testnet" --amount 1
+near call linkdrop-proxy.testnet send '{"public_key": "ed25519:2EVN4CVLu5oH18YFoxGyeVkg1c7MaDb9aDrhkaWPqjd7", "balance": "2840000000000000000000", "fc_data": {"receiver_id": "nft.examples.testnet", "method_name": "nft_mint", "args": "{\"token_id\":\"ed25519:Db3ALuBMU2ruMNroZfwFC5ZGMXK3bRX12UjRAbH19LZL\",\"token_metadata\":{\"title\":\"My Linkdrop Called This Function!\",\"description\":\"Linkdrop NFT that was lazy minted when the linkdrop was claimed\",\"media\":\"https://bafybeicek3skoaae4p5chsutjzytls5dmnj5fbz6iqsd2uej334sy46oge.ipfs.nftstorage.link/\",\"media_hash\":null,\"copies\":10000,\"issued_at\":null,\"expires_at\":null,\"starts_at\":null,\"updated_at\":null,\"extra\":null,\"reference\":null,\"reference_hash\":null}}", "attached_deposit": "1000000000000000000000000", "refund_to_deposit": true, "account_id_field": "receiver_id" }}' --accountId "benjiman.testnet" --amount 1
 ```
 
-This will create a linkdrop for `0.00284 $NEAR` and specify that once the linkdrop is claimed, the method `nft_mint` should be called on the contract `nft.examples.testnet` with a set of arguments that are stringified JSON. In addition, an **extra field called receiver_id** should be **added to the args** and the claiming account ID will be set for that field in the arguments.
+This will create a linkdrop for `0.00284 $NEAR` and specify that once the linkdrop is claimed, the method_name `nft_mint` should be called on the contract `nft.examples.testnet` with a set of arguments that are stringified JSON. In addition, an **extra field called receiver_id** should be **added to the args** and the claiming account ID will be set for that field in the arguments.
 
-> **NOTE:** you must attach enough $NEAR to cover the attached deposit. If the linkdrop claim fails, your $NEAR will be refunded and the function call will NOT execute.
+> **NOTE:** you must attach enough $NEAR to cover the attached attached_deposit. If the linkdrop claim fails, your $NEAR will be refunded and the function call will NOT execute.
 
 <p align="center">
   <img src="flowcharts/claiming-function-call-linkdrops-with-new-accounts.png" style="width: 65%; height: 65%" alt="Logo">
@@ -315,7 +315,7 @@ near deploy --wasmFile out/main.wasm --accountId YOUR_CONTRACT_ID.testnet
 Once deployed, you need to initialize the contract with the external linkdrop contract you want to interact with. In most cases, this will be `near` or `testnet` since you'll want to create sub-accounts of `.testnet` (i.e `benjiman.testnet`).
 
 ```
-near call YOUR_CONTRACT_ID.testnet new '{"linkdrop_contract": "testnet", "owner_id": "YOUR_CONTRACT_ID.testnet"}' --accountId YOUR_CONTRACT_ID.testnet
+near call YOUR_CONTRACT_ID.testnet new '{"root_account": "testnet", "owner_id": "YOUR_CONTRACT_ID.testnet"}' --accountId YOUR_CONTRACT_ID.testnet
 ```
 
 You're now ready to create custom linkdrops! You can either interact with the contract directly using the CLI or use one of the pre-deployed scripts.
@@ -332,7 +332,7 @@ This will cover creating single linkdrops, however, the only differences between
 - Call the `send` function and pass in the `public_key`, `balance`. If creating a FT, NFT, or FC linkdrop, you must specify the struct as well. This is outlined in the respective sections.  
 
 ```bash
-near call YOUR_CONTRACT_ID.testnet send '{"public_key": "ed25519:4iwBf6eAXZ4bcN6TWPikSqu3UJ2HUwF8wNNkGZrgDYqE", "balance": "10000000000000000000000"}' --deposit 1 --accountId "benjiman.testnet"
+near call YOUR_CONTRACT_ID.testnet send '{"public_key": "ed25519:4iwBf6eAXZ4bcN6TWPikSqu3UJ2HUwF8wNNkGZrgDYqE", "balance": "10000000000000000000000"}' --attached_deposit 1 --accountId "benjiman.testnet"
 ```
 
 Once the function is successful, you can create the link and click it to claim the linkdrop:
