@@ -64,7 +64,7 @@ test('Setting gas price', async t => {
     t.is(result, '100');
 });
 
-test('attached_deposit & withdraw to user balance', async t => {
+test('Deposit & withdraw to user balance', async t => {
     const { dropzone, ali } = t.context.accounts;
     let result = await dropzone.view('get_user_balance', {account_id: ali});
     t.is(result, '0');
@@ -114,4 +114,23 @@ test('Withdrawing fees earned', async t => {
 
     let b2 = await ali.availableBalance();
     t.assert(assertBalanceChange(b1, b2, NEAR.parse('1005 mN'), 0.01), "balance didn't decrement properly with 1% precision");
+});
+
+test('Custom fees earned', async t => {
+    const { dropzone, ali } = t.context.accounts;
+    let result = await dropzone.view('get_fees_collected', {});
+    t.is(result, '0');
+        
+    await dropzone.call(dropzone, 'set_fees_per_user', {account_id: ali, drop_fee: NEAR.parse("5").toString(), key_fee: "0"});
+    await ali.call(dropzone, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+    await ali.call(dropzone, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()})
+    
+    result = await dropzone.view('get_fees_collected', {});
+    t.is(result, NEAR.parse("5").toString());
+    
+    let keyPair = await KeyPairEd25519.fromRandom();
+    await ali.call(dropzone, 'add_keys', {public_keys: [keyPair.publicKey.toString()], drop_id: 0})
+
+    result = await dropzone.view('get_fees_collected', {});
+    t.is(result, NEAR.parse('5').toString());
 });
