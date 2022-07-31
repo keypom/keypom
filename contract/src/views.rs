@@ -319,7 +319,8 @@ impl Keypom {
     }
 
     /// Returns the current fees associated with an account
-    pub fn get_fees_per_user(&self, account_id: AccountId) -> Option<(u128, u128)> {
-        self.fees_per_user.get(&account_id)
+    pub fn get_fees_per_user(&self, account_id: AccountId) -> Option<(U128, U128)> {
+        // return fees per user as a U128 tuple
+        self.fees_per_user.get(&account_id).map(|fees| (U128(fees.0), U128(fees.1)))
     }
 }

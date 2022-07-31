@@ -13,13 +13,13 @@ impl Keypom {
     }
 
     /// Set the desired linkdrop contract to interact with
-    pub fn set_fees_per_user(&mut self, account_id: AccountId, drop_fee: u128, key_fee: u128) {
+    pub fn set_fees_per_user(&mut self, account_id: AccountId, drop_fee: U128, key_fee: U128) {
         assert_eq!(
             env::predecessor_account_id(),
             self.owner_id,
             "predecessor != owner"
         );
-        self.fees_per_user.insert(&account_id, &(drop_fee, key_fee));
+        self.fees_per_user.insert(&account_id, &(drop_fee.0, key_fee.0));
     }
 
     /// Set the desired linkdrop contract to interact with
