@@ -317,4 +317,10 @@ impl Keypom {
     pub fn get_root_account(&self) -> String {
         self.root_account.to_string()
     }
+
+    /// Returns the current fees associated with an account
+    pub fn get_fees_per_user(&self, account_id: AccountId) -> Option<(U128, U128)> {
+        // return fees per user as a U128 tuple
+        self.fees_per_user.get(&account_id).map(|fees| (U128(fees.0), U128(fees.1)))
+    }
 }
