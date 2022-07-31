@@ -404,7 +404,10 @@ impl Keypom {
             - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
-        let fees = self.fees_per_user.get(&owner_id).unwrap_or((self.drop_fee, self.key_fee));
+        let fees = self
+            .fees_per_user
+            .get(&owner_id)
+            .unwrap_or((self.drop_fee, self.key_fee));
         let required_deposit = fees.0 // drop fee
             + total_required_storage
             + (fees.1 // key fee
@@ -459,10 +462,7 @@ impl Keypom {
 
         // Increment our fees earned
         self.fees_collected += fees.0 + fees.1 * len;
-        near_sdk::log!(
-            "Fees collected {}",
-            yocto_to_near(fees.0 + fees.1 * len)
-        );
+        near_sdk::log!("Fees collected {}", yocto_to_near(fees.0 + fees.1 * len));
 
         let current_account_id = env::current_account_id();
 
@@ -673,7 +673,10 @@ impl Keypom {
             - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
-        let fees = self.fees_per_user.get(&funder).unwrap_or((self.drop_fee, self.key_fee));
+        let fees = self
+            .fees_per_user
+            .get(&funder)
+            .unwrap_or((self.drop_fee, self.key_fee));
         let required_deposit = total_required_storage
             + (fees.1 // key fee
                 + actual_allowance
