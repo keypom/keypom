@@ -317,4 +317,9 @@ impl Keypom {
     pub fn get_root_account(&self) -> String {
         self.root_account.to_string()
     }
+
+    /// Returns the current fees associated with an account
+    pub fn get_fees_per_user(&self, account_id: AccountId) -> Option<(u128, u128)> {
+        self.fees_per_user.get(&account_id)
+    }
 }

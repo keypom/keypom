@@ -404,9 +404,13 @@ impl Keypom {
             - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
-        let required_deposit = self.drop_fee
+        let fees = self
+            .fees_per_user
+            .get(&owner_id)
+            .unwrap_or((self.drop_fee, self.key_fee));
+        let required_deposit = fees.0 // drop fee
             + total_required_storage
-            + (self.key_fee
+            + (fees.1 // key fee
                 + actual_allowance
                 + ACCESS_KEY_STORAGE
                 + deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128
@@ -430,9 +434,9 @@ impl Keypom {
             GAS to attach: {}",
             yocto_to_near(current_user_balance),
             yocto_to_near(required_deposit),
-            yocto_to_near(self.drop_fee),
+            yocto_to_near(fees.0),
             yocto_to_near(total_required_storage),
-            yocto_to_near(self.key_fee),
+            yocto_to_near(fees.1),
             yocto_to_near(actual_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(deposit_per_use.0),
@@ -457,11 +461,8 @@ impl Keypom {
         near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
 
         // Increment our fees earned
-        self.fees_collected += self.drop_fee + self.key_fee * len;
-        near_sdk::log!(
-            "Fees collected {}",
-            yocto_to_near(self.drop_fee + self.key_fee * len)
-        );
+        self.fees_collected += fees.0 + fees.1 * len;
+        near_sdk::log!("Fees collected {}", yocto_to_near(fees.0 + fees.1 * len));
 
         let current_account_id = env::current_account_id();
 
@@ -672,8 +673,12 @@ impl Keypom {
             - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
+        let fees = self
+            .fees_per_user
+            .get(&funder)
+            .unwrap_or((self.drop_fee, self.key_fee));
         let required_deposit = total_required_storage
-            + (self.key_fee
+            + (fees.1 // key fee
                 + actual_allowance
                 + ACCESS_KEY_STORAGE
                 + drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128
@@ -699,7 +704,7 @@ impl Keypom {
             yocto_to_near(current_user_balance),
             yocto_to_near(required_deposit),
             yocto_to_near(total_required_storage),
-            yocto_to_near(self.key_fee),
+            yocto_to_near(fees.1),
             yocto_to_near(actual_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(drop.deposit_per_use),
@@ -723,8 +728,8 @@ impl Keypom {
         near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
 
         // Increment our fees earned
-        self.fees_collected += self.key_fee * len;
-        near_sdk::log!("Fees collected {}", yocto_to_near(self.key_fee * len));
+        self.fees_collected += fees.1 * len;
+        near_sdk::log!("Fees collected {}", yocto_to_near(fees.1 * len));
 
         // Create a new promise batch to create all the access keys
         let current_account_id = env::current_account_id();
