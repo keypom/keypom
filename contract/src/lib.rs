@@ -87,6 +87,7 @@ enum StorageKey {
     PksForDrop { account_id_hash: CryptoHash },
     DropMetadata { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
+    FeesPerUser,
     UserBalances,
 }
 
@@ -108,6 +109,9 @@ pub struct Keypom {
     pub drop_fee: u128,
     pub key_fee: u128,
     pub fees_collected: u128,
+
+    // Keep track of fees per each user. Only the owner can edit this.
+    pub fees_per_user: LookupMap<AccountId, (u128, u128)>,
 
     // keep track of the balances for each user. This is to prepay for drop creations
     pub user_balances: LookupMap<AccountId, Balance>,
@@ -135,6 +139,7 @@ impl Keypom {
             /*
                 FEES
             */
+            fees_per_user: LookupMap::new(StorageKey::FeesPerUser),
             drop_fee: DROP_CREATION_FEE,
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
