@@ -424,12 +424,17 @@ impl Keypom {
 
         // If not successful, the balance and attached_deposit is added to the amount to refund since it was never transferred.
         if !claim_succeeded {
+            // Get the total_attached deposit from looping through the method datas
+            let total_attached_deposit = cur_method_data
+                    .iter()
+                    .fold(0, |acc, x| acc + x.attached_deposit.0);
+
             near_sdk::log!(
                 "Claim unsuccessful. Refunding linkdrop balance: {} and attached_deposit: {}",
                 balance.0,
-                cur_method_data.attached_deposit.0
+                total_attached_deposit
             );
-            amount_to_refund += balance.0 + cur_method_data.attached_deposit.0
+            amount_to_refund += balance.0 + total_attached_deposit
         }
 
         // Get the funder's balance and increment it by the amount to refund
