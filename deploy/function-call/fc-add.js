@@ -10,7 +10,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
 let OFFSET = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 1;
+let NUM_KEYS = 100;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -96,10 +96,9 @@ async function start() {
 		LINKDROP_PROXY_CONTRACT_ID, 
 		'get_next_drop_id',
 	);
-
-	dropId -= 1;
 	
-	console.log('dropId: ', dropId);
+	console.log(`Next drop ID: ${dropId}. Cur drop ID: ${dropId - 1}`);
+	dropId -= 1;
 
 	try {
 		await fundingAccount.functionCall(
