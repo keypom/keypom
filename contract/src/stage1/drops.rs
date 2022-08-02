@@ -295,7 +295,7 @@ impl Keypom {
             storage_per_longest = Balance::from(final_nft_storage_one - initial_nft_storage_one);
             near_sdk::log!(
                 "TOKENS BEFORE {:?}",
-                self.get_token_ids_for_drop(self.next_drop_id, None, None)
+                self.get_nft_token_ids_for_drop(self.next_drop_id, None, None)
             );
 
             // Clear the token IDs so it's an empty vector and put the storage in the drop's nft data
