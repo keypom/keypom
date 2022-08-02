@@ -37,7 +37,7 @@ test.afterEach(async t => {
     });
 });
 
-test('Create empty basic drop check views', async t => {
+test('Create empty drop check views', async t => {
     const { dropzone, ali } = t.context.accounts;
     
     await ali.call(dropzone, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
@@ -69,35 +69,10 @@ test('Create empty basic drop check views', async t => {
     t.deepEqual(result.dropSupplyForOwner, 1);
 });
 
-test('Create empty complex drop check views', async t => {
+test('Create drop with 1000 keys', async t => {
     const { dropzone, ali } = t.context.accounts;
     
-    await ali.call(dropzone, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(dropzone, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
-    
-    let result = await queryAllViewFunctions({
-        contract: dropzone, 
-        drop_id: 0, 
-        account_id: ali.accountId
-    });
-    console.log('result: ', result)
-    
-    t.is(result.keyTotalSupply, '0');
-    t.deepEqual(result.keys, []);
-    let jsonDrop = result.dropInformation!;
-    t.is(jsonDrop.drop_id, 0);
-    t.is(jsonDrop.owner_id, ali.accountId);
-    t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
-    t.is(jsonDrop.drop_type, 'Simple');
-    t.is(jsonDrop.config, null);
-    t.is(jsonDrop.metadata, null);
-    t.is(jsonDrop.registered_uses, 0);
-    t.is(jsonDrop.required_gas, tGas(100));
-    t.is(jsonDrop.next_key_id, 0);
-    
-    t.is(result.keySupplyForDrop, 0);
-    t.deepEqual(result.keysForDrop, []);
-    t.deepEqual(result.tokenIdsForDrop, []);
-    t.deepEqual(result.keySupplyForOwner, 0);
-    t.deepEqual(result.dropSupplyForOwner, 1);
+    // log ali's available balance
+    let b = await ali.availableBalance();
+    console.log('b: ', b.toHuman())
 });
