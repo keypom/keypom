@@ -330,25 +330,25 @@ impl Keypom {
         } else if let Some(data) = fc_data.clone() {
             drop.drop_type = DropType::FunctionCall(data.clone());
 
-            // Ensure proper method_name data is passed in
-            let num_fcs = data.clone().methods.len() as u64;
-            // If there's 1 claim, there should be 1 method_name defined
+            // Ensure proper method data is passed in
+            let num_method_data = data.clone().methods.len() as u64;
+            // If there's 1 claim, there should be 1 method data defined
             if num_claims_per_key == 1 {
                 require!(
-                    num_fcs == 1,
-                    "Cannot have more FCs than the number of claims per key"
+                    num_method_data == 1,
+                    "Cannot have more Method Data than the number of claims per key"
                 );
-            // If there's more than 1 method_name defined, the number of methods should equal the number of claims per key
-            } else if num_fcs > 1 {
+            // If there's more than 1 method data defined and the number of claims per key more than 1, the number of methods should equal the number of claims per key
+            } else if num_method_data > 1 {
                 require!(
-                    num_fcs == num_claims_per_key,
+                    num_method_data == num_claims_per_key,
                     "Number of FCs must match number of claims per key if more than 1 is specified"
                 );
             }
 
-            // If there's one FC specified and more than 1 claim per key, that FC is to be used
-            // For all the claims. In this case, we need to tally all the deposits for each claim.
-            if num_claims_per_key > 1 && num_fcs == 1 {
+            // If there's one method data specified and more than 1 claim per key, that data is to be used
+            // For all the claims. In this case, we need to tally all the deposits for each method in all method data.
+            if num_claims_per_key > 1 && num_method_data == 1 {
                 let attached_deposit = data
                     .methods
                     .iter()
@@ -356,17 +356,31 @@ impl Keypom {
                     .unwrap()
                     .clone()
                     .expect("cannot have a single none function call")
-                    .attached_deposit
-                    .0;
-                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
+                    // iterate through   all entries and sum the attached_deposit
+                    .iter()
+                    .fold(0, |acc, x| acc + x.attached_deposit.0);
 
+                near_sdk::log!(format!(
+                    "Total attached_deposits for all method data: {}",
+                    attached_deposit
+                )
+                .as_str());
+                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
                 for method_name in data.methods {
                     num_none_fcs += method_name.is_some() as u64;
-                    deposit_required_for_fc_deposits +=
-                        method_name.map(|m| m.attached_deposit.0).unwrap_or(0);
+                    // If the method is not None, we need to get the attached_deposit by looping through the method datas
+                    if let Some(method_data) = method_name {
+                        let attached_deposit = method_data
+                            .iter()
+                            .fold(0, |acc, x| acc + x.attached_deposit.0);
+                        near_sdk::log!(
+                            format!("Adding attached deposit: {}", attached_deposit).as_str()
+                        );
+                        deposit_required_for_fc_deposits += attached_deposit;
+                    }
                 }
             }
 
@@ -616,11 +630,12 @@ impl Keypom {
         // Get the number of none FCs in FCData (if there are any)
         let mut num_none_fcs = 0;
         if let DropType::FunctionCall(data) = &drop.drop_type {
-            let num_fcs = data.methods.len() as u64;
+            // Ensure proper method data is passed in
+            let num_method_data = data.clone().methods.len() as u64;
 
-            // If there's one FC specified and more than 1 claim per key, that FC is to be used
-            // For all the claims. In this case, we need to tally all the deposits for each claim.
-            if num_claims_per_key > 1 && num_fcs == 1 {
+            // If there's one method data specified and more than 1 claim per key, that data is to be used
+            // For all the claims. In this case, we need to tally all the deposits for each method in all method data.
+            if num_claims_per_key > 1 && num_method_data == 1 {
                 let attached_deposit = data
                     .methods
                     .iter()
@@ -628,17 +643,31 @@ impl Keypom {
                     .unwrap()
                     .clone()
                     .expect("cannot have a single none function call")
-                    .attached_deposit
-                    .0;
-                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
+                    // iterate through   all entries and sum the attached_deposit
+                    .iter()
+                    .fold(0, |acc, x| acc + x.attached_deposit.0);
 
+                near_sdk::log!(format!(
+                    "Total attached_deposits for all method data: {}",
+                    attached_deposit
+                )
+                .as_str());
+                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
                 for method_name in data.methods.clone() {
                     num_none_fcs += method_name.is_some() as u64;
-                    deposit_required_for_fc_deposits +=
-                        method_name.map(|m| m.attached_deposit.0).unwrap_or(0);
+                    // If the method is not None, we need to get the attached_deposit by looping through the method datas
+                    if let Some(method_data) = method_name {
+                        let attached_deposit = method_data
+                            .iter()
+                            .fold(0, |acc, x| acc + x.attached_deposit.0);
+                        near_sdk::log!(
+                            format!("Adding attached deposit: {}", attached_deposit).as_str()
+                        );
+                        deposit_required_for_fc_deposits += attached_deposit;
+                    }
                 }
             }
         }

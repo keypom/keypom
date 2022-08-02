@@ -8,22 +8,22 @@ let LINKDROP_PROXY_CONTRACT_ID = process.env.CONTRACT_NAME;
 let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 
-let OFFSET = 1;
+let OFFSET = 10;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 1;
+let NUM_KEYS = 100;
 
 let NETWORK_ID = "testnet";
 let near;
 let keyStore;
 
 let config = {
-	uses_per_key: 2,
+	uses_per_key: 3,
 	//start_timestamp: 0,
 	//throttle_timestamp: 1e10, // 10 seconds
 	on_claim_refund_deposit: false,
 	//claim_permission: 'Claim',
-	drop_root: 'benjiman.testnet'
+	//drop_root: 'benjiman.testnet'
 }
 
 let metadata = {
@@ -31,8 +31,9 @@ let metadata = {
 	description: "This is a description"
 }
 
+
 /*
-	Hard coding NFT contract and metadata. Change this if you want.
+Hard coding NFT contract and metadata. Change this if you want.
 */
 let NFT_CONTRACT_ID = "nft.examples.testnet";
 const METADATA = {
@@ -50,6 +51,64 @@ const METADATA = {
 	"reference_hash": null
 };
 
+let fc_data = {
+	methods: [
+		[
+			{
+				receiver_id: "nft.examples.testnet",
+				method_name: "nft_mint",
+				args: JSON.stringify({
+					token_id: "test-one",
+					metadata: METADATA,
+				}),
+				attached_deposit: parseNearAmount("1")
+			},
+			{
+				receiver_id: "nft.examples.testnet",
+				method_name: "nft_mint",
+				args: JSON.stringify({
+					token_id: "test-two",
+					metadata: METADATA,
+				}),
+				attached_deposit: parseNearAmount("1")
+			},
+			{
+				receiver_id: "nft.examples.testnet",
+				method_name: "nft_mint",
+				args: JSON.stringify({
+					token_id: "test-three",
+					metadata: METADATA,
+				}),
+				attached_deposit: parseNearAmount("1")
+			},
+			{
+				receiver_id: "nft.examples.testnet",
+				method_name: "nft_mint",
+				args: JSON.stringify({
+					token_id: "test-four",
+					metadata: METADATA,
+				}),
+				attached_deposit: parseNearAmount("1")
+			},
+			{
+				receiver_id: "nft.examples.testnet",
+				method_name: "nft_mint",
+				args: JSON.stringify({
+					token_id: "test-five",
+					metadata: METADATA,
+				}),
+				attached_deposit: parseNearAmount("1")
+			},
+		]
+	],
+	config: {
+		account_id_field: "receiver_id",
+		// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
+		//attached_gas: "80000000000000",
+		drop_id_field: "custom_drop_id",
+		key_id_field: "custom_key_id",
+	}
+}
 // set up near
 const initiateNear = async () => {
 	const CREDENTIALS_DIR = ".near-credentials";
@@ -137,25 +196,6 @@ async function start() {
 	}
 
 	try {
-		let fc_data = {
-			methods: [null, {
-				receiver_id: "nft.examples.testnet",
-				method_name: "nft_mint",
-				args: JSON.stringify({
-					token_id: pubKeys[0],
-					metadata: METADATA,
-				}),
-				attached_deposit: parseNearAmount("1")
-			}],
-			config: {
-				refund_to_deposit: true,
-				account_id_field: "receiver_id",
-				// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
-				//attached_gas: "80000000000000",
-				drop_id_field: "custom_drop_id"
-			}
-		}
-
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'create_drop', 

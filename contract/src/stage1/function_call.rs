@@ -41,10 +41,10 @@ pub struct FCConfig {
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FCData {
-    // Vector of optional method_name data. If None, no method_name is called.
-    // Drops with more than 1 claim can call different functions each time if Some.
-    // If only 1 method_name is passed in for multiple claims, that method_name is used for every claim.
-    pub methods: Vec<Option<MethodData>>,
+    // Vector of optional Vec<MethodData>. If None, no method is called.
+    // Drops with more than 1 claim can call a set of different functions each time if Some.
+    // If only 1 Vec<MethodData> is passed in for multiple claims, that method data is used for every claim.
+    pub methods: Vec<Option<Vec<MethodData>>>,
 
     // Config for the FC data. If None, all default values are used.
     pub config: Option<FCConfig>,
@@ -55,7 +55,7 @@ impl Keypom {
     // Internal method_name for transfer NFTs.
     pub(crate) fn internal_fc_execute(
         &mut self,
-        methods: &MethodData,
+        methods: &Vec<MethodData>,
         fc_config: Option<FCConfig>,
         key_id: u64,
         account_id: AccountId,
@@ -64,46 +64,59 @@ impl Keypom {
         /*
             Function Calls
         */
-        let mut final_args = methods.args.clone();
+        let account_field = fc_config
+            .clone()
+            .and_then(|c| c.account_id_field);
+        let drop_id_field = fc_config
+            .clone()
+            .and_then(|c| c.drop_id_field);
+        let key_id_field = fc_config
+            .clone()
+            .and_then(|c| c.key_id_field);
+        let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
-        // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
-        if let Some(account_field) = fc_config.clone().and_then(|c| c.account_id_field) {
-            final_args.insert_str(
-                final_args.len() - 1,
-                &format!(",\"{}\":\"{}\"", account_field, account_id),
-            );
-            near_sdk::log!(
-                "Adding claimed account ID to specified field: {:?}",
-                account_field,
+        for method in methods {
+            let mut final_args = method.args.clone();
+    
+            // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
+            if let Some(field) = account_field.as_ref() {
+                final_args.insert_str(
+                    final_args.len() - 1,
+                    &format!(",\"{}\":\"{}\"", field, account_id),
+                );
+                near_sdk::log!(
+                    "Adding claimed account ID to specified field: {:?}",
+                    account_field,
+                );
+            }
+    
+            // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
+            if let Some(field) = drop_id_field.as_ref() {
+                final_args.insert_str(
+                    final_args.len() - 1,
+                    &format!(",\"{}\":\"{}\"", field, drop_id),
+                );
+                near_sdk::log!("Adding drop ID to args {:?}", drop_id,);
+            }
+    
+            // Add the key ID as part of the args to the function call
+            if let Some(field) = key_id_field.as_ref() {
+                final_args.insert_str(
+                    final_args.len() - 1,
+                    &format!(",\"{}\":\"{}\"", field, key_id),
+                );
+                near_sdk::log!("Adding key ID to args {:?}", key_id);
+            }
+    
+            // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top
+            Promise::new(method.receiver_id.clone()).function_call_weight(
+                method.method_name.clone(),
+                final_args.as_bytes().to_vec(),
+                // The claim is successful so attach the amount to refund to the attached_deposit instead of refunding the funder.
+                method.attached_deposit.0,
+                gas,
+                GasWeight(1),
             );
         }
-
-        // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
-        if let Some(drop_id_field) = fc_config.clone().and_then(|c| c.drop_id_field) {
-            final_args.insert_str(
-                final_args.len() - 1,
-                &format!(",\"{}\":\"{}\"", drop_id_field, drop_id),
-            );
-            near_sdk::log!("Adding drop ID to args {:?}", drop_id,);
-        }
-
-        // Add the key ID as part of the args to the function call
-        if let Some(key_id_field) = fc_config.clone().and_then(|c| c.key_id_field) {
-            final_args.insert_str(
-                final_args.len() - 1,
-                &format!(",\"{}\":\"{}\"", key_id_field, key_id),
-            );
-            near_sdk::log!("Adding key ID to args {:?}", key_id);
-        }
-
-        // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top
-        Promise::new(methods.receiver_id.clone()).function_call_weight(
-            methods.method_name.clone(),
-            final_args.as_bytes().to_vec(),
-            // The claim is successful so attach the amount to refund to the attached_deposit instead of refunding the funder.
-            methods.attached_deposit.0,
-            fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0)),
-            GasWeight(1),
-        );
     }
 }

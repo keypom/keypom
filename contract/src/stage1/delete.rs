@@ -107,8 +107,14 @@ impl Keypom {
                             .unwrap()
                             .clone()
                             .expect("cannot have a single none function call")
-                            .attached_deposit
-                            .0;
+                            // iterate through   all entries and sum the attached_deposit
+                            .iter()
+                            .fold(0, |acc, x| acc + x.attached_deposit.0);
+                        near_sdk::log!(format!(
+                            "Total attached_deposits for all method data: {}",
+                            attached_deposit
+                        )
+                        .as_str());
                         total_deposit_value += key_info.remaining_uses as u128 * attached_deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
@@ -119,10 +125,19 @@ impl Keypom {
                         let starting_index = (uses_per_key - key_info.remaining_uses) as usize;
                         for method_name in data.methods.iter().skip(starting_index) {
                             total_num_none_fcs += method_name.is_none() as u64;
-                            total_deposit_value += method_name
-                                .clone()
-                                .map(|m| m.attached_deposit.0)
-                                .unwrap_or(0);
+
+                            // If the method is not None, we need to get the attached_deposit by looping through the method datas
+                            if let Some(method_data) = method_name {
+                                let attached_deposit = method_data
+                                    .iter()
+                                    .fold(0, |acc, x| acc + x.attached_deposit.0);
+                                near_sdk::log!(format!(
+                                    "Adding attached deposit: {}",
+                                    attached_deposit
+                                )
+                                .as_str());
+                                total_deposit_value += attached_deposit;
+                            }
                         }
                     }
                 }
@@ -223,8 +238,14 @@ impl Keypom {
                             .unwrap()
                             .clone()
                             .expect("cannot have a single none function call")
-                            .attached_deposit
-                            .0;
+                            // iterate through   all entries and sum the attached_deposit
+                            .iter()
+                            .fold(0, |acc, x| acc + x.attached_deposit.0);
+                        near_sdk::log!(format!(
+                            "Total attached_deposits for all method data: {}",
+                            attached_deposit
+                        )
+                        .as_str());
                         total_deposit_value += key_info.remaining_uses as u128 * attached_deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
@@ -235,10 +256,18 @@ impl Keypom {
                         let starting_index = (uses_per_key - key_info.remaining_uses) as usize;
                         for method_name in data.methods.iter().skip(starting_index) {
                             total_num_none_fcs += method_name.is_none() as u64;
-                            total_deposit_value += method_name
-                                .clone()
-                                .map(|m| m.attached_deposit.0)
-                                .unwrap_or(0);
+                            // If the method is not None, we need to get the attached_deposit by looping through the method datas
+                            if let Some(method_data) = method_name {
+                                let attached_deposit = method_data
+                                    .iter()
+                                    .fold(0, |acc, x| acc + x.attached_deposit.0);
+                                near_sdk::log!(format!(
+                                    "Adding attached deposit: {}",
+                                    attached_deposit
+                                )
+                                .as_str());
+                                total_deposit_value += attached_deposit;
+                            }
                         }
                     }
                 }
