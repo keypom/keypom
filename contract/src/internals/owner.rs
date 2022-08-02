@@ -19,7 +19,8 @@ impl Keypom {
             self.owner_id,
             "predecessor != owner"
         );
-        self.fees_per_user.insert(&account_id, &(drop_fee.0, key_fee.0));
+        self.fees_per_user
+            .insert(&account_id, &(drop_fee.0, key_fee.0));
     }
 
     /// Set the desired linkdrop contract to interact with

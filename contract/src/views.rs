@@ -206,27 +206,6 @@ impl Keypom {
             .collect()
     }
 
-    /// Returns the total supply of active keys for a given owner
-    pub fn get_key_supply_for_owner(&self, account_id: AccountId) -> u64 {
-        //get the set of drops for the passed in owner
-        let drops_for_owner = self.drop_ids_for_owner.get(&account_id);
-        near_sdk::log!("Drops: {:?}", drops_for_owner);
-
-        //if there is some set of drops, we'll iterate through and collect all the keys
-        if let Some(drops_for_owner) = drops_for_owner {
-            let mut supply = 0;
-            for id in drops_for_owner.iter() {
-                near_sdk::log!("ID: {:?}", id);
-                supply += self.drop_for_id.get(&id).unwrap().pks.len();
-            }
-
-            supply
-        } else {
-            //if there isn't a set of keys for the passed in account ID, we'll return 0
-            0
-        }
-    }
-
     /// Returns the total supply of active drops for a given owner
     pub fn get_drop_supply_for_owner(&self, account_id: AccountId) -> u64 {
         //get the set of drops for the passed in owner
@@ -270,8 +249,18 @@ impl Keypom {
         }
     }
 
+    /// Return the total supply of token IDs for a given drop
+    pub fn get_nft_supply_for_drop(&self, drop_id: DropId) -> u64 {
+        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
+        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
+            return nft_data.token_ids.len();
+        } else {
+            return 0;
+        }
+    }
+
     /// Paginate through token IDs in a drop
-    pub fn get_token_ids_for_drop(
+    pub fn get_nft_token_ids_for_drop(
         &self,
         drop_id: DropId,
         from_index: Option<U128>,
@@ -321,6 +310,8 @@ impl Keypom {
     /// Returns the current fees associated with an account
     pub fn get_fees_per_user(&self, account_id: AccountId) -> Option<(U128, U128)> {
         // return fees per user as a U128 tuple
-        self.fees_per_user.get(&account_id).map(|fees| (U128(fees.0), U128(fees.1)))
+        self.fees_per_user
+            .get(&account_id)
+            .map(|fees| (U128(fees.0), U128(fees.1)))
     }
 }
