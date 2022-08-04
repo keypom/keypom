@@ -81,7 +81,7 @@ impl Keypom {
         for method in methods {
             let mut final_args = method.args.clone();
 
-            if final_args.contains("\"binary_fields_present\"") {
+            if final_args.contains("\"injected_fields\"") {
                 near_sdk::log!("Malicious binary fields present. Returning and decrementing keys");
                 return;
             }
@@ -118,7 +118,7 @@ impl Keypom {
 
             final_args.insert_str(
                 final_args.len() - 1,
-                &format!(",\"binary_fields_present\":\"{}\"", binary_header),
+                &format!(",\"injected_fields\":\"{}\"", binary_header),
             );
             near_sdk::log!("Adding Binary Fields Present {:?}", binary_header);
     

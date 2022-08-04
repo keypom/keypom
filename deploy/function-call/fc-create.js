@@ -86,7 +86,7 @@ let fc_data = {
 				method_name: "nft_mint",
 				args: JSON.stringify({
 					token_id: "asldkjsadlksjalasd",
-					binary_fields_present: "0",
+					injected_fields: "0",
 					metadata: METADATA,
 				}),
 				attached_deposit: "0"//parseNearAmount("1")
