@@ -62,7 +62,7 @@ impl Keypom {
             near_sdk::log!("drop.registered_uses {}", drop.registered_uses);
 
             // Ensure that the keys to register can't exceed the number of keys in the drop.
-            if drop.registered_uses > drop.pks.len() * uses_per_key {
+            if drop.registered_uses > drop.pks.len() * uses_per_key { // TODO: remove?
                 near_sdk::log!("Too many NFTs sent. Contract is keeping the rest.");
                 drop.registered_uses = drop.pks.len() * uses_per_key;
             }

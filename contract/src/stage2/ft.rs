@@ -63,7 +63,7 @@ impl Keypom {
             near_sdk::log!("New claims registered {}", claims_to_register);
 
             // Ensure that the keys to register can't exceed the number of keys in the drop.
-            if drop.registered_uses > drop.pks.len() * uses_per_key {
+            if drop.registered_uses > drop.pks.len() * uses_per_key { // TODO: refund / remove?
                 near_sdk::log!("Too many FTs sent. Contract is keeping the rest.");
                 drop.registered_uses = drop.pks.len() * uses_per_key;
             }
