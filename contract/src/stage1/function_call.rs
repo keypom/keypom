@@ -82,7 +82,7 @@ impl Keypom {
             let mut final_args = method.args.clone();
 
             if final_args.contains("\"injected_fields\"") {
-                near_sdk::log!("Malicious binary fields present. Returning and decrementing keys");
+                near_sdk::log!("Injected fields detected in client args. Returning and decrementing keys");
                 return;
             }
             
