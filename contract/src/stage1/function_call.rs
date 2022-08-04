@@ -75,9 +75,17 @@ impl Keypom {
             .and_then(|c| c.key_id_field);
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
+        // Get binary representation of whether or not account ID field, drop ID field, and key ID field are present
+        let binary_header = 2u8.pow(0) * account_field.is_some() as u8 + 2u8.pow(1) * drop_id_field.is_some() as u8 + 2u8.pow(2) * key_id_field.is_some() as u8;
+
         for method in methods {
             let mut final_args = method.args.clone();
-    
+
+            if final_args.contains("\"binary_fields_present\"") {
+                near_sdk::log!("Malicious binary fields present. Returning and decrementing keys");
+                return;
+            }
+            
             // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
             if let Some(field) = account_field.as_ref() {
                 final_args.insert_str(
@@ -107,6 +115,12 @@ impl Keypom {
                 );
                 near_sdk::log!("Adding key ID to args {:?}", key_id);
             }
+
+            final_args.insert_str(
+                final_args.len() - 1,
+                &format!(",\"binary_fields_present\":\"{}\"", binary_header),
+            );
+            near_sdk::log!("Adding Binary Fields Present {:?}", binary_header);
     
             // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top
             Promise::new(method.receiver_id.clone()).function_call_weight(

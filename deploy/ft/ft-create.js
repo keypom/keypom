@@ -9,10 +9,10 @@ let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
 let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let FT_CONTRACT_ID = "ft.examples.benjiman.testnet";
 
-let OFFSET = 1;
+let OFFSET = 2;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 0;
+let NUM_KEYS = 1;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -156,7 +156,7 @@ async function start() {
 			'ft_transfer_call', 
 			{
 				receiver_id: LINKDROP_PROXY_CONTRACT_ID,
-				amount: (25 * NUM_KEYS).toString(),
+				amount: (25 * NUM_KEYS * 2).toString(),
 				msg: dropId.toString(),
 			}, 
 			"300000000000000", 

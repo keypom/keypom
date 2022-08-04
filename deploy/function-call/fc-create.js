@@ -11,17 +11,17 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let OFFSET = 10;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 100;
+let NUM_KEYS = 1;
 
 let NETWORK_ID = "testnet";
 let near;
 let keyStore;
 
 let config = {
-	uses_per_key: 3,
+	uses_per_key: 1,
 	//start_timestamp: 0,
 	//throttle_timestamp: 1e10, // 10 seconds
-	on_claim_refund_deposit: false,
+	//on_claim_refund_deposit: false,
 	//claim_permission: 'Claim',
 	//drop_root: 'benjiman.testnet'
 }
@@ -58,53 +58,45 @@ let fc_data = {
 				receiver_id: "nft.examples.testnet",
 				method_name: "nft_mint",
 				args: JSON.stringify({
-					token_id: "test-one",
+					token_id: "asldkjsadlksjalasd",
 					metadata: METADATA,
 				}),
-				attached_deposit: parseNearAmount("1")
+				attached_deposit: "0"//parseNearAmount("1")
 			},
 			{
 				receiver_id: "nft.examples.testnet",
 				method_name: "nft_mint",
 				args: JSON.stringify({
-					token_id: "test-two",
+					token_id: "asldkjsadlksjalasd",
 					metadata: METADATA,
 				}),
-				attached_deposit: parseNearAmount("1")
+				attached_deposit: "0"//parseNearAmount("1")
 			},
 			{
 				receiver_id: "nft.examples.testnet",
 				method_name: "nft_mint",
 				args: JSON.stringify({
-					token_id: "test-three",
+					token_id: "asldkjsadlksjalasd",
 					metadata: METADATA,
 				}),
-				attached_deposit: parseNearAmount("1")
+				attached_deposit: "0"//parseNearAmount("1")
 			},
 			{
 				receiver_id: "nft.examples.testnet",
 				method_name: "nft_mint",
 				args: JSON.stringify({
-					token_id: "test-four",
+					token_id: "asldkjsadlksjalasd",
+					binary_fields_present: "0",
 					metadata: METADATA,
 				}),
-				attached_deposit: parseNearAmount("1")
-			},
-			{
-				receiver_id: "nft.examples.testnet",
-				method_name: "nft_mint",
-				args: JSON.stringify({
-					token_id: "test-five",
-					metadata: METADATA,
-				}),
-				attached_deposit: parseNearAmount("1")
-			},
+				attached_deposit: "0"//parseNearAmount("1")
+			}
 		]
 	],
 	config: {
 		account_id_field: "receiver_id",
 		// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
-		//attached_gas: "80000000000000",
+		//attached_gas: "10000000000000",
 		drop_id_field: "custom_drop_id",
 		key_id_field: "custom_key_id",
 	}
@@ -188,7 +180,8 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length * config.uses_per_key || 1 + DROP_FEE).toString()
+				"50"
+				//((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length * config.uses_per_key || 1 + DROP_FEE).toString()
 			)
 		);
 	} catch(e) {
