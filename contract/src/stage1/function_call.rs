@@ -76,7 +76,7 @@ impl Keypom {
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
         // Get binary representation of whether or not account ID field, drop ID field, and key ID field are present
-        let binary_header = 2u8.pow(0) * account_field.is_some() as u8 + 2u8.pow(1) * drop_id_field.is_some() as u8 + 2u8.pow(2) * key_id_field.is_some() as u8;
+        let injected_fields = 2u8.pow(0) * account_field.is_some() as u8 + 2u8.pow(1) * drop_id_field.is_some() as u8 + 2u8.pow(2) * key_id_field.is_some() as u8;
 
         for method in methods {
             let mut final_args = method.args.clone();
@@ -118,9 +118,9 @@ impl Keypom {
 
             final_args.insert_str(
                 final_args.len() - 1,
-                &format!(",\"injected_fields\":\"{}\"", binary_header),
+                &format!(",\"injected_fields\":\"{}\"", injected_fields),
             );
-            near_sdk::log!("Adding Binary Fields Present {:?}", binary_header);
+            near_sdk::log!("Adding Injected Fields Present {:?}", injected_fields);
     
             // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top
             Promise::new(method.receiver_id.clone()).function_call_weight(
