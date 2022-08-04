@@ -50,23 +50,10 @@ impl Keypom {
                 "FT data must match what was sent"
             );
 
-            // Get the max claims per key. Default to 1 if not specified in the drop config.
-            let uses_per_key = drop
-                .config
-                .clone()
-                .and_then(|c| c.uses_per_key)
-                .unwrap_or(1);
-
             // Get the number of claims to register with the amount that is sent.
             let claims_to_register = (amount.0 / ft_data.balance_per_use.0) as u64;
             drop.registered_uses += claims_to_register;
             near_sdk::log!("New claims registered {}", claims_to_register);
-
-            // Ensure that the keys to register can't exceed the number of keys in the drop.
-            if drop.registered_uses > drop.pks.len() * uses_per_key {
-                near_sdk::log!("Too many FTs sent. Contract is keeping the rest.");
-                drop.registered_uses = drop.pks.len() * uses_per_key;
-            }
 
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
