@@ -18,7 +18,7 @@ let near;
 let keyStore;
 
 let config = {
-	uses_per_key: 2,
+	uses_per_key: 1,
 	//start_timestamp: 0,
 	//throttle_timestamp: 1e10, // 10 seconds
 	on_claim_refund_deposit: false,

@@ -5,9 +5,9 @@
 
 <div align="center">
   <h1>
-  NEAR Linkdrop Proxy
+  Keypom
   </h1>
-  The hub for creating linkdrops containing $NEAR and one of: NFTs, and FTs or an arbitrary function called upon claim
+  Limitless possibilities in the palm of your hand.
 </div>
 
 <div align="center">
@@ -43,29 +43,125 @@
 <tr>
 <td>
 
-The NEAR linkdrop proxy contract was initially created as a way to handle the hardcoded minimum 1 $NEAR fee for creating linkdrops using the [regular linkdrop contract](https://github.com/near/near-linkdrop/blob/f24f2608e1558db773f2408a28849d330abb3881/src/lib.rs#L18). If users wanted to create linkdrops, they needed to attach a **minimum** of 1 $NEAR. This made it costly and unscalable for projects that wanted to mass create linkdrops for an easy onboarding experience to NEAR.
+Keypom sheds light on the endless power that NEAR's access keys introduce. The contract was created as a result of 3 common problems that arose in the ecosystem.
 
-The proxy contract has a highly optimized fee structure that can be broken down below. Every linkdrop's fees are made up of: 
-- Actual linkdrop balance sent to the claimed account (**minimum 0.00284 $NEAR**).
-- Access key allowance (**0.02 $NEAR**).
+1. People want a cheap, customizable, and unique onboarding experience for users.
+2. Companies don't want to expose full access keys in their backend servers.
+3. dApps want a smooth UX for interactions that require deposits.
+
+The contract was initially created as a way to handle the 1 $NEAR minimum deposit required for creating linkdrops using the [regular linkdrop contract](https://github.com/near/near-linkdrop/blob/f24f2608e1558db773f2408a28849d330abb3881/src/lib.rs#L18). 
+
+If users wanted to create linkdrops, they needed to attach a **minimum** of 1 $NEAR. This made it costly and unscalable for projects that wanted to mass onboard onto NEAR. 
+
+Keypom, on the other hand, has been highly optimized and the design can be broken down into two categories: keys, and drops. At the end of the day, Keypom is a utility used to generate keys that belong to a drop. The drop outlines a suite of different permissions and outcomes that each key will derive.
+
+At a high level, Keypom allows for 4 different types of drops, each equipped with their own set of customizable features.
+
+1. Simple drops
+2. Non Fungible Token drops
+3. Fungible Token drops
+4. Function Call drops.
+
+# Customizable Features
+
+Keypom provides a highly customizable set of features for keys to inherit from when drops are created. These features come in the form of an optional `DropConfig` and optional `DropMetadata` and are shared across all drops regardless of their types. There are other configurations available specific to certain drop types as well.
+
+## Drop Config
+
+The drop config outlines global configurations that **all** the keys in the drop will inherit from. These configurations are outlined below.
+- **`uses_per_key`**: How many times can a key be used before it's deleted.
+- **`start_timestamp`**: At what block timestamp can the key **first** be used.
+- **`throttle_timestamp`**: How much time must pass in between key uses.
+- **`on_claim_refund_deposit`**: If a key was used to call `claim` instead of to create an account, should the key deposit be sent back to the drop owner?
+- **`claim_permission`**: What permissions should the key have. This can be either to only call `claim`, `create_account_and_claim`, or both.
+- **`drop_root`**: When `create_account_and_claim` is called, accounts normally inherit from the global root (`near` or `testnet`) in order to accounts to be top-level. By overloading this and passing in a `drop_root`, your application can force all created accounts for your drop to be sub-accounts of the `drop_root`. Keep in mind that the `drop_root` specified must have a valid contract deployed to it such that it can create sub-accounts.
+
+## Drop Metadata
+
+In addition to the drop config, the drop metadata is a way to pass additional information about the drop in the form of an arbitrary string. It's up to the drop owner to decide how this information should be used. A common approach is to pass in stringified JSON outlining a title, description, and media for the drop such that it can be rendered nicely on frontends.
+
+## NFT and FT Configs
+
+When creating either an NFT or FT drop, the creator has the ability to specify 2 different fields:
+- **`contract_id`**: What token contract will the drop use?
+- **`sender_id`**: Who will be sending the tokens to the contract?
+
+FT Specific:
+- **`balance_per_use`**: How many tokens will be sent per key use?
+
+NFT Specific:
+- **`longest_token_id`**: What is the longest token ID that will be used in the drop? (this is for storage optimizations and is explained in the [Cost](#cost) section)
+
+## Function Call Configurations
+
+Keypom allows for suite of features when creating function call drops. This allows for almost endless possibilities for creators. At the top level, each drop will have an optional `FCConfig` outlining features that all keys will inherit from.
+- **`account_id_field`**: When a key is used, what field should the claimed account be added to in the function call args? For example, if `benji.near` used the key and the account ID field was set to `receiver_id`, the args would have `{ "receiver_id": "benji.near" }` added.
+- **`drop_id_field`**: When a key is used, what field should the drop ID be added to in the function call args? For example, if a key belonging to drop ID `0` was used and the drop ID field was set to `id`, the args would have `{ "id": "0" }` added.
+- **`key_id_field`**: When a key is used, what field should the key ID be added to in the function call args? For example, if a key with ID `13` was used and the key ID field was set to `key`, the args would have `{ "key": "13" }` added.
+- **`attached_gas`**: How much gas should be attached to the function call? If this is specified, the key can **only** be used to call `claim`.
+
+In addition to the FCConfig, the creator can specify what's known as `MethodData`. This data outlines the specifics of the functions executed when a key is used.
+- **`receiver_id`**: What contract should the function call be sent to?
+- **`method_name`**: What method name should be called?
+- **`args`**: What arguments should be passed to the function call?
+- **`attached_deposit`**: How much deposit should be attached to the function call?
+
+This method data is outlined in the form of a set of optional `MethodData` vectors. Everytime a key is used, if the Method Data is null, it will be skipped and the uses are decremented. If the Method Data is not null, the contract will execute all functions in the vector. If only 1 vector of Method Data is defined, that will be used for all uses.
+
+Let's look at an example of how powerful this can be. Let's say you're doing an NFT ticketing event and want to have a proof of attendance where users will have an NFT lazy minted to them if they actually show up to the event. 
+
+You could have a key with 2 claims where the first method data is null and the second is a vector of size 1 that will lazy mint an NFT. You could setup an app that claims the null case when the person visits the link you gave them. The bouncer could then give them a password that would allow them to claim the second use and get the NFT. They can only do this if they show up to the event and get the password from the bouncer as the link you gave them is encrypted. As the creator, you would know how many people didn't use your original link, used it but didn't show up, and showed up all by checking the uses of the key.
+
+</p>
+
+# Cost
+
+There are several costs that must be taken into account when using Keypom. These costs are broken down into two categories: per key and per drop. On top of these costs, Keypom takes **1 $NEAR** per drop and **0.005 $NEAR** per key. This model promotes drops with a lot of keys rather than many different drops with fewer keys. These numbers **can** be changed on a per-account basis so reach out to Ben or Matt if this is of interest to your application. 
+
+> **NOTE:** Creating an empty drop and then adding 100 keys in separate calls will incur the same cost as creating a drop with 100 keys in the same call.
+
+## Per Drop
+
+When creating an empty drop, there are only two costs to keep in mind regardless of the drop type:
+- Keypom's drop fee (**1 $NEAR**)
+- Storage cost (**~0.008 $NEAR** for simple drops)
+
+## Per Key
+Whenever keys are added to a drop (either when the drop is first created or at a later date), the costs are outlined below.
+
+### Key Costs for Simple Drop
+
+- Keypom's key fee (**0.005 $NEAR**).
+- $NEAR sent when the key is used (can be 0).
+- Access key allowance (**~0.0187 $NEAR per use**).
 - Storage for creating access key (**0.001 $NEAR**).
-- Storage cost for storing information on the proxy contract (**dynamically calculated** but **~0.0015 $NEAR** for a basic linkdrop).
+- Storage cost (**~0.006 $NEAR** for simple drops)
 
-This means that at an absolute **minimum**, you can create a linkdrop for **~0.02534 $NEAR** making it **97.466% cheaper** than the alternate solution. 
+### Additional Costs for NFT Drops
 
-In addition, some of this upfront fee **will be refunded** to the funder once the account is created, making it even cheaper. The access key allowance and all storage will be refunded (minus the burnt GAS) once the linkdrop is claimed which makes the true cost of creating a linkdrop roughly `(0.02534 - (0.02 + 0.001 + 0.0015 - 0.01) = 0.01384 $NEAR` which is **~98.616% cheaper**. 
+Since keys aren't registered for use until **after** the contract has received the NFT, we don't know how much storage the token IDs will use on the contract. To combat this, the drop creators must pass in the **longest token ID** and the contract will charge that storage cost for all key uses.
 
-> **NOTE:** any excess $NEAR attached to the call when creating the linkdrop will be automatically refunded to the funder
+### Additional Costs for FT Drops
 
-Key features of the **Linkdrop Proxy Contract**:
+Since accounts claiming FTs may or may not be registered on the Fungible Token contract, Keypom will automatically try to register **all** accounts. This means that the drop creators must front the cost of registering users depending on the `storage_balance_bounds` returned from the FT contract. This applies to every use for every key.
 
-- **Batch creation** of linkdrops within the contract.
-- Ability to specify a **highly customizable function** to be called when the linkdrop is claimed.
-- Ability to pre-load the linkdrop with an **NFT** from **any** NEP-171 compatible smart contract.
-- Ability to pre-load the linkdrop with **fungible tokens** from **any** NEP-141 compatible smart contract.
-- Extremely **low required deposits** when compared with traditional approaches
-- **Customizable balance** that the linkdrop will contain.
+### Additional Costs for FC Drops
 
+Drop creators have a ton of customization available to them when creation Function Call drops. A cost that they might incur is the attached deposit being sent alongside the function call. Keypom will charge creators for all the attached deposits they specify.
+
+> **NOTE:** The storage costs are dynamically calculated and will vary depending on the information you store on-chain.
+
+## Deleting Keys and Drops
+
+Creators have the ability to delete drops and keys at any time. In this case, **all** the initial costs they incurred for the remaining keys will be refunded to them except for Keypom's fees.
+
+## Automatic Refunds When Keys are Used
+
+One way that Keypom optimizes the fee structure is by performing automatic refunds for some of the initial costs that creators pay for when keys are used. All the storage that is freed along with any unused allowance is automatically sent back to the creator whenever a key is used. This model drastically reduces the overall costs of creating drops and creates incentives for the keys to be used. 
+
+## Account Balances for Smooth UX
+
+In order to make the UX of using Keypom seamless, the contract introduces a debit account model. All costs and refunds go through your account's balance which is stored on the contract. This balance can be topped up or withdrawn at any moment using the `add_to_balance()`  and `withdraw_from_balance()` functions.
 
 </td>
 </tr>
@@ -76,15 +172,13 @@ Key features of the **Linkdrop Proxy Contract**:
 - [near-sdk-rs](https://github.com/near/near-sdk-rs)
 - [near-api-js](https://github.com/near/near-api-js)
 
-# How it Works
+# How Linkdrops Works
 
-Once the contract is deployed, you can either batch create linkdrops, or you can create them one-by-one. With each basic linkdrop, you have the option to either pre-load them with an NFT, or a fungible token.
-
-For some background as to how the linkdrop proxy contract works on NEAR: 
+For some background as to how linkdrops works on NEAR: 
 
 *The funder that has an account and some $NEAR:* 
 - creates a keypair locally `(pubKey1, privKey1)`. The blockchain doesn't know of this key's existence yet since it's all local for now.
-- calls `send` on the proxy contract and passes in the `pubKey1` as an argument as well as the desired `balance` for the linkdrop.
+- calls `send` on the contract and passes in the `pubKey1` as an argument as well as the desired `balance` for the linkdrop.
     - The contract will map the `pubKey1` to the desired `balance` for the linkdrop.
     - The contract will then add the `pubKey1` as a **function call access key** with the ability to call `claim` and `create_account_and_claim`. This means that anyone with the `privKey1` that was created locally, can claim this linkdrop. 
 - Funder will then create a link to send to someone that contains this `privKey1`. The link follows the following format: 
@@ -99,49 +193,17 @@ For some background as to how the linkdrop proxy contract works on NEAR:
 - Receives the link which includes `privKey1` and sends them to the NEAR wallet.
 - Wallet creates a new keypair `(pubKey2, privKey2)` locally. The blockchain doesn't know of this key's existence yet since it's all local for now.
 - Receiver will then choose an account ID such as `new_account.near`. 
-- Wallet will then use the `privKey1` which has access to call `claim` and `create_account_and_claim` in order to call `create_account_and_claim` on the proxy contract.
+- Wallet will then use the `privKey1` which has access to call `claim` and `create_account_and_claim` in order to call `create_account_and_claim` on the contract.
     - It will pass in `pubKey2` which will be used to create a full access key for the new account.
-- The proxy contract will create the new account and transfer the funds to it alongside any NFT or fungible tokens pre-loaded.
+- The contract will create the new account and transfer the funds to it alongside any NFT or fungible tokens pre-loaded.
 
-To view information account data information for a given key, you can call the following view function: 
-
-```bash
-near view YOUR_LINKDROP_PROXY_CONTRACT get_key_information '{"key": "ed25519:7jszQk7sfbdQy8NHM1EfJi9r3ncyvKa4ZoKU7uk9PbqR"}'
-```
-
-Example response:
-<p>
-
-```bash
-[
-  {
-    funder_id: 'benjiman.testnet',
-    balance: '2840000000000000000000',
-    storage_used: '1320000000000000000000',
-    cb_id: null,
-    cb_data_sent: true
-  },
-  null,
-  null,
-  null
-]
-```
 </p>
-
-This will return the Account Data followed by Fungible Token Data, NFT Data, and then Function Call Data. If any of the above don't exist, null is returned in its place.
-
-Below are some flowcharts for creating single linkdrops and batch creating multiple linkdrops.
-
-<p align="center">
-  <img src="flowcharts/creating-single-linkdrops.png" style="width: 65%; height: 65%" alt="Logo">
-  <br />
-  <img src="flowcharts/creating-multiple-linkdrops.png" style="width: 65%; height: 65%" alt="Logo">
-</p>
-
 
 ## NFT Linkdrops
 
-With the proxy contract, users can pre-load a linkdrop with **only one** NFT due to GAS constraints. In order to pre-load the NFT, you must:
+With Keypom contract, users can pre-load each key with a set of NFTs depending on how many uses per key. Each use will pop the last token ID off and send it to the claimed account.
+
+In order to pre-load the NFT and register a key use, you must:
 - create a linkdrop either through `send` or `send_multiple` and specify the NFTData for the NFT that will be pre-loaded onto the linkdrop. The NFT Data struct can be seen below.
 
 ```rust

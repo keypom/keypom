@@ -11,14 +11,14 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let OFFSET = 1;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 5;
+let NUM_KEYS = 0;
 
 let NETWORK_ID = "testnet";
 let near;
 let keyStore;
 
 let config = {
-	uses_per_key: 2,
+	uses_per_key: 1,
 	//start_timestamp: 0,
 	//throttle_timestamp: 1e10, // 10 seconds
 	on_claim_refund_deposit: false,
@@ -56,7 +56,7 @@ async function start() {
 	await initiateNear();
 
 	if(!LINKDROP_PROXY_CONTRACT_ID) {
-		const dev_account = await readFile(`neardev/dev-account`);
+		const dev_account = await readFile(`./neardev/dev-account`);
 		LINKDROP_PROXY_CONTRACT_ID = dev_account.toString();
 	}
 

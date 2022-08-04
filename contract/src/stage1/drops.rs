@@ -397,8 +397,7 @@ impl Keypom {
 
         // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
-        let total_required_storage = (Balance::from(final_storage - initial_storage)
-            + storage_per_longest)
+        let total_required_storage = Balance::from(final_storage - initial_storage)
             * env::storage_byte_cost();
         near_sdk::log!("Total required storage Yocto {}", total_required_storage);
 
@@ -428,7 +427,7 @@ impl Keypom {
                 + actual_allowance
                 + ACCESS_KEY_STORAGE
                 + deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128
-                + storage_per_longest * env::storage_byte_cost()
+                + storage_per_longest * env::storage_byte_cost() * (num_claims_per_key - num_none_fcs) as u128
                 + deposit_required_for_fc_deposits)
                 * len;
         near_sdk::log!(
