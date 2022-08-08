@@ -370,7 +370,7 @@ impl Keypom {
             // We can simply loop through and manually get this data
             } else {
                 for method_name in data.methods {
-                    num_none_fcs += method_name.is_some() as u64;
+                    num_none_fcs += method_name.is_none() as u64;
                     // If the method is not None, we need to get the attached_deposit by looping through the method datas
                     if let Some(method_data) = method_name {
                         let attached_deposit = method_data
@@ -656,7 +656,7 @@ impl Keypom {
             // We can simply loop through and manually get this data
             } else {
                 for method_name in data.methods.clone() {
-                    num_none_fcs += method_name.is_some() as u64;
+                    num_none_fcs += method_name.is_none() as u64;
                     // If the method is not None, we need to get the attached_deposit by looping through the method datas
                     if let Some(method_data) = method_name {
                         let attached_deposit = method_data

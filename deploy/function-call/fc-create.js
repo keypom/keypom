@@ -11,7 +11,7 @@ let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
 let OFFSET = 10;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
-let NUM_KEYS = 1;
+let NUM_KEYS = 100;
 
 let NETWORK_ID = "testnet";
 let near;
@@ -35,61 +35,30 @@ let metadata = {
 /*
 Hard coding NFT contract and metadata. Change this if you want.
 */
-let NFT_CONTRACT_ID = "nft.examples.testnet";
-const METADATA = {
-	"title": "Linkdropped Go Team NFT",
-	"description": "Testing Linkdrop NFT Go Team Token",
-	"media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif",
-	"media_hash": null,
-	"copies": 10000,
-	"issued_at": null,
-	"expires_at": null,
-	"starts_at": null,
-	"updated_at": null,
-	"extra": null,
-	"reference": null,
-	"reference_hash": null
-};
+//let NFT_CONTRACT_ID = "eth-toronto.keypom.testnet";
+// const METADATA = {
+// 	"title": "JS SDK Launch",
+// 	"description": "Thank you for supporting our JavaScript launch! Welcome to the NEAR ecosystem.",
+// 	"media": "https://bafybeihnb36l3xvpehkwpszthta4ic6bygjkyckp5cffxvszbcltzyjcwi.ipfs.nftstorage.link/",
+// 	"media_hash": null,
+// 	"copies": 400,
+// 	"issued_at": null,
+// 	"expires_at": null,
+// 	"starts_at": null,
+// 	"updated_at": null,
+// 	"extra": null,
+// 	"reference": null,
+// 	"reference_hash": null
+// };
 
 let fc_data = {
 	methods: [
 		[
 			{
-				receiver_id: "nft.examples.testnet",
+				receiver_id: "nft.eth-toronto.keypom.testnet",
 				method_name: "nft_mint",
-				args: JSON.stringify({
-					token_id: "asldkjsadlksjalasd",
-					metadata: METADATA,
-				}),
-				attached_deposit: "0"//parseNearAmount("1")
-			},
-			{
-				receiver_id: "nft.examples.testnet",
-				method_name: "nft_mint",
-				args: JSON.stringify({
-					token_id: "asldkjsadlksjalasd",
-					metadata: METADATA,
-				}),
-				attached_deposit: "0"//parseNearAmount("1")
-			},
-			{
-				receiver_id: "nft.examples.testnet",
-				method_name: "nft_mint",
-				args: JSON.stringify({
-					token_id: "asldkjsadlksjalasd",
-					metadata: METADATA,
-				}),
-				attached_deposit: "0"//parseNearAmount("1")
-			},
-			{
-				receiver_id: "nft.examples.testnet",
-				method_name: "nft_mint",
-				args: JSON.stringify({
-					token_id: "asldkjsadlksjalasd",
-					injected_fields: "0",
-					metadata: METADATA,
-				}),
-				attached_deposit: "0"//parseNearAmount("1")
+				args: "",
+				attached_deposit: parseNearAmount("0.01")
 			}
 		]
 	],
@@ -97,8 +66,8 @@ let fc_data = {
 		account_id_field: "receiver_id",
 		// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
 		//attached_gas: "10000000000000",
-		drop_id_field: "custom_drop_id",
-		key_id_field: "custom_key_id",
+		drop_id_field: "id",
+		//key_id_field: "key_id",
 	}
 }
 // set up near
