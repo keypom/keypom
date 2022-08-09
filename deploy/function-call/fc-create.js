@@ -4,16 +4,16 @@ const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
   
-let LINKDROP_PROXY_CONTRACT_ID = process.env.CONTRACT_NAME;
-let FUNDING_ACCOUNT_ID = process.env.FUNDING_ACCOUNT_ID;
-let LINKDROP_NEAR_AMOUNT = process.env.LINKDROP_NEAR_AMOUNT;
+let LINKDROP_PROXY_CONTRACT_ID = "eth-toronto.keypom.near"//process.env.CONTRACT_NAME;
+let FUNDING_ACCOUNT_ID = "eth-toronto.keypom.near";
+let LINKDROP_NEAR_AMOUNT = "0.25"//process.env.LINKDROP_NEAR_AMOUNT;
 
 let OFFSET = 10;
 let DROP_FEE = 1;
 let KEY_FEE = 0.005;
 let NUM_KEYS = 100;
 
-let NETWORK_ID = "testnet";
+let NETWORK_ID = "mainnet";
 let near;
 let keyStore;
 
@@ -24,11 +24,6 @@ let config = {
 	//on_claim_refund_deposit: false,
 	//claim_permission: 'Claim',
 	//drop_root: 'benjiman.testnet'
-}
-
-let metadata = {
-	title: "This is a title",
-	description: "This is a description"
 }
 
 
@@ -55,10 +50,10 @@ let fc_data = {
 	methods: [
 		[
 			{
-				receiver_id: "nft.eth-toronto.keypom.testnet",
+				receiver_id: "nft.eth-toronto.keypom.near",
 				method_name: "nft_mint",
 				args: "",
-				attached_deposit: parseNearAmount("0.01")
+				attached_deposit: parseNearAmount("0.009")
 			}
 		]
 	],
@@ -81,10 +76,10 @@ const initiateNear = async () => {
 	let nearConfig = {
 		networkId: NETWORK_ID,
 		keyStore,
-		nodeUrl: "https://rpc.testnet.near.org",
-		walletUrl: "https://wallet.testnet.near.org",
-		helperUrl: "https://helper.testnet.near.org",
-		explorerUrl: "https://explorer.testnet.near.org",
+		nodeUrl: "https://rpc.mainnet.near.org",
+		walletUrl: "https://wallet.mainnet.near.org",
+		helperUrl: "https://helper.mainnet.near.org",
+		explorerUrl: "https://explorer.mainnet.near.org",
 	};
 
 	near = await connect(nearConfig);
@@ -116,7 +111,7 @@ async function start() {
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'new', 
 			{
-				root_account: "testnet",
+				root_account: "near",
 				owner_id: LINKDROP_PROXY_CONTRACT_ID
 			}, 
 			"300000000000000", 
@@ -149,7 +144,7 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				"50"
+				"120"
 				//((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length * config.uses_per_key || 1 + DROP_FEE).toString()
 			)
 		);
@@ -165,8 +160,7 @@ async function start() {
 				public_keys: pubKeys,
 				deposit_per_use: parseNearAmount(LINKDROP_NEAR_AMOUNT),
 				fc_data,
-				config,
-				metadata: JSON.stringify(metadata)
+				config
 			}, 
 			"300000000000000"
 		);
@@ -258,8 +252,8 @@ async function start() {
 	
 	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
-		curPks[keyPairs[i].publicKey.toString()] = `https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`;
-		console.log(`https://wallet.testnet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);
+		curPks[keyPairs[i].publicKey.toString()] = `https://wallet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`;
+		console.log(`https://wallet.near.org/linkdrop/${LINKDROP_PROXY_CONTRACT_ID}/${keyPairs[i].secretKey}`);
 		console.log("Pub Key: ", keyPairs[i].publicKey.toString());
 	}
 
