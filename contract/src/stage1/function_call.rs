@@ -23,9 +23,6 @@ pub struct MethodData {
     // Specifies what field the key ID should go in when calling the function.
     // If Some(String), attach key ID to args. Else, don't attach.
     pub key_id_field: Option<String>,
-    // How much GAS should be attached to the function call if it's a straight execute. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
-    // This makes it so the keys can only call `claim`
-    pub attached_gas: Option<Gas>,
 }
 
 /// Keep track of optional configurations for the FC data
