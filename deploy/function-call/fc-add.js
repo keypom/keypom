@@ -17,7 +17,7 @@ let near;
 let keyStore;
 
 let config = {
-	uses_per_key: 2,
+	uses_per_key: 500,
 	//start_timestamp: 0,
 	//throttle_timestamp: 1e10, // 10 seconds
 	on_claim_refund_deposit: false,
@@ -107,7 +107,8 @@ async function start() {
 			{},
 			"300000000000000", 
 			parseNearAmount(
-				((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length * config.uses_per_key || 1).toString()
+				"50"
+				//((parseFloat(LINKDROP_NEAR_AMOUNT) + KEY_FEE + OFFSET + 1) * pubKeys.length * config.uses_per_key || 1).toString()
 			)
 		);
 	} catch(e) {

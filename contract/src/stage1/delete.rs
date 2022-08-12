@@ -131,11 +131,6 @@ impl Keypom {
                                 let attached_deposit = method_data
                                     .iter()
                                     .fold(0, |acc, x| acc + x.attached_deposit.0);
-                                near_sdk::log!(format!(
-                                    "Adding attached deposit: {}",
-                                    attached_deposit
-                                )
-                                .as_str());
                                 total_deposit_value += attached_deposit;
                             }
                         }
@@ -261,11 +256,6 @@ impl Keypom {
                                 let attached_deposit = method_data
                                     .iter()
                                     .fold(0, |acc, x| acc + x.attached_deposit.0);
-                                near_sdk::log!(format!(
-                                    "Adding attached deposit: {}",
-                                    attached_deposit
-                                )
-                                .as_str());
                                 total_deposit_value += attached_deposit;
                             }
                         }

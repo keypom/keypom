@@ -47,25 +47,12 @@ impl Keypom {
             // Push the token ID to the back of the vector
             token_ids.push(&token_id);
 
-            // Get the max claims per key. Default to 1 if not specified in the drop config.
-            let uses_per_key = drop
-                .config
-                .clone()
-                .and_then(|c| c.uses_per_key)
-                .unwrap_or(1);
-
             // Re-insert the token IDs into the NFT Data struct
             nft_data.token_ids = token_ids;
 
             // Increment the claims registered
             drop.registered_uses += 1;
             near_sdk::log!("drop.registered_uses {}", drop.registered_uses);
-
-            // Ensure that the keys to register can't exceed the number of keys in the drop.
-            if drop.registered_uses > drop.pks.len() * uses_per_key {
-                near_sdk::log!("Too many NFTs sent. Contract is keeping the rest.");
-                drop.registered_uses = drop.pks.len() * uses_per_key;
-            }
 
             // Add the nft data back with the updated set
             drop.drop_type = DropType::NonFungibleToken(nft_data);

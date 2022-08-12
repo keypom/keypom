@@ -14,24 +14,21 @@ pub struct MethodData {
     pub args: String,
     // Amount of yoctoNEAR to attach along with the call
     pub attached_deposit: U128,
+    // Specifies what field the claiming account should go in when calling the function
+    // If None, this isn't attached to the args
+    pub account_id_field: Option<String>,
+    // Specifies what field the drop ID should go in when calling the function.
+    // If Some(String), attach drop ID to args. Else, don't attach.
+    pub drop_id_field: Option<String>,
+    // Specifies what field the key ID should go in when calling the function.
+    // If Some(String), attach key ID to args. Else, don't attach.
+    pub key_id_field: Option<String>,
 }
 
 /// Keep track of optional configurations for the FC data
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FCConfig {
-    // Specifies what field the claiming account should go in when calling the function
-    // If None, this isn't attached to the args
-    pub account_id_field: Option<String>,
-
-    // Specifies what field the drop ID should go in when calling the function.
-    // If Some(String), attach drop ID to args. Else, don't attach.
-    pub drop_id_field: Option<String>,
-
-    // Specifies what field the key ID should go in when calling the function.
-    // If Some(String), attach key ID to args. Else, don't attach.
-    pub key_id_field: Option<String>,
-
     // How much GAS should be attached to the function call if it's a straight execute. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
     // This makes it so the keys can only call `claim`
     pub attached_gas: Option<Gas>,
@@ -64,34 +61,42 @@ impl Keypom {
         /*
             Function Calls
         */
-        let account_field = fc_config
-            .clone()
-            .and_then(|c| c.account_id_field);
-        let drop_id_field = fc_config
-            .clone()
-            .and_then(|c| c.drop_id_field);
-        let key_id_field = fc_config
-            .clone()
-            .and_then(|c| c.key_id_field);
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
         for method in methods {
+            // Get binary representation of whether or not account ID field, drop ID field, and key ID field are present
+            let injected_fields = 2u8.pow(0) * method.account_id_field.is_some() as u8 + 2u8.pow(1) *  method.drop_id_field.is_some() as u8 + 2u8.pow(2) *  method.key_id_field.is_some() as u8;
+
             let mut final_args = method.args.clone();
-    
+
+            if final_args.contains("\"injected_fields\"") {
+                near_sdk::log!("Injected fields detected in client args. Returning and decrementing keys");
+                return;
+            }
+
+            if final_args.len() == 0 {
+                final_args = format!("{{\"injected_fields\":\"{}\"}}", injected_fields);
+            } else {
+                final_args.insert_str(
+                    final_args.len() - 1,
+                        &format!(",\"injected_fields\":\"{}\"", injected_fields),
+                    );
+            }
+            
             // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
-            if let Some(field) = account_field.as_ref() {
+            if let Some(field) =  method.account_id_field.as_ref() {
                 final_args.insert_str(
                     final_args.len() - 1,
                     &format!(",\"{}\":\"{}\"", field, account_id),
                 );
                 near_sdk::log!(
                     "Adding claimed account ID to specified field: {:?}",
-                    account_field,
+                    method.account_id_field,
                 );
             }
     
             // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
-            if let Some(field) = drop_id_field.as_ref() {
+            if let Some(field) =  method.drop_id_field.as_ref() {
                 final_args.insert_str(
                     final_args.len() - 1,
                     &format!(",\"{}\":\"{}\"", field, drop_id),
@@ -100,14 +105,14 @@ impl Keypom {
             }
     
             // Add the key ID as part of the args to the function call
-            if let Some(field) = key_id_field.as_ref() {
+            if let Some(field) =  method.key_id_field.as_ref() {
                 final_args.insert_str(
                     final_args.len() - 1,
                     &format!(",\"{}\":\"{}\"", field, key_id),
                 );
                 near_sdk::log!("Adding key ID to args {:?}", key_id);
             }
-    
+
             // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top
             Promise::new(method.receiver_id.clone()).function_call_weight(
                 method.method_name.clone(),

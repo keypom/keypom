@@ -5,7 +5,7 @@
 	"author": "Ben Kurrek, Matt Lockyer",
 	"scripts": {
 		"deploy": "yarn dev-deploy",
-			"dev-deploy": "yarn build-contract && rm -rf neardev && (near dev-deploy || exit 0)",
+			"dev-deploy": "echo building contract && yarn build-contract && echo removing neardev && rm -rf neardev && echo deploying && (near dev-deploy || exit 0)",
 				"build-contract": "./build.sh",
 		"deploy-all": "yarn deploy && yarn simple && yarn ft && yarn nft && yarn fc",
 			"deploy-simple": "yarn deploy && yarn simple",
