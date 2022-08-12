@@ -1,8 +1,26 @@
-import { BN, NEAR, NearAccount } from "near-workspaces";
+import { BN, KeyPair, NEAR, NearAccount, PublicKey } from "near-workspaces";
 import { JsonDrop, JsonKeyInfo } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
+export const LARGE_GAS: string = "300000000000000";
 export const DEFAULT_DEPOSIT: string = "1000000000000000000000000";
+
+export async function generateKeyPairs(
+  numKeys: number,
+): Promise<{ keys: KeyPair[]; publicKeys: string[] }> {
+  // Generate NumKeys public keys
+  let kps: KeyPair[] = [];
+  let pks: string[] = [];
+  for (let i = 0; i < numKeys; i++) {
+    let keyPair = await KeyPair.fromRandom('ed25519');
+    kps.push(keyPair);
+    pks.push(keyPair.getPublicKey().toString());
+  }
+  return {
+    keys: kps,
+    publicKeys: pks
+  }
+}
 
 export function defaultCallOptions(
   gas: string = DEFAULT_GAS,
@@ -60,14 +78,12 @@ export async function queryAllViewFunctions(
     getDropInformation = await contract.view('get_drop_information', {drop_id});
     getKeySupplyForDrop = await contract.view('get_key_supply_for_drop', {drop_id});
     getKeysForDrop = await contract.view('get_keys_for_drop', {drop_id, from_index, limit});
-    tokenIdsForDrop = await contract.view('get_token_ids_for_drop', {drop_id, from_index, limit});
+    tokenIdsForDrop = await contract.view('get_nft_token_ids_for_drop', {drop_id, from_index, limit});
   }
 
-  let keySupplyForOwner: number | null = null;
   let dropSupplyForOwner: number | null = null;
   let dropsForOwner: JsonDrop[] | null = null;
   if(account_id != null) {
-    keySupplyForOwner = await contract.view('get_key_supply_for_owner', {account_id});
     dropSupplyForOwner = await contract.view('get_drop_supply_for_owner', {account_id});
     dropsForOwner = await contract.view('get_drops_for_owner', {account_id, from_index, limit});
   }
@@ -86,7 +102,6 @@ export async function queryAllViewFunctions(
     keySupplyForDrop: getKeySupplyForDrop,
     keysForDrop: getKeysForDrop,
     tokenIdsForDrop: tokenIdsForDrop,
-    keySupplyForOwner: keySupplyForOwner,
     dropSupplyForOwner: dropSupplyForOwner,
     dropsForOwner: dropsForOwner,
     gasPrice: getGasPrice,

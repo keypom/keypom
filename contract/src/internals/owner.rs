@@ -12,6 +12,21 @@ impl Keypom {
         self.root_account = root_account;
     }
 
+    /// Set the desired contract fees
+    pub fn set_fees(&mut self, drop_fee: Option<U128>, key_fee: Option<U128>) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.owner_id,
+            "predecessor != owner"
+        );
+        if let Some(drop_fee) = drop_fee {
+            self.drop_fee = drop_fee.0;
+        }
+        if let Some(key_fee) = key_fee {
+            self.key_fee = key_fee.0;
+        }
+    }
+
     /// Set the desired linkdrop contract to interact with
     pub fn set_fees_per_user(&mut self, account_id: AccountId, drop_fee: U128, key_fee: U128) {
         assert_eq!(

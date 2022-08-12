@@ -144,7 +144,6 @@ impl Keypom {
             .user_balances
             .get(&owner_id)
             .expect("No user balance found");
-        near_sdk::log!("Cur User balance {}", yocto_to_near(current_user_balance));
 
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
@@ -359,12 +358,6 @@ impl Keypom {
                     // iterate through   all entries and sum the attached_deposit
                     .iter()
                     .fold(0, |acc, x| acc + x.attached_deposit.0);
-
-                near_sdk::log!(format!(
-                    "Total attached_deposits for all method data: {}",
-                    attached_deposit
-                )
-                .as_str());
                 deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
@@ -376,9 +369,6 @@ impl Keypom {
                         let attached_deposit = method_data
                             .iter()
                             .fold(0, |acc, x| acc + x.attached_deposit.0);
-                        near_sdk::log!(
-                            format!("Adding attached deposit: {}", attached_deposit).as_str()
-                        );
                         deposit_required_for_fc_deposits += attached_deposit;
                     }
                 }
@@ -399,8 +389,6 @@ impl Keypom {
         let final_storage = env::storage_usage();
         let total_required_storage = Balance::from(final_storage - initial_storage)
             * env::storage_byte_cost();
-        near_sdk::log!("Total required storage Yocto {}", total_required_storage);
-
         // Increment the drop ID nonce
         self.next_drop_id += 1;
 
@@ -421,40 +409,55 @@ impl Keypom {
             .fees_per_user
             .get(&owner_id)
             .unwrap_or((self.drop_fee, self.key_fee));
-        let required_deposit = fees.0 // drop fee
+        let drop_fee = fees.0;
+        let key_fee = fees.1;
+        let total_key_fee = key_fee * len;
+        let total_allowance = actual_allowance * len;
+        let total_access_key_storage = ACCESS_KEY_STORAGE * len;
+        let total_deposits = deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_storage_per_longest =  storage_per_longest * env::storage_byte_cost() * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
+        
+        let required_deposit = drop_fee
             + total_required_storage
-            + (fees.1 // key fee
-                + actual_allowance
-                + ACCESS_KEY_STORAGE
-                + deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128
-                + storage_per_longest * env::storage_byte_cost() * (num_claims_per_key - num_none_fcs) as u128
-                + deposit_required_for_fc_deposits)
-                * len;
+            + total_key_fee
+            + total_allowance
+            + total_access_key_storage
+            + total_deposits
+            + total_storage_per_longest
+            + total_deposits_for_fc;
+
         near_sdk::log!(
             "Current balance: {}, 
             Required Deposit: {}, 
+            total_required_storage: {},
             Drop Fee: {}, 
-            Total Required Storage: {}, 
-            Key Fee: {}, 
-            ACCESS_KEY_ALLOWANCE: {}, 
-            ACCESS_KEY_STORAGE: {},
-            Linkdrop Balance: {}, 
-            Storage for longest token ID (if applicable): {},
-            total function call deposits (if applicable): {},
-            Num claims per key: {}
-            Num none FCs: {},
+            Key Fee: {} Total Key Fee: {},
+            allowance: {} total allowance: {},
+            access key storage: {} total access key storage: {},
+            deposits less none FCs: {} total deposits: {},
+            storage per longest less none FCs: {} total storage per longest: {},
+            deposits for FCs: {} total deposits for FCs: {},
+            Claims per key: {}
+            None FCs: {},
             length: {}
             GAS to attach: {}",
             yocto_to_near(current_user_balance),
             yocto_to_near(required_deposit),
-            yocto_to_near(fees.0),
             yocto_to_near(total_required_storage),
-            yocto_to_near(fees.1),
+            yocto_to_near(drop_fee),
+            yocto_to_near(key_fee),
+            yocto_to_near(total_key_fee),
             yocto_to_near(actual_allowance),
+            yocto_to_near(total_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
-            yocto_to_near(deposit_per_use.0),
-            yocto_to_near(storage_per_longest * env::storage_byte_cost()),
+            yocto_to_near(total_access_key_storage),
+            yocto_to_near(deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128),
+            yocto_to_near(total_deposits),
+            yocto_to_near(storage_per_longest * env::storage_byte_cost() * (num_claims_per_key - num_none_fcs) as u128),
+            yocto_to_near(total_storage_per_longest),
             yocto_to_near(deposit_required_for_fc_deposits),
+            yocto_to_near(total_deposits_for_fc),
             num_claims_per_key,
             num_none_fcs,
             len,
@@ -622,7 +625,6 @@ impl Keypom {
             .user_balances
             .get(&funder)
             .expect("No user balance found");
-        near_sdk::log!("Cur user balance {}", yocto_to_near(current_user_balance));
 
         // Get the required attached_deposit for all the FCs
         let mut deposit_required_for_fc_deposits = 0;
@@ -646,11 +648,6 @@ impl Keypom {
                     .iter()
                     .fold(0, |acc, x| acc + x.attached_deposit.0);
 
-                near_sdk::log!(format!(
-                    "Total attached_deposits for all method data: {}",
-                    attached_deposit
-                )
-                .as_str());
                 deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
@@ -662,9 +659,6 @@ impl Keypom {
                         let attached_deposit = method_data
                             .iter()
                             .fold(0, |acc, x| acc + x.attached_deposit.0);
-                        near_sdk::log!(
-                            format!("Adding attached deposit: {}", attached_deposit).as_str()
-                        );
                         deposit_required_for_fc_deposits += attached_deposit;
                     }
                 }
@@ -686,7 +680,6 @@ impl Keypom {
         let final_storage = env::storage_usage();
         let total_required_storage =
             Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
-        near_sdk::log!("Total required storage Yocto {}", total_required_storage);
 
         /*
             Required attached_deposit consists of:
@@ -705,44 +698,63 @@ impl Keypom {
             .fees_per_user
             .get(&funder)
             .unwrap_or((self.drop_fee, self.key_fee));
+        let drop_fee = fees.0;
+        let key_fee = fees.1;
+        let total_key_fee = key_fee * len;
+        let total_allowance = actual_allowance * len;
+        let total_access_key_storage = ACCESS_KEY_STORAGE * len;
+        let total_deposits = drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_storage_per_longest =  nft_optional_costs_per_key * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
+        let total_ft_costs = ft_optional_costs_per_claim * num_claims_per_key as u128 * len;
+        
         let required_deposit = total_required_storage
-            + (fees.1 // key fee
-                + actual_allowance
-                + ACCESS_KEY_STORAGE
-                + drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128
-                + nft_optional_costs_per_key
-                + deposit_required_for_fc_deposits
-                + ft_optional_costs_per_claim * num_claims_per_key as u128)
-                * len;
+            + total_key_fee
+            + total_allowance
+            + total_access_key_storage
+            + total_deposits
+            + total_storage_per_longest
+            + total_ft_costs
+            + total_deposits_for_fc;
 
         near_sdk::log!(
             "Current balance: {}, 
-            Required Deposit: {},  
-            Total Required Storage: {}, 
-            Key Fee: {}, 
-            ACCESS_KEY_ALLOWANCE: {}, 
-            ACCESS_KEY_STORAGE: {},
-            Linkdrop Balance: {}, 
-            NFT Optional costs per key: {},
-            total function call deposits per key: {},
-            FT Optional costs per claim: {},
-            Num claims per key: {}
-            Num none FCs: {},
+            Required Deposit: {}, 
+            Total required storage: {},
+            Drop Fee: {}, 
+            Key Fee: {} Total Key Fee: {},
+            allowance: {} total allowance: {},
+            access key storage: {} total access key storage: {},
+            deposits less none FCs: {} total deposits: {},
+            storage per longest less none FCs: {} total storage per longest: {},
+            deposits for FCs: {} total deposits for FCs: {},
+            FT Costs per claim {} total FT Costs: {},
+            Claims per key: {}
+            None FCs: {},
             length: {}",
             yocto_to_near(current_user_balance),
             yocto_to_near(required_deposit),
             yocto_to_near(total_required_storage),
-            yocto_to_near(fees.1),
+            yocto_to_near(drop_fee),
+            yocto_to_near(key_fee),
+            yocto_to_near(total_key_fee),
             yocto_to_near(actual_allowance),
+            yocto_to_near(total_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
-            yocto_to_near(drop.deposit_per_use),
-            yocto_to_near(nft_optional_costs_per_key),
+            yocto_to_near(total_access_key_storage),
+            yocto_to_near(drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128),
+            yocto_to_near(total_deposits),
+            yocto_to_near(nft_optional_costs_per_key * (num_claims_per_key - num_none_fcs) as u128),
+            yocto_to_near(total_storage_per_longest),
             yocto_to_near(deposit_required_for_fc_deposits),
+            yocto_to_near(total_deposits_for_fc),
             yocto_to_near(ft_optional_costs_per_claim),
+            yocto_to_near(total_ft_costs),
             num_claims_per_key,
             num_none_fcs,
-            len,
+            len
         );
+
         /*
             Ensure the attached attached_deposit can cover:
         */

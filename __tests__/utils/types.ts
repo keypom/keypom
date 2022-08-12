@@ -2,7 +2,7 @@ export type JsonDrop = {
     drop_id: number;
     owner_id: string,
     deposit_per_use: string;
-    drop_type: JsonDropType;
+    drop_type: DropType;
     config: DropConfig | null;
     metadata: string | null;
     registered_uses: number;
@@ -10,7 +10,11 @@ export type JsonDrop = {
     next_key_id: number;
 }
 
-export type JsonDropType = string | JsonNFTData | FTData | FCData;
+interface DropType {
+    FunctionCall: FCData;
+    NonFungibleToken: JsonNFTData;
+    FungibleToken: FTData;
+}
 
 export type JsonNFTData = {
     sender_id: string;

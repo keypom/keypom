@@ -15,11 +15,11 @@ const test = anyTest as TestFn<{
     // Prepare sandbox for tests, create accounts, deploy contracts, etc.
     const root = worker.rootAccount;
 
-    // Deploy the dropzone contract.
-    const dropzone = await root.devDeploy(`./out/main.wasm`);
+    // Deploy the keypom contract.
+    const keypom = await root.devDeploy(`./out/main.wasm`);
 
     // Init the contract
-    await dropzone.call(dropzone, 'new', {root_account: 'testnet', owner_id: dropzone});
+    await keypom.call(keypom, 'new', {root_account: 'testnet', owner_id: keypom});
 
     // Test users
     const ali = await root.createSubAccount('ali');
@@ -27,7 +27,7 @@ const test = anyTest as TestFn<{
 
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, dropzone, ali, bob };
+    t.context.accounts = { root, keypom, ali, bob };
 });
 
 // If the environment is reused, use test.after to replace test.afterEach
@@ -38,13 +38,13 @@ test.afterEach(async t => {
 });
 
 test('Create empty drop check views', async t => {
-    const { dropzone, ali } = t.context.accounts;
+    const { keypom, ali } = t.context.accounts;
     
-    await ali.call(dropzone, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(dropzone, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
+    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
     
     let result = await queryAllViewFunctions({
-        contract: dropzone, 
+        contract: keypom, 
         drop_id: 0, 
         account_id: ali.accountId
     });
@@ -55,7 +55,7 @@ test('Create empty drop check views', async t => {
     t.is(jsonDrop.drop_id, 0);
     t.is(jsonDrop.owner_id, ali.accountId);
     t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
-    t.is(jsonDrop.drop_type, 'Simple');
+    t.is(jsonDrop.drop_type.toString(), 'Simple');
     t.is(jsonDrop.config, null);
     t.is(jsonDrop.metadata, null);
     t.is(jsonDrop.registered_uses, 0);
@@ -65,12 +65,11 @@ test('Create empty drop check views', async t => {
     t.is(result.keySupplyForDrop, 0);
     t.deepEqual(result.keysForDrop, []);
     t.deepEqual(result.tokenIdsForDrop, []);
-    t.deepEqual(result.keySupplyForOwner, 0);
     t.deepEqual(result.dropSupplyForOwner, 1);
 });
 
 test('Create drop with 1000 keys', async t => {
-    const { dropzone, ali } = t.context.accounts;
+    const { keypom, ali } = t.context.accounts;
     
     // log ali's available balance
     let b = await ali.availableBalance();
