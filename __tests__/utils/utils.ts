@@ -1,8 +1,9 @@
 import { BN, KeyPair, NEAR, NearAccount, PublicKey } from "near-workspaces";
-import { JsonDrop, JsonKeyInfo } from "./types";
+import { JsonDrop, JsonKeyInfo, TokenMetadata } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
+export const WALLET_GAS: string = "100000000000000";
 export const DEFAULT_DEPOSIT: string = "1000000000000000000000000";
 
 export async function generateKeyPairs(
@@ -110,5 +111,29 @@ export async function queryAllViewFunctions(
     nextDropId: getNextDropId,
     keyTotalSupply: keyTotalSupply,
     keys: getKeys,
+  }
+}
+
+export async function createSeries(
+  {
+  account,
+  nftContract,
+  metadatas,
+  ids
+  }: 
+  {
+    account: NearAccount,
+    nftContract: NearAccount,
+    metadatas: TokenMetadata[],
+    ids: number[]
+  }
+) {
+  for(let i = 0; i < metadatas.length; i++) {
+    let metadata = metadatas[i];
+    let id = ids[i];
+    await account.call(nftContract, 'create_series', {
+      metadata,
+      id
+    }, {attachedDeposit: DEFAULT_DEPOSIT});
   }
 }

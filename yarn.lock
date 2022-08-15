@@ -1128,10 +1128,10 @@ near-units@^0.1.9:
   dependencies:
     bn.js "^5.2.0"
 
-near-workspaces@3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/near-workspaces/-/near-workspaces-3.1.0.tgz#d462ecb4bf2ae1cc33063995a1ef7db5e204910f"
-  integrity sha512-0f/S2YU0xNQ7UQwCW/pkqXspjeK0N+nYj3x7/sx+tUMsckNzahTLNww+3I0YBa/UtcMrCVsT5WDG8emvhdRxnQ==
+near-workspaces@3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/near-workspaces/-/near-workspaces-3.2.0.tgz#a3219782ad6fdaf6f791984da30432d3df00c8d8"
+  integrity sha512-T+eUSIdJFjl2d4hM3hET6j+3VrfM58Jb3Bs8M0KhHKJeoNkO/Eyhpkev3pRu63PFzl52SDTvHbZu+rVcAqJGNw==
   dependencies:
     base64url "^3.0.1"
     bn.js "^5.2.0"

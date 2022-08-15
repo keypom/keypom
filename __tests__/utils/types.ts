@@ -70,3 +70,18 @@ export type DropConfig = {
     claim_permission: string | null;
     drop_root: string | null;
 }
+
+export type TokenMetadata = {
+    title: string | null;
+    description: string | null;
+    media: string | null;
+    media_hash: string | null;
+    copies: number | null;
+    issued_at: number | null;
+    expires_at: number | null;
+    starts_at: number | null;
+    updated_at: number | null;
+    extra: string | null;
+    reference: string | null;
+    reference_hash: string | null;
+}
