@@ -121,6 +121,12 @@ impl Keypom {
         }
     }
 
+    /// Returns the JsonKeyInfo corresponding to a specific key
+    pub fn get_key_information_batch(&self, keys: Vec<PublicKey>) -> Vec<JsonKeyInfo> {
+        // Iterate through each key in the vector and return the JsonKeyInfo for that key
+        keys.iter().map(|key| self.get_key_information(key.clone())).collect()
+    }
+
     /// Returns the JsonDrop corresponding to a drop ID. If a key is specified, it will return the drop info for that key.
     pub fn get_drop_information(
         &self,
