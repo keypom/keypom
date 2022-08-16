@@ -1,7 +1,7 @@
 import { Worker, NearAccount, NEAR, KeyPairEd25519, tGas, KeyPair } from "near-workspaces";
 import anyTest, { TestFn } from "ava";
 import { assertBalanceChange, createSeries, defaultCallOptions, DEFAULT_DEPOSIT, DEFAULT_GAS, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/utils";
-import { JsonDrop, TokenMetadata } from "../utils/types";
+import { JsonDrop, JsonKeyInfo, TokenMetadata } from "../utils/types";
 
 const METADATA = {
     "title": "Linkdropped Go Team NFT",
@@ -60,82 +60,85 @@ test.afterEach(async t => {
     });
 });
 
-// test('Stage 1 Test views', async t => {
-//     const { keypom, nftSeries, owner, ali, bob} = t.context.accounts;
-//     let {keys, publicKeys} = await generateKeyPairs(100);
+test('Stage 1 Test views', async t => {
+    const { keypom, nftSeries, owner, ali, bob} = t.context.accounts;
+    let {keys, publicKeys} = await generateKeyPairs(100);
 
-//     console.log("adding to balance");
-//     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("8").toString()});
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("8").toString()});
 
-//     let fc_data = {
-//         methods: [
-//             null,
-//             null,
-//             [{
-//                 receiver_id: nftSeries,
-//                 method_name: "nft_mint",
-//                 args: "",
-//                 attached_deposit: NEAR.parse("0.01").toString(),
-//                 account_id_field: "receiver_id",
-//                 drop_id_field: "id"
-//             }]
-//         ]
-//     }
+    let fc_data = {
+        methods: [
+            null,
+            null,
+            [{
+                receiver_id: nftSeries,
+                method_name: "nft_mint",
+                args: "",
+                attached_deposit: NEAR.parse("0.01").toString(),
+                account_id_field: "receiver_id",
+                drop_id_field: "id"
+            }]
+        ]
+    }
 
-//     console.log("creating drop");
-//     await owner.call(keypom, 'create_drop', {
-//         public_keys: publicKeys, 
-//         deposit_per_use: NEAR.parse('5 mN').toString(),
-//         fc_data,
-//         config,
-//     },{gas: LARGE_GAS});
+    console.log("creating drop");
+    await owner.call(keypom, 'create_drop', {
+        public_keys: publicKeys, 
+        deposit_per_use: NEAR.parse('5 mN').toString(),
+        fc_data,
+        config,
+    },{gas: LARGE_GAS});
 
-//     console.log("querying views");
-//     let result = await queryAllViewFunctions({
-//         contract: keypom, 
-//         drop_id: 0, 
-//         account_id: owner.accountId,
-//         key: publicKeys[0]
-//     });
+    console.log("querying views");
+    let batch: JsonKeyInfo[] = await keypom.view('get_key_information_batch', {keys: publicKeys});
+    t.is(batch.length, 100);
+    
+    let result = await queryAllViewFunctions({
+        contract: keypom, 
+        drop_id: 0, 
+        account_id: owner.accountId,
+        key: publicKeys[0]
+    });
 
-//     t.is(result.keyBalance, NEAR.parse('5 mN').toString());
-//     let jsonKeyInfo = result.keyInformation;
-//     console.log('jsonKeyInfo: ', jsonKeyInfo)
-//     t.is(jsonKeyInfo?.drop_id, 0);
-//     t.is(jsonKeyInfo?.pk, publicKeys[0]);
-//     let keyInfo = jsonKeyInfo?.key_info;
-//     console.log('keyInfo: ', keyInfo)
-//     t.is(keyInfo?.key_id, 0);
-//     t.is(keyInfo?.remaining_uses, 3);
+    t.is(result.keyBalance, NEAR.parse('5 mN').toString());
+    let jsonKeyInfo = result.keyInformation;
+    console.log('jsonKeyInfo: ', jsonKeyInfo)
+    t.is(jsonKeyInfo?.drop_id, 0);
+    t.is(jsonKeyInfo?.pk, publicKeys[0]);
+    let keyInfo = jsonKeyInfo?.key_info;
+    console.log('keyInfo: ', keyInfo)
+    t.is(keyInfo?.key_id, 0);
+    t.is(keyInfo?.remaining_uses, 3);
 
-//     let jsonDrop = result.dropInformation!;
-//     console.log('jsonDrop: ', jsonDrop)
-//     t.is(jsonDrop.drop_id, 0);
-//     t.is(jsonDrop.owner_id, owner.accountId);
-//     t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
+    let jsonDrop = result.dropInformation!;
+    console.log('jsonDrop: ', jsonDrop)
+    t.is(jsonDrop.drop_id, 0);
+    t.is(jsonDrop.owner_id, owner.accountId);
+    t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
 
-//     let dropType = jsonDrop.drop_type.FunctionCall;
-//     console.log('dropType: ', dropType)
+    let dropType = jsonDrop.drop_type.FunctionCall;
+    console.log('dropType: ', dropType)
 
-//     //t.is(jsonDrop.drop_type, 'FunctionCall');
-//     t.deepEqual(jsonDrop.config, {
-//         uses_per_key: 3,
-//         start_timestamp: null,
-//         throttle_timestamp: null,
-//         on_claim_refund_deposit: true,
-//         claim_permission: null,
-//         drop_root: null,
-//     });
-//     t.is(jsonDrop.metadata, null);
-//     t.is(jsonDrop.registered_uses, 300);
-//     t.is(jsonDrop.required_gas, tGas(100));
-//     t.is(jsonDrop.next_key_id, 100);
+    //t.is(jsonDrop.drop_type, 'FunctionCall');
+    t.deepEqual(jsonDrop.config, {
+        uses_per_key: 3,
+        start_timestamp: null,
+        throttle_timestamp: null,
+        on_claim_refund_deposit: true,
+        claim_permission: null,
+        drop_root: null,
+    });
+    t.is(jsonDrop.metadata, null);
+    t.is(jsonDrop.registered_uses, 300);
+    t.is(jsonDrop.required_gas, tGas(100));
+    t.is(jsonDrop.next_key_id, 100);
 
-//     t.is(result.keySupplyForDrop, 100);
-//     t.is(result.keyTotalSupply, '100');
+    t.is(result.keySupplyForDrop, 100);
+    t.is(result.keyTotalSupply, '100');
 
-//     t.deepEqual(result.dropSupplyForOwner, 1);
-// });
+    t.deepEqual(result.dropSupplyForOwner, 1);
+});
 
 test('Fully Claim 1 key', async t => {
     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
