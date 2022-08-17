@@ -426,8 +426,8 @@ impl Keypom {
         if !claim_succeeded {
             // Get the total_attached deposit from looping through the method datas
             let total_attached_deposit = cur_method_data
-                    .iter()
-                    .fold(0, |acc, x| acc + x.attached_deposit.0);
+                .iter()
+                .fold(0, |acc, x| acc + x.attached_deposit.0);
 
             near_sdk::log!(
                 "Claim unsuccessful. Refunding linkdrop balance: {} and attached_deposit: {}",
