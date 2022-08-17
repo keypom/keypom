@@ -65,12 +65,16 @@ impl Keypom {
 
         for method in methods {
             // Get binary representation of whether or not account ID field, drop ID field, and key ID field are present
-            let injected_fields = 2u8.pow(0) * method.account_id_field.is_some() as u8 + 2u8.pow(1) *  method.drop_id_field.is_some() as u8 + 2u8.pow(2) *  method.key_id_field.is_some() as u8;
+            let injected_fields = 2u8.pow(0) * method.account_id_field.is_some() as u8
+                + 2u8.pow(1) * method.drop_id_field.is_some() as u8
+                + 2u8.pow(2) * method.key_id_field.is_some() as u8;
 
             let mut final_args = method.args.clone();
 
             if final_args.contains("\"injected_fields\"") {
-                near_sdk::log!("Injected fields detected in client args. Returning and decrementing keys");
+                near_sdk::log!(
+                    "Injected fields detected in client args. Returning and decrementing keys"
+                );
                 return;
             }
 
@@ -79,12 +83,12 @@ impl Keypom {
             } else {
                 final_args.insert_str(
                     final_args.len() - 1,
-                        &format!(",\"injected_fields\":\"{}\"", injected_fields),
-                    );
+                    &format!(",\"injected_fields\":\"{}\"", injected_fields),
+                );
             }
-            
+
             // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
-            if let Some(field) =  method.account_id_field.as_ref() {
+            if let Some(field) = method.account_id_field.as_ref() {
                 final_args.insert_str(
                     final_args.len() - 1,
                     &format!(",\"{}\":\"{}\"", field, account_id),
@@ -94,18 +98,18 @@ impl Keypom {
                     method.account_id_field,
                 );
             }
-    
+
             // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
-            if let Some(field) =  method.drop_id_field.as_ref() {
+            if let Some(field) = method.drop_id_field.as_ref() {
                 final_args.insert_str(
                     final_args.len() - 1,
                     &format!(",\"{}\":\"{}\"", field, drop_id),
                 );
                 near_sdk::log!("Adding drop ID to args {:?}", drop_id,);
             }
-    
+
             // Add the key ID as part of the args to the function call
-            if let Some(field) =  method.key_id_field.as_ref() {
+            if let Some(field) = method.key_id_field.as_ref() {
                 final_args.insert_str(
                     final_args.len() - 1,
                     &format!(",\"{}\":\"{}\"", field, key_id),

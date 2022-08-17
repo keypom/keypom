@@ -387,8 +387,10 @@ impl Keypom {
 
         // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
-        let total_required_storage = Balance::from(final_storage - initial_storage)
-            * env::storage_byte_cost();
+        let total_required_storage =
+            Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
+        near_sdk::log!("Total required storage Yocto {}", total_required_storage);
+
         // Increment the drop ID nonce
         self.next_drop_id += 1;
 
