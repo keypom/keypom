@@ -105,22 +105,24 @@ impl Keypom {
     /// Returns the JsonKeyInfo corresponding to a specific key
     pub fn get_key_information(&self, key: PublicKey) -> Option<JsonKeyInfo> {
         // Return the optional key info if it exists
-        self.drop_id_for_pk.get(&key).map(|drop_id| {
+        if let Some(drop_id) = self.drop_id_for_pk.get(&key) {
             let drop = self
                 .drop_for_id
                 .get(&drop_id)
                 .expect("no drop found for drop ID");
+
             if let Some(key_info) = drop.pks.get(&key) {
                 return Some(JsonKeyInfo {
                     drop_id: drop_id.clone(),
                     pk: key.clone(),
                     key_info: key_info.clone(),
                 });
-            } else {
-                return None;
             }
-        });
-        None
+
+            return None;
+        } else {
+            None
+        }
     }
 
     /// Returns the JsonKeyInfo corresponding to a specific key

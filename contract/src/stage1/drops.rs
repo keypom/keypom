@@ -417,9 +417,12 @@ impl Keypom {
         let total_allowance = actual_allowance * len;
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
         let total_deposits = deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128 * len;
-        let total_storage_per_longest =  storage_per_longest * env::storage_byte_cost() * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_storage_per_longest = storage_per_longest
+            * env::storage_byte_cost()
+            * (num_claims_per_key - num_none_fcs) as u128
+            * len;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
-        
+
         let required_deposit = drop_fee
             + total_required_storage
             + total_key_fee
@@ -456,7 +459,11 @@ impl Keypom {
             yocto_to_near(total_access_key_storage),
             yocto_to_near(deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128),
             yocto_to_near(total_deposits),
-            yocto_to_near(storage_per_longest * env::storage_byte_cost() * (num_claims_per_key - num_none_fcs) as u128),
+            yocto_to_near(
+                storage_per_longest
+                    * env::storage_byte_cost()
+                    * (num_claims_per_key - num_none_fcs) as u128
+            ),
             yocto_to_near(total_storage_per_longest),
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(total_deposits_for_fc),
@@ -705,11 +712,13 @@ impl Keypom {
         let total_key_fee = key_fee * len;
         let total_allowance = actual_allowance * len;
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
-        let total_deposits = drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128 * len;
-        let total_storage_per_longest =  nft_optional_costs_per_key * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_deposits =
+            drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_storage_per_longest =
+            nft_optional_costs_per_key * (num_claims_per_key - num_none_fcs) as u128 * len;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
         let total_ft_costs = ft_optional_costs_per_claim * num_claims_per_key as u128 * len;
-        
+
         let required_deposit = total_required_storage
             + total_key_fee
             + total_allowance
