@@ -97,34 +97,38 @@ impl Keypom {
             //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
             .take(limit.unwrap_or(50) as usize)
             //we'll map the public key which are strings into Drops
-            .map(|pk| self.get_key_information(pk.clone()))
+            .map(|pk| self.get_key_information(pk.clone()).unwrap())
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
             .collect()
     }
 
     /// Returns the JsonKeyInfo corresponding to a specific key
-    pub fn get_key_information(&self, key: PublicKey) -> JsonKeyInfo {
-        let drop_id = self
-            .drop_id_for_pk
-            .get(&key)
-            .expect("no drop ID found for key");
-        let drop = self
-            .drop_for_id
-            .get(&drop_id)
-            .expect("no drop found for drop ID");
-        let key_info = drop.pks.get(&key).unwrap();
-
-        JsonKeyInfo {
-            key_info,
-            drop_id,
-            pk: key,
-        }
+    pub fn get_key_information(&self, key: PublicKey) -> Option<JsonKeyInfo> {
+        // Return the optional key info if it exists
+        self.drop_id_for_pk.get(&key).map(|drop_id| {
+            let drop = self
+                .drop_for_id
+                .get(&drop_id)
+                .expect("no drop found for drop ID");
+            if let Some(key_info) = drop.pks.get(&key) {
+                return Some(JsonKeyInfo {
+                    drop_id: drop_id.clone(),
+                    pk: key.clone(),
+                    key_info: key_info.clone(),
+                });
+            } else {
+                return None;
+            }
+        });
+        None
     }
 
     /// Returns the JsonKeyInfo corresponding to a specific key
-    pub fn get_key_information_batch(&self, keys: Vec<PublicKey>) -> Vec<JsonKeyInfo> {
+    pub fn get_key_information_batch(&self, keys: Vec<PublicKey>) -> Vec<Option<JsonKeyInfo>> {
         // Iterate through each key in the vector and return the JsonKeyInfo for that key
-        keys.iter().map(|key| self.get_key_information(key.clone())).collect()
+        keys.iter()
+            .map(|key| self.get_key_information(key.clone()))
+            .collect()
     }
 
     /// Returns the JsonDrop corresponding to a drop ID. If a key is specified, it will return the drop info for that key.
@@ -207,7 +211,7 @@ impl Keypom {
             //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
             .take(limit.unwrap_or(50) as usize)
             //we'll map the public key which are strings into Drops
-            .map(|pk| self.get_key_information(pk.clone()))
+            .map(|pk| self.get_key_information(pk.clone()).unwrap())
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
             .collect()
     }
