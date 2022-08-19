@@ -23,10 +23,21 @@
 			"deploy-fc": "yarn deploy && yarn fc",
 				"fc": "yarn fc-create && yarn fc-add",
 					"fc-create": "node deploy/function-call/fc-create",
-					"fc-add": "node deploy/function-call/fc-add"
+					"fc-add": "node deploy/function-call/fc-add",
+		"test": "yarn test:internals && yarn test:stage1 && yarn test:stage3",
+			"test:internals": "ava __tests__/internals/test-internals.ava.ts",
+			"test:stage1": "yarn test:stage1:simple",
+				"test:stage1:simple": "ava __tests__/stage1/test-simple.ava.ts",
+			"test:stage3": "yarn test:stage3:ticketing",
+				"test:stage3:ticketing": "ava __tests__/stage3/test-ticketing.ava.ts"
 	},
 	"dependencies": {},
 	"devDependencies": {
-		"near-api-js": "^0.44.2"
+		"ava": "^4.2.0",
+		"near-workspaces": "3.2.0",
+		"near-api-js": "^0.44.2",
+		"typescript": "^4.6.4",
+		"ts-node": "^10.8.0",
+		"@types/bn.js": "^5.1.0"
 	}
 }

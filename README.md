@@ -257,23 +257,10 @@ Due to the nature of how fungible token contracts handle storage, the user is re
 An example of creating an FT drop can be seen:
 
 ```bash
-near call keypom.testnet create_drop 
-'{
-  "public_keys": [
-    "ed25519:4Adq6WiKVjGz56Ena6D1w2UnADuZpiFBWAz12cfnkibv"
-  ],
-  "deposit_per_use": "5000000000000000000000",
-  "ft_data": {
-    "contract_id": "ft.examples.benjiman.testnet",
-    "sender_id": "benjiman.testnet",
-    "balance_per_use": "25"
-  },
-  "config": {
-    "uses_per_key": 1,
-  },
-  "metadata": "{\"title\":\"This is a title\",\"description\":\"This is a description\"}"
-}' 
---accountId "benjiman.testnet"
+export LINKDROP_PROXY_CONTRACT_ID="INSERT_HERE"
+export FUNDING_ACCOUNT_ID="INSERT_HERE"
+export LINKDROP_NEAR_AMOUNT="INSERT_HERE"
+export SEND_MULTIPLE="false"
 ```
 
 Once the drop is created with the fungible token data, you can the send the fungible tokens to register uses.

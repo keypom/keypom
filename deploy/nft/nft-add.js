@@ -205,17 +205,6 @@ async function start() {
 		viewData.get_keys_for_drop = keysForDrop; 
 		console.log('keysForDrop: ', keysForDrop);
 
-
-		const keySupplyForFunder = await fundingAccount.viewFunction(
-			LINKDROP_PROXY_CONTRACT_ID, 
-			'get_key_supply_for_owner',
-			{
-				account_id: FUNDING_ACCOUNT_ID
-			}
-		);
-		viewData.get_key_supply_for_owner = keySupplyForFunder; 
-		console.log('keySupplyForFunder: ', keySupplyForFunder);
-
 		const dropSupplyForFunder = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
 			'get_drop_supply_for_owner',
@@ -238,7 +227,7 @@ async function start() {
 
 		const tokens = await fundingAccount.viewFunction(
 			LINKDROP_PROXY_CONTRACT_ID, 
-			'get_token_ids_for_drop',
+			'get_nft_token_ids_for_drop',
 			{
 				drop_id: dropId
 			}
