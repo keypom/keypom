@@ -131,9 +131,10 @@ export async function createSeries(
   for(let i = 0; i < metadatas.length; i++) {
     let metadata = metadatas[i];
     let id = ids[i];
+    
     await account.call(nftContract, 'create_series', {
       metadata,
-      id
+      mint_id: id,
     }, {attachedDeposit: DEFAULT_DEPOSIT});
   }
 }

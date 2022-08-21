@@ -38,9 +38,12 @@ test.beforeEach(async (t) => {
     // Deploy the keypom contract.
     const keypom = await root.devDeploy(`./out/main.wasm`);
     const nftSeries = await root.devDeploy(`./__tests__/ext-wasm/nft-series.wasm`);
+    console.log('root: ', root)
+    await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
+    await root.call(root, 'new', {});
 
     // Init the contract
-    await keypom.call(keypom, 'new', { root_account: 'testnet', owner_id: keypom });
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
     await nftSeries.call(nftSeries, 'new_default_meta', { owner_id: nftSeries });
 
     // Test users
@@ -147,74 +150,95 @@ test('Stage 1 Test views', async t => {
     t.deepEqual(result.dropSupplyForOwner, 1);
 });
 
-// test('Fully Claim 1 key', async t => {
-//     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
-//     let { keys, publicKeys } = await generateKeyPairs(1);
+test('Fully Claim 1 key', async t => {
+    const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
+    let { keys, publicKeys } = await generateKeyPairs(1);
 
-//     console.log("Creating series");
-//     await createSeries({
-//         account: nftSeries,
-//         nftContract: nftSeries,
-//         metadatas: [METADATA],
-//         ids: [0]
-//     })
+    console.log("Creating series");
+    await createSeries({
+        account: nftSeries,
+        nftContract: nftSeries,
+        metadatas: [METADATA],
+        ids: [0]
+    })
 
-//     console.log("adding to balance");
-//     await owner.call(keypom, 'add_to_balance', {}, { attachedDeposit: NEAR.parse("8").toString() });
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, { attachedDeposit: NEAR.parse("8").toString() });
 
-//     let fc_data = {
-//         methods: [
-//             null,
-//             null,
-//             [{
-//                 receiver_id: nftSeries,
-//                 method_name: "nft_mint",
-//                 args: "",
-//                 attached_deposit: NEAR.parse("0.01").toString(),
-//                 account_id_field: "receiver_id",
-//                 drop_id_field: "id"
-//             }]
-//         ]
-//     }
+    let fc_data = {
+        methods: [
+            null,
+            null,
+            [{
+                receiver_id: nftSeries,
+                method_name: "nft_mint",
+                args: "",
+                attached_deposit: NEAR.parse("0.01").toString(),
+                account_id_field: "receiver_id",
+                drop_id_field: "id"
+            }]
+        ]
+    }
 
-//     console.log("creating drop");
-//     await owner.call(keypom, 'create_drop', {
-//         public_keys: [publicKeys[0]],
-//         deposit_per_use: NEAR.parse('5 mN').toString(),
-//         fc_data,
-//         config,
-//     }, { gas: LARGE_GAS });
+    console.log("creating drop");
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]],
+        deposit_per_use: NEAR.parse('1').toString(),
+        fc_data,
+        config,
+    }, { gas: LARGE_GAS });
 
-//     bob.updateAccount({
-//         amount: "0"
-//     });
+    bob.updateAccount({
+        amount: "0"
+    });
 
-//     await keypom.setKey(keys[0]);
+    await keypom.setKey(keys[0]);
 
-//     // await keypom.updateAccessKey(
-//     //     keys[0],  // public key
-//     //     {
-//     //         nonce: 0,
-//     //         permission: {
-//     //             FunctionCall: {
-//     //                 allowance: "18762630063718400000000",
-//     //                 receiver_id: keypom.accountId,
-//     //                 method_names: ["claim", "create_account_and_claim"],
-//     //             }
-//     //         }
-//     //     }
-//     // )
+    await keypom.updateAccessKey(
+        keys[0],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    // await keypom.updateAccessKey(
+    //     keys[0],  // public key
+    //     {
+    //         nonce: 0,
+    //         permission: {
+    //             FunctionCall: {
+    //                 allowance: "18762630063718400000000",
+    //                 receiver_id: keypom.accountId,
+    //                 method_names: ["claim", "create_account_and_claim"],
+    //             }
+    //         }
+    //     }
+    // )
 
-//     await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
-//     await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
-//     let { keys: keys2, publicKeys: pks2 } = await generateKeyPairs(1);
-//     //await keypom.call(keypom, 'create_account_and_claim', {new_account_id: 'benji.test.near', new_public_key : pks2[0]}, {gas: WALLET_GAS});
-//     await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
-//     let bobInfo = await bob.balance();
-//     console.log('bobInfo: ', bobInfo)
-//     let res = await nftSeries.view('nft_tokens', {});
-//     console.log('res: ', res)
-// });
+    await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
+    await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
+    let { keys: keys2, publicKeys: pks2 } = await generateKeyPairs(1);
 
-// test('Ticketing Injected Fields', async t => {
-// });
+    let curBal = await keypom.view('get_user_balance', {account_id: owner});
+    console.log('curBal: ', curBal)
+    await keypom.call(keypom, 'create_account_and_claim', {new_account_id: 'benji.test.test.near', new_public_key : pks2[0]}, {gas: WALLET_GAS});
+    curBal = await keypom.view('get_user_balance', {account_id: owner});
+    console.log('curBal: ', curBal)
+
+    //await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
+    let bobInfo = await bob.balance();
+    console.log('available: ', bobInfo.available.toString())
+    console.log('staked: ', bobInfo.staked.toString())
+    console.log('stateStaked: ', bobInfo.stateStaked.toString())
+    console.log('total: ', bobInfo.total.toString())
+    let res = await nftSeries.view('nft_tokens', {});
+    console.log('res: ', res)
+});
+
+test('Testing Create Account from Root Linkdrop Contract', async t => {
+    const { root, keypom, nftSeries, owner, ali, bob } = t.context.accounts;
+
+    const {publicKeys} = await generateKeyPairs(1);
+    await owner.call(root, 'create_account', {new_account_id: 'foobar.test.near', new_public_key: publicKeys[0]}, {gas: WALLET_GAS, attachedDeposit: NEAR.parse("1").toString()});
+    console.log('root final: ', root)
+});

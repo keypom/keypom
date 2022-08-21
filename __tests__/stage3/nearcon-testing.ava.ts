@@ -39,9 +39,11 @@ test.beforeEach(async (t) => {
     // Deploy the keypom contract.
     const keypom = await root.devDeploy(`./out/main.wasm`);
     const nftSeries = await root.devDeploy(`./__tests__/ext-wasm/nft-series.wasm`);
-
+    await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
+    await root.call(root, 'new', {});
+    
     // Init the contract
-    await keypom.call(keypom, 'new', { root_account: 'testnet', owner_id: keypom });
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
     await nftSeries.call(nftSeries, 'new_default_meta', { owner_id: nftSeries });
     await nftSeries.call(nftSeries, 'add_approved_minter', { account_id: keypom });
 

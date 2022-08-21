@@ -146,7 +146,25 @@ impl Keypom {
         storage_used: Balance,
     ) -> bool {
         // Get the status of the cross contract call
-        let claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+        let claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
+            // If the value was empty string, then it was a regular claim
+            if value.is_empty() {
+                near_sdk::log!("received empty string as success value");
+                true
+            } else {
+                if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
+                    //if we need don't need to return the token, we simply return true meaning everything went fine
+                    near_sdk::log!("received value of {} as success value", account_created);
+                    account_created
+                } else {
+                    near_sdk::log!("did not receive boolean from success value");
+                    false
+                }
+            }
+        } else {
+            near_sdk::log!("promise result not successful");
+            false
+        };
 
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -157,16 +175,12 @@ impl Keypom {
             prepaid_gas.0
         );
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
+        // Default amount to refund to be the storage used
+        let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
-            "Refund Amount: {}, 
-            Access Key Storage: {}, 
-            Storage Used: {}",
+            "Refund Amount (storage used): {}",
             yocto_to_near(amount_to_refund),
-            yocto_to_near(ACCESS_KEY_STORAGE),
-            yocto_to_near(storage_used)
         );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
@@ -223,20 +237,35 @@ impl Keypom {
         // Get the status of the cross contract call. If this function is invoked directly via an execute, default the claim succeeded to true
         let mut claim_succeeded = true;
         if !execute {
-            claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+            // Get the status of the cross contract call
+            claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
+                // If the value was empty string, then it was a regular claim
+                if value.is_empty() {
+                    near_sdk::log!("received empty string as success value");
+                    true
+                } else {
+                    if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
+                        //if we need don't need to return the token, we simply return true meaning everything went fine
+                        near_sdk::log!("received value of {} as success value", account_created);
+                        account_created
+                    } else {
+                        near_sdk::log!("did not receive boolean from success value");
+                        false
+                    }
+                }
+            } else {
+                near_sdk::log!("promise result not successful");
+                false
+            };
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
+        // Default amount to refund to be the storage used
+        let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
-            "Refund Amount: {}, 
-            Access Key Storage: {}, 
-            Storage Used: {}",
+            "Refund Amount (storage used): {}",
             yocto_to_near(amount_to_refund),
-            yocto_to_near(ACCESS_KEY_STORAGE),
-            yocto_to_near(storage_used)
         );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
@@ -302,22 +331,39 @@ impl Keypom {
         // Get the status of the cross contract call. If this function is invoked directly via an execute, default the claim succeeded to true
         let mut claim_succeeded = true;
         if !execute {
-            claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+            // Get the status of the cross contract call
+            claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
+                // If the value was empty string, then it was a regular claim
+                if value.is_empty() {
+                    near_sdk::log!("received empty string as success value");
+                    true
+                } else {
+                    if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
+                        //if we need don't need to return the token, we simply return true meaning everything went fine
+                        near_sdk::log!("received value of {} as success value", account_created);
+                        account_created
+                    } else {
+                        near_sdk::log!("did not receive boolean from success value");
+                        false
+                    }
+                }
+            } else {
+                near_sdk::log!("promise result not successful");
+                false
+            };
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
         // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
         // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
         let mut amount_to_refund =
-            ACCESS_KEY_STORAGE + storage_used + storage_for_longest * env::storage_byte_cost();
+            storage_used + storage_for_longest * env::storage_byte_cost();
 
         near_sdk::log!(
             "Refund Amount: {}, 
-            Access Key Storage: {}, 
             Storage Used: {}
             Storage for longest: {}",
             yocto_to_near(amount_to_refund),
-            yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(storage_used),
             yocto_to_near(storage_for_longest * env::storage_byte_cost())
         );
@@ -390,20 +436,35 @@ impl Keypom {
         // Get the status of the cross contract call. If this function is invoked directly via an execute, default the claim succeeded to true
         let mut claim_succeeded = true;
         if !execute {
-            claim_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
+            // Get the status of the cross contract call
+            claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
+                // If the value was empty string, then it was a regular claim
+                if value.is_empty() {
+                    near_sdk::log!("received empty string as success value");
+                    true
+                } else {
+                    if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
+                        //if we need don't need to return the token, we simply return true meaning everything went fine
+                        near_sdk::log!("received value of {} as success value", account_created);
+                        account_created
+                    } else {
+                        near_sdk::log!("did not receive boolean from success value");
+                        false
+                    }
+                }
+            } else {
+                near_sdk::log!("promise result not successful");
+                false
+            };
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        let mut amount_to_refund = ACCESS_KEY_STORAGE + storage_used;
+        // Default amount to refund to be the storage used
+        let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
-            "Refund Amount: {}, 
-            Access Key Storage: {}, 
-            Storage Used: {}",
+            "Refund Amount (storage used): {}",
             yocto_to_near(amount_to_refund),
-            yocto_to_near(ACCESS_KEY_STORAGE),
-            yocto_to_near(storage_used)
         );
 
         // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
@@ -673,16 +734,17 @@ impl Keypom {
             let amount_to_refund =
                 key_info.allowance - drop.required_gas.0 as u128 * self.yocto_per_gas;
             near_sdk::log!(
-                "Key being deleted. Allowance Currently: {}. Will refund: {}",
+                "Key being deleted. Allowance Currently: {}. Will refund: {} and access key storage: {}",
                 key_info.allowance,
-                amount_to_refund
+                amount_to_refund,
+                ACCESS_KEY_STORAGE
             );
             // Get the funder's balance and increment it by the amount to refund
             let mut cur_funder_balance = self
                 .user_balances
                 .get(&drop.owner_id)
                 .expect("No funder balance found");
-            cur_funder_balance += amount_to_refund;
+            cur_funder_balance += amount_to_refund + ACCESS_KEY_STORAGE;
             self.user_balances
                 .insert(&drop.owner_id, &cur_funder_balance);
 
