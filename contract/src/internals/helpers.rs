@@ -17,6 +17,29 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
+/// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
+pub(crate) fn check_promise_result() -> bool {
+    if let PromiseResult::Successful(value) = env::promise_result(0) {
+        // If the value was empty string, then it was a regular claim
+        if value.is_empty() {
+            near_sdk::log!("received empty string as success value");
+            true
+        } else {
+            if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
+                //if we need don't need to return the token, we simply return true meaning everything went fine
+                near_sdk::log!("received value of {} as success value", account_created);
+                account_created
+            } else {
+                near_sdk::log!("did not receive boolean from success value");
+                false
+            }
+        }
+    } else {
+        near_sdk::log!("promise result not successful");
+        false
+    }
+}
+
 impl Keypom {
     /// Used to calculate the base allowance needed given attached GAS
     pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {

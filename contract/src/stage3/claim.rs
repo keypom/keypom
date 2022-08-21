@@ -146,25 +146,7 @@ impl Keypom {
         storage_used: Balance,
     ) -> bool {
         // Get the status of the cross contract call
-        let claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
-            // If the value was empty string, then it was a regular claim
-            if value.is_empty() {
-                near_sdk::log!("received empty string as success value");
-                true
-            } else {
-                if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
-                    //if we need don't need to return the token, we simply return true meaning everything went fine
-                    near_sdk::log!("received value of {} as success value", account_created);
-                    account_created
-                } else {
-                    near_sdk::log!("did not receive boolean from success value");
-                    false
-                }
-            }
-        } else {
-            near_sdk::log!("promise result not successful");
-            false
-        };
+        let claim_succeeded = check_promise_result();
 
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -238,25 +220,7 @@ impl Keypom {
         let mut claim_succeeded = true;
         if !execute {
             // Get the status of the cross contract call
-            claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
-                // If the value was empty string, then it was a regular claim
-                if value.is_empty() {
-                    near_sdk::log!("received empty string as success value");
-                    true
-                } else {
-                    if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
-                        //if we need don't need to return the token, we simply return true meaning everything went fine
-                        near_sdk::log!("received value of {} as success value", account_created);
-                        account_created
-                    } else {
-                        near_sdk::log!("did not receive boolean from success value");
-                        false
-                    }
-                }
-            } else {
-                near_sdk::log!("promise result not successful");
-                false
-            };
+            claim_succeeded = check_promise_result();
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
@@ -332,25 +296,7 @@ impl Keypom {
         let mut claim_succeeded = true;
         if !execute {
             // Get the status of the cross contract call
-            claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
-                // If the value was empty string, then it was a regular claim
-                if value.is_empty() {
-                    near_sdk::log!("received empty string as success value");
-                    true
-                } else {
-                    if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
-                        //if we need don't need to return the token, we simply return true meaning everything went fine
-                        near_sdk::log!("received value of {} as success value", account_created);
-                        account_created
-                    } else {
-                        near_sdk::log!("did not receive boolean from success value");
-                        false
-                    }
-                }
-            } else {
-                near_sdk::log!("promise result not successful");
-                false
-            };
+            claim_succeeded = check_promise_result();
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
@@ -437,25 +383,7 @@ impl Keypom {
         let mut claim_succeeded = true;
         if !execute {
             // Get the status of the cross contract call
-            claim_succeeded = if let PromiseResult::Successful(value) = env::promise_result(0) {
-                // If the value was empty string, then it was a regular claim
-                if value.is_empty() {
-                    near_sdk::log!("received empty string as success value");
-                    true
-                } else {
-                    if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
-                        //if we need don't need to return the token, we simply return true meaning everything went fine
-                        near_sdk::log!("received value of {} as success value", account_created);
-                        account_created
-                    } else {
-                        near_sdk::log!("did not receive boolean from success value");
-                        false
-                    }
-                }
-            } else {
-                near_sdk::log!("promise result not successful");
-                false
-            };
+            claim_succeeded = check_promise_result();
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
