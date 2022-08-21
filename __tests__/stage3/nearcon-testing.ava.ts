@@ -41,7 +41,7 @@ test.beforeEach(async (t) => {
     const nftSeries = await root.devDeploy(`./__tests__/ext-wasm/nft-series.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
     await root.call(root, 'new', {});
-    
+
     // Init the contract
     await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
     await nftSeries.call(nftSeries, 'new_default_meta', { owner_id: nftSeries });
@@ -77,7 +77,7 @@ test.beforeEach(async (t) => {
                 args: "",
                 attached_deposit: NEAR.parse("0.01").toString(),
                 account_id_field: "receiver_id",
-                drop_id_field: "id"
+                drop_id_field: "mint_id"
             }]
         ]
     }
@@ -228,7 +228,7 @@ test('Test Stage 1 Went Well', async t => {
 //                 args: "",
 //                 attached_deposit: NEAR.parse("0.01").toString(),
 //                 account_id_field: "receiver_id",
-//                 drop_id_field: "id"
+//                 drop_id_field: "mint_id"
 //             }]
 //         ]
 //     }

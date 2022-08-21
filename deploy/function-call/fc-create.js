@@ -66,7 +66,7 @@ let fc_data = {
 		account_id_field: "receiver_id",
 		// How much GAS should be attached to the function call. Cannot be greater than ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE (90 TGas).
 		//attached_gas: "10000000000000",
-		drop_id_field: "id",
+		drop_id_field: "mint_id",
 		//key_id_field: "key_id",
 	}
 }

@@ -80,7 +80,7 @@ test('Stage 1 Test views', async t => {
                 args: "",
                 attached_deposit: NEAR.parse("0.01").toString(),
                 account_id_field: "receiver_id",
-                drop_id_field: "id"
+                drop_id_field: "mint_id"
             }]
         ]
     }
@@ -175,7 +175,7 @@ test('Fully Claim 1 key', async t => {
                 args: "",
                 attached_deposit: NEAR.parse("0.01").toString(),
                 account_id_field: "receiver_id",
-                drop_id_field: "id"
+                drop_id_field: "mint_id"
             }]
         ]
     }
