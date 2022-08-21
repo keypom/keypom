@@ -4,11 +4,11 @@ import { assertBalanceChange, createSeries, defaultCallOptions, DEFAULT_DEPOSIT,
 import { JsonDrop, JsonKeyInfo, TokenMetadata } from "../utils/types";
 
 const METADATA = {
-    "title": "Linkdropped Go Team NFT",
+    "title": "",
     "description": "Testing Linkdrop NFT Go Team Token",
     "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif",
     "media_hash": null,
-    "copies": 100,
+    "copies": 1000,
     "issued_at": null,
     "expires_at": null,
     "starts_at": null,
@@ -26,6 +26,7 @@ let config = {
 const test = anyTest as TestFn<{
     worker: Worker;
     accounts: Record<string, NearAccount>;
+    keyPairs: KeyPair[][];
 }>;
 
 test.beforeEach(async (t) => {
@@ -42,32 +43,24 @@ test.beforeEach(async (t) => {
     // Init the contract
     await keypom.call(keypom, 'new', { root_account: 'testnet', owner_id: keypom });
     await nftSeries.call(nftSeries, 'new_default_meta', { owner_id: nftSeries });
+    await nftSeries.call(nftSeries, 'add_approved_minter', { account_id: keypom });
 
     // Test users
     const ali = await root.createSubAccount('ali');
     const owner = await root.createSubAccount('owner');
     const bob = await root.createSubAccount('bob');
 
-    // Save state for test runs
-    t.context.worker = worker;
-    t.context.accounts = { root, keypom, nftSeries, owner, ali, bob };
-});
-
-// If the environment is reused, use test.after to replace test.afterEach
-test.afterEach(async t => {
-    await t.context.worker.tearDown().catch(error => {
-        console.log('Failed to tear down the worker:', error);
-    });
-});
-
-test('Create All Drops', async t => {
-    const { keypom, nftSeries, owner, ali, bob} = t.context.accounts;
-
     let balance = await keypom.balance();
     console.log('available: ', balance.available.toString())
     console.log('staked: ', balance.staked.toString())
     console.log('stateStaked: ', balance.stateStaked.toString())
     console.log('total: ', balance.total.toString())
+
+    let nftBalance = await nftSeries.balance();
+    console.log('available: ', nftBalance.available.toString())
+    console.log('staked: ', nftBalance.staked.toString())
+    console.log('stateStaked: ', nftBalance.stateStaked.toString())
+    console.log('total: ', nftBalance.total.toString())
     // await keypom.updateAccount({
     //     amount: balance.staked.toString()
     // })
@@ -91,22 +84,29 @@ test('Create All Drops', async t => {
         amount: NEAR.parse('1000 N').toString()
     })
     console.log("adding to balance");
-    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("79").toString()});
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("500").toString()});
 
+    let keyPairs: KeyPair[][] = [];
     // Loop through 5 times and create a drop with 100 keys each time
     for (let i = 0; i < 5; i++) {
         console.log("Creating 100 keys to create drop")
-        let {publicKeys} = await generateKeyPairs(100);
+        let {keys, publicKeys} = await generateKeyPairs(100);
+        keyPairs.push(keys);
+
+        console.log("creating series")
+        await nftSeries.call(nftSeries, 'create_series', {mint_id: i, metadata: METADATA}, {attachedDeposit: NEAR.parse("0.01").toString()});
 
         await owner.call(keypom, 'create_drop', {
             public_keys: publicKeys, 
-            deposit_per_use: NEAR.parse('5 mN').toString(),
+            deposit_per_use: NEAR.parse('20 mN').toString(),
             fc_data,
             config,
         },{gas: LARGE_GAS});
 
         console.log("Creating 100 keys to add to drop")
-        publicKeys = await (await generateKeyPairs(100)).publicKeys;
+        let result = await (await generateKeyPairs(100));
+        publicKeys = result.publicKeys;
+        keyPairs.push(result.keys);
         
         await owner.call(keypom, 'add_keys', {
             public_keys: publicKeys, 
@@ -126,6 +126,79 @@ test('Create All Drops', async t => {
     console.log('staked: ', balance.staked.toString())
     console.log('stateStaked: ', balance.stateStaked.toString())
     console.log('total: ', balance.total.toString())
+
+    nftBalance = await nftSeries.balance();
+    console.log('available: ', nftBalance.available.toString())
+    console.log('staked: ', nftBalance.staked.toString())
+    console.log('stateStaked: ', nftBalance.stateStaked.toString())
+    console.log('total: ', nftBalance.total.toString())
+
+    // Save state for test runs
+    t.context.worker = worker;
+    t.context.accounts = { root, keypom, nftSeries, owner, ali, bob };
+    t.context.keyPairs = keyPairs;
+});
+
+// If the environment is reused, use test.after to replace test.afterEach
+test.afterEach(async t => {
+    await t.context.worker.tearDown().catch(error => {
+        console.log('Failed to tear down the worker:', error);
+    });
+});
+
+test('Test Stage 1 Went Well', async t => {
+    const { keypom, nftSeries, owner, ali, bob} = t.context.accounts;
+
+    for (let i = 0; i < 5; i++) {
+        let result = await queryAllViewFunctions({
+            contract: keypom, 
+            drop_id: i, 
+            account_id: owner.accountId
+        });
+
+        let jsonDrop: JsonDrop = result.dropInformation!;
+        console.log('jsonDrop: ', jsonDrop)
+        t.is(jsonDrop.drop_id, i);
+        t.is(jsonDrop.owner_id, owner.accountId);
+        t.is(jsonDrop.deposit_per_use, NEAR.parse('20 mN').toString());
+        t.is(jsonDrop.metadata, null);
+        t.is(jsonDrop.registered_uses, 600);
+        t.is(jsonDrop.required_gas, tGas(100));
+        t.is(jsonDrop.next_key_id, 200);
+
+        t.is(result.keySupplyForDrop, 200);
+
+        t.is(result.keyTotalSupply, '1000');
+
+        t.deepEqual(result.dropSupplyForOwner, 5);
+
+        t.deepEqual(jsonDrop.config, {
+            uses_per_key: 3,
+            start_timestamp: null,
+            throttle_timestamp: null,
+            on_claim_refund_deposit: true,
+            claim_permission: null,
+            drop_root: null,
+        });
+
+        let seriesInfo = await nftSeries.view('get_series_info', {id: i});
+        //@ts-ignore
+        t.is(seriesInfo.mint_id, i);
+        //@ts-ignore
+        t.is(seriesInfo.series_id, i);
+    }
+
+    let allSeries = await nftSeries.view('get_series');
+    
+    // @ts-ignore
+    t.is(allSeries.length, 5);
+    console.log('allSeries: ', allSeries)
+
+    let nftBalance = await nftSeries.balance();
+    console.log('available: ', nftBalance.available.toString())
+    console.log('staked: ', nftBalance.staked.toString())
+    console.log('stateStaked: ', nftBalance.stateStaked.toString())
+    console.log('total: ', nftBalance.total.toString())
 });
 
 // test('Fully Claim 1 key', async t => {
