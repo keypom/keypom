@@ -24,13 +24,13 @@
 				"fc": "yarn fc-create && yarn fc-add",
 					"fc-create": "node deploy/function-call/fc-create",
 					"fc-add": "node deploy/function-call/fc-add",
-		"test": "yarn test:internals && yarn test:stage1 && yarn test:stage3",
+		"test": "yarn test:internals && yarn test:stage1 && yarn test:stage3 && test:nearcon",
 			"test:internals": "ava __tests__/internals/test-internals.ava.ts",
 			"test:stage1": "yarn test:stage1:simple",
 				"test:stage1:simple": "ava __tests__/stage1/test-simple.ava.ts",
 			"test:stage3": "yarn test:stage3:ticketing",
 				"test:stage3:ticketing": "ava __tests__/stage3/test-ticketing.ava.ts",
-				"test:stage3:nearcon": "ava __tests__/stage3/nearcon-testing.ava.ts"
+			"test:nearcon": "ava __tests__/nearcon/nearcon-testing.ava.ts"
 	},
 	"dependencies": {},
 	"devDependencies": {
