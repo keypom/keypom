@@ -3,7 +3,7 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: AccountId) {
+    pub fn claim(&mut self, account_id: AccountId, expected_uses: Option<u64>) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
         let (
             drop_data_option,
@@ -13,7 +13,7 @@ impl Keypom {
             storage_for_longest,
             should_continue,
             cur_key_info,
-        ) = self.process_claim();
+        ) = self.process_claim(expected_uses);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -75,6 +75,7 @@ impl Keypom {
         &mut self,
         new_account_id: AccountId,
         new_public_key: PublicKey,
+        expected_uses: Option<u64>
     ) {
         let (
             drop_data_option,
@@ -84,7 +85,7 @@ impl Keypom {
             storage_for_longest,
             should_continue,
             cur_key_info,
-        ) = self.process_claim();
+        ) = self.process_claim(expected_uses);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -448,6 +449,7 @@ impl Keypom {
     /// If drop is none, simulate a panic.
     fn process_claim(
         &mut self,
+        expected_uses: Option<u64>
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -500,6 +502,22 @@ impl Keypom {
         let mut key_info = drop.pks.remove(&signer_pk).unwrap();
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
         let current_key_info = key_info.clone();
+
+        // If the key info doesn't match the expected uses, soft panic
+        if let Some(uses) = expected_uses {
+            if key_info.remaining_uses != uses {
+                let amount_to_decrement =
+                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                near_sdk::log!("Expected key uses of {}. Found: {}. Decrementing allowance by {}. Used GAS: {}", uses, key_info.remaining_uses, amount_to_decrement, used_gas.0);
+
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return (None, None, None, None, None, false, current_key_info);
+            }
+        }
+
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
         if drop.registered_uses < 1 || prepaid_gas != drop.required_gas {
             used_gas = env::used_gas();
@@ -656,23 +674,33 @@ impl Keypom {
         let final_storage = env::storage_usage();
         let total_storage_freed =
             Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
-
+        near_sdk::log!(
+            "Total storage freed: {}. Initial storage: {}. Final storage: {}",
+            total_storage_freed,
+            initial_storage,
+            final_storage
+        );
         if should_delete {
             // Amount to refund is the current allowance less the current execution's max GAS
             let amount_to_refund =
-                key_info.allowance - drop.required_gas.0 as u128 * self.yocto_per_gas;
+                key_info.allowance - drop.required_gas.0 as u128 * self.yocto_per_gas + ACCESS_KEY_STORAGE;
             near_sdk::log!(
-                "Key being deleted. Allowance Currently: {}. Will refund: {} and access key storage: {}",
-                key_info.allowance,
+                "Key being deleted. Will refund: {}.
+                Allowance Currently: {}. 
+                Drop required gas: {},
+                Access key storage: {}",
                 amount_to_refund,
+                key_info.allowance,
+                drop.required_gas.0 as u128 * self.yocto_per_gas,
                 ACCESS_KEY_STORAGE
             );
+
             // Get the funder's balance and increment it by the amount to refund
             let mut cur_funder_balance = self
                 .user_balances
                 .get(&drop.owner_id)
                 .expect("No funder balance found");
-            cur_funder_balance += amount_to_refund + ACCESS_KEY_STORAGE;
+            cur_funder_balance += amount_to_refund ;
             self.user_balances
                 .insert(&drop.owner_id, &cur_funder_balance);
 
