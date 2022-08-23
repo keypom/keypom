@@ -31,12 +31,18 @@ export function getNEARConFCData (receiver: NearAccount) {
                 receiver_id: receiver,
                 method_name: "nft_mint",
                 args: "",
-                attached_deposit: NEAR.parse("0.012").toString(),
+                attached_deposit: NEAR.parse("0.015").toString(),
                 account_id_field: "receiver_id",
                 drop_id_field: "mint_id"
             }]
         ]
     }
+}
+
+export const ticketDistro2 = {
+    "Orderly": [
+        1
+    ]
 }
 
 export const ticketDistro = {
