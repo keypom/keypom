@@ -1,13 +1,12 @@
-import { Worker, NearAccount, NEAR, KeyPairEd25519, tGas, KeyPair } from "near-workspaces";
 import anyTest, { TestFn } from "ava";
-import { assertBalanceChange, createSeries, defaultCallOptions, DEFAULT_DEPOSIT, DEFAULT_GAS, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/utils";
-import { JsonDrop, JsonKeyInfo, TokenMetadata } from "../utils/types";
-import { dropConfig, getNEARConFCData, nftMetadata, nftSeriesMetadata, ticketDistro } from "./utils";
+import { NearAccount, Worker } from "near-workspaces";
+import { generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { ticketDistro1, ticketDistro2 } from "./distro";
+import { createDistro, nftSeriesMetadata } from "./nearconUtils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
     accounts: Record<string, NearAccount>;
-    keyPairsForSponsors: Record<string, KeyPair[]>;
 }>;
 
 test.beforeEach(async (t) => {
@@ -30,90 +29,26 @@ test.beforeEach(async (t) => {
     // Add Keypom as an approved minter
     await nftSeries.call(nftSeries, 'add_approved_minter', { account_id: keypom });
 
-    let balance = await keypom.balance();
-    console.log('keypom available: ', balance.available.toString())
-    console.log('keypom staked: ', balance.staked.toString())
-    console.log('keypom stateStaked: ', balance.stateStaked.toString())
-    console.log('keypom total: ', balance.total.toString())
+    let keypomBalance = await keypom.balance();
+    console.log('keypom available INITIAL: ', keypomBalance.available.toString())
+    console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
+    console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
+    console.log('keypom total INITIAL: ', keypomBalance.total.toString())
 
     let nftBalance = await nftSeries.balance();
-    console.log('nftSeries available: ', nftBalance.available.toString())
-    console.log('nftSeries staked: ', nftBalance.staked.toString())
-    console.log('nftSeries stateStaked: ', nftBalance.stateStaked.toString())
-    console.log('nftSeries total: ', nftBalance.total.toString())
-    // await keypom.updateAccount({
-    //     amount: balance.staked.toString()
-    // })
+    console.log('nftSeries available INITIAL: ', nftBalance.available.toString())
+    console.log('nftSeries staked INITIAL: ', nftBalance.staked.toString())
+    console.log('nftSeries stateStaked INITIAL: ', nftBalance.stateStaked.toString())
+    console.log('nftSeries total INITIAL: ', nftBalance.total.toString())
 
     // Test users
     const ali = await root.createSubAccount('ali');
     const owner = await root.createSubAccount('owner');
     const bob = await root.createSubAccount('bob');
 
-    await owner.updateAccount({
-        amount: NEAR.parse('1000 N').toString()
-    })
-    console.log("adding to balance");
-    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("500").toString()});
-
-    let keyPairsForSponsors: Record<string, KeyPair[]> = {};
-    let mint_id = 0;
-
-    // Loop through each ticket in the distro and create the drop
-    for (let [sponsor, tickets] of Object.entries(ticketDistro)) {
-        console.log(`Creating Series for ${sponsor}`);
-        await nftSeries.call(nftSeries, 'create_series', {mint_id, metadata: nftMetadata}, {attachedDeposit: NEAR.parse("0.02").toString()});
-
-        // Creating the empty drop
-        await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
-            deposit_per_use: NEAR.parse('20 mN').toString(),
-            fc_data: getNEARConFCData(nftSeries),
-            config: dropConfig,
-        },{gas: LARGE_GAS});
-
-        // Creating the tickets for the sponsor
-        let finalKeys: KeyPair[] = [];
-        for (let i = 0; i < tickets.length; i++) {
-            console.log(`Creating ${tickets[i]} tix for ${sponsor}`);
-            let {keys, publicKeys} = await generateKeyPairs(tickets[i]);
-            // Add the keys vector to the final keys array
-            finalKeys.push(...keys);
-
-            await owner.call(keypom, 'add_keys', {
-                public_keys: publicKeys, 
-                drop_id: mint_id
-            },{gas: LARGE_GAS});
-        }
-
-        console.log(`Finished. Incrementing Mint ID. Was ${mint_id} now ${mint_id + 1}`);
-        keyPairsForSponsors[sponsor] = finalKeys;
-        mint_id += 1;
-    }
-
-    let result = await queryAllViewFunctions({
-        contract: keypom, 
-        drop_id: 0, 
-        account_id: owner.accountId
-    });
-    console.log('result: ', result)
-
-    balance = await keypom.balance();
-    console.log('available: ', balance.available.toString())
-    console.log('staked: ', balance.staked.toString())
-    console.log('stateStaked: ', balance.stateStaked.toString())
-    console.log('total: ', balance.total.toString())
-
-    nftBalance = await nftSeries.balance();
-    console.log('available: ', nftBalance.available.toString())
-    console.log('staked: ', nftBalance.staked.toString())
-    console.log('stateStaked: ', nftBalance.stateStaked.toString())
-    console.log('total: ', nftBalance.total.toString())
-
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, nftSeries, owner, ali, bob };
-    t.context.keyPairsForSponsors = keyPairsForSponsors;
 });
 
 // If the environment is reused, use test.after to replace test.afterEach
@@ -195,8 +130,8 @@ test.afterEach(async t => {
 
 test('Fully Claim 1 key', async t => {
     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
-    let keyPairsForSponsors = t.context.keyPairsForSponsors;
-
+    let keyPairsForSponsors = await createDistro(ticketDistro2, owner, keypom, nftSeries, "1");
+    console.log('keyPairsForSponsors: ', keyPairsForSponsors)
     let { keys: keys2, publicKeys: pks2 } = await generateKeyPairs(1);
 
     let curBal = await keypom.view('get_user_balance', {account_id: owner});
@@ -220,6 +155,74 @@ test('Fully Claim 1 key', async t => {
             await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
             await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
             await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${nonce}-${i}.test.near`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
+        }
+        nonce += 1;
+    }
+    
+    curBal = await keypom.view('get_user_balance', {account_id: owner});
+    console.log('curBal after: ', curBal)
+
+    let keypomInfo = await keypom.balance();
+    console.log('keypom available: ', keypomInfo.available.toString())
+    console.log('keypom staked: ', keypomInfo.staked.toString())
+    console.log('keypom stateStaked: ', keypomInfo.stateStaked.toString())
+    console.log('keypom total: ', keypomInfo.total.toString())
+
+    let nftSeriesInfo = await nftSeries.balance();
+    console.log('nft Series available: ', nftSeriesInfo.available.toString())
+    console.log('nft Series staked: ', nftSeriesInfo.staked.toString())
+    console.log('nft Series stateStaked: ', nftSeriesInfo.stateStaked.toString())
+    console.log('nft Series total: ', nftSeriesInfo.total.toString())
+
+    let getSeries = await nftSeries.view('get_series', {});
+    console.log('getSeries: ', getSeries)
+    
+    let supplySeries = await nftSeries.view('get_supply_series', {});
+    console.log('supplySeries: ', supplySeries)
+
+    let nftTotalSupply = await nftSeries.view('nft_total_supply', {});
+    console.log('nftTotalSupply: ', nftTotalSupply)
+
+    let viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+    });
+    console.log('viewFunctions: ', viewFunctions)
+
+    nonce = 0;
+    for (let [sponsor, keys] of Object.entries(keyPairsForSponsors)) {
+        let nftTotalSupply = await nftSeries.view('nft_supply_for_series', {mint_id: nonce});
+        console.log(`nftTotalSupply for ${sponsor}: ${nftTotalSupply}`);
+        nonce += 1;
+    }
+});
+
+test('Claim 1 with invalid expected uses', async t => {
+    const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
+    let keyPairsForSponsors = await createDistro(ticketDistro1, owner, keypom, nftSeries, "1");
+    console.log('keyPairsForSponsors: ', keyPairsForSponsors)
+    let { keys: keys2, publicKeys: pks2 } = await generateKeyPairs(1);
+
+    let curBal = await keypom.view('get_user_balance', {account_id: owner});
+    console.log('curBal before: ', curBal)
+
+    let nonce = 0;
+    // Iterate through each sponsor in the keyPairsForSponsors object
+    for (let [sponsor, keys] of Object.entries(keyPairsForSponsors)) {
+        console.log(`Claiming ${keys.length} keys for ${sponsor}`);
+
+        for(let i = 0; i < keys.length; i++) {
+            await keypom.setKey(keys[i]);
+            await keypom.updateAccessKey(
+                keys[i],  // public key
+                {
+                    nonce: 0,
+                    permission: 'FullAccess'
+                }
+            )
+
+            await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });
+            await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });
         }
         nonce += 1;
     }

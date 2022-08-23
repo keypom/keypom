@@ -1,6 +1,6 @@
-import { Worker, NearAccount, NEAR, KeyPairEd25519 } from "near-workspaces";
 import anyTest, { TestFn } from "ava";
-import { assertBalanceChange, defaultCallOptions, DEFAULT_DEPOSIT, DEFAULT_GAS } from "../utils/utils";
+import { KeyPairEd25519, NEAR, NearAccount, Worker } from "near-workspaces";
+import { assertBalanceChange, defaultCallOptions, DEFAULT_DEPOSIT } from "../utils/general";
 
 const test = anyTest as TestFn<{
     worker: Worker;

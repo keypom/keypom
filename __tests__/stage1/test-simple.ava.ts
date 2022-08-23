@@ -1,7 +1,6 @@
-import { Worker, NearAccount, NEAR, KeyPairEd25519, tGas } from "near-workspaces";
 import anyTest, { TestFn } from "ava";
-import { assertBalanceChange, defaultCallOptions, DEFAULT_DEPOSIT, DEFAULT_GAS, queryAllViewFunctions } from "../utils/utils";
-import { JsonDrop } from "../utils/types";
+import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
+import { queryAllViewFunctions } from "../utils/general";
 
 const test = anyTest as TestFn<{
     worker: Worker;

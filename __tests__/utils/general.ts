@@ -1,5 +1,5 @@
-import { BN, KeyPair, NEAR, NearAccount, PublicKey } from "near-workspaces";
-import { JsonDrop, JsonKeyInfo, TokenMetadata } from "./types";
+import { BN, KeyPair, NEAR, NearAccount } from "near-workspaces";
+import { JsonDrop, JsonKeyInfo } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -120,12 +120,12 @@ export async function createSeries(
   nftContract,
   metadatas,
   ids
-  }: 
+  }:
   {
     account: NearAccount,
     nftContract: NearAccount,
-    metadatas: TokenMetadata[],
-    ids: number[]
+    metadatas: string[],
+    ids: string[]
   }
 ) {
   for(let i = 0; i < metadatas.length; i++) {
