@@ -6,8 +6,10 @@ Keypom is an access key factory created as a result of 3 common problems that ar
 3. dApps want a *smooth UX* for interactions that require deposits.
 
 To solve this, Keypom allows for the creation of highly customizable access keys. Each access key
-has a different functionality depending on which type of *drop* they derive from. A drop can be one of
-four different categories:
+has a different functionality depending on which type of *drop* they derive from. A drop can be thought
+of as a bucket that access keys can be part of. An owner will create drops of a certain type
+with a set of features that all the keys within it will derive from. A drop can be one of four
+different types:
 
 1. Simple drops
 2. Non Fungible Token drops
@@ -15,7 +17,9 @@ four different categories:
 4. Function Call drops.
 
 Once a drop has been created, all keys added will share the same behaviour as outlined by the type of drop 
-and the configurations present.
+and the configurations present. These keys can be used to either claim with:
+- An **existing** NEAR account through the `claim` function.
+- A new account that doesn't exist yet is created through the `create_account_and_claim` function.
 
 # Shared Drop Customization
 
@@ -63,10 +67,35 @@ pub claim_permission: Option<ClaimPermissions>,
 pub drop_root: Option<AccountId>,
 ```
 
-# Usage
+# Simple Drops
 
+The most basic type of drop is the simple kind. Any keys that are part of a simple drop can
+only be used for 1 thing: **transferring $NEAR**. Once the key is claimed, the claiming account
+will receive the $NEAR specified in the `deposit_per_use`. Simple drops are a great way to send $NEAR to claiming accounts while not storing a lot
+of information on the contract. Below are a couple use cases.
 
+## Backend Servers
 
+Let's say you have a backend server that should send 10 $NEAR to the first 3
+people that redeem an NFT. Rather than exposing your full access key in the backend server, 
+you could create a simple drop that either has 3 keys or 1 key that is claimable 3 times.
+In the drop, you'd specify that each time the key is claimed, the specified account would
+receive 10 $NEAR.
+
+## Recurring Payments
+
+Recurring payments are quite a common situation. If you need to send someone 10 $NEAR once a
+month for 6 months, you could create a simple drop that has a `throttle_timestamp` of 1 month
+in between uses and everytime it's used, 10 $NEAR is sent to the account. In addition, you
+could specify a `start_timestamp` to determine the date at which the key can first be used.
+
+## Quick Onboarding
+
+If you need to quickly onboard users onto NEAR, you could create a simple drop with a 
+small amount of $NEAR (enough to create a wallet) and set the claim permission to be 
+`CreateAccountAndClaim`. This means that the key can only be used to create accounts.
+You can then add keys as you wish to the drop and give them out to users so they can create
+accounts and be onboarded onto NEAR.
 !*/
 
 
