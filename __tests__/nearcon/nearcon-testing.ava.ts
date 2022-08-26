@@ -1,8 +1,8 @@
 import anyTest, { TestFn } from "ava";
-import { NearAccount, Worker } from "near-workspaces";
-import { generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { KeyPair, NEAR, NearAccount, Worker } from "near-workspaces";
+import { generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { ticketDistro1, ticketDistro2 } from "./distro";
-import { createDistro, nftSeriesMetadata } from "./nearconUtils";
+import { createDistro, dropConfig, getNEARConFCData, nftMetadata, nftSeriesMetadata } from "./nearconUtils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -128,7 +128,7 @@ test.afterEach(async t => {
 //     console.log('total: ', nftBalance.total.toString())
 // });
 
-test('Fully Claim 1 key', async t => {
+test('Fully Claim all keys', async t => {
     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
     let keyPairsForSponsors = await createDistro(ticketDistro2, owner, keypom, nftSeries, "1");
     console.log('keyPairsForSponsors: ', keyPairsForSponsors)
@@ -197,70 +197,163 @@ test('Fully Claim 1 key', async t => {
     }
 });
 
-test('Claim 1 with invalid expected uses', async t => {
-    const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
-    let keyPairsForSponsors = await createDistro(ticketDistro1, owner, keypom, nftSeries, "1");
-    console.log('keyPairsForSponsors: ', keyPairsForSponsors)
-    let { keys: keys2, publicKeys: pks2 } = await generateKeyPairs(1);
+// test('Claim 1 with invalid expected uses', async t => {
+//     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
+//     let keyPairsForSponsors = await createDistro(ticketDistro1, owner, keypom, nftSeries, "1");
+//     console.log('keyPairsForSponsors: ', keyPairsForSponsors)
+//     let { keys: keys2, publicKeys: pks2 } = await generateKeyPairs(1);
 
-    let curBal = await keypom.view('get_user_balance', {account_id: owner});
-    console.log('curBal before: ', curBal)
+//     let curBal = await keypom.view('get_user_balance', {account_id: owner});
+//     console.log('curBal before: ', curBal)
 
-    let nonce = 0;
-    // Iterate through each sponsor in the keyPairsForSponsors object
-    for (let [sponsor, keys] of Object.entries(keyPairsForSponsors)) {
-        console.log(`Claiming ${keys.length} keys for ${sponsor}`);
+//     let nonce = 0;
+//     // Iterate through each sponsor in the keyPairsForSponsors object
+//     for (let [sponsor, keys] of Object.entries(keyPairsForSponsors)) {
+//         console.log(`Claiming ${keys.length} keys for ${sponsor}`);
 
-        for(let i = 0; i < keys.length; i++) {
-            await keypom.setKey(keys[i]);
-            await keypom.updateAccessKey(
-                keys[i],  // public key
-                {
-                    nonce: 0,
-                    permission: 'FullAccess'
-                }
-            )
+//         for(let i = 0; i < keys.length; i++) {
+//             await keypom.setKey(keys[i]);
+//             await keypom.updateAccessKey(
+//                 keys[i],  // public key
+//                 {
+//                     nonce: 0,
+//                     permission: 'FullAccess'
+//                 }
+//             )
 
-            await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });
-            await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });
-        }
-        nonce += 1;
-    }
+//             await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });
+//             await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });
+//         }
+//         nonce += 1;
+//     }
     
-    curBal = await keypom.view('get_user_balance', {account_id: owner});
-    console.log('curBal after: ', curBal)
+//     curBal = await keypom.view('get_user_balance', {account_id: owner});
+//     console.log('curBal after: ', curBal)
 
-    let keypomInfo = await keypom.balance();
-    console.log('keypom available: ', keypomInfo.available.toString())
-    console.log('keypom staked: ', keypomInfo.staked.toString())
-    console.log('keypom stateStaked: ', keypomInfo.stateStaked.toString())
-    console.log('keypom total: ', keypomInfo.total.toString())
+//     let keypomInfo = await keypom.balance();
+//     console.log('keypom available: ', keypomInfo.available.toString())
+//     console.log('keypom staked: ', keypomInfo.staked.toString())
+//     console.log('keypom stateStaked: ', keypomInfo.stateStaked.toString())
+//     console.log('keypom total: ', keypomInfo.total.toString())
 
-    let nftSeriesInfo = await nftSeries.balance();
-    console.log('nft Series available: ', nftSeriesInfo.available.toString())
-    console.log('nft Series staked: ', nftSeriesInfo.staked.toString())
-    console.log('nft Series stateStaked: ', nftSeriesInfo.stateStaked.toString())
-    console.log('nft Series total: ', nftSeriesInfo.total.toString())
+//     let nftSeriesInfo = await nftSeries.balance();
+//     console.log('nft Series available: ', nftSeriesInfo.available.toString())
+//     console.log('nft Series staked: ', nftSeriesInfo.staked.toString())
+//     console.log('nft Series stateStaked: ', nftSeriesInfo.stateStaked.toString())
+//     console.log('nft Series total: ', nftSeriesInfo.total.toString())
 
-    let getSeries = await nftSeries.view('get_series', {});
-    console.log('getSeries: ', getSeries)
+//     let getSeries = await nftSeries.view('get_series', {});
+//     console.log('getSeries: ', getSeries)
     
-    let supplySeries = await nftSeries.view('get_supply_series', {});
-    console.log('supplySeries: ', supplySeries)
+//     let supplySeries = await nftSeries.view('get_supply_series', {});
+//     console.log('supplySeries: ', supplySeries)
 
-    let nftTotalSupply = await nftSeries.view('nft_total_supply', {});
-    console.log('nftTotalSupply: ', nftTotalSupply)
+//     let nftTotalSupply = await nftSeries.view('nft_total_supply', {});
+//     console.log('nftTotalSupply: ', nftTotalSupply)
 
-    let viewFunctions = await queryAllViewFunctions({
-        contract: keypom, 
-        account_id: owner.accountId,
-    });
-    console.log('viewFunctions: ', viewFunctions)
+//     let viewFunctions = await queryAllViewFunctions({
+//         contract: keypom, 
+//         account_id: owner.accountId,
+//     });
+//     console.log('viewFunctions: ', viewFunctions)
 
-    nonce = 0;
-    for (let [sponsor, keys] of Object.entries(keyPairsForSponsors)) {
-        let nftTotalSupply = await nftSeries.view('nft_supply_for_series', {mint_id: nonce});
-        console.log(`nftTotalSupply for ${sponsor}: ${nftTotalSupply}`);
-        nonce += 1;
-    }
-});
+//     nonce = 0;
+//     for (let [sponsor, keys] of Object.entries(keyPairsForSponsors)) {
+//         let nftTotalSupply = await nftSeries.view('nft_supply_for_series', {mint_id: nonce});
+//         console.log(`nftTotalSupply for ${sponsor}: ${nftTotalSupply}`);
+//         nonce += 1;
+//     }
+// });
+
+// test('Force Injecting Fields Attack', async t => {
+//     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
+
+//     console.log("adding to balance");
+//     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("5").toString()});
+//     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("5").toString()});
+
+//     let keyPairs = await generateKeyPairs(10);
+
+//     await nftSeries.call(nftSeries, 'create_series', {mint_id: 0, metadata: nftMetadata}, {attachedDeposit: NEAR.parse("0.02").toString()});
+
+//     // Creating the legit drop
+//     await owner.call(keypom, 'create_drop', {
+//         public_keys: [keyPairs.publicKeys[0]], 
+//         deposit_per_use: NEAR.parse('20 mN').toString(),
+//         fc_data: getNEARConFCData(nftSeries),
+//         config: dropConfig,
+//     },{gas: LARGE_GAS});
+
+//     // Creating the first malicious drop
+//     await ali.call(keypom, 'create_drop', {
+//         public_keys: [keyPairs.publicKeys[1]], 
+//         deposit_per_use: NEAR.parse('20 mN').toString(),
+//         fc_data: {
+//             methods: [
+//                 null,
+//                 null,
+//                 [{
+//                     receiver_id: nftSeries,
+//                     method_name: "nft_mint",
+//                     args: JSON.stringify({
+//                         mint_id: 0,
+//                         receiver_id: ali.accountId
+//                     }),
+//                     attached_deposit: NEAR.parse("0.015").toString(),
+//                     account_id_field: "receiver_id",
+//                     drop_id_field: "mint_id"
+//                 }]
+//             ]
+//         },
+//         config: dropConfig,
+//     },{gas: LARGE_GAS});
+
+//     // Second malicious drop
+//     await ali.call(keypom, 'create_drop', {
+//         public_keys: [keyPairs.publicKeys[2]], 
+//         deposit_per_use: NEAR.parse('20 mN').toString(),
+//         fc_data: {
+//             methods: [
+//                 null,
+//                 null,
+//                 [{
+//                     receiver_id: nftSeries,
+//                     method_name: "nft_mint",
+//                     args: JSON.stringify({
+//                         mint_id: 0,
+//                         receiver_id: ali.accountId
+//                     }),
+//                     attached_deposit: NEAR.parse("0.015").toString(),
+//                 }]
+//             ]
+//         },
+//         config: dropConfig,
+//     },{gas: LARGE_GAS});
+
+//     let newKeyPairs = await generateKeyPairs(3);
+//     for(let i = 0; i < 3; i++) {
+//         await keypom.setKey(keyPairs.keys[i]);
+
+//         await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
+//         await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
+//         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : newKeyPairs.publicKeys[i]}, {gas: WALLET_GAS});
+//     }
+
+//     let getSeries = await nftSeries.view('get_series', {});
+//     console.log('getSeries: ', getSeries)
+    
+//     let supplySeries = await nftSeries.view('get_supply_series', {});
+//     console.log('supplySeries: ', supplySeries)
+
+//     let nftTotalSupply = await nftSeries.view('nft_total_supply', {});
+//     console.log('nftTotalSupply: ', nftTotalSupply)
+
+//     let viewFunctions = await queryAllViewFunctions({
+//         contract: keypom, 
+//         account_id: owner.accountId,
+//     });
+
+//     console.log('viewFunctions: ', viewFunctions)
+//     let nftTotalSupplyForSeries = await nftSeries.view('nft_supply_for_series', {mint_id: 0});
+//     console.log(`nftTotalSupply: ${nftTotalSupplyForSeries}`);
+// });
