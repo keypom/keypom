@@ -248,10 +248,10 @@ lazy minting NFTs, auto registration into DAOs, recursive key creation, analytic
 Unlike NFT and FT drops, the function calls must have everything paid for **upfront**. There is no two step process
 so the creation is similar to Simple drops. Once the drop is created and keys are added, you can immediately start using it.
 
-#### Drop Creation
+#### Function Call Config
 
-When creating the drop, you have quite a lot of customization available. At the top level, there is FC drop global
-config similar to how the *general* drop config works.
+When creating the drop, you have quite a lot of customization available. At the top level, there is a FC drop global
+config similar to how the *general* config works.
 
 ```rust
 pub struct FCConfig {
@@ -261,27 +261,85 @@ pub struct FCConfig {
     /// call `claim` if this is specified. You cannot have an `attached_gas` parameter and also
     /// call `create_account_and_claim.
     pub attached_gas: Option<Gas>,
-}```
+}
+```
 
+#### Method Data
+
+In addition to the global config, the user can specify a set of what's known as `MethodData`. This represents the
+information for the function being called. Within this data, there are also a few optional configurations you can use 
+to extend your use cases. You'll see how powerful these can be in the use cases [section](#use-cases).
+
+For **every key use**, you can specify a *vector* of `MethodData` which allows you to execute multiple function calls each
+time a key is used. These calls are scheduled 1 by 1 using a simple for loop. This means that most of the time, the function
+calls will be executed in the order specified in the vector but it is not *guaranteed*.
+
+It's important to note that the Gas available is split evenly between *all* the function calls and if there are too many,
+you might run into issues with not having enough Gas. You're responsible for ensuring that this doesn't happen.
+
+The vector of `MethodData` is *optional* for each key use. If a key use has `null` rather than `Some(Vector<MethodData>)`,
+it will decrement the uses and work as normal such that the `throttle_timestamp, `start_timestamp` etc. are enforced. The only
+difference is that after the key uses are decremented and these checks are performed, the execution **finishes early**. The null
+case does **not** create an account or send *any* funds. It doesn't invoke any function calls and simply *returns once the
+checks are done*. This makes the null case act as a "burner" where you disregard any logic. This has many uses which will
+be explored in the use cases [section](#use-cases).
+ 
+If a key has more than 1 use, you can specify a *different vector* of `MethodData` for **each use**. As an example, you could
+specify that the first use will result in a null case and the second use will result in a lazy minting function being called.
+If you have multiple uses but want them all to do the same thing, you don't have to repeat the same data. Passing in only 1 
+vector of `MethodData` will result in  **all the uses** inheriting that data.
+
+#### Injected Fields
+
+There is one other piece of information that is **automatically** attached to the arguments being sent to the function. 
+This is known as the `injected_fields`. It is a decimal representation of the optional fields specified in the method data.
+You can think of each of the `account_id_field`, `drop_id_field`, and `key_id_field` as representing a bit. If the field
+was specified, the bit is on. If it isn't, the bit is off. The binary looks as follows.
+```
+LSB
+2^0 -> account_id_field
+2^1 -> drop_id_field
+2^2 -> key_id_field
+```
+
+As an example, say the user had `MethodData` with the `account_id_field` set to `receiver_id`. This would mean that the 
+binary representation of the fields would look as follows. `001` which has a decimal equivalent to 1. The contract would
+then pass in an `injected_fields`  value of 1.
+
+If the user had `MethodData` with the `key_id_field` set to `key` and the `drop_id_field` set to "drop", the binary 
+representation would be `110` which has a decimal equivalent to 6. The contract would then pass in an `injected_fields` 
+value of 6.
+
+##### Motivation
+
+Let's say there was an exclusive NFT contract that allowed the Keypom contract to mint NFTs as part of an FC drop. The drop ID
+was 5 and thus in the NFT contract, an NFT could only be minted by Keypom if the arguments coming in contained the field `series`
+with a value of 5. That drop would have a `d
+
+but only if the arguments
+contained the field `series` and the value was set to 
 
 ```rust
 pub struct MethodData {
-    // Contract that will be called
+    /// Receiving contract that the method will be invoked on
     pub receiver_id: AccountId,
-    // Method to call on receiver_id contract
+    /// Method to call on the `receiver_id` contract
     pub method_name: String,
-    // Arguments to pass in (stringified JSON)
+    /// Arguments to pass in (stringified JSON)
     pub args: String,
-    // Amount of yoctoNEAR to attach along with the call
+    /// Amount of yoctoNEAR to attach along with the call
     pub attached_deposit: U128,
-    // Specifies what field the claiming account should go in when calling the function
-    // If None, this isn't attached to the args
+    /// Specify a field name that will be auto populated and attached to the args sent
+    /// This field is populated with the account ID that uses the key.
+    /// Example: `account_id_field: "account"` -> '{"account": "benjiman.testnet"}'
     pub account_id_field: Option<String>,
-    // Specifies what field the drop ID should go in when calling the function.
-    // If Some(String), attach drop ID to args. Else, don't attach.
+    /// Specify a field name that will be auto populated and attached to the args sent
+    /// This field is populated with the drop ID that the key belongs to
+    /// Example: `drop_id_field: "series_id"` -> '{"series_id": "1"}'
     pub drop_id_field: Option<String>,
-    // Specifies what field the key ID should go in when calling the function.
-    // If Some(String), attach key ID to args. Else, don't attach.
+    /// Specify a field name that will be auto populated and attached to the args sent
+    /// This field is populated with the ID for the key being used
+    /// Example: `key_id_field: "key"` -> '{"key": "245"}'
     pub key_id_field: Option<String>,
 }
 ```
