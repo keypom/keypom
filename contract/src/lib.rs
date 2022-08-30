@@ -314,92 +314,12 @@ value of 6.
 
 Let's say there was an exclusive NFT contract that allowed the Keypom contract to mint NFTs as part of an FC drop. The drop ID
 was 5 and thus in the NFT contract, an NFT could only be minted by Keypom if the arguments coming in contained the field `series`
-with a value of 5. That drop would have a `d
+with a value of 5. That drop would have a `drop_id_field` set to `series` such that the `series` field passed into the arguments
+of the function call contained the value of the drop ID which is 5.
 
-but only if the arguments
-contained the field `series` and the value was set to 
-
-```rust
-pub struct MethodData {
-    /// Receiving contract that the method will be invoked on
-    pub receiver_id: AccountId,
-    /// Method to call on the `receiver_id` contract
-    pub method_name: String,
-    /// Arguments to pass in (stringified JSON)
-    pub args: String,
-    /// Amount of yoctoNEAR to attach along with the call
-    pub attached_deposit: U128,
-    /// Specify a field name that will be auto populated and attached to the args sent
-    /// This field is populated with the account ID that uses the key.
-    /// Example: `account_id_field: "account"` -> '{"account": "benjiman.testnet"}'
-    pub account_id_field: Option<String>,
-    /// Specify a field name that will be auto populated and attached to the args sent
-    /// This field is populated with the drop ID that the key belongs to
-    /// Example: `drop_id_field: "series_id"` -> '{"series_id": "1"}'
-    pub drop_id_field: Option<String>,
-    /// Specify a field name that will be auto populated and attached to the args sent
-    /// This field is populated with the ID for the key being used
-    /// Example: `key_id_field: "key"` -> '{"key": "245"}'
-    pub key_id_field: Option<String>,
-}
-```
-
-## Use Cases
-
-FT drops work really due to the fact that they support all the functionalities of the Simple drops, just with
-more use-cases and possibilities. Let's look at some use cases to see how fungible token drops can be used.
-
-#### Recurring Payments
-
-Recurring payments are quite a common situation. Let's say you need to send someone $50 USDC every week. You
-could create a key with 5 claims that has a throttle_timestamp` of 1 week. You would then pre-load maybe the
-first week's deposit of $50 USDC and register 1 use or you could send $500 USDC for the first 10 weeks. At that
-point, you would simply hand over the key to the user and they can claim once a week.
-
-#### Backend Servers
-
-Taking the recurring payments problem to another level, imagine that instead of leaving the claims up to the
-person, you wanted to automatically pay them through a backend server. They would give you their NEAR account
-and you would send them FTs. The problem is that you don't want to expose your full access key in the server.
-By creating a FT drop, you can store **only the function call access key** created by Keypom in the server.
-Your backend would them use the key to call the `claim` function and pass in the user's account ID to send
-them the FTs.
-
-#### Creating a Wallet with FTs
-
-Another awesome use-case is to allow users to be onboarded onto NEAR and **also** receive FTs. As an example, 
-You could do a promotion where you're giving away $10 USDC to the first 100 users that sign up to your mailing 
-list. You can also give away QR codes at events that contain a new fungible token that you're launching. You can
-simply create a FT drop and pre-load it with the FT of your choice. In addition, you can give it 0.02 $NEAR for
-new wallets that are created.
-
-You can pair this with setting the `on_claim_refund_deposit` flag to true which would make it so that if anyone claims 
-the fungible tokens and they *already have a wallet*, it will automatically refund you the 0.02 $NEAR. That money should
-only be used for the creation of new wallets. Since your focus is on the fungible tokens, you don't want to **force users**
-to create a new wallet if they have one already by specifying the claim permission to be `CreateAccountAndClaim` but instead,
-you want to be refunded in case they do.
-
-## FT Config
-
-Along with the default global configurations for drops, if you'd like to create a FT drop,
-you must specify the following pieces of information when the drop is created.
-
-```rust
-pub struct FTDataConfig {
-    /// The contract that the FTs live on.
-    pub contract_id: AccountId,
-    /// The account ID that will be sending the FTs to the contract.
-    pub sender_id: AccountId,
-    /// How many FTs should the contract send *each time* a key is used.
-    pub balance_per_use: U128,
-}
-```
- 
-By specifying this information, the drop is locked into only accepting FTs coming from the sender and contract. While
-you can send as many FTs as you'd like and can over-pay, you *must* send at **least** enough FTs in one call to cover
-1 use. As an example, if a drop is created such that 10 FTs will be sent when a key is used, you must send **at least 10**
-and cannot break it up into separate calls where you send 5 one time and 5 another.
-!*/
+There is nothing stopping a malicious user from creating a new drop that has an ID of 6 but hardcoding in the actual
+arguments 
+*/
 
 
 #![warn(missing_docs)]
