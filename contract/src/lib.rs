@@ -312,13 +312,39 @@ value of 6.
 
 ##### Motivation
 
-Let's say there was an exclusive NFT contract that allowed the Keypom contract to mint NFTs as part of an FC drop. The drop ID
-was 5 and thus in the NFT contract, an NFT could only be minted by Keypom if the arguments coming in contained the field `series`
-with a value of 5. That drop would have a `drop_id_field` set to `series` such that the `series` field passed into the arguments
-of the function call contained the value of the drop ID which is 5.
+Let's say there was an exclusive NFT contract that allowed the Keypom contract to mint NFTs as part of an FC drop. Only Keypom
+had access to mint and NFTs could only be minted the arguments coming into the function contained a field `series` with a valid
+number. Let's say the owner created an exclusive drop that happened to have a drop ID of 5. They could then go to the NFT contract
+and restrict NFTs to only be minted if:
+- `series` had a value of 5.
+- The Keypom contract was the one calling the function.
 
-There is nothing stopping a malicious user from creating a new drop that has an ID of 6 but hardcoding in the actual
-arguments 
+In order for this to work, when creating the drop, the owner would need to specify that the`drop_id_field` was set to a value of `series` 
+such that the drop ID is correctly passed into the function.
+
+The problem with this approach is that the receiving contract has no way of knowing which arguments were sent by the **user** upon drop creation
+and which arguments are populated by the Keypom contract. There is nothing stopping a malicious user from creating a new drop that has an ID of 6 but 
+hardcoding in the actual arguments that `series` should have a value of 5. In this case, the malicious drop would have *no* `drop_id_field`
+and the NFT contract would have no way of knowing that the `series` value is malicious.
+
+This can be prevented if a new field is introduced representing what was automatically injected by the Keypom contract itself. At the
+end of the day, Keypom will **always** send correct information to the receiving contracts. If those contracts have a way to know what has
+been sent by Keypom and what has been manually set by users, the problem is solved. In the above scenario, the NFT contract would simply add
+an assertion that the `injected_fields` is 3 (binary 011) meaning that the drop ID and account ID fields have been sent by the Keypom contract.
+
+## Use Cases
+
+Function call drops are the bread and butter of the Keypom contract. They are the most powerful and complex drops that can currently be created.
+With this complexity, there are an almost infinite number of use-cases that arise.
+
+#### Proof of Attendance Protocols
+
+#### Auto Registration into DAOs
+
+#### Combining FTs and NFTs
+
+#### 
+
 */
 
 
@@ -335,18 +361,17 @@ use near_sdk::{
     PublicKey,
 };
 
-/*
-    minimum amount of storage required to store an access key on the contract
-*/
-const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; // 0.001 N
 
-/*
-    minimum amount of NEAR that a new account (with longest possible name) must have when created
-    If this is less, it will throw a lack balance for state error (assuming you have the same account ID length)
-*/
-const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000; // 0.00284 N
+/// The minimum amount of storage required to create an access key on the contract
+/// Value equates to 0.001 $NEAR per key.
+const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000; 
 
-/// Indicates there are no attached_deposit for a callback for better readability.
+/// The minimum amount of NEAR that it costs to create a new *named* account on NEAR.
+/// This is based off the longest possible account ID length and has a value of 0.00284 $NEAR
+const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000;
+
+/// Constant indicating no attached deposit should be sent to a function call.
+/// Declared for readability and to prevent magic numbers.
 const NO_DEPOSIT: u128 = 0;
 
 /*

@@ -15,7 +15,7 @@ test.beforeEach(async (t) => {
     const root = worker.rootAccount;
 
     // Deploy the keypom contract.
-    const keypom = await root.devDeploy(`./out/main.wasm`);
+    const keypom = await root.devDeploy(`./out/keypom.wasm`);
 
     // Init the contract
     await keypom.call(keypom, 'new', {root_account: 'testnet', owner_id: keypom});
