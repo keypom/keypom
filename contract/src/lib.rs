@@ -30,13 +30,15 @@ These are outlined below.
 /// Each time a key is used, how much $NEAR should be sent to the claiming account (can be 0).
 pub deposit_per_use: u128,
 
-/// How much Gas should be attached when the key is used. The default is 100 TGas as this is what's used by the NEAR wallet.
+/// How much Gas should be attached when the key is used. The default is 100 TGas as this is 
+/// what's used by the NEAR wallet.
 pub required_gas: Gas,
 
 /// The drop as a whole can have a config as well
 pub config: Option<DropConfig>,
 
-/// Metadata for the drop in the form of stringified JSON. The format is completely up to the user and there are no standards for format.
+/// Metadata for the drop in the form of stringified JSON. The format is completely up to the 
+/// user and there are no standards for format.
 pub metadata: LazyOption<DropMetadata>,
 ```
 
@@ -54,16 +56,19 @@ pub start_timestamp: Option<u64>,
 /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
 pub throttle_timestamp: Option<u64>,
 
-/// If claim is called, refund the `deposit_per_use` to the owner's account directly. If None, default to false.
+/// If claim is called, refund the `deposit_per_use` to the owner's account directly. If None, 
+/// default to false.
 pub on_claim_refund_deposit: Option<bool>,
 
-/// What permissions does the key have? Can it call both `claim` and `create_account_and_claim` or just one of the two?
+/// What permissions does the key have? Can it call both `claim` and `create_account_and_claim` 
+/// or just one of the two?
 /// This defaults to the key being able to call both methods.
 pub claim_permission: Option<ClaimPermissions>,
 
-/// Override the global root account that sub-accounts will have (near or testnet). This allows users to create
-/// Specific drops that can create sub-accounts of a predefined root. For example, fayyr could specify a root of `fayyr.near`
-/// By which all sub-accounts will then be `ACCOUNT.fayyr.near`
+/// Override the global root account that sub-accounts will have (near or testnet). This allows 
+/// users to create specific drops that can create sub-accounts of a predefined root. 
+/// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then 
+/// be `ACCOUNT.fayyr.near`
 pub drop_root: Option<AccountId>,
 ```
 
