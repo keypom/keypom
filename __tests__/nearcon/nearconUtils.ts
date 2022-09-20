@@ -18,7 +18,7 @@ export async function createDistro(
     pagodaPoaps: boolean
     ) {
     await owner.updateAccount({
-        amount: NEAR.parse('1000 N').toString()
+        amount: NEAR.parse('10000 N').toString()
     })
     console.log("adding to balance");
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse(ownerBalance).toString()});

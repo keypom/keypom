@@ -344,12 +344,73 @@ With this complexity, there are an almost infinite number of use-cases that aris
 
 #### Proof of Attendance Protocols
 
+A very common use case in the space is what's known as Proof of Attendance. Often times when people go to events, they want a way to prove 
+that they were there. Some traditional approaches would be to submit your wallet address and you would be sent an NFT or some other form of
+proof at a later date. The problem with this is that it has a very high barrier to entry. Not everyone has a wallet.
+
+With Keypom, you can create a function call drop that allows people to onboard onto NEAR if they don't have a wallet or if they do, they can
+simply use that. As part of the onboarding / claiming process, they would receive some sort of proof of attendance such as an NFT. This can 
+be lazy minted on-demand such that storage isn't paid up-front for all the tokens.
+
+At this point, the event organizers or the funder can distribute links to people that attend the event in-person. These links would then be
+claimed by users and they would receive the proof of attendance.
+
 #### Auto Registration into DAOs
 
-#### Combining FTs and NFTs
+DAOs are a raging topic in crypto. The problem with DAOs, however, is there is a barrier to entry for users that aren't familiar with the
+specific chain they're built on top of. Users might not have wallets or understand how to interact with contracts. On the contrary, they
+might be very well versed or immersed in the DAO's topics. They shouldn't be required to create a wallet and learn the onboarding process.
 
-#### 
+With Keypom, you can create a function call drop with the main purpose of registering users into a DAO. For people that have a wallet,
+this will act as an easy way of registering them with the click of a link. For users that don't have a wallet and are unfamiliar with
+NEAR, they can be onboarded and registered into the DAO with the same click of a link.
 
+#### Multisig Contracts
+
+Another amazing use-case for Keypom is allowing multisig contracts to have ZERO barrier to entry. Often times when using a multisig contract,
+you will entrust a key to a trusted party. This party might have no idea what NEAR is or how to interact with your contract. With Keypom,
+you can create a drop that will allow them to sign their transaction with a click of a link. No NEAR wallet is needed and no knowledge of the
+chain is required.
+
+At the end of the day, from the users perspective, they are given a link and when they click it, their portion of the multisig transaction is
+signed. The action is only performed on the multisig contract once all links have been clicked. This is an extremely powerful way of doing
+accomplishing multisig transactions with zero barrier to entry.
+
+The users don't even need to create a new account. They can simply call `claim` when the link is clicked which will fire the cross-contract call
+to the multisig contract and pass in the injected fields that will be cross-checked by that contract.
+
+#### NFT Ticketing
+
+The problem with current NFT ticketing systems is that they require users to have a wallet. This is a huge barrier to entry for people that
+are attending events but don't have wallets. In addition, there is often no proof of attendance for the event as the NFT is burned in order
+to get into the event which requires an internet connection. 
+
+Keypom aims to solve these problems by having a ticketing system that has the following features.
+- No wallet is needed to enter the event or receive a POAP.
+- No wifi is needed at the door.
+- An NFT is minted on-demand for each user that attends the event.
+- Users can optionally onboard onto NEAR if they don't have a wallet.
+
+In addition, some way to provide analytics to event organizers that contains information such as links that were:
+- Given out but not clicked at all.
+- Clicked but not attended.
+- Partially claimed indicating the number of people that attended but did not onboard or receive a POAP.
+- Fully claimed indicating the number of people that attended and received a POAP.
+
+In order to accomplish this, you can create a drop that has 3 uses per key. These uses would be:
+1. Array(`null`)
+2. Array(`null`)
+3. Array(function call to POAP contract to lazy mint an NFT)
+
+The event organizer would create the links and distribute them to people however they see fit. When a user receives the link, the first
+claim is automatically fired. This is a `null` case so nothing happens except for the fact that the key uses are decremented. At this point,
+the organizer knows that the user has clicked the link since the uses have been decremented.
+
+The next claim happens **only** when the user is at the door. Keypom would expose a QR code that can only be scanned by the bouncer's phone.
+This QR code would appear once the first link is clicked and contains the private key for the link. At the event, they wouldn't need any wifi 
+to get in as they only need to show the bouncer the QR code. Once the bouncer scans it, the site would ensure that they have exactly 2 out of 
+the 3 uses left. If they don't, they're not let in. At that point, a use is decremented from the key and the next time they visit the
+ticket page (when they have internet), they would be able to claim the final use and be onboarded / receive a POAP.
 */
 
 
@@ -379,50 +440,69 @@ const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000;
 /// Declared for readability and to prevent magic numbers.
 const NO_DEPOSIT: u128 = 0;
 
-/*
-    GAS Constants (outlines the minimum to attach. Any unspent GAS will be added according to the weights)
-*/
-const MIN_GAS_FOR_ON_CLAIM: Gas = Gas(55_000_000_000_000); // 55 TGas
+/// Minimum Gas required for the on claim callback.
+/// This value equates to 55 TGas
+const MIN_GAS_FOR_ON_CLAIM: Gas = Gas(55_000_000_000_000);
 
-// NFTs
-const MIN_GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000); // 10 TGas
+/// Minimum Gas required for a simple NFT transfer
+/// This value equates to 10 TGas
+const MIN_GAS_FOR_SIMPLE_NFT_TRANSFER: Gas = Gas(10_000_000_000_000);
+
+/// Minimum Gas required to resolve the NFT transfer
+/// This is 15 TGas more than the simple NFT transfer.
+/// The total value is 15 TGas + 10 TGas = 25 TGas
 const MIN_GAS_FOR_RESOLVE_TRANSFER: Gas =
-    Gas(15_000_000_000_000 + MIN_GAS_FOR_SIMPLE_NFT_TRANSFER.0); // 15 TGas + 10 TGas = 25 TGas
+    Gas(15_000_000_000_000 + MIN_GAS_FOR_SIMPLE_NFT_TRANSFER.0);
 
-// FTs
-// Actual amount of GAS to attach when querying the storage balance bounds. No unspent GAS will be attached on top of this (weight of 0)
-const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000); // 10 TGas
-const MIN_GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000); // 25 TGas
-const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000); // 5 TGas
-const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000); // 5 TGas
+/// Actual amount of GAS to attach when querying the storage balance bounds. 
+/// No unspent GAS will be attached on top of this (weight of 0)
+const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000);
+/// Minimum Gas required to resolve the cross contract call to the FT contract checking for storage balances.
+/// This value equates to 25 TGas
+const MIN_GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000);
+/// Minimum Gas required to perform a simple transfer of fungible tokens.
+/// This value equates to 5 TGas
+const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
+/// Minimum Gas required to register a user on the FT contract
+/// This value equates to 5 TGas
+const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000);
+/// Minimum Gas required to resolve the batch of promises for transferring the FTs and registering the user.
+/// This value is made up of the Gas for transferring, Gas for registering, and a 13 TGas buffer
+/// Equal to 13 TGas + 5 TGas + 5 TGas = 23 TGas
 const MIN_GAS_FOR_RESOLVE_BATCH: Gas =
-    Gas(13_000_000_000_000 + MIN_GAS_FOR_FT_TRANSFER.0 + MIN_GAS_FOR_STORAGE_DEPOSIT.0); // 13 TGas + 5 TGas + 5 TGas = 23 TGas
+    Gas(13_000_000_000_000 + MIN_GAS_FOR_FT_TRANSFER.0 + MIN_GAS_FOR_STORAGE_DEPOSIT.0);
 
-// Specifies the GAS being attached from the wallet site
-const ATTACHED_GAS_FROM_WALLET: Gas = Gas(100_000_000_000_000); // 100 TGas
+/// Specifies the GAS being attached from the wallet site
+/// If no specific Gas value is specified and overloaded, this value is used.
+/// Value equates to 100 TGas
+const ATTACHED_GAS_FROM_WALLET: Gas = Gas(100_000_000_000_000);
 
-// Specifies the amount of GAS to attach on top of the FC Gas if executing a regular function call in claim
-const GAS_OFFSET_IF_FC_EXECUTE: Gas = Gas(20_000_000_000_000); // 20 TGas
+/// Specifies the amount of GAS to attach on top of the FC Gas if executing a regular function call in claim
+/// This is to to ensure there is enough Gas to execute everything except the CCC
+/// This value is equal to 20 TGas
+const GAS_OFFSET_IF_FC_EXECUTE: Gas = Gas(20_000_000_000_000);
 
-// Actual amount of GAS to attach when creating a new account. No unspent GAS will be attached on top of this (weight of 0)
-const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); // 28 TGas
+/// Actual amount of GAS to attach for creating a new account.
+/// This value is equal to 28 TGas
+const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000);
 
-/// Both methods callable by the function call access key
+/// Specifies both `claim` and `create_account_and_claim` functions can be called with the access key
 const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim";
 
-/// Only the claim method_name is callable by the access key
+/// Specifies only `claim` can be called with the access key
 const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim";
 
-/// Only the create_account_and_claim method_name is callable by the access key
+/// Specifies only `create_account_and_claim` can be called with the access key
 const ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME: &str = "create_account_and_claim";
 
-/*
-    FEES
-*/
-const DROP_CREATION_FEE: u128 = 0; //1_000_000_000_000_000_000_000_000; // 1 N
-const KEY_ADDITION_FEE: u128 = 0; //5_000_000_000_000_000_000_000; // 0.005 N
+/// Fee for creating a drop. Currently 0 $NEAR
+const DROP_CREATION_FEE: u128 = 0;
+/// Fee for adding a key. Currently 0 $NEAR
+const KEY_ADDITION_FEE: u128 = 0;
 
-const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000); // 10 TGas
+/// How much to decrement the access key's allowance if there is a soft panic
+/// Value is equal to 10 TGas
+const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000);
 
 mod internals;
 mod stage1;
@@ -449,34 +529,39 @@ enum StorageKey {
 
 #[near_bindgen]
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize)]
+/// Main contract struct that holds all the contract data
 pub struct Keypom {
-    /// THIS IS A TEST
+    /// Owner of the Keypom contract that can call internal methods (e.g. `set_fees`)
     pub owner_id: AccountId,
-    // Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
+    /// Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
     pub root_account: AccountId,
 
-    // Map each key to a nonce rather than repeating each drop data in memory
+    /// Map of each key to its respective drop ID. This is much more efficient than repeating the
+    /// Drop data for every single key.
     pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
-    // Map the nonce to a specific drop
+    /// Map a drop ID to its respective Drop data
     pub drop_for_id: LookupMap<DropId, Drop>,
-    // Keep track of the drop ids for each funder for pagination
+    /// Keep track of the drop ids that each funder has created. This is used for view methods.
     pub drop_ids_for_owner: LookupMap<AccountId, UnorderedSet<DropId>>,
 
-    // Fees taken by the contract. One is for creating a drop, the other is for each key in the drop.
+    /// Fee taken by the contract every time a new drop is created
     pub drop_fee: u128,
+    /// Fee taken by the contract everytime a new key is added to a drop
     pub key_fee: u128,
+    /// Total amount of fees available for withdrawal collected overtime.
     pub fees_collected: u128,
 
-    // Keep track of fees per each user. Only the owner can edit this.
+    /// Overload the `drop_fee` and `key_fee` for specific users by providing custom fees
+    /// Tuple is (drop_fee, key_fee)
     pub fees_per_user: LookupMap<AccountId, (u128, u128)>,
 
-    // keep track of the balances for each user. This is to prepay for drop creations
+    /// Keep track of the balances for each user. This is to prepay for drop creations
     pub user_balances: LookupMap<AccountId, Balance>,
 
-    // Keep track of a nonce used for the drop IDs
+    /// Keep track of a nonce used for the drop IDs
     pub next_drop_id: DropId,
 
-    // Keep track of the price of 1 GAS per 1 yocto
+    /// How many yoctoNEAR does 1 unit of Gas cost
     pub yocto_per_gas: u128,
 }
 

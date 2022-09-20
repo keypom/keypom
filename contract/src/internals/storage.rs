@@ -26,7 +26,7 @@ impl Keypom {
         // the account to withdraw storage to is always the predecessor
         let owner_id = env::predecessor_account_id();
         //get the amount that the user has by removing them from the map. If they're not in the map, default to 0
-        let amount = self.user_balances.remove(&owner_id).unwrap_or(0);
+        let amount = self.user_balances.insert(&owner_id, &0).unwrap_or(0);
 
         //if that excess to withdraw is > 0, we transfer the amount to the user.
         if amount > 0 {
