@@ -584,8 +584,8 @@ impl Keypom {
             _ => {}
         };
 
-        // Default the should delete variable to true. If there's a case where it shouldn't, change the bool.
-        let mut should_delete = true;
+        // Default whether or not the key should be deleted as true
+        let mut should_delete_key = true;
         near_sdk::log!(
             "Key usage last used: {:?} Num uses: {:?} (before)",
             key_info.last_used,
@@ -641,7 +641,7 @@ impl Keypom {
             );
 
             drop.pks.insert(&signer_pk, &key_info);
-            should_delete = false;
+            should_delete_key = false;
         }
 
         drop.registered_uses -= 1;
@@ -651,8 +651,14 @@ impl Keypom {
             // Add drop back with the updated data.
             self.drop_for_id.insert(&drop_id, &drop);
         } else {
-            // Remove the drop ID from the funder's list if the drop is now empty
-            self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
+            // There are no keys left. We should only remove the drop if the drop's config is set to delete on empty
+            if drop.config.clone().and_then(|c| c.delete_on_empty).unwrap_or(false) {
+                near_sdk::log!("Drop is empty and delete_on_empty is set to true. Deleting drop");
+                // Remove the drop ID from the funder's list if the drop is now empty
+                self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
+            } else {
+                near_sdk::log!("Drop is empty but delete_on_empty is not specified. Keeping drop");
+            }
         }
 
         // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -665,7 +671,7 @@ impl Keypom {
             initial_storage,
             final_storage
         );
-        if should_delete {
+        if should_delete_key {
             // Amount to refund is the current allowance less the current execution's max GAS
             let amount_to_refund = key_info.allowance
                 - drop.required_gas.0 as u128 * self.yocto_per_gas
