@@ -73,7 +73,7 @@ impl Keypom {
         &mut self,
         new_account_id: AccountId,
         new_public_key: PublicKey,
-        expected_uses: Option<u64>
+        expected_uses: Option<u64>,
     ) {
         let (
             drop_data_option,
@@ -295,10 +295,8 @@ impl Keypom {
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
-        let mut amount_to_refund =
-            storage_used;
+        // Default amount to refund to be the storage freed
+        let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
             "Refund Amount: {}, 
@@ -441,7 +439,7 @@ impl Keypom {
     /// If drop is none, simulate a panic.
     fn process_claim(
         &mut self,
-        expected_uses: Option<u64>
+        expected_uses: Option<u64>,
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -497,7 +495,7 @@ impl Keypom {
         if let Some(uses) = expected_uses {
             if key_info.remaining_uses != uses {
                 let amount_to_decrement =
-                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
                 near_sdk::log!("Expected key uses of {}. Found: {}. Decrementing allowance by {}. Used GAS: {}", uses, key_info.remaining_uses, amount_to_decrement, used_gas.0);
 
                 key_info.allowance -= amount_to_decrement;
@@ -550,7 +548,7 @@ impl Keypom {
         }
 
         /*
-            If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
+            If it's an NFT drop get the token ID and remove it from the set.
             If it's an FC drop, get the next method_name data and check if it's none (to skip transfer of funds)
         */
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
@@ -669,8 +667,9 @@ impl Keypom {
         );
         if should_delete {
             // Amount to refund is the current allowance less the current execution's max GAS
-            let amount_to_refund =
-                key_info.allowance - drop.required_gas.0 as u128 * self.yocto_per_gas + ACCESS_KEY_STORAGE;
+            let amount_to_refund = key_info.allowance
+                - drop.required_gas.0 as u128 * self.yocto_per_gas
+                + ACCESS_KEY_STORAGE;
             near_sdk::log!(
                 "Key being deleted. Will refund: {}.
                 Allowance Currently: {}. 
@@ -687,7 +686,7 @@ impl Keypom {
                 .user_balances
                 .get(&drop.owner_id)
                 .expect("No funder balance found");
-            cur_funder_balance += amount_to_refund ;
+            cur_funder_balance += amount_to_refund;
             self.user_balances
                 .insert(&drop.owner_id, &cur_funder_balance);
 

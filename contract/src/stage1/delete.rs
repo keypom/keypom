@@ -169,7 +169,8 @@ impl Keypom {
                 - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
-            let total_deposits = drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
+            let total_deposits =
+                drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
             let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_left as u128;
 
             total_refund_amount = total_storage_freed
@@ -295,7 +296,8 @@ impl Keypom {
                 - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
-            let total_deposits = drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
+            let total_deposits =
+                drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
             let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_left as u128;
 
             total_refund_amount = total_storage_freed

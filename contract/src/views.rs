@@ -159,7 +159,7 @@ impl Keypom {
             DropType::FunctionCall(data) => JsonDropType::FunctionCall(data),
             DropType::NonFungibleToken(data) => JsonDropType::NonFungibleToken(JsonNFTData {
                 contract_id: data.contract_id,
-                sender_id: data.sender_id
+                sender_id: data.sender_id,
             }),
             DropType::FungibleToken(data) => JsonDropType::FungibleToken(data),
             _simple => JsonDropType::Simple,

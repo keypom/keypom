@@ -246,10 +246,10 @@ impl Keypom {
         if let Some(data) = nft_data {
             let NFTDataConfig {
                 sender_id,
-                contract_id
+                contract_id,
             } = data;
 
-            // Create the token ID vector and insert the longest token ID
+            // Create the token ID vector
             let token_ids = Vector::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("nft-{}{}", self.next_drop_id, owner_id)),

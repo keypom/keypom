@@ -19,8 +19,6 @@ interface DropType {
 export type JsonNFTData = {
     sender_id: string;
     contract_id: string;
-    longest_token_id: string;
-    storage_for_longest: string;
 }
 
 export type FTData = {

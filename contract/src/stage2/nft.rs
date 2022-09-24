@@ -60,10 +60,11 @@ impl Keypom {
             let final_storage = env::storage_usage();
             let total_required_storage =
                 Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
-            
+
             let mut drop_funder_balance = self.user_balances.get(&drop.owner_id).unwrap_or(0);
             drop_funder_balance -= total_required_storage;
-            self.user_balances.insert(&drop.owner_id, &drop_funder_balance);
+            self.user_balances
+                .insert(&drop.owner_id, &drop_funder_balance);
         } else {
             env::panic_str("drop type isn't NFT");
         }
