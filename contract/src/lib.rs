@@ -413,9 +413,6 @@ the 3 uses left. If they don't, they're not let in. At that point, a use is decr
 ticket page (when they have internet), they would be able to claim the final use and be onboarded / receive a POAP.
 */
 
-
-#![warn(missing_docs)]
-
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
