@@ -238,8 +238,6 @@ impl Keypom {
             next_key_id,
         };
 
-        // For NFT drops, measure the storage for adding the longest token ID
-        let mut storage_per_longest = 0;
         // Keep track of the total attached_deposit required for the FC data (depending on None and Some cases)
         let mut deposit_required_for_fc_deposits = 0;
         // Keep track of the number of none FCs so we don't charge the user
@@ -249,10 +247,9 @@ impl Keypom {
             let NFTDataConfig {
                 sender_id,
                 contract_id,
-                longest_token_id,
             } = data;
 
-            // Create the token ID vector and insert the longest token ID
+            // Create the token ID vector
             let token_ids = Vector::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("nft-{}{}", self.next_drop_id, owner_id)),
@@ -262,8 +259,6 @@ impl Keypom {
             let actual_nft_data = NFTData {
                 sender_id,
                 contract_id,
-                longest_token_id: longest_token_id.clone(),
-                storage_for_longest: u128::MAX,
                 token_ids,
             };
 
@@ -272,37 +267,6 @@ impl Keypom {
             drop.drop_type = DropType::NonFungibleToken(actual_nft_data);
 
             // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&drop_id, &drop);
-
-            // Measure how much storage it costs to insert the 1 longest token ID
-            let initial_nft_storage_one = env::storage_usage();
-            // Now that the drop has been added, insert the longest token ID and measure storage
-            if let DropType::NonFungibleToken(data) = &mut drop.drop_type {
-                data.token_ids.push(&longest_token_id);
-            }
-
-            // Add drop with the longest possible token ID and max storage
-            self.drop_for_id.insert(&drop_id, &drop);
-            let final_nft_storage_one = env::storage_usage();
-            near_sdk::log!(
-                "i1: {} f1: {}",
-                initial_nft_storage_one,
-                final_nft_storage_one
-            );
-
-            // Measure the storage per single longest token ID
-            storage_per_longest = Balance::from(final_nft_storage_one - initial_nft_storage_one);
-            near_sdk::log!(
-                "TOKENS BEFORE {:?}",
-                self.get_nft_token_ids_for_drop(self.next_drop_id, None, None)
-            );
-
-            // Clear the token IDs so it's an empty vector and put the storage in the drop's nft data
-            if let DropType::NonFungibleToken(data) = &mut drop.drop_type {
-                data.token_ids.pop();
-                data.storage_for_longest = storage_per_longest;
-            }
-
             self.drop_for_id.insert(&drop_id, &drop);
         } else if let Some(data) = ft_data.clone() {
             // If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type
@@ -404,7 +368,6 @@ impl Keypom {
 
             Optional:
             - FC attached_deposit for each key * num Some(data) claims
-            - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
         let fees = self
@@ -417,10 +380,6 @@ impl Keypom {
         let total_allowance = actual_allowance * len;
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
         let total_deposits = deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128 * len;
-        let total_storage_per_longest = storage_per_longest
-            * env::storage_byte_cost()
-            * (num_claims_per_key - num_none_fcs) as u128
-            * len;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
 
         let required_deposit = drop_fee
@@ -429,7 +388,6 @@ impl Keypom {
             + total_allowance
             + total_access_key_storage
             + total_deposits
-            + total_storage_per_longest
             + total_deposits_for_fc;
 
         near_sdk::log!(
@@ -441,7 +399,6 @@ impl Keypom {
             allowance: {} total allowance: {},
             access key storage: {} total access key storage: {},
             deposits less none FCs: {} total deposits: {},
-            storage per longest less none FCs: {} total storage per longest: {},
             deposits for FCs: {} total deposits for FCs: {},
             Claims per key: {}
             None FCs: {},
@@ -459,12 +416,6 @@ impl Keypom {
             yocto_to_near(total_access_key_storage),
             yocto_to_near(deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128),
             yocto_to_near(total_deposits),
-            yocto_to_near(
-                storage_per_longest
-                    * env::storage_byte_cost()
-                    * (num_claims_per_key - num_none_fcs) as u128
-            ),
-            yocto_to_near(total_storage_per_longest),
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(total_deposits_for_fc),
             num_claims_per_key,
@@ -675,12 +626,8 @@ impl Keypom {
         }
 
         // Get optional costs
-        let mut nft_optional_costs_per_key = 0;
         let mut ft_optional_costs_per_claim = 0;
         match drop.drop_type {
-            DropType::NonFungibleToken(data) => {
-                nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost()
-            }
             DropType::FungibleToken(data) => ft_optional_costs_per_claim = data.ft_storage.0,
             _ => {}
         };
@@ -700,7 +647,6 @@ impl Keypom {
 
             Optional:
             - FC attached_deposit for each key * num Some(data) claims
-            - storage for longest token ID for each key
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
         let fees = self
@@ -714,8 +660,6 @@ impl Keypom {
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
         let total_deposits =
             drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128 * len;
-        let total_storage_per_longest =
-            nft_optional_costs_per_key * (num_claims_per_key - num_none_fcs) as u128 * len;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
         let total_ft_costs = ft_optional_costs_per_claim * num_claims_per_key as u128 * len;
 
@@ -724,7 +668,6 @@ impl Keypom {
             + total_allowance
             + total_access_key_storage
             + total_deposits
-            + total_storage_per_longest
             + total_ft_costs
             + total_deposits_for_fc;
 
@@ -737,7 +680,6 @@ impl Keypom {
             allowance: {} total allowance: {},
             access key storage: {} total access key storage: {},
             deposits less none FCs: {} total deposits: {},
-            storage per longest less none FCs: {} total storage per longest: {},
             deposits for FCs: {} total deposits for FCs: {},
             FT Costs per claim {} total FT Costs: {},
             Claims per key: {}
@@ -755,8 +697,6 @@ impl Keypom {
             yocto_to_near(total_access_key_storage),
             yocto_to_near(drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128),
             yocto_to_near(total_deposits),
-            yocto_to_near(nft_optional_costs_per_key * (num_claims_per_key - num_none_fcs) as u128),
-            yocto_to_near(total_storage_per_longest),
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(total_deposits_for_fc),
             yocto_to_near(ft_optional_costs_per_claim),

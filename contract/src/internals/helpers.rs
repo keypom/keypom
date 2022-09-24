@@ -115,7 +115,6 @@ impl Keypom {
         account_id: AccountId,
         storage_freed: u128,
         token_id: Option<String>,
-        storage_for_longest: Option<u128>,
         promise: Option<Promise>,
     ) {
         macro_rules! resolve_promise_or_call {
@@ -174,8 +173,6 @@ impl Keypom {
                     U128(drop_data.deposit_per_use),
                     // How much storage was freed when the key was claimed
                     storage_freed,
-                    // How much storage was prepaid to cover the longest token ID being inserted.
-                    storage_for_longest.expect("no storage for longest token Id found"),
                     // Sender of the NFT
                     data.sender_id,
                     // Contract where the NFT is stored

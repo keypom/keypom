@@ -7,8 +7,6 @@ use crate::*;
 pub struct NFTData {
     pub sender_id: AccountId,
     pub contract_id: AccountId,
-    pub longest_token_id: String,
-    pub storage_for_longest: Balance,
     pub token_ids: Vector<String>,
 }
 
@@ -18,7 +16,6 @@ pub struct NFTData {
 pub struct NFTDataConfig {
     pub sender_id: AccountId,
     pub contract_id: AccountId,
-    pub longest_token_id: String,
 }
 
 #[near_bindgen]
@@ -39,10 +36,9 @@ impl Keypom {
                 nft_data.sender_id == sender_id && nft_data.contract_id == contract_id,
                 "NFT data must match what was sent"
             );
-            require!(
-                token_id.len() <= nft_data.longest_token_id.len(),
-                "token ID must be less than largest token specified"
-            );
+
+            // Measure the storage by inserting this info and ensure the drop funder has enough balance
+            let initial_storage = env::storage_usage();
 
             // Push the token ID to the back of the vector
             token_ids.push(&token_id);
@@ -59,6 +55,16 @@ impl Keypom {
 
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
+
+            // Calculate the storage for inserting the token and subtract from funder's balance
+            let final_storage = env::storage_usage();
+            let total_required_storage =
+                Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
+
+            let mut drop_funder_balance = self.user_balances.get(&drop.owner_id).unwrap_or(0);
+            drop_funder_balance -= total_required_storage;
+            self.user_balances
+                .insert(&drop.owner_id, &drop_funder_balance);
         } else {
             env::panic_str("drop type isn't NFT");
         }

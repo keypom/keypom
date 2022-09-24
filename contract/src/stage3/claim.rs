@@ -10,7 +10,6 @@ impl Keypom {
             drop_id,
             storage_freed_option,
             token_id,
-            storage_for_longest,
             should_continue,
             cur_key_info,
         ) = self.process_claim(expected_uses);
@@ -56,7 +55,6 @@ impl Keypom {
             account_id,
             storage_freed,
             token_id,
-            storage_for_longest,
             promise,
         );
 
@@ -75,14 +73,13 @@ impl Keypom {
         &mut self,
         new_account_id: AccountId,
         new_public_key: PublicKey,
-        expected_uses: Option<u64>
+        expected_uses: Option<u64>,
     ) {
         let (
             drop_data_option,
             drop_id,
             storage_freed_option,
             token_id,
-            storage_for_longest,
             should_continue,
             cur_key_info,
         ) = self.process_claim(expected_uses);
@@ -121,7 +118,6 @@ impl Keypom {
             new_account_id,
             storage_freed,
             token_id,
-            storage_for_longest,
             Some(promise),
         );
 
@@ -273,8 +269,6 @@ impl Keypom {
         balance: U128,
         // How much storage was freed when the key was claimed
         storage_used: Balance,
-        // How much storage was prepaid to cover the longest token ID being inserted.
-        storage_for_longest: Balance,
         // Sender of the NFT
         sender_id: AccountId,
         // Contract where the NFT is stored
@@ -301,18 +295,14 @@ impl Keypom {
         }
         near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
-        // Default amount to refund to be everything except balance and burnt GAS since balance was sent to new account.
-        // In addition, we refund them for the cost of storing the longest token ID now that a key has been claimed
-        let mut amount_to_refund =
-            storage_used + storage_for_longest * env::storage_byte_cost();
+        // Default amount to refund to be the storage freed
+        let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
             "Refund Amount: {}, 
-            Storage Used: {}
-            Storage for longest: {}",
+            Storage Used: {}",
             yocto_to_near(amount_to_refund),
             yocto_to_near(storage_used),
-            yocto_to_near(storage_for_longest * env::storage_byte_cost())
         );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
@@ -449,7 +439,7 @@ impl Keypom {
     /// If drop is none, simulate a panic.
     fn process_claim(
         &mut self,
-        expected_uses: Option<u64>
+        expected_uses: Option<u64>,
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -459,8 +449,6 @@ impl Keypom {
         Option<Balance>,
         // Next token ID to claim
         Option<String>,
-        // Storage for the longest token ID
-        Option<Balance>,
         // Should we return and not do anything once the drop is claimed (if FC data is none)
         bool,
         // Current key info before decrementing
@@ -507,14 +495,14 @@ impl Keypom {
         if let Some(uses) = expected_uses {
             if key_info.remaining_uses != uses {
                 let amount_to_decrement =
-                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
                 near_sdk::log!("Expected key uses of {}. Found: {}. Decrementing allowance by {}. Used GAS: {}", uses, key_info.remaining_uses, amount_to_decrement, used_gas.0);
 
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
                 drop.pks.insert(&signer_pk, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, None, false, current_key_info);
+                return (None, None, None, None, false, current_key_info);
             }
         }
 
@@ -534,7 +522,7 @@ impl Keypom {
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None, false, current_key_info);
+            return (None, None, None, None, false, current_key_info);
         }
 
         // Ensure enough time has passed if a start timestamp was specified in the config.
@@ -556,23 +544,20 @@ impl Keypom {
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, None, false, current_key_info);
+            return (None, None, None, None, false, current_key_info);
         }
 
         /*
-            If it's an NFT drop get the token ID and remove it from the set. Also set the storage for longest
+            If it's an NFT drop get the token ID and remove it from the set.
             If it's an FC drop, get the next method_name data and check if it's none (to skip transfer of funds)
         */
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
         let mut token_id = None;
-        // Default the storage for longest to be none and return the actual value if it's an NFT drop
-        let mut storage_for_longest = None;
         // Default the should continue variable to true. If the next FC method_name is None, we set it to false
         let mut should_continue = true;
         match &mut drop.drop_type {
             DropType::NonFungibleToken(data) => {
                 token_id = data.token_ids.pop();
-                storage_for_longest = Some(data.storage_for_longest);
             }
             DropType::FunctionCall(data) => {
                 // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
@@ -634,7 +619,7 @@ impl Keypom {
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
                 drop.pks.insert(&signer_pk, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, None, false, current_key_info);
+                return (None, None, None, None, false, current_key_info);
             }
 
             near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
@@ -682,8 +667,9 @@ impl Keypom {
         );
         if should_delete {
             // Amount to refund is the current allowance less the current execution's max GAS
-            let amount_to_refund =
-                key_info.allowance - drop.required_gas.0 as u128 * self.yocto_per_gas + ACCESS_KEY_STORAGE;
+            let amount_to_refund = key_info.allowance
+                - drop.required_gas.0 as u128 * self.yocto_per_gas
+                + ACCESS_KEY_STORAGE;
             near_sdk::log!(
                 "Key being deleted. Will refund: {}.
                 Allowance Currently: {}. 
@@ -700,7 +686,7 @@ impl Keypom {
                 .user_balances
                 .get(&drop.owner_id)
                 .expect("No funder balance found");
-            cur_funder_balance += amount_to_refund ;
+            cur_funder_balance += amount_to_refund;
             self.user_balances
                 .insert(&drop.owner_id, &cur_funder_balance);
 
@@ -714,7 +700,6 @@ impl Keypom {
             Some(drop_id),
             Some(total_storage_freed),
             token_id,
-            storage_for_longest,
             should_continue,
             current_key_info,
         )

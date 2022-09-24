@@ -46,8 +46,6 @@ pub struct JsonDrop {
 pub struct JsonNFTData {
     pub sender_id: AccountId,
     pub contract_id: AccountId,
-    pub longest_token_id: String,
-    pub storage_for_longest: U128,
 }
 
 /// Struct to return in views to query for specific data related to an access key.
@@ -162,8 +160,6 @@ impl Keypom {
             DropType::NonFungibleToken(data) => JsonDropType::NonFungibleToken(JsonNFTData {
                 contract_id: data.contract_id,
                 sender_id: data.sender_id,
-                longest_token_id: data.longest_token_id,
-                storage_for_longest: U128(data.storage_for_longest),
             }),
             DropType::FungibleToken(data) => JsonDropType::FungibleToken(data),
             _simple => JsonDropType::Simple,

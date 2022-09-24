@@ -38,18 +38,15 @@ impl Keypom {
             .unwrap_or(1);
 
         // Get optional costs
-        let mut nft_optional_costs_per_key = 0;
         let mut ft_optional_costs_per_claim = 0;
 
         // ensure that there are no FTs or NFTs left to be refunded
         match drop_type {
-            DropType::NonFungibleToken(data) => {
+            DropType::NonFungibleToken(_) => {
                 require!(
                     drop.registered_uses == 0,
                     "NFTs must be refunded before keys are deleted"
                 );
-
-                nft_optional_costs_per_key = data.storage_for_longest * env::storage_byte_cost();
             }
             DropType::FungibleToken(data) => {
                 require!(
@@ -71,7 +68,7 @@ impl Keypom {
         // Get the total number of claims and none FCs across all keys being deleted
         let mut total_num_claims_left = 0;
         let mut total_num_none_fcs = 0;
-        let mut total_deposit_value = 0;
+        let mut total_fc_deposits = 0;
         // If the user passed in public keys, loop through and remove them from the drop
         if let Some(keys) = public_keys {
             // Set the keys to delete equal to the keys passed in
@@ -115,7 +112,7 @@ impl Keypom {
                             attached_deposit
                         )
                         .as_str());
-                        total_deposit_value += key_info.remaining_uses as u128 * attached_deposit;
+                        total_fc_deposits += key_info.remaining_uses as u128 * attached_deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
@@ -131,7 +128,7 @@ impl Keypom {
                                 let attached_deposit = method_data
                                     .iter()
                                     .fold(0, |acc, x| acc + x.attached_deposit.0);
-                                total_deposit_value += attached_deposit;
+                                total_fc_deposits += attached_deposit;
                             }
                         }
                     }
@@ -169,36 +166,38 @@ impl Keypom {
 
                 Optional:
                 - total FC deposits
-                - storage for longest token ID for each key
                 - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
             */
+            let total_access_key_storage = ACCESS_KEY_STORAGE * len;
+            let total_deposits =
+                drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_left as u128;
+
             total_refund_amount = total_storage_freed
-                + drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128
-                + ft_optional_costs_per_claim * total_num_claims_left as u128
-                + total_deposit_value
                 + total_allowance_left
-                + (ACCESS_KEY_STORAGE + nft_optional_costs_per_key) * len;
+                + total_access_key_storage
+                + total_deposits
+                + total_fc_deposits
+                + total_ft_costs;
 
             near_sdk::log!(
                 "Total refund: {}
                 storage freed: {}
-                drop balance: {}
-                FT costs per claim: {}
-                total attached_deposit value: {}
-                total allowance left: {}
-                access key storage: {}
-                nft optional costs per key: {}
+                allowance left: {}
+                access key storage {}
+                total deposits: {}
+                total fc deposits: {}
+                total ft costs: {}
                 total num claims left: {}
                 total num none FCs {}
                 len: {}",
                 yocto_to_near(total_refund_amount),
                 yocto_to_near(total_storage_freed),
-                yocto_to_near(drop.deposit_per_use),
-                yocto_to_near(ft_optional_costs_per_claim),
-                yocto_to_near(total_deposit_value),
                 yocto_to_near(total_allowance_left),
-                yocto_to_near(ACCESS_KEY_STORAGE),
-                yocto_to_near(nft_optional_costs_per_key),
+                yocto_to_near(total_access_key_storage),
+                yocto_to_near(total_deposits),
+                yocto_to_near(total_fc_deposits),
+                yocto_to_near(total_ft_costs),
                 total_num_claims_left,
                 total_num_none_fcs,
                 len
@@ -241,7 +240,7 @@ impl Keypom {
                             attached_deposit
                         )
                         .as_str());
-                        total_deposit_value += key_info.remaining_uses as u128 * attached_deposit;
+                        total_fc_deposits += key_info.remaining_uses as u128 * attached_deposit;
 
                     // In the case where either there's 1 claim per key or the number of FCs is not 1,
                     // We can simply loop through and manually get this data
@@ -256,7 +255,7 @@ impl Keypom {
                                 let attached_deposit = method_data
                                     .iter()
                                     .fold(0, |acc, x| acc + x.attached_deposit.0);
-                                total_deposit_value += attached_deposit;
+                                total_fc_deposits += attached_deposit;
                             }
                         }
                     }
@@ -294,36 +293,38 @@ impl Keypom {
 
                 Optional:
                 - total FC deposits
-                - storage for longest token ID for each key
                 - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
             */
+            let total_access_key_storage = ACCESS_KEY_STORAGE * len;
+            let total_deposits =
+                drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_left as u128;
+
             total_refund_amount = total_storage_freed
-                + drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128
-                + ft_optional_costs_per_claim * total_num_claims_left as u128
-                + total_deposit_value
                 + total_allowance_left
-                + (ACCESS_KEY_STORAGE + nft_optional_costs_per_key) * len;
+                + total_access_key_storage
+                + total_deposits
+                + total_fc_deposits
+                + total_ft_costs;
 
             near_sdk::log!(
                 "Total refund: {}
                 storage freed: {}
-                drop balance: {}
-                FT costs per claim: {}
-                total attached_deposit value: {}
-                total allowance left: {}
-                access key storage: {}
-                nft optional costs per key: {}
+                allowance left: {}
+                access key storage {}
+                total deposits: {}
+                total fc deposits: {}
+                total ft costs: {}
                 total num claims left: {}
                 total num none FCs {}
                 len: {}",
                 yocto_to_near(total_refund_amount),
                 yocto_to_near(total_storage_freed),
-                yocto_to_near(drop.deposit_per_use),
-                yocto_to_near(ft_optional_costs_per_claim),
-                yocto_to_near(total_deposit_value),
                 yocto_to_near(total_allowance_left),
-                yocto_to_near(ACCESS_KEY_STORAGE),
-                yocto_to_near(nft_optional_costs_per_key),
+                yocto_to_near(total_access_key_storage),
+                yocto_to_near(total_deposits),
+                yocto_to_near(total_fc_deposits),
+                yocto_to_near(total_ft_costs),
                 total_num_claims_left,
                 total_num_none_fcs,
                 len
