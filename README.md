@@ -46,7 +46,7 @@
 Keypom sheds light on the endless power that NEAR's access keys introduce. The contract was created as a result of 3 common problems that arose in the ecosystem.
 
 1. People want a cheap, customizable, and unique onboarding experience for users.
-2. Companies don't want to expose full access keys in their backend servers.
+2. Companies don't want to expose full accessnearcon-beta-keypom-nfts.near keys in their backend servers.
 3. dApps want a smooth UX for interactions that require deposits.
 
 The contract was initially created as a way to handle the 1 $NEAR minimum deposit required for creating linkdrops using the [regular linkdrop contract](https://github.com/near/near-linkdrop/blob/f24f2608e1558db773f2408a28849d330abb3881/src/lib.rs#L18). 

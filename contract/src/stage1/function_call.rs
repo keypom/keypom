@@ -117,6 +117,8 @@ impl Keypom {
                 near_sdk::log!("Adding key ID to args {:?}", key_id);
             }
 
+            near_sdk::log!("Final args {:?}", final_args);
+
             // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top
             Promise::new(method.receiver_id.clone()).function_call_weight(
                 method.method_name.clone(),

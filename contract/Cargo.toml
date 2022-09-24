@@ -1,5 +1,5 @@
 [package]
-name = "linkdrop-proxy"
+name = "keypom"
 version = "1.0.0"
 authors = ["Ben Kurrek <bkurrek@uwaterloo.ca>, Matt Lockyer <mattdlockyer@gmail.com>"]
 edition = "2018"
