@@ -61,6 +61,10 @@ pub struct DropConfig {
 
     // Root account that all sub-accounts will default to. If None, default to the global drop root.
     pub drop_root: Option<AccountId>,
+
+    // Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
+    // Must be overwritten
+    pub delete_on_empty: Option<bool>
 }
 
 // Drop Metadata should be a string which can be JSON or anything the users want.
