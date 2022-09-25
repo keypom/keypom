@@ -312,27 +312,46 @@ impl Keypom {
             // If there's one method data specified and more than 1 claim per key, that data is to be used
             // For all the claims. In this case, we need to tally all the deposits for each method in all method data.
             if num_claims_per_key > 1 && num_method_data == 1 {
-                let attached_deposit = data
+                let method_data = data
                     .methods
                     .iter()
                     .next()
                     .unwrap()
                     .clone()
-                    .expect("cannot have a single none function call")
-                    // iterate through   all entries and sum the attached_deposit
-                    .iter()
-                    .fold(0, |acc, x| acc + x.attached_deposit.0);
+                    .expect("cannot have a single none function call");
+
+                // Keep track of the total attached deposit across all methods in the method data
+                let mut attached_deposit = 0;
+                // Iterate through each method in the method data and accumulate the attached deposit
+                for method in method_data {
+                    // Add the attached_deposit to the total deposit required
+                    attached_deposit += method.attached_deposit.0;
+
+                    // Ensure no malicious activity is going on
+                    require!(method.receiver_id != env::current_account_id(), "Cannot invoke functions on keypom");
+                    require!(self.prohibited_fc_methods.contains(&method.method_name) == false, "Cannot invoke a prohibited function call");
+                }
+
                 deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
-                for method_name in data.methods {
-                    num_none_fcs += method_name.is_none() as u64;
+                for method_data in data.methods {
+                    num_none_fcs += method_data.is_none() as u64;
                     // If the method is not None, we need to get the attached_deposit by looping through the method datas
-                    if let Some(method_data) = method_name {
-                        let attached_deposit = method_data
-                            .iter()
-                            .fold(0, |acc, x| acc + x.attached_deposit.0);
+                    if let Some(data) = method_data {
+                        // Keep track of the total attached deposit across all methods in the method data
+                        let mut attached_deposit = 0;
+                        // Iterate through each method in the method data and accumulate the attached deposit
+                        for method in data {
+                            // Add the attached_deposit to the total deposit required
+                            attached_deposit += method.attached_deposit.0;
+
+                            // Ensure no malicious activity is going on
+                            require!(method.receiver_id != env::current_account_id(), "Cannot invoke functions on keypom");
+                            require!(self.prohibited_fc_methods.contains(&method.method_name) == false, "Cannot invoke a prohibited function call");
+                        }
+
                         deposit_required_for_fc_deposits += attached_deposit;
                     }
                 }

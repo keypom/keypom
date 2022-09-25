@@ -2,6 +2,16 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
+    /// Add a prohibited method to the list of methods that can't be called by a FC Drop
+    pub fn add_prohibited_method(&mut self, method: String) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.owner_id,
+            "predecessor != owner"
+        );
+        self.prohibited_fc_methods.insert(&method);
+    }
+
     /// Set the desired linkdrop contract to interact with
     pub fn set_root_account(&mut self, root_account: AccountId) {
         assert_eq!(

@@ -404,7 +404,7 @@ ticket page (when they have internet), they would be able to claim the final use
 */
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LookupSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
@@ -490,6 +490,16 @@ const KEY_ADDITION_FEE: u128 = 0;
 /// Value is equal to 10 TGas
 const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000);
 
+/// Which methods are prohibited from being called by an FC drop
+const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
+    "nft_transfer", 
+    "nft_transfer_call", 
+    "nft_approve",
+    "nft_transfer_payout",
+    "ft_transfer", 
+    "ft_transfer_call"
+];
+
 mod internals;
 mod stage1;
 mod stage2;
@@ -511,6 +521,7 @@ enum StorageKey {
     TokenIdsForDrop { account_id_hash: CryptoHash },
     FeesPerUser,
     UserBalances,
+    ProhibitedMethods
 }
 
 #[near_bindgen]
@@ -549,6 +560,9 @@ pub struct Keypom {
 
     /// How many yoctoNEAR does 1 unit of Gas cost
     pub yocto_per_gas: u128,
+
+    /// Which methods are prohibited from being called with an access key through an FC Drop
+    pub prohibited_fc_methods: LookupSet<String>,
 }
 
 #[near_bindgen]
@@ -556,7 +570,7 @@ impl Keypom {
     /// Initialize contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
     #[init]
     pub fn new(root_account: AccountId, owner_id: AccountId) -> Self {
-        Self {
+        let mut keypom = Self {
             owner_id,
             root_account,
             drop_id_for_pk: UnorderedMap::new(StorageKey::DropIdForPk),
@@ -564,6 +578,7 @@ impl Keypom {
             drop_ids_for_owner: LookupMap::new(StorageKey::DropIdsForFunder),
             user_balances: LookupMap::new(StorageKey::UserBalances),
             next_drop_id: 0,
+            prohibited_fc_methods: LookupSet::new(StorageKey::ProhibitedMethods),
             /*
                 FEES
             */
@@ -572,6 +587,13 @@ impl Keypom {
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
             yocto_per_gas: 100_000_000,
-        }
+        };
+
+        // Loop through and add all the default prohibited methods to the set
+        for method in DEFAULT_PROHIBITED_FC_METHODS {
+            keypom.prohibited_fc_methods.insert(&method.to_string());
+        };
+
+        keypom
     }
 }
