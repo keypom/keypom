@@ -47,6 +47,15 @@ pub struct FCData {
     pub config: Option<FCConfig>,
 }
 
+/// Injected Fields struct to be sent to external contracts
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct InjectedFields {
+    pub account_id_field: Option<String>,
+    pub drop_id_field: Option<String>,
+    pub key_id_field: Option<String>
+}
+
 #[near_bindgen]
 impl Keypom {
     // Internal method_name for transfer NFTs.
@@ -64,10 +73,11 @@ impl Keypom {
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
         for method in methods {
-            // Get binary representation of whether or not account ID field, drop ID field, and key ID field are present
-            let injected_fields = 2u8.pow(0) * method.account_id_field.is_some() as u8
-                + 2u8.pow(1) * method.drop_id_field.is_some() as u8
-                + 2u8.pow(2) * method.key_id_field.is_some() as u8;
+            let injected_fields = InjectedFields {
+                account_id_field: method.account_id_field.clone(),
+                drop_id_field: method.drop_id_field.clone(),
+                key_id_field: method.key_id_field.clone()
+            };
 
             let mut final_args = method.args.clone();
 
@@ -79,11 +89,11 @@ impl Keypom {
             }
 
             if final_args.len() == 0 {
-                final_args = format!("{{\"injected_fields\":\"{}\"}}", injected_fields);
+                final_args = format!("{{\"injected_fields\":{}}}", near_sdk::serde_json::to_string(&injected_fields).unwrap());
             } else {
                 final_args.insert_str(
                     final_args.len() - 1,
-                    &format!(",\"injected_fields\":\"{}\"", injected_fields),
+                    &format!(",\"injected_fields\":{}", near_sdk::serde_json::to_string(&injected_fields).unwrap()),
                 );
             }
 
