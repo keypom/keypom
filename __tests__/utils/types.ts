@@ -10,6 +10,10 @@ export type JsonDrop = {
     next_key_id: number;
 }
 
+export type Error = {
+    message: String;
+}
+
 interface DropType {
     FunctionCall: FCData;
     NonFungibleToken: JsonNFTData;
@@ -67,6 +71,7 @@ export type DropConfig = {
     on_claim_refund_deposit: boolean | null;
     claim_permission: string | null;
     drop_root: string | null;
+    delete_on_empty: boolean | null;
 }
 
 export type TokenMetadata = {

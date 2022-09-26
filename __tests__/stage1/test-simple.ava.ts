@@ -36,36 +36,36 @@ test.afterEach(async t => {
     });
 });
 
-// test('Create empty drop check views', async t => {
-//     const { keypom, ali } = t.context.accounts;
+test('Create empty drop check views', async t => {
+    const { keypom, ali } = t.context.accounts;
     
-//     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-//     await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
+    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
     
-//     let result = await queryAllViewFunctions({
-//         contract: keypom, 
-//         drop_id: 0, 
-//         account_id: ali.accountId
-//     });
+    let result = await queryAllViewFunctions({
+        contract: keypom, 
+        drop_id: 0, 
+        account_id: ali.accountId
+    });
 
-//     t.is(result.keyTotalSupply, '0');
-//     t.deepEqual(result.keys, []);
-//     let jsonDrop = result.dropInformation!;
-//     t.is(jsonDrop.drop_id, 0);
-//     t.is(jsonDrop.owner_id, ali.accountId);
-//     t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
-//     t.is(jsonDrop.drop_type.toString(), 'Simple');
-//     t.is(jsonDrop.config, null);
-//     t.is(jsonDrop.metadata, null);
-//     t.is(jsonDrop.registered_uses, 0);
-//     t.is(jsonDrop.required_gas, tGas(100));
-//     t.is(jsonDrop.next_key_id, 0);
+    t.is(result.keyTotalSupply, '0');
+    t.deepEqual(result.keys, []);
+    let jsonDrop = result.dropInformation!;
+    t.is(jsonDrop.drop_id, 0);
+    t.is(jsonDrop.owner_id, ali.accountId);
+    t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
+    t.is(jsonDrop.drop_type.toString(), 'Simple');
+    t.is(jsonDrop.config, null);
+    t.is(jsonDrop.metadata, null);
+    t.is(jsonDrop.registered_uses, 0);
+    t.is(jsonDrop.required_gas, tGas(100));
+    t.is(jsonDrop.next_key_id, 0);
     
-//     t.is(result.keySupplyForDrop, 0);
-//     t.deepEqual(result.keysForDrop, []);
-//     t.deepEqual(result.tokenIdsForDrop, []);
-//     t.deepEqual(result.dropSupplyForOwner, 1);
-// });
+    t.is(result.keySupplyForDrop, 0);
+    t.deepEqual(result.keysForDrop, []);
+    t.deepEqual(result.tokenIdsForDrop, []);
+    t.deepEqual(result.dropSupplyForOwner, 1);
+});
 
 test('Create drop with 1000 keys', async t => {
     const { keypom, ali } = t.context.accounts;

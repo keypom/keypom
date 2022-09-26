@@ -1,5 +1,5 @@
 import { KeyPair, NEAR, NearAccount } from "near-workspaces";
-import { generateKeyPairs, LARGE_GAS } from "../utils/general";
+import { generateKeyPairs, LARGE_GAS } from "../../utils/general";
 
 export const nftSeriesMetadata = {
     "spec": "nft-1.0.99",
@@ -15,7 +15,6 @@ export async function createDistro(
     nftSeries: NearAccount, 
     ownerBalance: string,
     depositPerUse: string,
-    pagodaPoaps: boolean
     ) {
     await owner.updateAccount({
         amount: NEAR.parse('10000 N').toString()
@@ -28,14 +27,14 @@ export async function createDistro(
     // Loop through each ticket in the distro and create the drop
     for (let [sponsor, tickets] of Object.entries(ticketDistribution)) {
         console.log(`Creating Series for ${sponsor}`);
-        await nftSeries.call(nftSeries, 'create_series', {mint_id, metadata: nftMetadata}, {attachedDeposit: NEAR.parse("0.02").toString()});
+        await nftSeries.call(nftSeries, 'create_series', {mint_id, metadata: pagodaNftMetadataPizza}, {attachedDeposit: NEAR.parse("0.02").toString()});
 
         // Creating the empty drop
         await owner.call(keypom, 'create_drop', {
             public_keys: [], 
             deposit_per_use: depositPerUse,
-            fc_data: getNEARConFCData(nftSeries, pagodaPoaps),
-            config: pagodaPoaps ? null : dropConfig,
+            fc_data: getNEARConFCData(nftSeries),
+            config: null
         },{gas: LARGE_GAS});
 
         //Creating the tickets for the sponsor
@@ -72,11 +71,6 @@ export async function createDistro(
     return keyPairsForSponsors;
 }
 
-export const nftMetadata = {
-    "media": "bafybeigmwo5tusydasem6bwwpxxgleztkespzltddwwexknvkg6243cxay",
-    "copies": 1000,
-};
-
 export const pagodaNftMetadataBucketHat = {
     "media": "bafybeihnb36l3xvpehkwpszthta4ic6bygjkyckp5cffxvszbcltzyjcwi",
     "title": "This is my bucket hat title",
@@ -101,26 +95,9 @@ export const keypomMetadata = {
     id: "nearcon-opening-night"
 }
 
-export function getNEARConFCData (receiver: NearAccount, pagodaPoaps: boolean) {
-    if (pagodaPoaps) {
-        return {
-            methods: [
-                [{
-                    receiver_id: receiver,
-                    method_name: "nft_mint",
-                    args: "",
-                    attached_deposit: NEAR.parse("0.015").toString(),
-                    account_id_field: "receiver_id",
-                    drop_id_field: "mint_id"
-                }]
-            ]
-        } 
-    }
-
+export function getNEARConFCData (receiver: NearAccount) {
     return {
         methods: [
-            null,
-            null,
             [{
                 receiver_id: receiver,
                 method_name: "nft_mint",
@@ -130,5 +107,5 @@ export function getNEARConFCData (receiver: NearAccount, pagodaPoaps: boolean) {
                 drop_id_field: "mint_id"
             }]
         ]
-    }
+    } 
 }
