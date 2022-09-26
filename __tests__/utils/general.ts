@@ -64,6 +64,13 @@ export async function queryAllViewFunctions(
     account_id?: string | null
   }
 ) {
+  let getGasPrice: string = await contract.view('get_gas_price', {});
+  let getRootAccount: string = await contract.view('get_root_account', {});
+  let getFeesCollected: string = await contract.view('get_fees_collected', {});
+  let getNextDropId: number = await contract.view('get_next_drop_id', {});
+  let keyTotalSupply: string = await contract.view('get_key_total_supply', {});
+  let getKeys: JsonKeyInfo[] = await contract.view('get_keys', {from_index, limit});
+
   let getKeyBalance: string | null = null;
   let getKeyInformation: JsonKeyInfo | null = null;
   if(key != null) {
@@ -89,12 +96,6 @@ export async function queryAllViewFunctions(
     dropsForOwner = await contract.view('get_drops_for_owner', {account_id, from_index, limit});
   }
 
-  let getGasPrice: string = await contract.view('get_gas_price', {});
-  let getRootAccount: string = await contract.view('get_root_account', {});
-  let getFeesCollected: string = await contract.view('get_fees_collected', {});
-  let getNextDropId: number = await contract.view('get_next_drop_id', {});
-  let keyTotalSupply: string = await contract.view('get_key_total_supply', {});
-  let getKeys: JsonKeyInfo[] = await contract.view('get_keys', {from_index, limit});
 
   return {
     keyBalance: getKeyBalance,

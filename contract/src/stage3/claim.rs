@@ -658,6 +658,8 @@ impl Keypom {
                 self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
             } else {
                 near_sdk::log!("Drop is empty but delete_on_empty is not specified. Keeping drop");
+                // Add drop back with the updated data.
+                self.drop_for_id.insert(&drop_id, &drop);
             }
         }
 

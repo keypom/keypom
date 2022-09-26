@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
-import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
-import { generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { NEAR, NearAccount, Worker } from "near-workspaces";
+import { generateKeyPairs, WALLET_GAS } from "../utils/general";
 
 const test = anyTest as TestFn<{
     worker: Worker;

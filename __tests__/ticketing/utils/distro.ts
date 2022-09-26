@@ -1,26 +1,10 @@
-export const pagodaDistroPoaps = {
-    "BucketHat": [
-        100,
-        100,
-        100,
-        100
-    ],
-    "Pizza": [
-        100,
-        100,
-        100,
-        100,
-        100
-    ]
-}
-
-export const ticketDistro1 = {
+export const ticketDistroTiny = {
     "Orderly": [
         1
     ]
 }
 
-export const ticketDistro2 = {
+export const ticketDistroSmall = {
     "Orderly": [
         1
     ],
@@ -32,7 +16,7 @@ export const ticketDistro2 = {
     ]
 }
 
-export const ticketDistro3 = {
+export const ticketDistroActual = {
     "Orderly": [
         100,
         100
