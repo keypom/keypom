@@ -22,3 +22,9 @@ export const pagodaDistroPoapsSmall = {
         5
     ]
 }
+
+export const pagodaDistroPoapsTiny = {
+    "BucketHat": [
+        1
+    ]
+}
