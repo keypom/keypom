@@ -1,5 +1,5 @@
 import anyTest, { TestFn } from "ava";
-import { NEAR, NearAccount, Worker } from "near-workspaces";
+import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
 import { generateKeyPairs, LARGE_GAS, WALLET_GAS } from "../utils/general";
 import { JsonKeyInfo } from "../utils/types";
 
@@ -37,7 +37,11 @@ test.beforeEach(async (t) => {
     // Test users
     const ali = await root.createSubAccount('ali');
     const owner = await root.createSubAccount('owner');
-    const bob = await root.createSubAccount('bob');
+    
+    // Custom root
+    const customRoot = await root.createSubAccount('custom-root');
+    await customRoot.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
+    await customRoot.call(customRoot, 'new', {});
 
     // Add 10k $NEAR to owner's account
     await owner.updateAccount({
@@ -46,7 +50,7 @@ test.beforeEach(async (t) => {
 
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, keypom, owner, ali, bob };
+    t.context.accounts = { root, keypom, owner, ali, customRoot };
 });
 
 // If the environment is reused, use test.after to replace test.afterEach
@@ -57,7 +61,7 @@ test.afterEach(async t => {
 });
 
 test('Testing Delete On Empty Config', async t => {
-    const { keypom, owner, ali, bob } = t.context.accounts;
+    const { keypom, owner, ali } = t.context.accounts;
     console.log("adding to balance");
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
@@ -111,7 +115,7 @@ test('Testing Delete On Empty Config', async t => {
 });
 
 test('Testing Start Timestamp', async t => {
-    const { keypom, owner, ali, bob } = t.context.accounts;
+    const { keypom, owner, ali } = t.context.accounts;
     console.log("adding to balance");
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
@@ -164,7 +168,7 @@ test('Testing Start Timestamp', async t => {
 });
 
 test('Testing Throttle Timestamp', async t => {
-    const { keypom, owner, ali, bob } = t.context.accounts;
+    const { keypom, owner, ali } = t.context.accounts;
     console.log("adding to balance");
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
@@ -220,4 +224,108 @@ test('Testing Throttle Timestamp', async t => {
     aliBal = await ali.availableBalance();
     console.log('aliBal After: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("2").toString());
+});
+
+test('Testing On Claim Refund Deposit', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    let {keys, publicKeys} = await generateKeyPairs(2);
+    let config = {
+        on_claim_refund_deposit: true,
+    }
+
+    // Creating the drop that should be deleted
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config,
+    },{gas: LARGE_GAS});
+
+    // Set ali's balance to 0 so we can check if the claim works properly
+    await ali.updateAccount({
+        amount: "0"
+    })
+    // Withdrawing all owner's balance
+    await owner.call(keypom, 'withdraw_from_balance', {});
+
+    await keypom.setKey(keys[0]);
+    await keypom.updateAccessKey(
+        publicKeys[0],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+
+    let aliBal = await ali.availableBalance();
+    console.log('aliBal: ', aliBal.toString())
+    t.is(aliBal.toString(), NEAR.parse("0").toString());
+
+    let userBal: String = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    console.log('userBal: ', userBal)
+    t.assert(userBal > NEAR.parse("1").toString())
+
+    const dropSupplyForOwner = await keypom.view('get_drop_supply_for_owner', {account_id: owner.accountId});
+    console.log('dropSupplyForOwner: ', dropSupplyForOwner)
+    t.is(dropSupplyForOwner, 1);
+
+    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
+    t.is(getKeySupplyForDrop, 0);
+});
+
+test('Testing Custom Drop Root', async t => {
+    const { keypom, owner, ali, customRoot } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    let {keys, publicKeys} = await generateKeyPairs(2);
+    let config = {
+        drop_root: customRoot.accountId,
+    }
+
+    // Creating the drop that points to the custom root
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config,
+    },{gas: LARGE_GAS});
+    
+    // Creating the regular drop
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[1]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config: null,
+    },{gas: LARGE_GAS});
+
+    let { keys: keys2, publicKeys: pks2 } = await generateKeyPairs(1);
+    let newAccount = await keypom.getAccount(`foo.${customRoot.accountId}.test.near`);
+    
+    await keypom.setKey(keys[1]);
+    await keypom.updateAccessKey(
+        publicKeys[1],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    // SHOULD NOT WORK
+    await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.${customRoot.accountId}.test.near`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
+    let doesExist = await newAccount.exists();
+    t.is(doesExist, false);
+
+    await keypom.setKey(keys[0]);
+    await keypom.updateAccessKey(
+        publicKeys[0],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.${customRoot.accountId}.test.near`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
+    doesExist = await newAccount.exists();
+    t.is(doesExist, false);
 });

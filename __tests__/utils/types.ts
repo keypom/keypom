@@ -10,6 +10,10 @@ export type JsonDrop = {
     next_key_id: number;
 }
 
+export type Error = {
+    message: String;
+}
+
 interface DropType {
     FunctionCall: FCData;
     NonFungibleToken: JsonNFTData;
