@@ -652,7 +652,12 @@ impl Keypom {
             self.drop_for_id.insert(&drop_id, &drop);
         } else {
             // There are no keys left. We should only remove the drop if the drop's config is set to delete on empty
-            if drop.config.clone().and_then(|c| c.delete_on_empty).unwrap_or(false) {
+            if drop
+                .config
+                .clone()
+                .and_then(|c| c.delete_on_empty)
+                .unwrap_or(false)
+            {
                 near_sdk::log!("Drop is empty and delete_on_empty is set to true. Deleting drop");
                 // Remove the drop ID from the funder's list if the drop is now empty
                 self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);

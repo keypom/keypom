@@ -404,7 +404,7 @@ ticket page (when they have internet), they would be able to claim the final use
 */
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LookupSet};
+use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
@@ -492,12 +492,12 @@ const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000);
 
 /// Which methods are prohibited from being called by an FC drop
 const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
-    "nft_transfer", 
-    "nft_transfer_call", 
+    "nft_transfer",
+    "nft_transfer_call",
     "nft_approve",
     "nft_transfer_payout",
-    "ft_transfer", 
-    "ft_transfer_call"
+    "ft_transfer",
+    "ft_transfer_call",
 ];
 
 mod internals;
@@ -521,7 +521,7 @@ enum StorageKey {
     TokenIdsForDrop { account_id_hash: CryptoHash },
     FeesPerUser,
     UserBalances,
-    ProhibitedMethods
+    ProhibitedMethods,
 }
 
 #[near_bindgen]
@@ -592,7 +592,7 @@ impl Keypom {
         // Loop through and add all the default prohibited methods to the set
         for method in DEFAULT_PROHIBITED_FC_METHODS {
             keypom.prohibited_fc_methods.insert(&method.to_string());
-        };
+        }
 
         keypom
     }

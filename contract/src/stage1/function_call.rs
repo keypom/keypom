@@ -53,7 +53,7 @@ pub struct FCData {
 pub struct InjectedFields {
     pub account_id_field: Option<String>,
     pub drop_id_field: Option<String>,
-    pub key_id_field: Option<String>
+    pub key_id_field: Option<String>,
 }
 
 #[near_bindgen]
@@ -76,7 +76,7 @@ impl Keypom {
             let injected_fields = InjectedFields {
                 account_id_field: method.account_id_field.clone(),
                 drop_id_field: method.drop_id_field.clone(),
-                key_id_field: method.key_id_field.clone()
+                key_id_field: method.key_id_field.clone(),
             };
 
             let mut final_args = method.args.clone();
@@ -89,11 +89,17 @@ impl Keypom {
             }
 
             if final_args.len() == 0 {
-                final_args = format!("{{\"injected_fields\":{}}}", near_sdk::serde_json::to_string(&injected_fields).unwrap());
+                final_args = format!(
+                    "{{\"injected_fields\":{}}}",
+                    near_sdk::serde_json::to_string(&injected_fields).unwrap()
+                );
             } else {
                 final_args.insert_str(
                     final_args.len() - 1,
-                    &format!(",\"injected_fields\":{}", near_sdk::serde_json::to_string(&injected_fields).unwrap()),
+                    &format!(
+                        ",\"injected_fields\":{}",
+                        near_sdk::serde_json::to_string(&injected_fields).unwrap()
+                    ),
                 );
             }
 

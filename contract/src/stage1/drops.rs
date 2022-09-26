@@ -64,7 +64,7 @@ pub struct DropConfig {
 
     // Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
     // Must be overwritten
-    pub delete_on_empty: Option<bool>
+    pub delete_on_empty: Option<bool>,
 }
 
 // Drop Metadata should be a string which can be JSON or anything the users want.
@@ -332,8 +332,14 @@ impl Keypom {
                     attached_deposit += method.attached_deposit.0;
 
                     // Ensure no malicious activity is going on
-                    require!(method.receiver_id != env::current_account_id(), "Cannot invoke functions on keypom");
-                    require!(self.prohibited_fc_methods.contains(&method.method_name) == false, "Cannot invoke a prohibited function call");
+                    require!(
+                        method.receiver_id != env::current_account_id(),
+                        "Cannot invoke functions on keypom"
+                    );
+                    require!(
+                        self.prohibited_fc_methods.contains(&method.method_name) == false,
+                        "Cannot invoke a prohibited function call"
+                    );
                 }
 
                 deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
@@ -352,8 +358,14 @@ impl Keypom {
                             attached_deposit += method.attached_deposit.0;
 
                             // Ensure no malicious activity is going on
-                            require!(method.receiver_id != env::current_account_id(), "Cannot invoke functions on keypom");
-                            require!(self.prohibited_fc_methods.contains(&method.method_name) == false, "Cannot invoke a prohibited function call");
+                            require!(
+                                method.receiver_id != env::current_account_id(),
+                                "Cannot invoke functions on keypom"
+                            );
+                            require!(
+                                self.prohibited_fc_methods.contains(&method.method_name) == false,
+                                "Cannot invoke a prohibited function call"
+                            );
                         }
 
                         deposit_required_for_fc_deposits += attached_deposit;
