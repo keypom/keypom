@@ -1,4 +1,4 @@
-import { NearAccount } from "near-workspaces"
+import { NEAR, NearAccount } from "near-workspaces"
 import { LARGE_GAS } from "../../utils/general";
 
 export const nftSeriesMetadata = {
@@ -25,13 +25,33 @@ export async function sendNFTs(
     tokenIds: String[],
     keypom: NearAccount,
     nftSeries: NearAccount,
-    dropIds: String[]
+    dropId: String
 ) {
     for(var i = 0; i < tokenIds.length; i++) {
         await minter.call(nftSeries, "nft_transfer_call", {
             receiver_id: keypom,
             token_id: tokenIds[i],
-            msg: dropIds[i] 
+            msg: dropId 
         },{gas: LARGE_GAS, attachedDeposit: "1"});
+    }
+}
+
+export async function mintNFTs(
+    minter: NearAccount,
+    nftSeries: NearAccount,
+    mintId: String,
+    numToMint: number
+) {
+    for(var i = 0; i < numToMint; i++) {
+        await nftSeries.call(
+            nftSeries, 
+            'nft_mint', 
+            { 
+                mint_id: mintId, 
+                receiver_id: minter, 
+                injected_fields,
+            }, 
+            { attachedDeposit: NEAR.parse("1").toString() }
+        );
     }
 }
