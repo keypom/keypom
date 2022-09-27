@@ -63,6 +63,11 @@ impl Keypom {
 
             let mut drop_funder_balance = self.user_balances.get(&drop.owner_id).unwrap_or(0);
             drop_funder_balance -= total_required_storage;
+            near_sdk::log!(
+                "Subtracting {} from funder to cover storage. New balance is {}",
+                total_required_storage,
+                drop_funder_balance
+            );
             self.user_balances
                 .insert(&drop.owner_id, &drop_funder_balance);
         } else {

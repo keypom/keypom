@@ -17,20 +17,6 @@ let NETWORK_ID = "testnet";
 let near;
 let keyStore;
 
-let config = {
-	uses_per_key: 2,
-	//start_timestamp: 0,
-	//throttle_timestamp: 1e10, // 10 seconds
-	on_claim_refund_deposit: false,
-	//claim_permission: 'Claim',
-	drop_root: 'benjiman.testnet'
-}
-
-let metadata = {
-	title: "This is a title",
-	description: "This is a description"
-}
-
 /*
 	Hard coding NFT contract and metadata. Change this if you want.
 */
