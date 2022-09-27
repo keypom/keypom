@@ -10,8 +10,13 @@ export type JsonDrop = {
     next_key_id: number;
 }
 
-export type Error = {
-    message: String;
+export type JsonToken = {
+    series_id: number;
+    token_id: string;
+    owner_id: string;
+    metadata: TokenMetadata;
+    approved_account_ids: Record<string, number>;
+    royalty: Record<string, number> | null;
 }
 
 interface DropType {
