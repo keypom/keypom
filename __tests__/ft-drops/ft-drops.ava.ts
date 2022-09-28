@@ -1,8 +1,7 @@
 import anyTest, { TestFn } from "ava";
-import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
+import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
-import { JsonKeyInfo, JsonToken } from "../utils/types";
-import { injected_fields, mintNFTs, nftMetadata, nftSeriesMetadata, sendNFTs } from "./utils/nft-utils";
+import { oneGtNear, sendFTs, totalSupply } from "./utils/ft-utils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -23,12 +22,12 @@ test.beforeEach(async (t) => {
     // Deploy all 3 contracts
     const keypom = await root.devDeploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
-    const nftSeries = await root.devDeploy(`./__tests__/ext-wasm/nft-series.wasm`);
+    const ftContract = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
 
     // Init the 3 contracts
     await root.call(root, 'new', {});
     await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
-    await nftSeries.call(nftSeries, 'new', { owner_id: nftSeries, metadata: nftSeriesMetadata });
+    await ftContract.call(ftContract, 'new_default_meta', { owner_id: ftContract, total_supply: totalSupply.toString() });
     
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())
@@ -47,12 +46,13 @@ test.beforeEach(async (t) => {
     })
 
     // Mint the NFT
-    await nftSeries.call(nftSeries, 'create_series', { mint_id: 0, metadata: nftMetadata }, { attachedDeposit: NEAR.parse("1").toString() });
-    await nftSeries.call(nftSeries, 'nft_mint', { mint_id: '0', receiver_id: minter, injected_fields }, { attachedDeposit: NEAR.parse("1").toString() });
+    await ftContract.call(ftContract, 'storage_deposit', { account_id: minter.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
+    await ftContract.call(ftContract, 'storage_deposit', { account_id: keypom.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
+    await ftContract.call(ftContract, 'ft_transfer', { receiver_id: minter.accountId, amount: (oneGtNear * BigInt(1000)).toString() }, { attachedDeposit: "1" });
 
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, keypom, owner, ali, minter, nftSeries };
+    t.context.accounts = { root, keypom, owner, ali, minter, ftContract };
     t.context.keypomInitialBalance = keypomBalance.available;
 });
 
@@ -63,37 +63,35 @@ test.afterEach(async t => {
     });
 });
 
-test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
-    const { keypom, owner, ali, nftSeries, minter } = t.context.accounts;
+test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
+    const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     console.log("adding to balance");
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(6);
-    let nft_data = {
+    let ft_data = {
+        contract_id: ftContract.accountId,
         sender_id: minter.accountId,
-        contract_id: nftSeries.accountId
+        balance_per_use: oneGtNear.toString()
     }
     let config = {
         uses_per_key: 2,
     }
 
-    // Creating the NFT drop with 5 keys
+    // Creating the FT drop with 5 keys each with 2 uses per key
     await owner.call(keypom, 'create_drop', {
         public_keys: publicKeys.slice(0, 5), 
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        ft_data,
         config
     },{gas: LARGE_GAS});
 
     // Get roughly the min for storing those token IDs
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("0.009").toString()});
-
-    // Mint another 9 NFTs (there is now 10 in total)
-    await mintNFTs(minter, nftSeries, '0', 9);
-    await sendNFTs(minter, ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6", "1:7", "1:8", "1:9", "1:10"], keypom, nftSeries, "0");
+    // Should kickback and refund minter's balance because this isn't enough gtNEAR for 1 registered use
+    await sendFTs(minter, (oneGtNear/BigInt(2)).toString(), keypom, ftContract, "0");
 
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
@@ -102,11 +100,31 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
+    t.is(viewFunctions.dropInformation?.registered_uses, 0);
+
+    let minterBal = await ftContract.view('ft_balance_of', { account_id: minter.accountId });
+    console.log('minterBal: ', minterBal)
+    t.is(minterBal, (oneGtNear * BigInt(1000)).toString());
+
+    // Register all 10 uses
+    await sendFTs(minter, (oneGtNear*BigInt(10)).toString(), keypom, ftContract, "0");
+
+    viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+        drop_id: 0
+    });
+    console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
+    console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
     t.is(viewFunctions.dropInformation?.registered_uses, 10);
 
-    let tokenInfos: JsonToken[] = await nftSeries.view('nft_tokens_for_owner', { account_id: keypom.accountId });
-    console.log('tokenInfos: ', tokenInfos)
-    t.is(tokenInfos.length, 10);
+    minterBal = await ftContract.view('ft_balance_of', { account_id: minter.accountId });
+    console.log('minterBal: ', minterBal)
+    t.is(minterBal, (oneGtNear * BigInt(990)).toString());
+
+    let keypomBal = await ftContract.view('ft_balance_of', { account_id: keypom.accountId });
+    console.log('keypomBal: ', keypomBal)
+    t.is(keypomBal, (oneGtNear * BigInt(10)).toString());
 
     for(let i = 0; i < 5; i++) {
         await keypom.setKey(keys[i]);
@@ -121,21 +139,15 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[5]}, {gas: WALLET_GAS});
         await keypom.call(keypom, 'claim', {account_id: `${i}.test.near`}, {gas: WALLET_GAS});
 
-        let tokenInfos: JsonToken[] = await nftSeries.view('nft_tokens_for_owner', { account_id: `${i}.test.near` });
+        let newUserBal = await ftContract.view('ft_balance_of', { account_id: `${i}.test.near` });
         console.log(`account ID: ${i}.test.near`)
-        console.log('tokenInfos: ', tokenInfos)
-        t.is(tokenInfos[0].owner_id, `${i}.test.near`);
-        t.is(tokenInfos[1].owner_id, `${i}.test.near`);
-        t.is(tokenInfos.length, 2);
+        console.log('newUserBal: ', newUserBal)
+        t.is(newUserBal, (oneGtNear * BigInt(2)).toString());
     }
 
-    tokenInfos = await nftSeries.view('nft_tokens_for_owner', { account_id: keypom.accountId });
-    console.log('tokenInfos at END for keypom: ', tokenInfos)
-    t.is(tokenInfos.length, 0);
-
-    tokenInfos = await nftSeries.view('nft_tokens_for_owner', { account_id: minter.accountId });
-    console.log('tokenInfos at END for minter: ', tokenInfos)
-    t.is(tokenInfos.length, 0);
+    keypomBal = await ftContract.view('ft_balance_of', { account_id: keypom.accountId });
+    console.log('keypomBal AFTER: ', keypomBal)
+    t.is(keypomBal, "0");
 
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
@@ -159,38 +171,37 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
     t.assert(keypomBalance.available > keypomInitialBalance);
 });
 
-test('OverRegister NFTs and add multi use key later', async t => {
-    const { keypom, owner, ali, nftSeries, minter } = t.context.accounts;
+test('OverRegister FTs and add multi use key later', async t => {
+    const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     console.log("adding to balance");
-    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let nft_data = {
+    let ft_data = {
+        contract_id: ftContract.accountId,
         sender_id: minter.accountId,
-        contract_id: nftSeries.accountId
+        balance_per_use: oneGtNear.toString()
     }
 
     let config = {
         uses_per_key: 10,
     }
 
-    // Creating the NFT drop with 5 keys
+    // Creating the FT drop with 5 keys
     await owner.call(keypom, 'create_drop', {
         public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        ft_data,
         config
     },{gas: LARGE_GAS});
 
     // Get roughly the min for storing those token IDs
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("0.009").toString()});
 
-    // Mint another 9 NFTs (there is now 10 in total)
-    await mintNFTs(minter, nftSeries, '0', 9);
-    await sendNFTs(minter, ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6", "1:7", "1:8", "1:9", "1:10"], keypom, nftSeries, "0");
+    // Send 5 FTs registers to the contract
+    await sendFTs(minter, (oneGtNear * BigInt(10)).toString(), keypom, ftContract, "0");
 
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
@@ -202,9 +213,13 @@ test('OverRegister NFTs and add multi use key later', async t => {
     t.is(viewFunctions.keysForDrop?.length, 0);
     t.is(viewFunctions.dropInformation?.registered_uses, 10);
 
-    let tokenInfos: JsonToken[] = await nftSeries.view('nft_tokens_for_owner', { account_id: keypom.accountId });
-    console.log('tokenInfos: ', tokenInfos)
-    t.is(tokenInfos.length, 10);
+    let minterBal = await ftContract.view('ft_balance_of', { account_id: minter.accountId });
+    console.log('minterBal: ', minterBal)
+    t.is(minterBal, (oneGtNear * BigInt(990)).toString());
+
+    let keypomBal = await ftContract.view('ft_balance_of', { account_id: keypom.accountId });
+    console.log('keypomBal: ', keypomBal)
+    t.is(keypomBal, (oneGtNear * BigInt(10)).toString());
 
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
     await owner.call(keypom, 'add_keys', {drop_id: 0, public_keys: [publicKeys[0]]}, {gas: LARGE_GAS});
@@ -220,21 +235,19 @@ test('OverRegister NFTs and add multi use key later', async t => {
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[1]}, {gas: WALLET_GAS});
         await keypom.call(keypom, 'claim', {account_id: `${i}.test.near`}, {gas: WALLET_GAS});
 
-        let tokenInfos: JsonToken[] = await nftSeries.view('nft_tokens_for_owner', { account_id: `${i}.test.near` });
+        let newUserBal = await ftContract.view('ft_balance_of', { account_id: `${i}.test.near` });
         console.log(`account ID: ${i}.test.near`)
-        console.log('tokenInfos: ', tokenInfos)
-        t.is(tokenInfos[0].owner_id, `${i}.test.near`);
-        t.is(tokenInfos[1].owner_id, `${i}.test.near`);
-        t.is(tokenInfos.length, 2);
+        console.log('newUserBal: ', newUserBal)
+        t.is(newUserBal, (oneGtNear * BigInt(2)).toString());
     }
 
-    tokenInfos = await nftSeries.view('nft_tokens_for_owner', { account_id: keypom.accountId });
-    console.log('tokenInfos at END for keypom: ', tokenInfos)
-    t.is(tokenInfos.length, 0);
+    keypomBal = await ftContract.view('ft_balance_of', { account_id: keypom.accountId });
+    console.log('keypomBal: ', keypomBal)
+    t.is(keypomBal, "0");
 
-    tokenInfos = await nftSeries.view('nft_tokens_for_owner', { account_id: minter.accountId });
-    console.log('tokenInfos at END for minter: ', tokenInfos)
-    t.is(tokenInfos.length, 0);
+    minterBal = await ftContract.view('ft_balance_of', { account_id: minter.accountId });
+    console.log('minterBal: ', minterBal)
+    t.is(minterBal, (oneGtNear * BigInt(990)).toString());
 
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
@@ -256,55 +269,4 @@ test('OverRegister NFTs and add multi use key later', async t => {
     let keypomBalance = await keypom.balance();
     console.log('keypom available FINAL: ', keypomBalance.available.toString())
     t.assert(keypomBalance.available > keypomInitialBalance);
-});
-
-test('Not enough funder balance stage 2', async t => {
-    const { keypom, owner, ali, nftSeries, minter } = t.context.accounts;
-    console.log("adding to balance");
-    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
-
-    let {keys, publicKeys} = await generateKeyPairs(2);
-    let nft_data = {
-        sender_id: minter.accountId,
-        contract_id: nftSeries.accountId
-    }
-
-    // Creating the drop that should be deleted
-    await owner.call(keypom, 'create_drop', {
-        public_keys: [publicKeys[0]], 
-        deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
-    },{gas: LARGE_GAS});
-
-    await owner.call(keypom, 'withdraw_from_balance', {});
-    await sendNFTs(minter, ["1:1"], keypom, nftSeries, "0");
-
-    let viewFunctions = await queryAllViewFunctions({
-        contract: keypom, 
-        account_id: owner.accountId,
-        drop_id: 0
-    });
-    console.log('viewFunctions.dropInformation B4: ', viewFunctions.dropInformation)
-    console.log('viewFunctions.keysForDrop B4: ', viewFunctions.keysForDrop)
-    t.is(viewFunctions.dropInformation?.registered_uses, 0);
-
-    let tokenInfo: JsonToken = await nftSeries.view('nft_token', { token_id: "1:1" });
-    console.log('tokenInfo: ', tokenInfo)
-    t.is(tokenInfo.owner_id, minter.accountId);
-
-    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("0.001").toString()});
-    await sendNFTs(minter, ["1:1"], keypom, nftSeries, "0");
-
-    viewFunctions = await queryAllViewFunctions({
-        contract: keypom, 
-        account_id: owner.accountId,
-        drop_id: 0
-    });
-    console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
-    console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
-    t.is(viewFunctions.dropInformation?.registered_uses, 1);
-
-    tokenInfo = await nftSeries.view('nft_token', { token_id: "1:1" });
-    console.log('tokenInfo: ', tokenInfo)
-    t.is(tokenInfo.owner_id, keypom.accountId);
 });
