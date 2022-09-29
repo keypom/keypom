@@ -1,0 +1,336 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Keypom is an access key factory created as a result of 3 common problems that arose in the ecosystem."><meta name="keywords" content="rust, rustlang, rust-lang, keypom"><title>keypom - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../dark.css" disabled><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../storage.js"></script><script defer src="../crates.js"></script><script defer src="../main.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../favicon.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../keypom/index.html"><div class="logo-container"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"></h2>
+    </nav>
+    <nav class="sidebar"><a class="sidebar-logo" href="../keypom/index.html"><div class="logo-container"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></div>
+        </a><h2 class="location"><a href="#">Crate keypom</a></h2><div class="sidebar-elems"><div class="block"><ul><li class="version">Version 1.0.0</li><li><a id="all-types" href="all.html">All Items</a></li></ul></div><section><div class="block"><ul><li><a href="#structs">Structs</a></li></ul></div></section></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../keypom/index.html"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
+                                <a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../wheel.svg"></a></div>
+                        </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
+    <h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">keypom</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../src/keypom/lib.rs.html#1-599">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Keypom is an access key factory created as a result of 3 common problems that arose in the ecosystem.</p>
+<ol>
+<li>People want a <em>cheap, customizable, and unique</em> onboarding experience for users.</li>
+<li>Companies don’t want to expose <strong>full access keys</strong> in their backend servers.</li>
+<li>dApps want a <em>smooth UX</em> for interactions that require deposits.</li>
+</ol>
+<p>To solve this, Keypom allows for the creation of highly customizable access keys. Each access key
+has a different functionality depending on which type of <em>drop</em> they derive from. A drop can be thought
+of as a bucket that access keys can be part of. An owner will create drops of a certain type
+with a set of features that all the keys within it will derive from. A drop can be one of four
+different types:</p>
+<ol>
+<li>Simple drops</li>
+<li>Non Fungible Token drops</li>
+<li>Fungible Token drops</li>
+<li>Function Call drops.</li>
+</ol>
+<p>Once a drop has been created, all keys added will share the same behaviour as outlined by the type of drop
+and the configurations present. These keys can be used to either claim with:</p>
+<ul>
+<li>An <strong>existing</strong> NEAR account through the <code>claim</code> function.</li>
+<li>A new account that doesn’t exist yet is created through the <code>create_account_and_claim</code> function.</li>
+</ul>
+<h2 id="shared-drop-customization"><a href="#shared-drop-customization">Shared Drop Customization</a></h2>
+<p>While each <em>type</em> of drop has its own set of customizable features, there are some that are shared by <strong>all drops</strong>
+These are outlined below.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="doccomment">/// Each time a key is used, how much $NEAR should be sent to the claiming account (can be 0).</span>
+<span class="kw">pub</span> <span class="ident">deposit_per_use</span>: <span class="ident">u128</span>,
+
+<span class="doccomment">/// How much Gas should be attached when the key is used. The default is 100 TGas as this is</span>
+<span class="doccomment">/// what&#39;s used by the NEAR wallet.</span>
+<span class="kw">pub</span> <span class="ident">required_gas</span>: <span class="ident">Gas</span>,
+
+<span class="doccomment">/// The drop as a whole can have a config as well</span>
+<span class="kw">pub</span> <span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DropConfig</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// Metadata for the drop in the form of stringified JSON. The format is completely up to the</span>
+<span class="doccomment">/// user and there are no standards for format.</span>
+<span class="kw">pub</span> <span class="ident">metadata</span>: <span class="ident">LazyOption</span><span class="op">&lt;</span><span class="ident">DropMetadata</span><span class="op">&gt;</span>,</code></pre></div>
+<p>Within the config, there are a suite of features that can be customized as well.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="doccomment">/// How many uses can each key have before it&#39;s deleted. If None, default to 1.</span>
+<span class="kw">pub</span> <span class="ident">uses_per_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// Minimum block timestamp before keys can be used. If None, keys can be used immediately</span>
+<span class="doccomment">/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
+<span class="kw">pub</span> <span class="ident">start_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// How often can a key be used. This specifies the time between each use.</span>
+<span class="doccomment">/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
+<span class="kw">pub</span> <span class="ident">throttle_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// If claim is called, refund the `deposit_per_use` to the owner&#39;s account directly. If None,</span>
+<span class="doccomment">/// default to false.</span>
+<span class="kw">pub</span> <span class="ident">on_claim_refund_deposit</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// What permissions does the key have? Can it call both `claim` and `create_account_and_claim`</span>
+<span class="doccomment">/// or just one of the two?</span>
+<span class="doccomment">/// This defaults to the key being able to call both methods.</span>
+<span class="kw">pub</span> <span class="ident">claim_permission</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ClaimPermissions</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// Override the global root account that sub-accounts will have (near or testnet). This allows</span>
+<span class="doccomment">/// users to create specific drops that can create sub-accounts of a predefined root.</span>
+<span class="doccomment">/// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then</span>
+<span class="doccomment">/// be `ACCOUNT.fayyr.near`</span>
+<span class="kw">pub</span> <span class="ident">drop_root</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountId</span><span class="op">&gt;</span>,</code></pre></div>
+<h2 id="simple-drops"><a href="#simple-drops">Simple Drops</a></h2>
+<p>The most basic type of drop is the simple kind. Any keys that are part of a simple drop can
+only be used for 1 thing: <strong>transferring $NEAR</strong>. Once the key is claimed, the claiming account
+will receive the $NEAR specified in the <code>deposit_per_use</code>. Simple drops are a great way to send $NEAR to claiming accounts while not storing a lot
+of information on the contract. Below are a couple use cases.</p>
+<h5 id="backend-servers"><a href="#backend-servers">Backend Servers</a></h5>
+<p>Let’s say you have a backend server that should send 10 $NEAR to the first 3
+people that redeem an NFT. Rather than exposing your full access key in the backend server,
+you could create a simple drop that either has 3 keys or 1 key that is claimable 3 times.
+In the drop, you’d specify that each time the key is claimed, the specified account would
+receive 10 $NEAR.</p>
+<h5 id="recurring-payments"><a href="#recurring-payments">Recurring Payments</a></h5>
+<p>Recurring payments are quite a common situation. If you need to send someone 10 $NEAR once a
+month for 6 months, you could create a simple drop that has a <code>throttle_timestamp</code> of 1 month
+in between uses and everytime it’s used, 10 $NEAR is sent to the account. In addition, you
+could specify a <code>start_timestamp</code> to determine the date at which the key can first be used.</p>
+<h5 id="quick-onboarding"><a href="#quick-onboarding">Quick Onboarding</a></h5>
+<p>If you need to quickly onboard users onto NEAR, you could create a simple drop with a
+small amount of $NEAR (enough to create a wallet) and set the claim permission to be
+<code>CreateAccountAndClaim</code>. This means that the key can only be used to create accounts.
+You can then add keys as you wish to the drop and give them out to users so they can create
+accounts and be onboarded onto NEAR.</p>
+<h2 id="non-fungible-token-drops"><a href="#non-fungible-token-drops">Non-Fungible Token Drops</a></h2>
+<p>Non-Fungible Token drops are a special type that allows users to “preload” the drop with NFTs.
+These tokens will then be <em>automatically</em> sent to the <strong>claiming user</strong>. The claiming flow
+is fairly similar to simple drops in that users can either create an account or claim to an
+existing one.</p>
+<p>NFT drops are essentially a wrapper around simple drops. All the functionalities that simple
+drops have are carried over but now, users can receive an NFT as well as $NEAR. This brings
+introduces some customization and uniqueness to the use-cases.</p>
+<h3 id="how-does-it-work"><a href="#how-does-it-work">How does it work?</a></h3>
+<p>Every drop has a field known as <code>registered_uses</code>. This tells the contract how many uses the
+drop has across all its keys. For simple drops, this field doesn’t matter since all the uses
+are paid for up-front when the drop is created or when keys are added. With NFT drops, however,
+there is a 2 step process:</p>
+<ul>
+<li>Firstly, the drop is created and all the $NEAR required is pre-paid for. This is the same as
+simple drops, however, the <code>registered_uses</code> are set to 0.</li>
+<li>Once the drop is created, the owner must send the contract the NFTs in order for keys to be
+usable. This process is done through the <code>nft_transfer_call</code> workflow baked into the NFT standards.
+It’s up to the owner to facilitate this process.</li>
+</ul>
+<p>Whenever the contract receives tokens, it will push the ID to a vector. These IDs are <strong>popped</strong> off
+whenever a key is used. A user will receive the most recent token sent to the contract as the
+vector is acting like a <em>stack</em>.</p>
+<h3 id="use-cases"><a href="#use-cases">Use Cases</a></h3>
+<p>NFT drops work really well for when you want to send a <em>pre-existing</em> NFT to a user along with
+some $NEAR. Since NFT drops are a light wrapper around simple drops, most of the use-cases are
+the same although people can now get NFTs as well. This means you can onboard a user with some
+$NEAR <strong>and</strong> they <em>get an NFT</em> too.</p>
+<h3 id="nft-config"><a href="#nft-config">NFT Config</a></h3>
+<p>Along with the default global configurations for drops, if you’d like to create an NFT drop,
+you must specify the following pieces of information when the drop is created.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NFTDataConfig</span> {
+    <span class="doccomment">/// Which account ID will be sending the NFTs to the contract</span>
+    <span class="kw">pub</span> <span class="ident">sender_id</span>: <span class="ident">AccountId</span>,
+    <span class="doccomment">/// Which contract will the NFTs live on</span>
+    <span class="kw">pub</span> <span class="ident">contract_id</span>: <span class="ident">AccountId</span>,
+}</code></pre></div>
+<p>By specifying this information, the drop is locked into only accepting NFTs from the sender and contract.</p>
+<h2 id="fungible-token-drops"><a href="#fungible-token-drops">Fungible Token Drops</a></h2>
+<p>A Fungible Token drop is also a light wrapper around the simple drop. It works very similarly to how its NFT
+counterpart does. First, you’ll need to create the drop and then you can fund it with assets and register
+key uses. The only difference between NFT and FT drops is that for FTs, you can over-register assets.</p>
+<p>You can preload a drop with as many FTs as you’d like even if you don’t have the keys yet. This will spike the
+<code>registered_uses</code> and then you can create keys and slowly eat away from this “total supply” overtime. If the
+drop runs out, you can send it more FTs to top up. All the keys in the FT drop will share from this supply
+and everytime a key is used, the <code>registered_uses</code> will decrement and the “total supply” will get smaller.</p>
+<h3 id="how-does-it-work-1"><a href="#how-does-it-work-1">How does it work?</a></h3>
+<p>As mentioned in the NFT section, every drop has a field known as <code>registered_uses</code>. This tells the contract
+how many uses the drop has across all its keys. For simple drops, this field doesn’t matter since all the uses
+are paid for up-front when the drop is created or when keys are added. With FT drops, however,
+there is a 2 step process:</p>
+<ul>
+<li>Firstly, the drop is created and all the $NEAR required is pre-paid for. This is the same as
+simple drops, however, the <code>registered_uses</code> are set to 0.</li>
+<li>Once the drop is created, the owner must send the contract the FTs in order for keys to be
+usable. This process is done through the <code>ft_transfer_call</code> workflow baked into the FT standards.
+It’s up to the owner to facilitate this process.</li>
+</ul>
+<h3 id="use-cases-1"><a href="#use-cases-1">Use Cases</a></h3>
+<p>FT drops work really due to the fact that they support all the functionalities of the Simple drops, just with
+more use-cases and possibilities. Let’s look at some use cases to see how fungible token drops can be used.</p>
+<h5 id="recurring-payments-1"><a href="#recurring-payments-1">Recurring Payments</a></h5>
+<p>Recurring payments are quite a common situation. Let’s say you need to send someone $50 USDC every week. You
+could create a key with 5 claims that has a throttle_timestamp` of 1 week. You would then pre-load maybe the
+first week’s deposit of $50 USDC and register 1 use or you could send $500 USDC for the first 10 weeks. At that
+point, you would simply hand over the key to the user and they can claim once a week.</p>
+<h5 id="backend-servers-1"><a href="#backend-servers-1">Backend Servers</a></h5>
+<p>Taking the recurring payments problem to another level, imagine that instead of leaving the claims up to the
+person, you wanted to automatically pay them through a backend server. They would give you their NEAR account
+and you would send them FTs. The problem is that you don’t want to expose your full access key in the server.
+By creating a FT drop, you can store <strong>only the function call access key</strong> created by Keypom in the server.
+Your backend would them use the key to call the <code>claim</code> function and pass in the user’s account ID to send
+them the FTs.</p>
+<h5 id="creating-a-wallet-with-fts"><a href="#creating-a-wallet-with-fts">Creating a Wallet with FTs</a></h5>
+<p>Another awesome use-case is to allow users to be onboarded onto NEAR and <strong>also</strong> receive FTs. As an example,
+You could do a promotion where you’re giving away $10 USDC to the first 100 users that sign up to your mailing
+list. You can also give away QR codes at events that contain a new fungible token that you’re launching. You can
+simply create a FT drop and pre-load it with the FT of your choice. In addition, you can give it 0.02 $NEAR for
+new wallets that are created.</p>
+<p>You can pair this with setting the <code>on_claim_refund_deposit</code> flag to true which would make it so that if anyone claims
+the fungible tokens and they <em>already have a wallet</em>, it will automatically refund you the 0.02 $NEAR. That money should
+only be used for the creation of new wallets. Since your focus is on the fungible tokens, you don’t want to <strong>force users</strong>
+to create a new wallet if they have one already by specifying the claim permission to be <code>CreateAccountAndClaim</code> but instead,
+you want to be refunded in case they do.</p>
+<h3 id="ft-config"><a href="#ft-config">FT Config</a></h3>
+<p>Along with the default global configurations for drops, if you’d like to create a FT drop,
+you must specify the following pieces of information when the drop is created.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FTDataConfig</span> {
+    <span class="doccomment">/// The contract that the FTs live on.</span>
+    <span class="kw">pub</span> <span class="ident">contract_id</span>: <span class="ident">AccountId</span>,
+    <span class="doccomment">/// The account ID that will be sending the FTs to the contract.</span>
+    <span class="kw">pub</span> <span class="ident">sender_id</span>: <span class="ident">AccountId</span>,
+    <span class="doccomment">/// How many FTs should the contract send *each time* a key is used.</span>
+    <span class="kw">pub</span> <span class="ident">balance_per_use</span>: <span class="ident">U128</span>,
+}</code></pre></div>
+<p>By specifying this information, the drop is locked into only accepting FTs coming from the sender and contract. While
+you can send as many FTs as you’d like and can over-pay, you <em>must</em> send at <strong>least</strong> enough FTs in one call to cover
+1 use. As an example, if a drop is created such that 10 FTs will be sent when a key is used, you must send <strong>at least 10</strong>
+and cannot break it up into separate calls where you send 5 one time and 5 another.</p>
+<h2 id="function-call-drops"><a href="#function-call-drops">Function Call Drops</a></h2>
+<p>Function call drops are by far the most powerful feature that Keypom provides. FC drops allow <strong>any</strong> method on <strong>any</strong>
+contract to be executed. In addition, there are a huge variety of customizations and features you can choose from when
+defining the drop that come on top of the global options. The possibilities are almost endless. State of the art NFT ticketing,
+lazy minting NFTs, auto registration into DAOs, recursive key creation, analytics for marketing at events and much more.</p>
+<h3 id="how-does-it-work-2"><a href="#how-does-it-work-2">How does it work?</a></h3>
+<p>Unlike NFT and FT drops, the function calls must have everything paid for <strong>upfront</strong>. There is no two step process
+so the creation is similar to Simple drops. Once the drop is created and keys are added, you can immediately start using it.</p>
+<h5 id="function-call-config"><a href="#function-call-config">Function Call Config</a></h5>
+<p>When creating the drop, you have quite a lot of customization available. At the top level, there is a FC drop global
+config similar to how the <em>general</em> config works.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FCConfig</span> {
+    <span class="doccomment">/// How much GAS should be attached to the function call if it&#39;s a regular claim.</span>
+    <span class="doccomment">/// If this is used, you *cannot* go through conventional linkdrop apps such as mynearwallet</span>
+    <span class="doccomment">/// since those *always* attach 100 TGas no matter what. In addition, you will only be able to</span>
+    <span class="doccomment">/// call `claim` if this is specified. You cannot have an `attached_gas` parameter and also</span>
+    <span class="doccomment">/// call `create_account_and_claim.</span>
+    <span class="kw">pub</span> <span class="ident">attached_gas</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Gas</span><span class="op">&gt;</span>,
+}</code></pre></div>
+<h5 id="method-data"><a href="#method-data">Method Data</a></h5>
+<p>In addition to the global config, the user can specify a set of what’s known as <code>MethodData</code>. This represents the
+information for the function being called. Within this data, there are also a few optional configurations you can use
+to extend your use cases. You’ll see how powerful these can be in the use cases <a href="#use-cases">section</a>.</p>
+<p>For <strong>every key use</strong>, you can specify a <em>vector</em> of <code>MethodData</code> which allows you to execute multiple function calls each
+time a key is used. These calls are scheduled 1 by 1 using a simple for loop. This means that most of the time, the function
+calls will be executed in the order specified in the vector but it is not <em>guaranteed</em>.</p>
+<p>It’s important to note that the Gas available is split evenly between <em>all</em> the function calls and if there are too many,
+you might run into issues with not having enough Gas. You’re responsible for ensuring that this doesn’t happen.</p>
+<p>The vector of <code>MethodData</code> is <em>optional</em> for each key use. If a key use has <code>null</code> rather than <code>Some(Vector&lt;MethodData&gt;)</code>,
+it will decrement the uses and work as normal such that the <code>throttle_timestamp, </code>start_timestamp` etc. are enforced. The only
+difference is that after the key uses are decremented and these checks are performed, the execution <strong>finishes early</strong>. The null
+case does <strong>not</strong> create an account or send <em>any</em> funds. It doesn’t invoke any function calls and simply <em>returns once the
+checks are done</em>. This makes the null case act as a “burner” where you disregard any logic. This has many uses which will
+be explored in the use cases <a href="#use-cases">section</a>.</p>
+<p>If a key has more than 1 use, you can specify a <em>different vector</em> of <code>MethodData</code> for <strong>each use</strong>. As an example, you could
+specify that the first use will result in a null case and the second use will result in a lazy minting function being called.
+If you have multiple uses but want them all to do the same thing, you don’t have to repeat the same data. Passing in only 1
+vector of <code>MethodData</code> will result in  <strong>all the uses</strong> inheriting that data.</p>
+<h5 id="injected-fields"><a href="#injected-fields">Injected Fields</a></h5>
+<p>There is one other piece of information that is <strong>automatically</strong> attached to the arguments being sent to the function.
+This is known as the <code>injected_fields</code>. It is a decimal representation of the optional fields specified in the method data.
+You can think of each of the <code>account_id_field</code>, <code>drop_id_field</code>, and <code>key_id_field</code> as representing a bit. If the field
+was specified, the bit is on. If it isn’t, the bit is off. The binary looks as follows.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="ident">LSB</span>
+<span class="number">2</span><span class="op">^</span><span class="number">0</span> -&gt; <span class="ident">account_id_field</span>
+<span class="number">2</span><span class="op">^</span><span class="number">1</span> -&gt; <span class="ident">drop_id_field</span>
+<span class="number">2</span><span class="op">^</span><span class="number">2</span> -&gt; <span class="ident">key_id_field</span></code></pre></div>
+<p>As an example, say the user had <code>MethodData</code> with the <code>account_id_field</code> set to <code>receiver_id</code>. This would mean that the
+binary representation of the fields would look as follows. <code>001</code> which has a decimal equivalent to 1. The contract would
+then pass in an <code>injected_fields</code>  value of 1.</p>
+<p>If the user had <code>MethodData</code> with the <code>key_id_field</code> set to <code>key</code> and the <code>drop_id_field</code> set to “drop”, the binary
+representation would be <code>110</code> which has a decimal equivalent to 6. The contract would then pass in an <code>injected_fields</code>
+value of 6.</p>
+<h6 id="motivation"><a href="#motivation">Motivation</a></h6>
+<p>Let’s say there was an exclusive NFT contract that allowed the Keypom contract to mint NFTs as part of an FC drop. Only Keypom
+had access to mint and NFTs could only be minted the arguments coming into the function contained a field <code>series</code> with a valid
+number. Let’s say the owner created an exclusive drop that happened to have a drop ID of 5. They could then go to the NFT contract
+and restrict NFTs to only be minted if:</p>
+<ul>
+<li><code>series</code> had a value of 5.</li>
+<li>The Keypom contract was the one calling the function.</li>
+</ul>
+<p>In order for this to work, when creating the drop, the owner would need to specify that the<code>drop_id_field</code> was set to a value of <code>series</code>
+such that the drop ID is correctly passed into the function.</p>
+<p>The problem with this approach is that the receiving contract has no way of knowing which arguments were sent by the <strong>user</strong> upon drop creation
+and which arguments are populated by the Keypom contract. There is nothing stopping a malicious user from creating a new drop that has an ID of 6 but
+hardcoding in the actual arguments that <code>series</code> should have a value of 5. In this case, the malicious drop would have <em>no</em> <code>drop_id_field</code>
+and the NFT contract would have no way of knowing that the <code>series</code> value is malicious.</p>
+<p>This can be prevented if a new field is introduced representing what was automatically injected by the Keypom contract itself. At the
+end of the day, Keypom will <strong>always</strong> send correct information to the receiving contracts. If those contracts have a way to know what has
+been sent by Keypom and what has been manually set by users, the problem is solved. In the above scenario, the NFT contract would simply add
+an assertion that the <code>injected_fields</code> is 3 (binary 011) meaning that the drop ID and account ID fields have been sent by the Keypom contract.</p>
+<h3 id="use-cases-2"><a href="#use-cases-2">Use Cases</a></h3>
+<p>Function call drops are the bread and butter of the Keypom contract. They are the most powerful and complex drops that can currently be created.
+With this complexity, there are an almost infinite number of use-cases that arise.</p>
+<h5 id="proof-of-attendance-protocols"><a href="#proof-of-attendance-protocols">Proof of Attendance Protocols</a></h5>
+<p>A very common use case in the space is what’s known as Proof of Attendance. Often times when people go to events, they want a way to prove
+that they were there. Some traditional approaches would be to submit your wallet address and you would be sent an NFT or some other form of
+proof at a later date. The problem with this is that it has a very high barrier to entry. Not everyone has a wallet.</p>
+<p>With Keypom, you can create a function call drop that allows people to onboard onto NEAR if they don’t have a wallet or if they do, they can
+simply use that. As part of the onboarding / claiming process, they would receive some sort of proof of attendance such as an NFT. This can
+be lazy minted on-demand such that storage isn’t paid up-front for all the tokens.</p>
+<p>At this point, the event organizers or the funder can distribute links to people that attend the event in-person. These links would then be
+claimed by users and they would receive the proof of attendance.</p>
+<h5 id="auto-registration-into-daos"><a href="#auto-registration-into-daos">Auto Registration into DAOs</a></h5>
+<p>DAOs are a raging topic in crypto. The problem with DAOs, however, is there is a barrier to entry for users that aren’t familiar with the
+specific chain they’re built on top of. Users might not have wallets or understand how to interact with contracts. On the contrary, they
+might be very well versed or immersed in the DAO’s topics. They shouldn’t be required to create a wallet and learn the onboarding process.</p>
+<p>With Keypom, you can create a function call drop with the main purpose of registering users into a DAO. For people that have a wallet,
+this will act as an easy way of registering them with the click of a link. For users that don’t have a wallet and are unfamiliar with
+NEAR, they can be onboarded and registered into the DAO with the same click of a link.</p>
+<h5 id="multisig-contracts"><a href="#multisig-contracts">Multisig Contracts</a></h5>
+<p>Another amazing use-case for Keypom is allowing multisig contracts to have ZERO barrier to entry. Often times when using a multisig contract,
+you will entrust a key to a trusted party. This party might have no idea what NEAR is or how to interact with your contract. With Keypom,
+you can create a drop that will allow them to sign their transaction with a click of a link. No NEAR wallet is needed and no knowledge of the
+chain is required.</p>
+<p>At the end of the day, from the users perspective, they are given a link and when they click it, their portion of the multisig transaction is
+signed. The action is only performed on the multisig contract once all links have been clicked. This is an extremely powerful way of doing
+accomplishing multisig transactions with zero barrier to entry.</p>
+<p>The users don’t even need to create a new account. They can simply call <code>claim</code> when the link is clicked which will fire the cross-contract call
+to the multisig contract and pass in the injected fields that will be cross-checked by that contract.</p>
+<h5 id="nft-ticketing"><a href="#nft-ticketing">NFT Ticketing</a></h5>
+<p>The problem with current NFT ticketing systems is that they require users to have a wallet. This is a huge barrier to entry for people that
+are attending events but don’t have wallets. In addition, there is often no proof of attendance for the event as the NFT is burned in order
+to get into the event which requires an internet connection.</p>
+<p>Keypom aims to solve these problems by having a ticketing system that has the following features.</p>
+<ul>
+<li>No wallet is needed to enter the event or receive a POAP.</li>
+<li>No wifi is needed at the door.</li>
+<li>An NFT is minted on-demand for each user that attends the event.</li>
+<li>Users can optionally onboard onto NEAR if they don’t have a wallet.</li>
+</ul>
+<p>In addition, some way to provide analytics to event organizers that contains information such as links that were:</p>
+<ul>
+<li>Given out but not clicked at all.</li>
+<li>Clicked but not attended.</li>
+<li>Partially claimed indicating the number of people that attended but did not onboard or receive a POAP.</li>
+<li>Fully claimed indicating the number of people that attended and received a POAP.</li>
+</ul>
+<p>In order to accomplish this, you can create a drop that has 3 uses per key. These uses would be:</p>
+<ol>
+<li>Array(<code>null</code>)</li>
+<li>Array(<code>null</code>)</li>
+<li>Array(function call to POAP contract to lazy mint an NFT)</li>
+</ol>
+<p>The event organizer would create the links and distribute them to people however they see fit. When a user receives the link, the first
+claim is automatically fired. This is a <code>null</code> case so nothing happens except for the fact that the key uses are decremented. At this point,
+the organizer knows that the user has clicked the link since the uses have been decremented.</p>
+<p>The next claim happens <strong>only</strong> when the user is at the door. Keypom would expose a QR code that can only be scanned by the bouncer’s phone.
+This QR code would appear once the first link is clicked and contains the private key for the link. At the event, they wouldn’t need any wifi
+to get in as they only need to show the bouncer the QR code. Once the bouncer scans it, the site would ensure that they have exactly 2 out of
+the 3 uses left. If they don’t, they’re not let in. At that point, a use is decremented from the key and the next time they visit the
+ticket page (when they have internet), they would be able to claim the final use and be onboarded / receive a POAP.</p>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Keypom.html" title="keypom::Keypom struct">Keypom</a></div><div class="item-right docblock-short"><p>Main contract struct that holds all the contract data</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.KeypomExt.html" title="keypom::KeypomExt struct">KeypomExt</a></div><div class="item-right docblock-short"></div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../" data-current-crate="keypom" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (848090dcd 2022-07-22)" ></div>
+</body></html>
