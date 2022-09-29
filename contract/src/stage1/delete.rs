@@ -17,6 +17,7 @@ impl Keypom {
         drop_id: DropId,
         public_keys: Option<Vec<PublicKey>>,
         limit: Option<u8>,
+        delete_on_empty: Option<bool>
     ) {
         // Measure initial storage before doing any operations
         let initial_storage = env::storage_usage();
@@ -139,11 +140,11 @@ impl Keypom {
             }
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
-            if drop.pks.len() == 0 {
-                near_sdk::log!("Drop empty. Removing from funder");
+            if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
+                near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
                 self.internal_remove_drop_for_funder(&owner_id, &drop_id);
             } else {
-                near_sdk::log!("Drop non empty. Adding back. Len: {}", drop.pks.len());
+                near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
                 self.drop_for_id.insert(&drop_id, &drop);
             }
 
@@ -266,11 +267,11 @@ impl Keypom {
             }
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
-            if drop.pks.len() == 0 {
-                near_sdk::log!("Drop empty. Removing from funder");
+            if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
+                near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
                 self.internal_remove_drop_for_funder(&owner_id, &drop_id);
             } else {
-                near_sdk::log!("Drop non empty. Adding back. Len: {}", drop.pks.len());
+                near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
                 self.drop_for_id.insert(&drop_id, &drop);
             }
 
@@ -408,6 +409,8 @@ impl Keypom {
                     );
                 }
 
+                self.drop_for_id.insert(&drop_id, &drop);
+
                 // Create the second batch promise to execute after the nft_batch_index batch is finished executing.
                 // It will execute on the current account ID (this contract)
                 let batch_ft_resolve_promise_id =
@@ -441,7 +444,7 @@ impl Keypom {
                     .then(
                         // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
                         Self::ext(env::current_account_id())
-                            .ft_resolve_refund(drop_id, num_to_refund),
+                            .ft_resolve_refund(drop_id, num_to_refund, data.ft_storage, drop.owner_id),
                     )
                     .as_return();
             }
