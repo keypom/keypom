@@ -51,8 +51,8 @@ async function start() {
 	console.log('FUNDING_ACCOUNT_ID: ', FUNDING_ACCOUNT_ID);
 	console.log('LINKDROP_NEAR_AMOUNT: ', LINKDROP_NEAR_AMOUNT);
 
-	if(!FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !NFT_CONTRACT_ID) {
-		throw "must specify funding account and linkdrop near amount and nft contract ID";
+	if(!FUNDING_ACCOUNT_ID || !LINKDROP_NEAR_AMOUNT || !FT_CONTRACT_ID) {
+		throw "must specify funding account and linkdrop near amount and ft contract ID";
 	}
 
 	const contractAccount = await near.account(KEYPOM_CONTRACT);
