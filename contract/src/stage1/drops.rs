@@ -462,14 +462,20 @@ impl Keypom {
         /*
             Ensure the attached attached_deposit can cover:
         */
-        require!(
-            current_user_balance >= required_deposit,
-            "Not enough attached_deposit"
-        );
-        // Decrement the user's balance by the required attached_deposit and insert back into the map
-        current_user_balance -= required_deposit;
-        self.user_balances.insert(&owner_id, &current_user_balance);
-        near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
+        let actual_near_attached = env::attached_deposit();
+        if actual_near_attached < required_deposit {
+            near_sdk::log!(
+                "Not enough attached_deposit. Using user balance instead."
+            );
+            require!(
+                current_user_balance >= required_deposit,
+                "Not enough attached_deposit"
+            );
+            // Decrement the user's balance by the required attached_deposit and insert back into the map
+            current_user_balance -= required_deposit;
+            self.user_balances.insert(&owner_id, &current_user_balance);
+            near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
+        }
 
         // Increment our fees earned
         self.fees_collected += fees.0 + fees.1 * len;
@@ -744,14 +750,20 @@ impl Keypom {
         /*
             Ensure the attached attached_deposit can cover:
         */
-        require!(
-            current_user_balance >= required_deposit,
-            "Not enough attached_deposit"
-        );
-        // Decrement the user's balance by the required attached_deposit and insert back into the map
-        current_user_balance -= required_deposit;
-        self.user_balances.insert(&funder, &current_user_balance);
-        near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
+        let actual_near_attached = env::attached_deposit();
+        if actual_near_attached < required_deposit {
+            near_sdk::log!(
+                "Not enough attached_deposit. Using user balance instead."
+            );
+            require!(
+                current_user_balance >= required_deposit,
+                "Not enough attached_deposit"
+            );
+            // Decrement the user's balance by the required attached_deposit and insert back into the map
+            current_user_balance -= required_deposit;
+            self.user_balances.insert(&funder, &current_user_balance);
+            near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
+        }
 
         // Increment our fees earned
         self.fees_collected += fees.1 * len;
