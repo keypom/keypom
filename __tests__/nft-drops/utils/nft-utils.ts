@@ -28,7 +28,7 @@ export async function sendNFTs(
     dropId: String
 ) {
     for(var i = 0; i < tokenIds.length; i++) {
-        await minter.call(nftSeries, "nft_transfer_call", {
+        await minter.callRaw(nftSeries, "nft_transfer_call", {
             receiver_id: keypom,
             token_id: tokenIds[i],
             msg: dropId 
