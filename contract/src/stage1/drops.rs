@@ -65,6 +65,9 @@ pub struct DropConfig {
     // Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
     // Must be overwritten
     pub delete_on_empty: Option<bool>,
+
+    // When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
+    pub auto_withdraw: Option<bool>,
 }
 
 // Drop Metadata should be a string which can be JSON or anything the users want.
@@ -119,7 +122,10 @@ impl Keypom {
         ft_data: Option<FTDataConfig>,
         nft_data: Option<NFTDataConfig>,
         fc_data: Option<FCData>,
-    ) -> DropId {
+    ) -> Option<DropId> {
+        // Pessimistically measure storage
+        let initial_storage = env::storage_usage();
+
         // Ensure the user has only specified one type of callback data
         let num_cbs_specified =
             ft_data.is_some() as u8 + nft_data.is_some() as u8 + fc_data.is_some() as u8;
@@ -147,10 +153,13 @@ impl Keypom {
         let mut current_user_balance = self
             .user_balances
             .get(&owner_id)
-            .expect("No user balance found");
+            .unwrap_or(0);
+        
+        let near_attached = env::attached_deposit();
+        // Add the attached deposit to their balance
+        current_user_balance += near_attached;
+        self.user_balances.insert(&owner_id, &current_user_balance);
 
-        // Pessimistically measure storage
-        let initial_storage = env::storage_usage();
         let mut key_map: UnorderedMap<PublicKey, KeyInfo> =
             UnorderedMap::new(StorageKey::PksForDrop {
                 // We get a new unique prefix for the collection
@@ -462,10 +471,28 @@ impl Keypom {
         /*
             Ensure the attached attached_deposit can cover:
         */
-        require!(
-            current_user_balance >= required_deposit,
-            "Not enough attached_deposit"
-        );
+        if current_user_balance < required_deposit {
+            near_sdk::log!("Not enough user balance. Found {} expected: {}", yocto_to_near(current_user_balance), yocto_to_near(required_deposit));
+            current_user_balance -= near_attached;
+
+            // If they have a balance, insert it back into the map otherwise remove it
+            if current_user_balance > 0 {
+                self.user_balances.insert(&owner_id, &current_user_balance);
+            } else {
+                self.user_balances.remove(&owner_id);
+            }
+
+            // Refund the predecessor for their attached deposit if it's greater than 0
+            if near_attached > 0 {
+                Promise::new(env::predecessor_account_id()).transfer(near_attached);
+            }
+
+            // Remove the drop
+            self.internal_remove_drop(&drop_id, public_keys);
+            // Return early
+            return None;
+        }
+
         // Decrement the user's balance by the required attached_deposit and insert back into the map
         current_user_balance -= required_deposit;
         self.user_balances.insert(&owner_id, &current_user_balance);
@@ -513,12 +540,13 @@ impl Keypom {
                 .then(
                     Self::ext(current_account_id)
                         // Resolve the promise with the min GAS. All unspent GAS will be added to this call.
+                        .with_attached_deposit(near_attached)
                         .with_static_gas(MIN_GAS_FOR_RESOLVE_STORAGE_CHECK)
                         .resolve_storage_check(public_keys, drop_id, required_deposit),
                 );
         }
 
-        drop_id
+        Some(drop_id)
     }
 
     /*
@@ -526,7 +554,7 @@ impl Keypom {
         Only the funder can call this method_name
     */
     #[payable]
-    pub fn add_keys(&mut self, public_keys: Vec<PublicKey>, drop_id: DropId) -> DropId {
+    pub fn add_keys(&mut self, public_keys: Vec<PublicKey>, drop_id: DropId) -> Option<DropId> {
         let mut drop = self
             .drop_for_id
             .get(&drop_id)
@@ -620,6 +648,11 @@ impl Keypom {
             .user_balances
             .get(&funder)
             .expect("No user balance found");
+
+        let near_attached = env::attached_deposit();
+        // Add the attached deposit to their balance
+        current_user_balance += near_attached;
+        self.user_balances.insert(&funder, &current_user_balance);
 
         // Get the required attached_deposit for all the FCs
         let mut deposit_required_for_fc_deposits = 0;
@@ -744,6 +777,27 @@ impl Keypom {
         /*
             Ensure the attached attached_deposit can cover:
         */
+        if current_user_balance < required_deposit {
+            near_sdk::log!("Not enough user balance. Found {} expected: {}", yocto_to_near(current_user_balance), yocto_to_near(required_deposit));
+            current_user_balance -= near_attached;
+
+            // If they have a balance, insert it back into the map otherwise remove it
+            if current_user_balance > 0 {
+                self.user_balances.insert(&funder, &current_user_balance);
+            } else {
+                self.user_balances.remove(&funder);
+            }
+
+            // Refund the predecessor for their attached deposit if it's greater than 0
+            if near_attached > 0 {
+                Promise::new(env::predecessor_account_id()).transfer(near_attached);
+            }
+
+            // Remove the drop
+            self.internal_remove_drop(&drop_id, public_keys);
+            // Return early
+            return None;
+        }
         require!(
             current_user_balance >= required_deposit,
             "Not enough attached_deposit"
@@ -776,6 +830,6 @@ impl Keypom {
 
         env::promise_return(promise);
 
-        drop_id
+        Some(drop_id)
     }
 }
