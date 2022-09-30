@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
-import { generateKeyPairs, LARGE_GAS, WALLET_GAS } from "../utils/general";
+import { assertBalanceChange, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { JsonKeyInfo } from "../utils/types";
 
 const test = anyTest as TestFn<{
@@ -264,9 +264,9 @@ test('Testing On Claim Refund Deposit', async t => {
     console.log('aliBal: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
 
-    let userBal: String = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    let userBal: string = await keypom.view('get_user_balance', {account_id: owner.accountId});
     console.log('userBal: ', userBal)
-    t.assert(userBal > NEAR.parse("1").toString())
+    t.assert(NEAR.parse("1").gte(NEAR.from(userBal)))
 
     const dropSupplyForOwner = await keypom.view('get_drop_supply_for_owner', {account_id: owner.accountId});
     console.log('dropSupplyForOwner: ', dropSupplyForOwner)
@@ -328,4 +328,98 @@ test('Testing Custom Drop Root', async t => {
     await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.${customRoot.accountId}.test.near`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
     doesExist = await newAccount.exists();
     t.is(doesExist, false);
+});
+
+test('Testing Auto Withdraw', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
+
+    let {keys, publicKeys} = await generateKeyPairs(4);
+    let config1 = {
+        uses_per_key: 1,
+    }
+    let config2 = {
+        uses_per_key: 1,
+        auto_withdraw: true,
+        delete_on_empty: true
+    }
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config: config1,
+    },{gas: LARGE_GAS});
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[1]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config: config2,
+    },{gas: LARGE_GAS});
+
+    // Loop through 2 times and claim the keys
+    for (let i = 0; i < 2; i++) {
+        await keypom.setKey(keys[i]);
+        await keypom.updateAccessKey(
+            publicKeys[i],  // public key
+            {
+                nonce: 0,
+                permission: 'FullAccess'
+            }
+        )
+        await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+    }
+
+    // Get the user balance and make sure it hasn't been auto withdrawn
+    let userBal: String = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    console.log('userBal: ', userBal)
+    t.assert(userBal > "0");
+    
+    // Delete the first drop
+    await owner.call(keypom, 'delete_keys', {drop_id: 0}, {gas: LARGE_GAS});
+
+    let viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId
+    });
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    t.is(viewFunctions.dropSupplyForOwner, 0);
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[2]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config: config2,
+    },{gas: LARGE_GAS});
+
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("1000").toString()});
+    let shouldBeRefunded: string = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    console.log('shouldBeRefunded: ', userBal)
+    t.assert(NEAR.parse("1000").lte(NEAR.from(shouldBeRefunded)));
+    
+    let b1 = await owner.availableBalance();
+    console.log('b1: ', b1.toString())
+
+    await keypom.setKey(keys[2]);
+    await keypom.updateAccessKey(
+        publicKeys[2],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+
+    let b2 = await owner.availableBalance();
+    console.log('b2: ', b2.toString())
+    t.assert(assertBalanceChange(b1, b2, NEAR.from(shouldBeRefunded), 0.01), "balance didn't decrement properly with 1% precision");
+
+    userBal = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    console.log('userBal: ', userBal)
+    t.is(userBal, "0");
+
+    viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId
+    });
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
 });

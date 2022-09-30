@@ -8,11 +8,11 @@ pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
 
-/// Helper function to convert yoctoNEAR to $NEAR with 4 decimals of precision.
+/// Helper function to convert yoctoNEAR to $NEAR with 7 decimals of precision.
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
-    //10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.
-    let formatted_near = yocto / 100_000_000_000_000_000_000;
-    let near = formatted_near as f64 / 10_000_f64;
+    //10^17 yoctoNEAR (1 NEAR would be 10_000_000). This is to give a precision of 7 decimal places.
+    let formatted_near = yocto / 100_000_000_000_000_000;
+    let near = formatted_near as f64 / 10_000_000f64;
 
     near
 }
@@ -41,6 +41,25 @@ pub(crate) fn check_promise_result() -> bool {
 }
 
 impl Keypom {
+
+    pub(crate) fn internal_remove_drop(&mut self, drop_id: &u128, public_keys: Vec<PublicKey>) -> AccountId {
+        // Remove the drop
+        let mut drop = self.drop_for_id.remove(drop_id).expect("drop not found");
+        // Clear the map
+        drop.pks.clear();
+        let owner_id = drop.owner_id.clone();
+
+        // Remove the drop ID from the funder's list
+        self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
+
+        // Loop through the keys and remove the public keys' mapping
+        for pk in public_keys {
+            self.drop_id_for_pk.remove(&pk.clone());
+        };
+
+        // Return the owner ID
+        owner_id
+    }
     /// Used to calculate the base allowance needed given attached GAS
     pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {
         // Get the number of CCCs you can make with the attached GAS
@@ -115,6 +134,7 @@ impl Keypom {
         account_id: AccountId,
         storage_freed: u128,
         token_id: Option<String>,
+        auto_withdraw: bool,
         promise: Option<Promise>,
     ) {
         macro_rules! resolve_promise_or_call {
@@ -161,6 +181,8 @@ impl Keypom {
                     cur_key_info,
                     // Maximum number of claims
                     drop_data.config.and_then(|c| c.uses_per_key).unwrap_or(1),
+                    // Is it an auto withdraw case
+                    auto_withdraw,
                 ));
             }
             DropType::NonFungibleToken(data) => {
@@ -179,6 +201,8 @@ impl Keypom {
                     data.contract_id,
                     // Token ID for the NFT
                     token_id.expect("no token ID found"),
+                    // Is it an auto withdraw case
+                    auto_withdraw,
                 ));
             }
             DropType::FungibleToken(data) => {
@@ -193,6 +217,8 @@ impl Keypom {
                     storage_freed,
                     // FT Data to be used
                     data,
+                    // Is it an auto withdraw case
+                    auto_withdraw,
                 ));
             }
             DropType::Simple => {
@@ -207,6 +233,8 @@ impl Keypom {
                             U128(drop_data.deposit_per_use),
                             // How much storage was freed when the key was claimed
                             storage_freed,
+                            // Is it an auto withdraw case
+                            auto_withdraw,
                         ),
                 );
             }

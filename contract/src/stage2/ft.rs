@@ -138,7 +138,7 @@ impl Keypom {
                 num_to_refund
             );
             let amount_to_refund = ft_storage.0 * num_to_refund as u128;
-            let mut cur_user_bal = self.user_balances.get(&funder).expect("no user balance");
+            let mut cur_user_bal = self.user_balances.get(&funder).unwrap_or(0);
             cur_user_bal += amount_to_refund;
             self.user_balances.insert(&funder, &cur_user_bal);
             near_sdk::log!("Refunding user {}. Num to refund: {}. FT storage: {}", amount_to_refund, num_to_refund, ft_storage.0);
@@ -167,31 +167,48 @@ impl Keypom {
         let result = promise_result_as_success();
         let pub_keys_len = public_keys.len() as u128;
 
+        // Get the attached deposit originally sent by the user (if any)
+        let near_attached = env::attached_deposit();
+
         // If things went wrong, we need to delete the data and refund the user.
         if result.is_none() {
-            // Refund the funder any excess $NEAR
-            near_sdk::log!(
-                "Unsuccessful query to get storage. Refunding funder's balance: {}",
-                yocto_to_near(required_deposit)
-            );
-            // Remove the drop
-            let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
-            // Clear the map
-            drop.pks.clear();
-            let owner_id = drop.owner_id.clone();
-
-            // Remove the drop ID from the funder's list
-            self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
-
-            // Loop through the keys and remove the public keys' mapping
-            for pk in public_keys {
-                self.drop_id_for_pk.remove(&pk.clone());
-            }
+            // Remove the drop and get the owner ID back
+            let owner_id = self.internal_remove_drop(&drop_id, public_keys);
 
             // Refund the user's balance for the required attached_deposit
             let mut user_balance = self.user_balances.get(&owner_id).unwrap();
-            user_balance += required_deposit;
-            self.user_balances.insert(&owner_id, &user_balance);
+            user_balance = user_balance + required_deposit - near_attached;
+
+            // Refund the funder any excess $NEAR
+            near_sdk::log!(
+                "Unsuccessful query to get storage. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}",
+                yocto_to_near(required_deposit),
+                yocto_to_near(near_attached),
+                yocto_to_near(user_balance)
+            );
+
+            if user_balance > 0 {
+                // Refund the funder any excess $NEAR
+                near_sdk::log!(
+                    "User balance positive. Adding back into contract."
+                );
+                self.user_balances.insert(&owner_id, &user_balance);
+            } else {
+                near_sdk::log!(
+                    "User balance zero. Removing from contract."
+                );
+                self.user_balances.remove(&owner_id);
+            }
+
+            // Refund the predecessor for their attached deposit if it's greater than 0
+            if near_attached > 0 {
+                near_sdk::log!(
+                    "Refunding user for attached deposit of: {}",
+                    yocto_to_near(near_attached)
+                );
+
+                Promise::new(env::predecessor_account_id()).transfer(near_attached);
+            }
 
             return false;
         }
@@ -216,23 +233,43 @@ impl Keypom {
 
             // Ensure the user's current balance can cover the extra storage required
             if cur_user_balance < extra_storage_required {
-                near_sdk::log!("Not enough balance to cover FT storage for each key and their claims. Refunding funder's balance: {}", yocto_to_near(required_deposit));
-                // Remove the drop
-                self.drop_for_id.remove(&drop_id).unwrap();
-                // Clear the map
-                drop.pks.clear();
-
-                // Remove the drop ID from the funder's list
-                self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
-
-                // Loop through the keys and remove the keys from the drop and remove the drop ID for the key
-                for pk in public_keys {
-                    self.drop_id_for_pk.remove(&pk.clone());
-                }
+                // Remove the drop and get the owner ID back
+                let owner_id = self.internal_remove_drop(&drop_id, public_keys);
 
                 // Refund the user's balance for the required attached_deposit
-                cur_user_balance += required_deposit;
-                self.user_balances.insert(&owner_id, &cur_user_balance);
+                let mut user_balance = self.user_balances.get(&owner_id).unwrap();
+                user_balance = user_balance + required_deposit - near_attached;
+
+                // Refund the funder any excess $NEAR
+                near_sdk::log!(
+                    "Not enough balance to cover FT storage for each key and their claims. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}",
+                    yocto_to_near(required_deposit),
+                    yocto_to_near(near_attached),
+                    yocto_to_near(user_balance)
+                );
+
+                if user_balance > 0 {
+                    // Refund the funder any excess $NEAR
+                    near_sdk::log!(
+                        "User balance positive. Adding back into contract."
+                    );
+                    self.user_balances.insert(&owner_id, &user_balance);
+                } else {
+                    near_sdk::log!(
+                        "User balance zero. Removing from contract."
+                    );
+                    self.user_balances.remove(&owner_id);
+                }
+
+                // Refund the predecessor for their attached deposit if it's greater than 0
+                if near_attached > 0 {
+                    near_sdk::log!(
+                        "Refunding user for attached deposit of: {}",
+                        yocto_to_near(near_attached)
+                    );
+                    
+                    Promise::new(env::predecessor_account_id()).transfer(near_attached);
+                }
 
                 return false;
             }
@@ -292,29 +329,43 @@ impl Keypom {
                 false
             }
         } else {
-            // Refund the funder any excess $NEAR
-            near_sdk::log!(
-                "Unsuccessful query to get storage. Refunding funder's balance: {}",
-                yocto_to_near(required_deposit)
-            );
-            // Remove the drop
-            let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
-            // Clear the map
-            drop.pks.clear();
-            let owner_id = drop.owner_id.clone();
-
-            // Remove the drop ID from the funder's list
-            self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
-
-            // Loop through the keys and remove the public keys' mapping
-            for pk in public_keys {
-                self.drop_id_for_pk.remove(&pk.clone());
-            }
+            // Remove the drop and get the owner ID back
+            let owner_id = self.internal_remove_drop(&drop_id, public_keys);
 
             // Refund the user's balance for the required attached_deposit
             let mut user_balance = self.user_balances.get(&owner_id).unwrap();
-            user_balance += required_deposit;
-            self.user_balances.insert(&owner_id, &user_balance);
+            user_balance = user_balance + required_deposit - near_attached;
+
+            // Refund the funder any excess $NEAR
+            near_sdk::log!(
+                "Unsuccessful query to get storage. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}",
+                yocto_to_near(required_deposit),
+                yocto_to_near(near_attached),
+                yocto_to_near(user_balance)
+            );
+
+            if user_balance > 0 {
+                // Refund the funder any excess $NEAR
+                near_sdk::log!(
+                    "User balance positive. Adding back into contract."
+                );
+                self.user_balances.insert(&owner_id, &user_balance);
+            } else {
+                near_sdk::log!(
+                    "User balance zero. Removing from contract."
+                );
+                self.user_balances.remove(&owner_id);
+            }
+
+            // Refund the predecessor for their attached deposit if it's greater than 0
+            if near_attached > 0 {
+                near_sdk::log!(
+                    "Refunding user for attached deposit of: {}",
+                    yocto_to_near(near_attached)
+                );
+                
+                Promise::new(env::predecessor_account_id()).transfer(near_attached);
+            }
 
             return false;
         }

@@ -11,7 +11,8 @@ impl Keypom {
             storage_freed_option,
             token_id,
             should_continue,
-            cur_key_info,
+            cur_key_info, 
+            auto_withdraw,
         ) = self.process_claim(expected_uses);
 
         if drop_data_option.is_none() {
@@ -55,6 +56,7 @@ impl Keypom {
             account_id,
             storage_freed,
             token_id,
+            auto_withdraw,
             promise,
         );
 
@@ -82,6 +84,7 @@ impl Keypom {
             token_id,
             should_continue,
             cur_key_info,
+            auto_withdraw
         ) = self.process_claim(expected_uses);
 
         if drop_data_option.is_none() {
@@ -118,6 +121,7 @@ impl Keypom {
             new_account_id,
             storage_freed,
             token_id,
+            auto_withdraw,
             Some(promise),
         );
 
@@ -141,6 +145,8 @@ impl Keypom {
         balance: U128,
         // How much storage was freed when the key was claimed
         storage_used: Balance,
+        // Is it an auto withdraw case
+        auto_withdraw: bool
     ) -> bool {
         // Get the status of the cross contract call
         let claim_succeeded = check_promise_result();
@@ -158,8 +164,9 @@ impl Keypom {
         let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
-            "Refund Amount (storage used): {}",
+            "Refund Amount (storage used): {}. Auto withdraw: {}",
             yocto_to_near(amount_to_refund),
+            auto_withdraw
         );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
@@ -171,19 +178,33 @@ impl Keypom {
             amount_to_refund += balance.0
         }
 
-        near_sdk::log!(
-            "Refunding funder: {:?} For amount: {:?}",
-            owner_id,
-            yocto_to_near(amount_to_refund)
-        );
-
-        // Get the funder's balance and increment it by the amount to refund
-        let mut cur_funder_balance = self
+        
+        if auto_withdraw {
+            near_sdk::log!(
+                "Auto withdraw. Refunding funder: {:?} balance For amount: {:?}",
+                owner_id,
+                yocto_to_near(amount_to_refund)
+            );
+            
+            // Send the funds to the funder
+            Promise::new(owner_id).transfer(amount_to_refund);
+        } else {
+            
+            // Get the funder's balance and increment it by the amount to refund
+            let mut cur_funder_balance = self
             .user_balances
             .get(&owner_id)
-            .expect("No funder balance found");
-        cur_funder_balance += amount_to_refund;
-        self.user_balances.insert(&owner_id, &cur_funder_balance);
+            .unwrap_or(0);
+            cur_funder_balance += amount_to_refund;
+            
+            near_sdk::log!(
+                "Refunding funder's balance: {:?} For amount: {:?}",
+                yocto_to_near(cur_funder_balance),
+                yocto_to_near(amount_to_refund)
+            );
+            
+            self.user_balances.insert(&owner_id, &cur_funder_balance);
+        }
 
         claim_succeeded
     }
@@ -204,6 +225,8 @@ impl Keypom {
         ft_data: FTData,
         // Was this function invoked via an execute (no callback)
         execute: bool,
+        // Is it an auto withdraw case
+        auto_withdraw: bool
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -225,8 +248,9 @@ impl Keypom {
         let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
-            "Refund Amount (storage used): {}",
+            "Refund Amount (storage used): {}. Auto withdraw: {}",
             yocto_to_near(amount_to_refund),
+            auto_withdraw
         );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
@@ -238,18 +262,32 @@ impl Keypom {
             amount_to_refund += balance.0
         }
 
-        near_sdk::log!(
-            "Refunding funder: {:?} balance For amount: {:?}",
-            owner_id,
-            yocto_to_near(amount_to_refund)
-        );
-        // Get the funder's balance and increment it by the amount to refund
-        let mut cur_funder_balance = self
+        if auto_withdraw {
+            near_sdk::log!(
+                "Auto withdraw. Refunding funder: {:?} balance For amount: {:?}",
+                owner_id,
+                yocto_to_near(amount_to_refund)
+            );
+            
+            // Send the funds to the funder
+            Promise::new(owner_id).transfer(amount_to_refund);
+        } else {
+            
+            // Get the funder's balance and increment it by the amount to refund
+            let mut cur_funder_balance = self
             .user_balances
             .get(&owner_id)
-            .expect("No funder balance found");
-        cur_funder_balance += amount_to_refund;
-        self.user_balances.insert(&owner_id, &cur_funder_balance);
+            .unwrap_or(0);
+            cur_funder_balance += amount_to_refund;
+            
+            near_sdk::log!(
+                "Refunding funder's balance: {:?} For amount: {:?}",
+                yocto_to_near(cur_funder_balance),
+                yocto_to_near(amount_to_refund)
+            );
+            
+            self.user_balances.insert(&owner_id, &cur_funder_balance);
+        }
 
         // Perform the FT transfer functionality
         self.internal_ft_transfer(claim_succeeded, ft_data, account_id);
@@ -277,6 +315,8 @@ impl Keypom {
         token_id: String,
         // Was this function invoked via an execute (no callback)
         execute: bool,
+        // Is it an auto withdraw case
+        auto_withdraw: bool
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -299,10 +339,9 @@ impl Keypom {
         let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
-            "Refund Amount: {}, 
-            Storage Used: {}",
+            "Refund Amount (storage used): {}. Auto withdraw: {}",
             yocto_to_near(amount_to_refund),
-            yocto_to_near(storage_used),
+            auto_withdraw
         );
 
         // If not successful, the balance is added to the amount to refund since it was never transferred.
@@ -314,18 +353,32 @@ impl Keypom {
             amount_to_refund += balance.0
         }
 
-        near_sdk::log!(
-            "Refunding funder: {:?} balance For amount: {:?}",
-            owner_id,
-            yocto_to_near(amount_to_refund)
-        );
-        // Get the funder's balance and increment it by the amount to refund
-        let mut cur_funder_balance = self
+        if auto_withdraw {
+            near_sdk::log!(
+                "Auto withdraw. Refunding funder: {:?} balance For amount: {:?}",
+                owner_id,
+                yocto_to_near(amount_to_refund)
+            );
+            
+            // Send the funds to the funder
+            Promise::new(owner_id).transfer(amount_to_refund);
+        } else {
+            
+            // Get the funder's balance and increment it by the amount to refund
+            let mut cur_funder_balance = self
             .user_balances
             .get(&owner_id)
-            .expect("No funder balance found");
-        cur_funder_balance += amount_to_refund;
-        self.user_balances.insert(&owner_id, &cur_funder_balance);
+            .unwrap_or(0);
+            cur_funder_balance += amount_to_refund;
+            
+            near_sdk::log!(
+                "Refunding funder's balance: {:?} For amount: {:?}",
+                yocto_to_near(cur_funder_balance),
+                yocto_to_near(amount_to_refund)
+            );
+            
+            self.user_balances.insert(&owner_id, &cur_funder_balance);
+        }
 
         // Transfer the NFT
         self.internal_nft_transfer(
@@ -356,10 +409,12 @@ impl Keypom {
         drop_id: DropId,
         // Current key info before uses were decremented
         cur_key_info: KeyInfo,
-        // How many uses the key had left before it was decremented
+        // How many uses the key had left before sit was decremented
         uses_per_key: u64,
         // Was this function invoked via an execute (no callback)
         execute: bool,
+        // Is it an auto withdraw case
+        auto_withdraw: bool
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -382,8 +437,9 @@ impl Keypom {
         let mut amount_to_refund = storage_used;
 
         near_sdk::log!(
-            "Refund Amount (storage used): {}",
+            "Refund Amount (storage used): {}. Auto withdraw: {}",
             yocto_to_near(amount_to_refund),
+            auto_withdraw
         );
 
         // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
@@ -417,13 +473,32 @@ impl Keypom {
             amount_to_refund += balance.0 + total_attached_deposit
         }
 
-        // Get the funder's balance and increment it by the amount to refund
-        let mut cur_funder_balance = self
+        if auto_withdraw {
+            near_sdk::log!(
+                "Auto withdraw. Refunding funder: {:?} balance For amount: {:?}",
+                owner_id,
+                yocto_to_near(amount_to_refund)
+            );
+            
+            // Send the funds to the funder
+            Promise::new(owner_id).transfer(amount_to_refund);
+        } else {
+            
+            // Get the funder's balance and increment it by the amount to refund
+            let mut cur_funder_balance = self
             .user_balances
             .get(&owner_id)
-            .expect("No funder balance found");
-        cur_funder_balance += amount_to_refund;
-        self.user_balances.insert(&owner_id, &cur_funder_balance);
+            .unwrap_or(0);
+            cur_funder_balance += amount_to_refund;
+            
+            near_sdk::log!(
+                "Refunding funder's balance: {:?} For amount: {:?}",
+                yocto_to_near(cur_funder_balance),
+                yocto_to_near(amount_to_refund)
+            );
+            
+            self.user_balances.insert(&owner_id, &cur_funder_balance);
+        }
 
         self.internal_fc_execute(
             &cur_method_data,
@@ -453,6 +528,8 @@ impl Keypom {
         bool,
         // Current key info before decrementing
         KeyInfo,
+        // Should we auto withdraw and send the refund to the drop owner's bal
+        bool,
     ) {
         let mut used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -502,7 +579,7 @@ impl Keypom {
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
                 drop.pks.insert(&signer_pk, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, false, current_key_info);
+                return (None, None, None, None, false, current_key_info, false);
             }
         }
 
@@ -522,7 +599,7 @@ impl Keypom {
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, false, current_key_info);
+            return (None, None, None, None, false, current_key_info, false);
         }
 
         // Ensure enough time has passed if a start timestamp was specified in the config.
@@ -544,7 +621,7 @@ impl Keypom {
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, false, current_key_info);
+            return (None, None, None, None, false, current_key_info, false);
         }
 
         /*
@@ -619,7 +696,7 @@ impl Keypom {
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
                 drop.pks.insert(&signer_pk, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, false, current_key_info);
+                return (None, None, None, None, false, current_key_info, false);
             }
 
             near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
@@ -678,6 +755,7 @@ impl Keypom {
             initial_storage,
             final_storage
         );
+        let mut should_auto_withdraw = false;
         if should_delete_key {
             // Amount to refund is the current allowance less the current execution's max GAS
             let amount_to_refund = key_info.allowance
@@ -694,14 +772,35 @@ impl Keypom {
                 ACCESS_KEY_STORAGE
             );
 
-            // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self
-                .user_balances
-                .get(&drop.owner_id)
-                .expect("No funder balance found");
-            cur_funder_balance += amount_to_refund;
-            self.user_balances
-                .insert(&drop.owner_id, &cur_funder_balance);
+            // Check if auto_withdrawing to the funder's entire balance 
+            let auto_withdraw = drop
+                .config
+                .clone()
+                .and_then(|c| c.auto_withdraw)
+                .unwrap_or(false);
+                
+            // Get the number of drops still left for the owner
+            let cur_drop_num_for_owner = self.drop_ids_for_owner.get(&drop.owner_id).and_then(|d| Some(d.len())).unwrap_or(0);
+            
+            // If auto_withdraw is set to true and this is the last drop for the owner, we should just withdraw the entire balance
+            if auto_withdraw && cur_drop_num_for_owner == 0 {
+                should_auto_withdraw = true;
+                let mut cur_balance = self.user_balances.remove(&drop.owner_id).unwrap_or(0);
+                cur_balance += amount_to_refund;
+                near_sdk::log!("Auto withdrawing the entire balance of {}.", yocto_to_near(cur_balance));
+                
+                // Send cur balance to drop owner
+                Promise::new(drop.owner_id.clone()).transfer(cur_balance);
+            } else {
+                // Get the funder's balance and increment it by the amount to refund
+                let mut cur_funder_balance = self
+                    .user_balances
+                    .get(&drop.owner_id)
+                    .unwrap_or(0);
+                cur_funder_balance += amount_to_refund;
+                self.user_balances
+                    .insert(&drop.owner_id, &cur_funder_balance);
+            }
 
             // Delete the key
             Promise::new(env::current_account_id()).delete_key(signer_pk);
@@ -715,6 +814,7 @@ impl Keypom {
             token_id,
             should_continue,
             current_key_info,
+            should_auto_withdraw
         )
     }
 }

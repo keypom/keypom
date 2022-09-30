@@ -42,7 +42,7 @@ export function assertBalanceChange(b1: NEAR, b2: NEAR, expected: NEAR, precisio
     lower: expected.abs().sub(range) // 1 - .05  = .95
   }
   let diff = b2.sub(b1).abs();
-  //console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
+  console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
   return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
 }
 
