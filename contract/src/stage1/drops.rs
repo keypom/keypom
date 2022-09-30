@@ -647,7 +647,7 @@ impl Keypom {
         let mut current_user_balance = self
             .user_balances
             .get(&funder)
-            .expect("No user balance found");
+            .unwrap_or(0);
 
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance

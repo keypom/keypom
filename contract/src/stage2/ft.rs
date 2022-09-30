@@ -138,7 +138,7 @@ impl Keypom {
                 num_to_refund
             );
             let amount_to_refund = ft_storage.0 * num_to_refund as u128;
-            let mut cur_user_bal = self.user_balances.get(&funder).expect("no user balance");
+            let mut cur_user_bal = self.user_balances.get(&funder).unwrap_or(0);
             cur_user_bal += amount_to_refund;
             self.user_balances.insert(&funder, &cur_user_bal);
             near_sdk::log!("Refunding user {}. Num to refund: {}. FT storage: {}", amount_to_refund, num_to_refund, ft_storage.0);
