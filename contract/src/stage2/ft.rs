@@ -127,7 +127,7 @@ impl Keypom {
 
     #[private]
     /// Self callback checks if fungible tokens were successfully refunded. If yes, set keys registered to 0.
-    pub fn ft_resolve_refund(&mut self, drop_id: DropId, num_to_refund: u64, ft_storage: U128, funder: AccountId) -> bool {
+    pub fn ft_resolve_refund(&mut self, drop_id: DropId, num_to_refund: u64) -> bool {
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
         // Everything went well so we return true since the keys registered have already been decremented
@@ -137,11 +137,6 @@ impl Keypom {
                 drop_id,
                 num_to_refund
             );
-            let amount_to_refund = ft_storage.0 * num_to_refund as u128;
-            let mut cur_user_bal = self.user_balances.get(&funder).unwrap_or(0);
-            cur_user_bal += amount_to_refund;
-            self.user_balances.insert(&funder, &cur_user_bal);
-            near_sdk::log!("Refunding user {}. Num to refund: {}. FT storage: {}", amount_to_refund, num_to_refund, ft_storage.0);
             return true;
         }
 
