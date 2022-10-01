@@ -23,6 +23,8 @@ trait ExtNFTContract {
 trait ExtFTContract {
     fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>);
 
+    fn storage_deposit(&mut self, account_id: Option<AccountId>, registration_only: Option<bool>);
+
     fn storage_balance_bounds(&self) -> StorageBalanceBounds;
 }
 

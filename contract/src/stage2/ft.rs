@@ -224,7 +224,7 @@ impl Keypom {
 
             // Get the current user balance ad ensure that they have the extra $NEAR for covering the FT storage
             let mut cur_user_balance = self.user_balances.get(&owner_id).unwrap();
-            let extra_storage_required = min.0 * uses_per_key as u128 * pub_keys_len;
+            let extra_storage_required = min.0 * uses_per_key as u128 * pub_keys_len + min.0;
 
             // Ensure the user's current balance can cover the extra storage required
             if cur_user_balance < extra_storage_required {
@@ -272,7 +272,7 @@ impl Keypom {
             // Update the FT data to include the storage and insert the drop back with the updated FT data
             if let DropType::FungibleToken(mut ft_data) = drop.drop_type {
                 ft_data.ft_storage = min;
-                drop.drop_type = DropType::FungibleToken(ft_data);
+                drop.drop_type = DropType::FungibleToken(ft_data.clone());
 
                 self.drop_for_id.insert(&drop_id, &drop);
 
@@ -317,6 +317,8 @@ impl Keypom {
                 }
 
                 env::promise_return(promise);
+
+                self.internal_register_ft_contract(&ft_data.contract_id, min.0, &owner_id, true);
 
                 // Everything went well and we return true
                 return true;

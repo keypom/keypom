@@ -3,6 +3,18 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     /// Add a prohibited method to the list of methods that can't be called by a FC Drop
+    #[payable]
+    pub fn register_ft_contract(&mut self, account_id: AccountId) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.owner_id,
+            "predecessor != owner"
+        );
+        self.internal_register_ft_contract(&account_id, env::attached_deposit(), &env::predecessor_account_id(), false);
+        self.registered_ft_contracts.insert(&account_id);
+    }
+
+    /// Add a prohibited method to the list of methods that can't be called by a FC Drop
     pub fn add_prohibited_method(&mut self, method: String) {
         assert_eq!(
             env::predecessor_account_id(),

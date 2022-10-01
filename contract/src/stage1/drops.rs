@@ -255,6 +255,8 @@ impl Keypom {
         let mut deposit_required_for_fc_deposits = 0;
         // Keep track of the number of none FCs so we don't charge the user
         let mut num_none_fcs = 0;
+        let mut was_ft_registered = false;
+
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
         if let Some(data) = nft_data {
             let NFTDataConfig {
@@ -291,11 +293,15 @@ impl Keypom {
 
             // Create the NFT data
             let actual_ft_data = FTData {
-                contract_id,
+                contract_id: contract_id.clone(),
                 sender_id,
                 balance_per_use,
                 ft_storage: U128(u128::MAX),
             };
+            
+            // Temporarily add the FT contract. If it was already registered, don't remove but if it was, remove now.
+            // This is to measure the storage cost of adding the contract. 
+            was_ft_registered = !self.registered_ft_contracts.insert(&contract_id);
 
             // The number of claims is 0 until FTs are sent to the contract
             drop.registered_uses = 0;
@@ -527,12 +533,20 @@ impl Keypom {
 
             env::promise_return(promise);
         } else {
+            let ft_contract = ft_data.unwrap().contract_id;
+            // If the ft contract was NOT already registered, we should remove it from the set here and add it
+            // Only if everything went well in the callback.
+            if !was_ft_registered {
+                near_sdk::log!("FT contract was not already registered. Removing from set");
+                self.registered_ft_contracts.remove(&ft_contract);
+            }
+
             /*
                 Get the storage required by the FT contract and ensure the user has attached enough
                 attached_deposit to cover the storage and perform refunds if they overpayed.
             */
 
-            ext_ft_contract::ext(ft_data.unwrap().contract_id)
+            ext_ft_contract::ext(ft_contract)
                 // Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.
                 .with_static_gas(GAS_FOR_STORAGE_BALANCE_BOUNDS)
                 .with_unused_gas_weight(0)

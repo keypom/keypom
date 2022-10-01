@@ -522,6 +522,7 @@ enum StorageKey {
     FeesPerUser,
     UserBalances,
     ProhibitedMethods,
+    RegisteredFtContracts
 }
 
 #[near_bindgen]
@@ -563,6 +564,9 @@ pub struct Keypom {
 
     /// Which methods are prohibited from being called with an access key through an FC Drop
     pub prohibited_fc_methods: LookupSet<String>,
+
+    /// Which contract has Keypom been automatically registered on?
+    pub registered_ft_contracts: LookupSet<AccountId>,
 }
 
 #[near_bindgen]
@@ -579,6 +583,7 @@ impl Keypom {
             user_balances: LookupMap::new(StorageKey::UserBalances),
             next_drop_id: 0,
             prohibited_fc_methods: LookupSet::new(StorageKey::ProhibitedMethods),
+            registered_ft_contracts: LookupSet::new(StorageKey::RegisteredFtContracts),
             /*
                 FEES
             */

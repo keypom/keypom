@@ -44,7 +44,6 @@ test.beforeEach(async (t) => {
 
     // Mint the NFT
     await ftContract.call(ftContract, 'storage_deposit', { account_id: minter.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
-    await ftContract.call(ftContract, 'storage_deposit', { account_id: keypom.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
     await ftContract.call(ftContract, 'ft_transfer', { receiver_id: minter.accountId, amount: (oneGtNear * BigInt(1000)).toString() }, { attachedDeposit: "1" });
 
     let keypomBalance = await keypom.balance();
@@ -69,6 +68,7 @@ test.afterEach(async t => {
 
 test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
+    await keypom.call(keypom, 'register_ft_contract', {account_id: ftContract.accountId}, {attachedDeposit: NEAR.parse("0.01")});
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     console.log("adding to balance");
@@ -177,6 +177,7 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
 
 test('OverRegister FTs and add multi use key later', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
+    await keypom.call(keypom, 'register_ft_contract', {account_id: ftContract.accountId}, {attachedDeposit: NEAR.parse("0.01")});
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     console.log("adding to balance");
@@ -277,6 +278,7 @@ test('OverRegister FTs and add multi use key later', async t => {
 
 test('Deleting Keys and Drop', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
+    await keypom.call(keypom, 'register_ft_contract', {account_id: ftContract.accountId}, {attachedDeposit: NEAR.parse("0.01")});
     const keypomInitialBalance = t.context.keypomInitialBalance;
     const keypomInitialStateStaked = t.context.keypomInitialStateStaked;
 
@@ -353,6 +355,7 @@ test('Deleting Keys and Drop', async t => {
 
 test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
+    await keypom.call(keypom, 'register_ft_contract', {account_id: ftContract.accountId}, {attachedDeposit: NEAR.parse("0.01")});
     const keypomInitialBalance = t.context.keypomInitialBalance;
     const keypomInitialStateStaked = t.context.keypomInitialStateStaked;
 
@@ -452,6 +455,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
 
 test('Paying with Attached Deposit. FT Contract Does Not Exist', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
+    await keypom.call(keypom, 'register_ft_contract', {account_id: ftContract.accountId}, {attachedDeposit: NEAR.parse("0.01")});
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
@@ -486,6 +490,7 @@ test('Paying with Attached Deposit. FT Contract Does Not Exist', async t => {
 
 test('Paying with Attached Deposit. Not enough deposit to cover callback registration fee', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
+    await keypom.call(keypom, 'register_ft_contract', {account_id: ftContract.accountId}, {attachedDeposit: NEAR.parse("0.01")});
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
@@ -515,7 +520,7 @@ test('Paying with Attached Deposit. Not enough deposit to cover callback registr
     let b2 = await owner.availableBalance();
     console.log('b2: ', b2.toString())
     // Should only go down by about 20 TGas
-    t.assert(assertBalanceChange(b1, b2, NEAR.parse("0.002"), 0.05), "balance didn't decrement properly with 1% precision");
+    t.assert(assertBalanceChange(b1, b2, NEAR.parse("0.0021"), 0.01), "balance didn't decrement properly with 1% precision");
 
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
@@ -530,6 +535,7 @@ test('Paying with Attached Deposit. Not enough deposit to cover callback registr
 
 test('Paying with User Balance. FT Contract Does Not Exist', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
+    await keypom.call(keypom, 'register_ft_contract', {account_id: ftContract.accountId}, {attachedDeposit: NEAR.parse("0.01")});
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
@@ -565,3 +571,4 @@ test('Paying with User Balance. FT Contract Does Not Exist', async t => {
     t.is(ownerBal, NEAR.parse("15").toString());
 }); 
 
+// Add a test checking if you create 1 drop then another, the first one will cost more since FT contract needs to be registered
