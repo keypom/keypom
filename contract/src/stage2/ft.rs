@@ -268,7 +268,7 @@ impl Keypom {
                         yocto_to_near(near_attached)
                     );
                     
-                    Promise::new(env::predecessor_account_id()).transfer(near_attached);
+                    Promise::new(owner_id).transfer(near_attached);
                 }
 
                 return false;

@@ -5,6 +5,8 @@ export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
 export const WALLET_GAS: string = "100000000000000";
 export const DEFAULT_DEPOSIT: string = "1000000000000000000000000";
+export const GAS_PRICE: BN = new BN("100000000");
+export const DEFAULT_TERRA_IN_NEAR: string = "3000000000000000000000";
 
 export async function generateKeyPairs(
   numKeys: number,
@@ -33,13 +35,16 @@ export function defaultCallOptions(
   };
 }
 
-export function assertBalanceChange(b1: NEAR, b2: NEAR, expected: NEAR, precision: number) {
-  // 1 * 5% = .05
-  let divNum = new BN(Math.ceil(1 / precision))
-  let range = expected.abs().div(divNum);
+export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, precision: number) {
+  console.log('expected change: ', expected_change.toString())
+
+  let numToDivide = new BN(Math.ceil(1 / precision));
+  let range = expected_change.abs().div(numToDivide);
+  console.log('range addition: ', range.toString())
+
   let acceptableRange = {
-    upper: expected.abs().add(range), // 1 + .05 = 1.05
-    lower: expected.abs().sub(range) // 1 - .05  = .95
+    upper: expected_change.abs().add(range), // 1 + .05 = 1.05
+    lower: expected_change.abs().sub(range) // 1 - .05  = .95
   }
   let diff = b2.sub(b1).abs();
   console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
