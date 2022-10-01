@@ -278,6 +278,11 @@ impl Keypom {
 
                 // Decrement the user's balance by the extra required and insert back into the map
                 cur_user_balance -= extra_storage_required;
+                near_sdk::log!(
+                    "User has enough balance to cover FT storage. Subtracting {} from user balance. User balance is now {}",
+                    yocto_to_near(extra_storage_required),
+                    yocto_to_near(cur_user_balance)
+                );
                 self.user_balances.insert(&owner_id, &cur_user_balance);
 
                 // Create the keys for the contract

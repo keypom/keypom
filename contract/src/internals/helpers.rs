@@ -45,12 +45,16 @@ impl Keypom {
     pub(crate) fn internal_register_ft_contract(&mut self, ft_contract_id: &AccountId, storage_required: u128, account_to_refund: &AccountId, refund_balance: bool) {
         // Check if the ft contract is already in the registered ft contracts list
         if !self.registered_ft_contracts.contains(ft_contract_id) {
-            near_sdk::log!("FT contract not registered. Performing cross contract call.");
+            near_sdk::log!("FT contract not registered. Performing cross contract call to {} and inserting back into set", ft_contract_id);
+
             // Perform a cross contract call to fire and forget. Attach the storage required
             ext_ft_contract::ext(ft_contract_id.clone())
                 // Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.
                 .with_static_gas(MIN_GAS_FOR_FT_TRANSFER)
+                .with_attached_deposit(storage_required)
                 .storage_deposit(Some(env::current_account_id()), None);
+            
+            self.registered_ft_contracts.insert(ft_contract_id);
         } else {
             // If we should refund the account's balance, do it here. Otherwise, just transfer the funds directly.
             if refund_balance {

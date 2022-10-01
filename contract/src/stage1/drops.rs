@@ -300,8 +300,10 @@ impl Keypom {
             };
             
             // Temporarily add the FT contract. If it was already registered, don't remove but if it was, remove now.
-            // This is to measure the storage cost of adding the contract. 
-            was_ft_registered = !self.registered_ft_contracts.insert(&contract_id);
+            // This is to measure the storage cost of adding the contract.
+            let clean_insert = self.registered_ft_contracts.insert(&contract_id);
+            was_ft_registered = !clean_insert;
+            near_sdk::log!("was_ft_registered: {}", was_ft_registered); 
 
             // The number of claims is 0 until FTs are sent to the contract
             drop.registered_uses = 0;
