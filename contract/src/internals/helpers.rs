@@ -41,7 +41,35 @@ pub(crate) fn check_promise_result() -> bool {
 }
 
 impl Keypom {
+    /// Internal function to register Keypom on a given FT contract
+    pub(crate) fn internal_register_ft_contract(&mut self, ft_contract_id: &AccountId, storage_required: u128, account_to_refund: &AccountId, refund_balance: bool) {
+        // Check if the ft contract is already in the registered ft contracts list
+        if !self.registered_ft_contracts.contains(ft_contract_id) {
+            near_sdk::log!("FT contract not registered. Performing cross contract call to {} and inserting back into set", ft_contract_id);
 
+            // Perform a cross contract call to fire and forget. Attach the storage required
+            ext_ft_contract::ext(ft_contract_id.clone())
+                // Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.
+                .with_static_gas(MIN_GAS_FOR_FT_TRANSFER)
+                .with_attached_deposit(storage_required)
+                .storage_deposit(Some(env::current_account_id()), None);
+            
+            self.registered_ft_contracts.insert(ft_contract_id);
+        } else {
+            // If we should refund the account's balance, do it here. Otherwise, just transfer the funds directly.
+            if refund_balance {
+                let mut cur_user_bal = self.user_balances.get(account_to_refund).unwrap_or(0);
+                cur_user_bal += storage_required;
+                near_sdk::log!("FT contract already registered. Refunding user balance for {}. Balance is now {}", yocto_to_near(storage_required), yocto_to_near(cur_user_bal));
+                self.user_balances.insert(account_to_refund, &cur_user_bal);
+            } else {
+                near_sdk::log!("FT contract already registered. Transferring user for: {}", yocto_to_near(storage_required));
+                Promise::new(account_to_refund.clone()).transfer(storage_required);
+            }
+        }
+    }
+
+    /// Internal function to force remove a drop from the contract's state
     pub(crate) fn internal_remove_drop(&mut self, drop_id: &u128, public_keys: Vec<PublicKey>) -> AccountId {
         // Remove the drop
         let mut drop = self.drop_for_id.remove(drop_id).expect("drop not found");
@@ -60,6 +88,7 @@ impl Keypom {
         // Return the owner ID
         owner_id
     }
+
     /// Used to calculate the base allowance needed given attached GAS
     pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {
         // Get the number of CCCs you can make with the attached GAS
