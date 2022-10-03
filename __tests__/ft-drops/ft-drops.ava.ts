@@ -419,7 +419,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     await owner.call(keypom, 'withdraw_from_balance', {});
     await owner.call(keypom, 'refund_assets', {drop_id: 0})
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
-    t.is(ownerBal, (ftRegistrationFee.mul(new BN(5))).toString());
+    t.is(ownerBal, "0");
 
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 

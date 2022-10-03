@@ -67,7 +67,7 @@ impl Keypom {
         let mut total_allowance_left = 0;
 
         // Get the total number of claims and none FCs across all keys being deleted
-        let mut total_num_claims_left = 0;
+        let mut total_num_claims_refunded = 0;
         let mut total_num_none_fcs = 0;
         let mut total_fc_deposits = 0;
         // If the user passed in public keys, loop through and remove them from the drop
@@ -88,7 +88,7 @@ impl Keypom {
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
                 let key_info = drop.pks.remove(key).expect("public key must be in drop");
-                total_num_claims_left += key_info.remaining_uses;
+                total_num_claims_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
@@ -171,8 +171,8 @@ impl Keypom {
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
-            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_left as u128;
+                drop.deposit_per_use * (total_num_claims_refunded - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_refunded as u128;
 
             total_refund_amount = total_storage_freed
                 + total_allowance_left
@@ -199,7 +199,7 @@ impl Keypom {
                 yocto_to_near(total_deposits),
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
-                total_num_claims_left,
+                total_num_claims_refunded,
                 total_num_none_fcs,
                 len
             );
@@ -216,7 +216,7 @@ impl Keypom {
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
                 let key_info = drop.pks.remove(key).expect("public key must be in drop");
-                total_num_claims_left += key_info.remaining_uses;
+                total_num_claims_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
                 // Claims and get the deposits left along with the total number of None FCs
@@ -298,8 +298,8 @@ impl Keypom {
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_claims_left - total_num_none_fcs) as u128;
-            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_left as u128;
+                drop.deposit_per_use * (total_num_claims_refunded - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_refunded as u128;
 
             total_refund_amount = total_storage_freed
                 + total_allowance_left
@@ -326,7 +326,7 @@ impl Keypom {
                 yocto_to_near(total_deposits),
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
-                total_num_claims_left,
+                total_num_claims_refunded,
                 total_num_none_fcs,
                 len
             );
@@ -444,7 +444,7 @@ impl Keypom {
                     .then(
                         // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
                         Self::ext(env::current_account_id())
-                            .ft_resolve_refund(drop_id, num_to_refund, data.ft_storage, drop.owner_id),
+                            .ft_resolve_refund(drop_id, num_to_refund),
                     )
                     .as_return();
             }
