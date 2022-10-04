@@ -15,7 +15,7 @@ const numSponsors = Object.keys(ticketDistribution).length;
 
 test.beforeEach(async (t) => {
     // Comment this if you want to see console logs
-    console.log = function() {}
+    //console.log = function() {}
 
     // Init the worker and start a Sandbox server
     const worker = await Worker.init();
