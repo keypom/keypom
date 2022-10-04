@@ -4,6 +4,7 @@
 	"license": "MIT",
 	"author": "Ben Kurrek, Matt Lockyer",
 	"scripts": {
+		"pub-docs": "rm -rf doc && mkdir doc && cargo doc --no-deps && cp -r target/doc/* doc && gh-pages -d doc",
 		"dev-deploy": "echo building contract && yarn build-contract && echo removing neardev && rm -rf neardev && echo deploying && (near dev-deploy --wasmFile out/keypom.wasm || exit 0)",
 			"build-contract": "./build.sh",
 		"simple": "yarn simple-create && yarn simple-add",
