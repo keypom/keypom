@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
-import { generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { JsonKeyInfo, JsonToken } from "../utils/types";
 import { injected_fields, mintNFTs, nftMetadata, nftSeriesMetadata, sendNFTs } from "./utils/nft-utils";
 
@@ -27,7 +27,7 @@ test.beforeEach(async (t) => {
 
     // Init the 3 contracts
     await root.call(root, 'new', {});
-    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
     await nftSeries.call(nftSeries, 'new', { owner_id: nftSeries, metadata: nftSeriesMetadata });
 
     // Test users

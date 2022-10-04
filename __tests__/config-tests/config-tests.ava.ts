@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
-import { assertBalanceChange, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { assertBalanceChange, CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { JsonKeyInfo } from "../utils/types";
 
 const test = anyTest as TestFn<{
@@ -26,7 +26,7 @@ test.beforeEach(async (t) => {
     
     // Init the 3 contracts
     await root.call(root, 'new', {});
-    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
     
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())

@@ -1,7 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { BN } from "bn.js";
 import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
-import { assertBalanceChange, DEFAULT_GAS, GAS_PRICE, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { assertBalanceChange, CONTRACT_METADATA, DEFAULT_GAS, GAS_PRICE, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { ftRegistrationFee, oneGtNear, sendFTs, totalSupply } from "./utils/ft-utils";
 
 const test = anyTest as TestFn<{
@@ -28,7 +28,7 @@ test.beforeEach(async (t) => {
 
     // Init the 3 contracts
     await root.call(root, 'new', {});
-    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
     await ftContract.call(ftContract, 'new_default_meta', { owner_id: ftContract, total_supply: totalSupply.toString() });
     
     // Test users

@@ -404,7 +404,7 @@ ticket page (when they have internet), they would be able to claim the final use
 */
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, UnorderedSet};
+use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, UnorderedSet, LazyOption};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
@@ -510,6 +510,16 @@ use internals::*;
 use stage1::*;
 use stage2::*;
 
+/// Contract metadata structure
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ContractSourceMetadata {
+    /// Commit hash being used for the currently deployed wasm. If the contract is not open-sourced, this could also be a numbering system for internal organization / tracking such as "1.0.0" and "2.1.0".
+    pub version: String,
+    /// Link to open source code such as a Github repository or a CID to somewhere on IPFS. 
+    pub link: String, 
+}
+
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
     DropIdForPk,
@@ -522,7 +532,8 @@ enum StorageKey {
     FeesPerUser,
     UserBalances,
     ProhibitedMethods,
-    RegisteredFtContracts
+    RegisteredFtContracts,
+    ContractMetadata
 }
 
 #[near_bindgen]
@@ -567,13 +578,16 @@ pub struct Keypom {
 
     /// Which contract has Keypom been automatically registered on?
     pub registered_ft_contracts: LookupSet<AccountId>,
+
+    /// Source metadata extension:
+    pub contract_metadata: LazyOption<ContractSourceMetadata>
 }
 
 #[near_bindgen]
 impl Keypom {
     /// Initialize contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
     #[init]
-    pub fn new(root_account: AccountId, owner_id: AccountId) -> Self {
+    pub fn new(root_account: AccountId, owner_id: AccountId, contract_metadata: ContractSourceMetadata) -> Self {
         let mut keypom = Self {
             owner_id,
             root_account,
@@ -592,6 +606,11 @@ impl Keypom {
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
             yocto_per_gas: 100_000_000,
+
+            /*
+                CONTRACT METADATA
+            */
+            contract_metadata: LazyOption::new(StorageKey::ContractMetadata, Some(&contract_metadata))
         };
 
         // Loop through and add all the default prohibited methods to the set

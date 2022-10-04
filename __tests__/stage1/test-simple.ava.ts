@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
-import { generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -18,7 +18,7 @@ const test = anyTest as TestFn<{
     const keypom = await root.devDeploy(`./out/keypom.wasm`);
 
     // Init the contract
-    await keypom.call(keypom, 'new', {root_account: 'testnet', owner_id: keypom});
+    await keypom.call(keypom, 'new', {root_account: 'testnet', owner_id: keypom, contract_metadata: CONTRACT_METADATA});
 
     // Test users
     const ali = await root.createSubAccount('ali');
@@ -48,7 +48,7 @@ test('Create empty drop check views', async t => {
         account_id: ali.accountId
     });
 
-    t.is(result.keyTotalSupply, '0');
+    t.is(result.keyTotalSupply, 0);
     t.deepEqual(result.keys, []);
     let jsonDrop = result.dropInformation!;
     t.is(jsonDrop.drop_id, 0);

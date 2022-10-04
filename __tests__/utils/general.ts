@@ -7,6 +7,10 @@ export const WALLET_GAS: string = "100000000000000";
 export const DEFAULT_DEPOSIT: string = "1000000000000000000000000";
 export const GAS_PRICE: BN = new BN("100000000");
 export const DEFAULT_TERRA_IN_NEAR: string = "3000000000000000000000";
+export const CONTRACT_METADATA = {
+  "version": "1.0.0",
+  "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
+}
 
 export async function generateKeyPairs(
   numKeys: number,
@@ -69,11 +73,11 @@ export async function queryAllViewFunctions(
     account_id?: string | null
   }
 ) {
-  let getGasPrice: string = await contract.view('get_gas_price', {});
+  let getGasPrice: number = await contract.view('get_gas_price', {});
   let getRootAccount: string = await contract.view('get_root_account', {});
   let getFeesCollected: string = await contract.view('get_fees_collected', {});
   let getNextDropId: number = await contract.view('get_next_drop_id', {});
-  let keyTotalSupply: string = await contract.view('get_key_total_supply', {});
+  let keyTotalSupply: number = await contract.view('get_key_total_supply', {});
   let getKeys: JsonKeyInfo[] = await contract.view('get_keys', {from_index, limit});
 
   let getKeyBalance: string | null = null;

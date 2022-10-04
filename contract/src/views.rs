@@ -77,9 +77,9 @@ impl Keypom {
         CUSTOM
     */
     /// Query for the total supply of keys on the contract
-    pub fn get_key_total_supply(&self) -> U128 {
+    pub fn get_key_total_supply(&self) -> u64 {
         //return the length of the data_for_pk set
-        U128(self.drop_id_for_pk.len() as u128)
+        self.drop_id_for_pk.len()
     }
 
     /// Paginate through all active keys on the contract and return a vector of key info.
@@ -296,8 +296,8 @@ impl Keypom {
     }
 
     /// Returns the current nonce on the contract
-    pub fn get_next_drop_id(&self) -> u128 {
-        self.next_drop_id
+    pub fn get_next_drop_id(&self) -> u64 {
+        self.next_drop_id as u64
     }
 
     /// Returns how many fees the contract has collected
@@ -306,8 +306,8 @@ impl Keypom {
     }
 
     /// Returns the current GAS price stored on the contract
-    pub fn get_gas_price(&self) -> U128 {
-        U128(self.yocto_per_gas)
+    pub fn get_gas_price(&self) -> u64 {
+        self.yocto_per_gas as u64
     }
 
     /// Returns the current linkdrop contract
@@ -321,5 +321,10 @@ impl Keypom {
         self.fees_per_user
             .get(&account_id)
             .map(|fees| (U128(fees.0), U128(fees.1)))
+    }
+
+    /// Returns the current contract source metadata
+    pub fn contract_source_metadata(&self) -> ContractSourceMetadata {
+        self.contract_metadata.get().unwrap()
     }
 }

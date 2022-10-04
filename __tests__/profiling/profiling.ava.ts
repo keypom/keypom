@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { generateKeyPairs, LARGE_GAS } from "../utils/general";
+import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS } from "../utils/general";
 
 const path = require("path");
 const homedir = require("os").homedir();
@@ -29,7 +29,7 @@ test.beforeEach(async (t) => {
     
     // Init the 3 contracts
     await root.call(root, 'new', {});
-    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
     
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())

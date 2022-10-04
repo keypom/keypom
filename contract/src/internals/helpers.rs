@@ -41,6 +41,15 @@ pub(crate) fn check_promise_result() -> bool {
 }
 
 impl Keypom {
+    /// Internal function to assert that the predecessor is the contract owner
+    pub(crate) fn assert_owner(&mut self) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.owner_id,
+            "predecessor != owner"
+        );
+    }
+
     /// Internal function to register Keypom on a given FT contract
     pub(crate) fn internal_register_ft_contract(&mut self, ft_contract_id: &AccountId, storage_required: u128, account_to_refund: &AccountId, refund_balance: bool) {
         // Check if the ft contract is already in the registered ft contracts list
@@ -55,18 +64,20 @@ impl Keypom {
                 .storage_deposit(Some(env::current_account_id()), None);
             
             self.registered_ft_contracts.insert(ft_contract_id);
-        } else {
-            // If we should refund the account's balance, do it here. Otherwise, just transfer the funds directly.
-            if refund_balance {
-                let mut cur_user_bal = self.user_balances.get(account_to_refund).unwrap_or(0);
-                cur_user_bal += storage_required;
-                near_sdk::log!("FT contract already registered. Refunding user balance for {}. Balance is now {}", yocto_to_near(storage_required), yocto_to_near(cur_user_bal));
-                self.user_balances.insert(account_to_refund, &cur_user_bal);
-            } else {
-                near_sdk::log!("FT contract already registered. Transferring user for: {}", yocto_to_near(storage_required));
-                Promise::new(account_to_refund.clone()).transfer(storage_required);
-            }
+            return;
         }
+
+        // If we should refund the account's balance, do it here. Otherwise, just transfer the funds directly.
+        if refund_balance {
+            let mut cur_user_bal = self.user_balances.get(account_to_refund).unwrap_or(0);
+            cur_user_bal += storage_required;
+            near_sdk::log!("FT contract already registered. Refunding user balance for {}. Balance is now {}", yocto_to_near(storage_required), yocto_to_near(cur_user_bal));
+            self.user_balances.insert(account_to_refund, &cur_user_bal);
+            return;
+        }
+
+        near_sdk::log!("FT contract already registered. Transferring user for: {}", yocto_to_near(storage_required));
+        Promise::new(account_to_refund.clone()).transfer(storage_required);
     }
 
     /// Internal function to force remove a drop from the contract's state
