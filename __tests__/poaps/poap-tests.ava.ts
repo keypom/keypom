@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { pagodaDistroPoapsSmall } from "./utils/distro";
 import { createDistro, nftSeriesMetadata } from "./utils/nearconUtils";
 
@@ -30,7 +30,7 @@ test.beforeEach(async (t) => {
     
     // Init the 3 contracts
     await root.call(root, 'new', {});
-    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom });
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
     await nftSeries.call(nftSeries, 'new', { owner_id: nftSeries, metadata: nftSeriesMetadata });
     
     // Add Keypom as an approved minter
@@ -132,7 +132,7 @@ test('Fully Claim all Pagoda POAPs', async t => {
     });
     console.log('viewFunctions: ', viewFunctions)
     t.is(viewFunctions.dropSupplyForOwner, numSponsors)
-    t.is(viewFunctions.keyTotalSupply, '0')
+    t.is(viewFunctions.keyTotalSupply, 0)
 
     nonce = 0;
     for (let [sponsor, keys] of Object.entries(keyPairsForSponsors)) {

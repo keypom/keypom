@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { KeyPairEd25519, NEAR, NearAccount, Worker } from "near-workspaces";
-import { assertBalanceChange, defaultCallOptions, DEFAULT_DEPOSIT } from "../utils/general";
+import { assertBalanceChange, CONTRACT_METADATA, defaultCallOptions, DEFAULT_DEPOSIT } from "../utils/general";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -18,7 +18,7 @@ test.beforeEach(async (t) => {
     const keypom = await root.devDeploy(`./out/keypom.wasm`);
 
     // Init the contract
-    await keypom.call(keypom, 'new', {root_account: 'testnet', owner_id: keypom});
+    await keypom.call(keypom, 'new', {root_account: 'testnet', owner_id: keypom, contract_metadata: CONTRACT_METADATA});
 
     // Test users
     const ali = await root.createSubAccount('ali');
@@ -53,15 +53,31 @@ test('Changing linkdrop contract', async t => {
     t.is(result, 'foo');
 });
 
+test('Setting Contract Metadata', async t => {
+    const { keypom } = t.context.accounts;
+    let result = await keypom.view('contract_source_metadata', {});
+    t.deepEqual(result, CONTRACT_METADATA);
+
+    let newMetadata = {
+        "version": "0.0.1",
+        "link": "foo"
+    }
+
+    await keypom.call(keypom, 'set_contract_metadata', {contract_metadata: newMetadata});
+    
+    result = await keypom.view('contract_source_metadata', {});
+    t.deepEqual(result, newMetadata);
+});
+
 test('Setting gas price', async t => {
     const { keypom } = t.context.accounts;
     let result = await keypom.view('get_gas_price', {});
-    t.is(result, '100000000');
+    t.is(result, 100000000);
 
     await keypom.call(keypom, 'set_gas_price', {yocto_per_gas: 100});
     
     result = await keypom.view('get_gas_price', {});
-    t.is(result, '100');
+    t.is(result, 100);
 });
 
 test('Deposit & withdraw to user balance', async t => {
