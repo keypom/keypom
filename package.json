@@ -32,7 +32,8 @@
 			"test:poaps": "ava __tests__/poaps/poap-tests.ava.ts",
 			"test:configs": "ava __tests__/config-tests/config-tests.ava.ts",
 			"test:nft-drops": "ava __tests__/nft-drops/nft-drops.ava.ts",
-			"test:ft-drops": "ava __tests__/ft-drops/ft-drops.ava.ts"
+			"test:ft-drops": "ava __tests__/ft-drops/ft-drops.ava.ts",
+			"test:profiling" : "ava __tests__/profiling/profiling.ava.ts"
 	},
 	"dependencies": {},
 	"devDependencies": {
