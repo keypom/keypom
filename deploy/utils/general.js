@@ -44,7 +44,7 @@ const estimateRequiredDeposit = async (
     fcData,
     ftData
 ) => {
-    let totalRequiredStorage = new BN(parseNearAmount("0.5"));
+    let totalRequiredStorage = new BN(parseNearAmount("0.2"));
     console.log('totalRequiredStorage: ', totalRequiredStorage.toString())
 
     let actualAllowance = estimatePessimisticAllowance(attachedGas);
