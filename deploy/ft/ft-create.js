@@ -2,9 +2,10 @@ const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/for
 const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
-const { initiateNearConnection, getFtCosts, estimateRequiredDeposit, ATTACHED_GAS_FROM_WALLET } = require("../utils/general");
-const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT } = require("./configurations");
+const { initiateNearConnection, getFtCosts, estimateRequiredDeposit, ATTACHED_GAS_FROM_WALLET, getRecentDropId } = require("../utils/general");
+const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT, FT_DATA, FT_CONTRACT_ID } = require("./configurations");
 const { KeyPair } = require("near-api-js");
+const { BN } = require("bn.js");
 
 async function start() {
 	// Initiate connection to the NEAR blockchain.
@@ -19,7 +20,7 @@ async function start() {
 		DROP_CONFIG.uses_per_key,
 		ATTACHED_GAS_FROM_WALLET,
 		null,
-		null
+		FT_DATA
 	)
 	
 	// Keep track of an array of the keyPairs we create
@@ -53,12 +54,56 @@ async function start() {
 				public_keys: pubKeys,
 				deposit_per_use: DEPOSIT_PER_USE,
 				config: DROP_CONFIG,
-				metadata: JSON.stringify(DROP_METADATA)
+				metadata: JSON.stringify(DROP_METADATA),
+				ft_data: FT_DATA
 			}, 
 			"300000000000000"
 		);
 	} catch(e) {
 		console.log('error creating drop: ', e);
+	}
+
+	try {
+		await fundingAccount.functionCall(
+			FT_CONTRACT_ID, 
+			'storage_deposit',
+			{
+				account_id: FUNDING_ACCOUNT_ID,
+			},
+			"300000000000000",
+			parseNearAmount("0.1")
+		);
+
+		let amountToTransfer = new BN(FT_DATA.balance_per_use).mul(new BN(NUM_KEYS * DROP_CONFIG.uses_per_key)).toString();
+		console.log('amountToTransfer: ', amountToTransfer.toString());
+
+		await fundingAccount.functionCall(
+			FT_CONTRACT_ID, 
+			'ft_mint', 
+			{
+				account_id: FUNDING_ACCOUNT_ID,
+				// The max amount of tokens an account can receive PER `ft_transfer` call is 10
+				amount: amountToTransfer.toString()
+			},
+			"300000000000000"
+		);
+
+		let dropId = await getRecentDropId(fundingAccount, FUNDING_ACCOUNT_ID, KEYPOM_CONTRACT);
+		console.log('dropId: ', dropId)
+
+		await fundingAccount.functionCall(
+			FT_CONTRACT_ID, 
+			'ft_transfer_call', 
+			{
+				receiver_id: KEYPOM_CONTRACT,
+				amount: amountToTransfer.toString(),
+				msg: dropId.toString()
+			},
+			"300000000000000",
+			"1"
+		);
+	} catch(e) {
+		console.log('error sending FTs', e);
 	}
 	
 	let curPks = {};

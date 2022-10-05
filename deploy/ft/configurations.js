@@ -4,11 +4,21 @@ const KEYPOM_CONTRACT = "v1.keypom.testnet"
 const FUNDING_ACCOUNT_ID = "benjiman.testnet";
 const NETWORK_ID = "testnet";
 const DEPOSIT_PER_USE = parseNearAmount("1");
-const NUM_KEYS = 10;
+const NUM_KEYS = 1;
+const FT_CONTRACT_ID = "ft.keypom.testnet";
+
+const FT_DATA = {
+    // Contract ID of the fungible token
+    contract_id: FT_CONTRACT_ID,
+    // Who will be sending the FTs to the Keypom contract
+    sender_id: FUNDING_ACCOUNT_ID,
+    // How many FTs should be sent to the claimed account everytime a key is used
+    balance_per_use: parseNearAmount("1"),
+}
 
 const DROP_CONFIG = {
     // How many claims can each key have.
-    uses_per_key: 1,
+    uses_per_key: 5,
 
     // Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
     // Must be overwritten
@@ -44,5 +54,7 @@ module.exports = {
     NUM_KEYS,
     DROP_CONFIG,
     DROP_METADATA,
-    KEYPOM_CONTRACT
+    KEYPOM_CONTRACT,
+    FT_DATA,
+    FT_CONTRACT_ID
 }
