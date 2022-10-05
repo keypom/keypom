@@ -21,7 +21,6 @@ impl Keypom {
     }
 
     // Allows users to withdraw their balance
-    #[payable]
     pub fn withdraw_from_balance(&mut self) {
         // the account to withdraw storage to is always the predecessor
         let owner_id = env::predecessor_account_id();
