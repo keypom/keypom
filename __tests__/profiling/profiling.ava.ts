@@ -63,10 +63,56 @@ test.afterEach(async t => {
     });
 });
 
-test('Simple Drop', async t => {
+test('Simple Drop Upfront', async t => {
     const { keypom, owner, ali } = t.context.accounts;
     let startIndex = 0;
     let finishIndex = 100;
+
+    // dataToWrite is an object containing strings that map to objects
+    let dataToWrite: Record<string, Record<string, string>> = {};
+
+    let config = {
+        delete_on_empty: true,
+        auto_withdraw: true
+    }
+    
+    // Loop through and create a drop with 0 all the way to 100 keys per drop and check the net user costs
+    for (let i = startIndex; i < finishIndex; i++) {
+        let {keys, publicKeys} = await generateKeyPairs(i+1);
+
+        // Withdraw all balance and deposit 1000 $NEAR
+        await owner.call(keypom, 'withdraw_from_balance', {});
+        await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("1000").toString()});
+
+        let bal1 = await owner.balance();
+        // Creating the drop that should be deleted
+        await owner.call(keypom, 'create_drop', {
+            public_keys: publicKeys, 
+            deposit_per_use: NEAR.parse("1").toString(),
+            config,
+        },{gas: LARGE_GAS});
+        let bal2 = await owner.balance();
+
+        let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
+        let netCost = NEAR.parse("1000").sub(NEAR.from(ownerBal));
+        
+        dataToWrite[`${i}-keys`] = {
+            "initialActual": bal1.available.toString(),
+            "finalActual": bal2.available.toString(),
+            "netActual": bal1.available.sub(bal2.available).toString(),
+            "initialBalance": NEAR.parse("1000").toString(),
+            "finalBalance": ownerBal,
+            "netCost": netCost.toString(),
+        }
+    }
+
+    await writeFile(path.resolve(__dirname, `simple.json`), JSON.stringify(dataToWrite));
+});
+
+test('Simple Drop NET', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    let startIndex = 0;
+    let finishIndex = 1;
 
     // dataToWrite is an object containing strings that map to objects
     let dataToWrite: Record<string, Record<string, string>> = {};
