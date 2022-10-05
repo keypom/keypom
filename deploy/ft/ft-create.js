@@ -19,6 +19,7 @@ async function start() {
 		NUM_KEYS,
 		DROP_CONFIG.uses_per_key,
 		ATTACHED_GAS_FROM_WALLET,
+		parseNearAmount("0.1"),
 		null,
 		FT_DATA
 	)

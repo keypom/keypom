@@ -41,8 +41,9 @@ const estimateRequiredDeposit = async (
     numKeys,
     usesPerKey,
     attachedGas,
-    fcData,
-    ftData
+    storage = parseNearAmount("0.01"),
+    fcData = null,
+    ftData = null,
 ) => {
     let totalRequiredStorage = new BN(parseNearAmount("0.2"));
     console.log('totalRequiredStorage: ', totalRequiredStorage.toString())
