@@ -423,3 +423,87 @@ test('Testing Auto Withdraw', async t => {
     });
     console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
 });
+
+test('Testing Custom Drop ID', async t => {
+    const { keypom, owner, ali, customRoot } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("1000").toString()});
+
+    // Creating the drop that points to the custom root
+    try {
+        await owner.call(keypom, 'create_drop', {
+            public_keys: [], 
+            deposit_per_use: NEAR.parse("1").toString(),
+            drop_id: "1"
+        },{gas: LARGE_GAS});
+    } catch(e) {}
+
+    let viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+    });
+    console.log('viewFunctions.nextDropId: ', viewFunctions.nextDropId)
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    t.is(viewFunctions.nextDropId, 0);
+    t.is(viewFunctions.dropSupplyForOwner, 0);
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [], 
+        deposit_per_use: NEAR.parse("1").toString()
+    },{gas: LARGE_GAS});
+
+    viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+    });
+    console.log('viewFunctions.nextDropId: ', viewFunctions.nextDropId)
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    t.is(viewFunctions.nextDropId, 1);
+    t.is(viewFunctions.dropSupplyForOwner, 1);
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        drop_id: "2000000000"
+    },{gas: LARGE_GAS});
+
+    viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+    });
+    console.log('viewFunctions.nextDropId: ', viewFunctions.nextDropId)
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    t.is(viewFunctions.nextDropId, 1);
+    t.is(viewFunctions.dropSupplyForOwner, 2);
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [], 
+        deposit_per_use: NEAR.parse("1").toString()
+    },{gas: LARGE_GAS});
+
+    viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+    });
+    console.log('viewFunctions.nextDropId: ', viewFunctions.nextDropId)
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    t.is(viewFunctions.nextDropId, 2);
+    t.is(viewFunctions.dropSupplyForOwner, 3);
+
+    try {
+        await owner.call(keypom, 'create_drop', {
+            public_keys: [], 
+            deposit_per_use: NEAR.parse("1").toString(),
+            drop_id: "2000000000"
+        },{gas: LARGE_GAS});
+    } catch(e) {}
+
+    viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+    });
+    console.log('viewFunctions.nextDropId: ', viewFunctions.nextDropId)
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    t.is(viewFunctions.nextDropId, 2);
+    t.is(viewFunctions.dropSupplyForOwner, 3);
+});

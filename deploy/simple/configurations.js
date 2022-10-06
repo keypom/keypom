@@ -4,7 +4,7 @@ const KEYPOM_CONTRACT = "v1.keypom.testnet"
 const FUNDING_ACCOUNT_ID = "benjiman.testnet";
 const NETWORK_ID = "testnet";
 const DEPOSIT_PER_USE = parseNearAmount("1");
-const NUM_KEYS = 10;
+const NUM_KEYS = 1;
 
 const DROP_CONFIG = {
     // How many claims can each key have.

@@ -6,6 +6,8 @@ use near_sdk::{
 
 pub type DropId = u128;
 
+const MIN_DROP_ID_PASSED_IN: u128 = 1_000_000_000;
+
 #[derive(BorshSerialize, BorshDeserialize)]
 pub enum DropType {
     Simple,
@@ -122,9 +124,24 @@ impl Keypom {
         ft_data: Option<FTDataConfig>,
         nft_data: Option<NFTDataConfig>,
         fc_data: Option<FCData>,
+        drop_id: Option<U128>,
     ) -> Option<DropId> {
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
+
+        let mut actual_drop_id = self.next_drop_id;
+
+        if let Some(id) = drop_id {
+            require!(
+                !self.drop_for_id.contains_key(&id.into()),
+                "Drop ID already exists"
+            );
+            require!(id.0 >= MIN_DROP_ID_PASSED_IN, "drop ID too small");
+            actual_drop_id = id.0;
+        } else {
+            // Increment the drop ID nonce only if no drop Id was passed in
+            self.next_drop_id += 1;
+        }
 
         // Ensure the user has only specified one type of callback data
         let num_cbs_specified =
@@ -145,7 +162,6 @@ impl Keypom {
         // Funder is the predecessor
         let owner_id = env::predecessor_account_id();
         let len = public_keys.len() as u128;
-        let drop_id = self.next_drop_id;
         // Get the number of claims per key to dictate what key usage data we should put in the map
         let num_claims_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
@@ -163,7 +179,7 @@ impl Keypom {
         let mut key_map: UnorderedMap<PublicKey, KeyInfo> =
             UnorderedMap::new(StorageKey::PksForDrop {
                 // We get a new unique prefix for the collection
-                account_id_hash: hash_account_id(&format!("{}{}", self.next_drop_id, owner_id)),
+                account_id_hash: hash_account_id(&format!("{}{}", actual_drop_id, owner_id)),
             });
 
         // Decide what methods the access keys can call
@@ -220,14 +236,14 @@ impl Keypom {
                 },
             );
             require!(
-                self.drop_id_for_pk.insert(pk, &drop_id).is_none(),
+                self.drop_id_for_pk.insert(pk, &actual_drop_id).is_none(),
                 "Keys cannot belong to another drop"
             );
             next_key_id += 1;
         }
 
         // Add this drop ID to the funder's set of drops
-        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &drop_id);
+        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &actual_drop_id);
 
         // Create drop object
         let mut drop = Drop {
@@ -243,7 +259,7 @@ impl Keypom {
                     // We get a new unique prefix for the collection
                     account_id_hash: hash_account_id(&format!(
                         "metadata-{}{}",
-                        self.next_drop_id, owner_id
+                        actual_drop_id, owner_id
                     )),
                 },
                 metadata.as_ref(),
@@ -267,7 +283,7 @@ impl Keypom {
             // Create the token ID vector
             let token_ids = Vector::new(StorageKey::TokenIdsForDrop {
                 //we get a new unique prefix for the collection
-                account_id_hash: hash_account_id(&format!("nft-{}{}", self.next_drop_id, owner_id)),
+                account_id_hash: hash_account_id(&format!("nft-{}{}", actual_drop_id, owner_id)),
             });
 
             // Create the NFT data
@@ -282,7 +298,7 @@ impl Keypom {
             drop.drop_type = DropType::NonFungibleToken(actual_nft_data);
 
             // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&drop_id, &drop);
+            self.drop_for_id.insert(&actual_drop_id, &drop);
         } else if let Some(data) = ft_data.clone() {
             // If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type
             let FTDataConfig {
@@ -310,7 +326,7 @@ impl Keypom {
             drop.drop_type = DropType::FungibleToken(actual_ft_data);
 
             // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&drop_id, &drop);
+            self.drop_for_id.insert(&actual_drop_id, &drop);
         } else if let Some(data) = fc_data.clone() {
             drop.drop_type = DropType::FunctionCall(data.clone());
 
@@ -391,14 +407,14 @@ impl Keypom {
             }
 
             // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&drop_id, &drop);
+            self.drop_for_id.insert(&actual_drop_id, &drop);
         } else {
             require!(
                 deposit_per_use.0 > 0,
                 "Cannot have a simple drop with zero balance"
             );
             // In simple case, we just insert the drop with whatever it was initialized with.
-            self.drop_for_id.insert(&drop_id, &drop);
+            self.drop_for_id.insert(&actual_drop_id, &drop);
         }
 
         // Calculate the storage being used for the entire drop
@@ -406,9 +422,6 @@ impl Keypom {
         let total_required_storage =
             Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
         near_sdk::log!("Total required storage Yocto {}", total_required_storage);
-
-        // Increment the drop ID nonce
-        self.next_drop_id += 1;
 
         /*
             Required attached_deposit consists of:
@@ -496,7 +509,7 @@ impl Keypom {
             }
 
             // Remove the drop
-            self.internal_remove_drop(&drop_id, public_keys);
+            self.internal_remove_drop(&actual_drop_id, public_keys);
             // Return early
             return None;
         }
@@ -558,11 +571,11 @@ impl Keypom {
                         // Resolve the promise with the min GAS. All unspent GAS will be added to this call.
                         .with_attached_deposit(near_attached)
                         .with_static_gas(MIN_GAS_FOR_RESOLVE_STORAGE_CHECK)
-                        .resolve_storage_check(public_keys, drop_id, required_deposit),
+                        .resolve_storage_check(public_keys, actual_drop_id, required_deposit),
                 );
         }
 
-        Some(drop_id)
+        Some(actual_drop_id)
     }
 
     /*
