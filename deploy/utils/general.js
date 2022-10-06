@@ -41,8 +41,9 @@ const estimateRequiredDeposit = async (
     numKeys,
     usesPerKey,
     attachedGas,
-    fcData,
-    ftData
+    storage = parseNearAmount("0.01"),
+    fcData = null,
+    ftData = null,
 ) => {
     let totalRequiredStorage = new BN(parseNearAmount("0.2"));
     console.log('totalRequiredStorage: ', totalRequiredStorage.toString())
@@ -159,11 +160,22 @@ const getFtCosts = async (near, numKeys, usesPerKey, ftContract) => {
     return costs.toString();
 };
 
+// Estimate the amount of allowance required for a given attached gas.
+const getRecentDropId = async (fundingAccountObject, accountId, keypomContract) => {
+    let dropSupplyForOwner = await fundingAccountObject.viewFunction(keypomContract, 'get_drop_supply_for_owner', {account_id: accountId});
+	console.log('dropSupplyForOwner: ', dropSupplyForOwner)
+	let dropsForOwner = await fundingAccountObject.viewFunction(keypomContract, 'get_drops_for_owner', { account_id: accountId, from_index: (dropSupplyForOwner - 1).toString() });
+	console.log('dropsForOwner: ', dropsForOwner)
+
+    return dropsForOwner[dropsForOwner.length - 1].drop_id;
+};
+
 module.exports = {
     initiateNearConnection,
     estimateRequiredDeposit,
     estimatePessimisticAllowance,
     getNoneFcsAndDepositRequired,
     getFtCosts,
+    getRecentDropId,
     ATTACHED_GAS_FROM_WALLET
 };

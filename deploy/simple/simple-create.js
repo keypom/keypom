@@ -18,8 +18,6 @@ async function start() {
 		NUM_KEYS,
 		DROP_CONFIG.uses_per_key,
 		ATTACHED_GAS_FROM_WALLET,
-		null,
-		null
 	)
 	
 	// Keep track of an array of the keyPairs we create
