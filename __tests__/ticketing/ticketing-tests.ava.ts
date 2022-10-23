@@ -7,6 +7,8 @@ import { createDistro, dropConfig, getNEARConFCData, nftMetadata, nftSeriesMetad
 const test = anyTest as TestFn<{
     worker: Worker;
     accounts: Record<string, NearAccount>;
+    keypomInitialBalance: NEAR;
+    keypomInitialStateStaked: NEAR;
 }>;
 
 const ticketDistribution = ticketDistroSmall;

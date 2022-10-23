@@ -47,13 +47,24 @@ pub struct DropConfig {
     // How many claims can each key have. If None, default to 1.
     pub uses_per_key: Option<u64>,
 
-    // Minimum block timestamp that keys can be used. If None, keys can be used immediately
+    // Minimum block timestamp before keys can be used. If None, keys can be used immediately
     // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
     pub start_timestamp: Option<u64>,
 
-    // How often can a key be used
+    // Block timestamp that keys must be before. If None, keys can be used indefinitely
+    // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub end_timestamp: Option<u64>,
+
+    // Time interval between each key use. If None, there is no delay between key uses.
     // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
     pub throttle_timestamp: Option<u64>,
+
+    // Interval of time after the `start_timestamp` that must pass before a key can be used.
+    // If multiple intervals pass, the key can be used multiple times. This has nothing to do
+    // With the throttle timestamp. It only pertains to the start timestamp and the current 
+    // timestamp. The last_used timestamp is not taken into account.
+    // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub claim_interval: Option<u64>,
 
     // If claim is called, refund the deposit to the owner's balance. If None, default to false.
     pub on_claim_refund_deposit: Option<bool>,
@@ -158,6 +169,9 @@ impl Keypom {
                 NEW_ACCOUNT_BASE
             );
         }
+        
+        // Ensure the user has specified a valid drop config
+        assert_valid_drop_config(&config);
 
         // Funder is the predecessor
         let owner_id = env::predecessor_account_id();

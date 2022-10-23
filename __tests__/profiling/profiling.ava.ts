@@ -9,6 +9,8 @@ const { writeFile, mkdir, readFile } = require('fs/promises');
 const test = anyTest as TestFn<{
     worker: Worker;
     accounts: Record<string, NearAccount>;
+    keypomInitialBalance: NEAR;
+    keypomInitialStateStaked: NEAR;
 }>;
 
 
