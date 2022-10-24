@@ -568,6 +568,21 @@ impl Keypom {
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
         let current_key_info = key_info.clone();
 
+        // Ensure the key has enough allowance
+        if key_info.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas {
+            used_gas = env::used_gas();
+
+            let amount_to_decrement =
+                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            near_sdk::log!("Not enough allowance on the key {}. Decrementing allowance by {} Used GAS: {}", key_info.allowance, amount_to_decrement, used_gas.0);
+
+            key_info.allowance -= amount_to_decrement;
+            near_sdk::log!("Allowance is now {}", key_info.allowance);
+            drop.pks.insert(&signer_pk, &key_info);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return (None, None, None, None, false, current_key_info, false);
+        }
+
         // If the key info doesn't match the expected uses, soft panic
         if let Some(uses) = expected_uses {
             if key_info.remaining_uses != uses {
@@ -602,27 +617,9 @@ impl Keypom {
             return (None, None, None, None, false, current_key_info, false);
         }
 
-        // Ensure enough time has passed if a start timestamp was specified in the config.
-        let current_timestamp = env::block_timestamp();
-        let desired_timestamp = drop
-            .config
-            .clone()
-            .and_then(|c| c.start_timestamp)
-            .unwrap_or(current_timestamp);
-
-        if current_timestamp < desired_timestamp {
-            used_gas = env::used_gas();
-
-            let amount_to_decrement =
-                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-            near_sdk::log!("Drop isn't claimable until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}", desired_timestamp, current_timestamp, amount_to_decrement, used_gas.0);
-
-            key_info.allowance -= amount_to_decrement;
-            near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(&signer_pk, &key_info);
-            self.drop_for_id.insert(&drop_id, &drop);
+        if self.assert_claim_timestamps(drop_id, &mut drop, &mut key_info, &signer_pk) == false {
             return (None, None, None, None, false, current_key_info, false);
-        }
+        };
 
         /*
             If it's an NFT drop get the token ID and remove it from the set.
@@ -668,40 +665,6 @@ impl Keypom {
             key_info.last_used,
             key_info.remaining_uses
         );
-
-        // Ensure the key is within the interval if specified
-        if let Some(interval) = drop.config.clone().and_then(|c| c.throttle_timestamp) {
-            near_sdk::log!(
-                "Current timestamp {} last used: {} subs: {} interval: {}",
-                current_timestamp,
-                key_info.last_used,
-                current_timestamp - key_info.last_used,
-                interval
-            );
-
-            if (current_timestamp - key_info.last_used) < interval
-                || key_info.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas
-            {
-                used_gas = env::used_gas();
-
-                let amount_to_decrement =
-                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-                if (current_timestamp - key_info.last_used) < interval {
-                    near_sdk::log!("Not enough time has passed since the key was last used. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
-                } else {
-                    near_sdk::log!("Not enough allowance on the key {}. Decrementing allowance by {} Used GAS: {}", key_info.allowance, amount_to_decrement, used_gas.0);
-                }
-
-                key_info.allowance -= amount_to_decrement;
-                near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
-                self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, false, current_key_info, false);
-            }
-
-            near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
-            key_info.last_used = current_timestamp;
-        }
 
         // No uses left! The key should be deleted
         if key_info.remaining_uses == 1 {

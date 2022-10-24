@@ -6,6 +6,8 @@ import { JsonKeyInfo } from "../utils/types";
 const test = anyTest as TestFn<{
     worker: Worker;
     accounts: Record<string, NearAccount>;
+    keypomInitialBalance: NEAR;
+    keypomInitialStateStaked: NEAR;
 }>;
 
 const ONE_SECOND_NS = 1e9;
@@ -51,6 +53,8 @@ test.beforeEach(async (t) => {
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, owner, ali, customRoot };
+    t.context.keypomInitialBalance = keypomBalance.available;
+    t.context.keypomInitialStateStaked = keypomBalance.stateStaked;
 });
 
 // If the environment is reused, use test.after to replace test.afterEach
@@ -506,4 +510,282 @@ test('Testing Custom Drop ID', async t => {
     console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
     t.is(viewFunctions.nextDropId, 2);
     t.is(viewFunctions.dropSupplyForOwner, 3);
+});
+
+test('Testing Valid Config', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
+
+    let config = {
+        uses_per_key: 0,
+    }
+    try {
+        await owner.call(keypom, 'create_drop', {
+            public_keys: [], 
+            deposit_per_use: NEAR.parse("1").toString(),
+            config,
+        },{gas: LARGE_GAS});
+    } catch(e) {}
+
+    let config1 = {
+        start_timestamp: 500,
+    }
+    try {
+        await owner.call(keypom, 'create_drop', {
+            public_keys: [], 
+            deposit_per_use: NEAR.parse("1").toString(),
+            config: config1,
+        },{gas: LARGE_GAS});
+    } catch(e) {}
+
+    let config2 = {
+        end_timestamp: 0,
+    }
+    try {
+        await owner.call(keypom, 'create_drop', {
+            public_keys: [], 
+            deposit_per_use: NEAR.parse("1").toString(),
+            config: config2,
+        },{gas: LARGE_GAS});
+    } catch(e) {}
+
+    let config3 = {
+        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+    }
+    try {
+        await owner.call(keypom, 'create_drop', {
+            public_keys: [], 
+            deposit_per_use: NEAR.parse("1").toString(),
+            config: config3,
+        },{gas: LARGE_GAS});
+    } catch(e) {}
+
+    let viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+    });
+    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    t.is(viewFunctions.dropSupplyForOwner, 0);
+    t.is(viewFunctions.nextDropId, 0);
+});
+test('Testing End Timestamp', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    let {keys, publicKeys} = await generateKeyPairs(2);
+    let config = {
+        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+    }
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: publicKeys, 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config,
+    },{gas: LARGE_GAS});
+
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
+    t.is(getKeySupplyForDrop, 2);
+
+    // Set ali's balance to 0 so we can check if the claim works properly
+    await ali.updateAccount({
+        amount: "0"
+    })
+
+    await keypom.setKey(keys[0]);
+    await keypom.updateAccessKey(
+        publicKeys[0],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    // THIS SHOULD PASS
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
+    t.is(getKeySupplyForDrop, 1);
+
+    // Wait 15 seconds
+    await new Promise(r => setTimeout(r, 15000));
+
+    // THIS SHOULD FAIL
+    try {
+        await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+    } catch(e) {}
+
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
+    t.is(getKeySupplyForDrop, 1);
+});
+
+test('Testing End Timestamp Key Drainage', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    const keypomInitialBalance = t.context.keypomInitialBalance;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    let config = {
+        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+    }
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: publicKeys, 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config,
+    },{gas: LARGE_GAS});
+
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
+    t.is(getKeySupplyForDrop, 1);
+
+    // Wait 5 seconds
+    await new Promise(r => setTimeout(r, 5000));
+
+    // Set ali's balance to 0 so we can check if the claim works properly
+    await ali.updateAccount({
+        amount: "0"
+    })
+
+    await keypom.setKey(keys[0]);
+    await keypom.updateAccessKey(
+        publicKeys[0],  // public key
+    )
+
+    // Loop 50 times and try to claim
+    for (let i = 0; i < 50; i++) {
+        try {
+            await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+        } catch(e) {}
+    }
+
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
+    t.is(getKeySupplyForDrop, 1);
+});
+
+test('Testing Claim Interval', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    let config = {
+        uses_per_key: 5,
+        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+        claim_interval: ONE_SECOND_NS * 10,
+    }
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config,
+    },{gas: LARGE_GAS});
+
+    // Set ali's balance to 0 so we can check if the claim works properly
+    await ali.updateAccount({
+        amount: "0"
+    })
+
+    await keypom.setKey(keys[0]);
+    await keypom.updateAccessKey(
+        publicKeys[0],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    // THIS SHOULD FAIL BECAUSE THE INTERVAL HASN'T BEEN REACHED
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+
+    let aliBal = await ali.availableBalance();
+    console.log('aliBal Before: ', aliBal.toString())
+    t.is(aliBal.toString(), NEAR.parse("0").toString());
+
+    // Wait 50 seconds
+    await new Promise(r => setTimeout(r, 50000));
+
+    // Loop through and claim all 5 times
+    for (let i = 0; i < 5; i++) {
+        await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+    }
+
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
+    t.is(getKeySupplyForDrop, 0);
+
+    aliBal = await ali.availableBalance();
+    console.log('aliBal After: ', aliBal.toString())
+    t.is(aliBal.toString(), NEAR.parse("5").toString());
+});
+
+test('Testing All Time Based Configs Together', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    let config = {
+        uses_per_key: 5,
+        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+        claim_interval: ONE_SECOND_NS * 10,
+        throttle_timestamp: ONE_SECOND_NS * 30
+    }
+
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config,
+    },{gas: LARGE_GAS});
+
+    // Set ali's balance to 0 so we can check if the claim works properly
+    await ali.updateAccount({
+        amount: "0"
+    })
+
+    await keypom.setKey(keys[0]);
+    await keypom.updateAccessKey(
+        publicKeys[0],  // public key
+        {
+            nonce: 0,
+            permission: 'FullAccess'
+        }
+    )
+    // THIS SHOULD FAIL BECAUSE THE INTERVAL HASN'T BEEN REACHED
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+
+    let aliBal = await ali.availableBalance();
+    console.log('aliBal Before: ', aliBal.toString())
+    t.is(aliBal.toString(), NEAR.parse("0").toString());
+
+    // Wait 50 seconds
+    await new Promise(r => setTimeout(r, 60000));
+
+
+    // Loop through and claim all 5 times But ONLY ONE should go off
+    for (let i = 0; i < 5; i++) {
+        await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+    }
+
+    aliBal = await ali.availableBalance();
+    console.log('aliBal After: ', aliBal.toString())
+    t.is(aliBal.toString(), NEAR.parse("1").toString());
+
+    // Wait 30 seconds
+    await new Promise(r => setTimeout(r, 30000));
+
+    // Loop through and claim all 5 times But ONLY ONE should go off
+    for (let i = 0; i < 4; i++) {
+        await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
+        // Wait 30 seconds
+        await new Promise(r => setTimeout(r, 30000));
+    }
+
+    aliBal = await ali.availableBalance();
+    console.log('aliBal After: ', aliBal.toString())
+    t.is(aliBal.toString(), NEAR.parse("5").toString());
 });

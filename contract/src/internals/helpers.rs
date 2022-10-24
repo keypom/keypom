@@ -40,6 +40,44 @@ pub(crate) fn check_promise_result() -> bool {
     }
 }
 
+/// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
+pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
+    if let Some(config) = drop_config {
+        near_sdk::log!("Current Block Timestamp: {}", env::block_timestamp());
+        
+        // Assert that if uses per key is passed in, it cannot equal 0
+        assert!(
+            config.uses_per_key.unwrap_or(1) != 0,
+            "Cannot have 0 uses per key for a drop config"
+        );
+
+        // Assert that if the claim_interval is some, the start_timestamp is also some
+        assert!(
+            (config.claim_interval.is_some() && config.start_timestamp.is_none()) == false,
+            "If you want to set a claim interval, you must also set a start timestamp"
+        );
+
+        // Assert that both the start_timestamp and end timestamps are greater than the current block
+        assert!(
+            config.start_timestamp.unwrap_or(env::block_timestamp()) >= env::block_timestamp(),
+            "The start timestamp must be greater than the current block timestamp"
+        );
+        assert!(
+            config.end_timestamp.unwrap_or(env::block_timestamp()) >= env::block_timestamp(),
+            "The end timestamp must be greater than the current block timestamp"
+        );
+
+
+        // If both the start timestamp and end timestamp are set, ensure that the start timestamp is less than the end timestamp
+        if config.start_timestamp.is_some() && config.end_timestamp.is_some() {
+            assert!(
+                config.start_timestamp.unwrap() < config.end_timestamp.unwrap(),
+                "The start timestamp must be less than the end timestamp"
+            );
+        }
+    }
+}
+
 impl Keypom {
     /// Internal function to assert that the predecessor is the contract owner
     pub(crate) fn assert_owner(&mut self) {
@@ -48,6 +86,114 @@ impl Keypom {
             self.owner_id,
             "predecessor != owner"
         );
+    }
+
+    /// Internal function to assert that the predecessor is the contract owner
+    pub(crate) fn assert_claim_timestamps(&mut self, drop_id: DropId, drop: &mut Drop, key_info: &mut KeyInfo, signer_pk: &PublicKey) -> bool {
+        // Ensure enough time has passed if a start timestamp was specified in the config.
+        let current_timestamp = env::block_timestamp();
+        let desired_start_timestamp = drop
+            .config
+            .clone()
+            .and_then(|c| c.start_timestamp)
+            .unwrap_or(0);
+
+        if current_timestamp < desired_start_timestamp {
+            let used_gas = env::used_gas();
+
+            let amount_to_decrement =
+                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            near_sdk::log!("Drop isn't claimable until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}", desired_start_timestamp, current_timestamp, amount_to_decrement, used_gas.0);
+
+            key_info.allowance -= amount_to_decrement;
+            near_sdk::log!("Allowance is now {}", key_info.allowance);
+            drop.pks.insert(&signer_pk, &key_info);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return false;
+        }
+
+        // Ensure the end timestamp hasn't passed and the key is still usable
+        let desired_end_timestamp = drop
+            .config
+            .clone()
+            .and_then(|c| c.end_timestamp)
+            .unwrap_or(u64::MAX);
+        if current_timestamp > desired_end_timestamp {
+            let used_gas = env::used_gas();
+
+            let amount_to_decrement =
+                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            near_sdk::log!("Drop claim period passed. Claimable up until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}", desired_end_timestamp, current_timestamp, amount_to_decrement, used_gas.0);
+
+            key_info.allowance -= amount_to_decrement;
+            near_sdk::log!("Allowance is now {}", key_info.allowance);
+            drop.pks.insert(&signer_pk, &key_info);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return false;
+        }
+
+        // Ensure the key is within the interval if specified
+        if let Some(interval) = drop.config.clone().and_then(|c| c.throttle_timestamp) {
+            near_sdk::log!(
+                "Current timestamp {} last used: {} subs: {} interval: {}",
+                current_timestamp,
+                key_info.last_used,
+                current_timestamp - key_info.last_used,
+                interval
+            );
+
+            if (current_timestamp - key_info.last_used) < interval {
+                let used_gas = env::used_gas();
+
+                let amount_to_decrement =
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                near_sdk::log!("Not enough time has passed since the key was last used. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return false;
+            }
+
+            near_sdk::log!("Enough time has passed for key to be used. Setting last used to current timestamp {}", current_timestamp);
+            key_info.last_used = current_timestamp;
+        }
+
+        // Ensure the key is within the claim interval if specified
+        if let Some(interval) = drop.config.clone().and_then(|c| c.claim_interval) {
+            let start_timestamp = drop.config.clone().and_then(|c| c.start_timestamp).unwrap();
+            let total_num_claims = (env::block_timestamp() - start_timestamp) / interval;
+            let uses_per_key = drop.config.clone().and_then(|c| c.uses_per_key).unwrap_or(0);
+            let claims_left = total_num_claims + key_info.remaining_uses - uses_per_key ;
+           
+            near_sdk::log!(
+                "Current timestamp {} start timestamp: {} claim interval: {} total num claims: {} total uses per key: {} remaining uses: {} num remaining claims: {}",
+                current_timestamp,
+                start_timestamp,
+                interval,
+                total_num_claims,
+                uses_per_key,
+                key_info.remaining_uses,
+                claims_left
+            );
+
+            if claims_left < 1 {
+                let used_gas = env::used_gas();
+
+                let amount_to_decrement =
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                near_sdk::log!("Not enough time has passed before the key can be used. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return false;
+            }
+        }
+
+        true
     }
 
     /// Internal function to register Keypom on a given FT contract
