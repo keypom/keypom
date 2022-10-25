@@ -24,8 +24,7 @@ pub enum ClaimPermissions {
 }
 
 /// Keep track of different configuration options for each key in a drop
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct KeyInfo {
     // How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: u64,
@@ -38,6 +37,12 @@ pub struct KeyInfo {
 
     // Nonce for the current key.
     pub key_id: u64,
+
+    // Password for each use for this specific key
+    pub pw_per_use: Option<LookupMap<u64, Option<String>>>,
+
+    // Password for the key regardless of the use
+    pub pw_per_key: Option<String>,
 }
 
 /// Keep track of different configuration options for each key in a drop

@@ -566,7 +566,7 @@ impl Keypom {
         // Panic doesn't affect allowance
         let mut key_info = drop.pks.remove(&signer_pk).unwrap();
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
-        let current_key_info = key_info.clone();
+        let current_key_info = key_info;
 
         // Ensure the key has enough allowance
         if key_info.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas {

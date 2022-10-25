@@ -505,6 +505,7 @@ mod stage1;
 mod stage2;
 mod stage3;
 mod views;
+mod json_types;
 
 use internals::*;
 use stage1::*;
