@@ -15,7 +15,7 @@ export const nftMetadata = {
     "copies": 1000,
 }
 
-export const injected_fields = {
+export const keypom_args = {
     "account_id_field": "receiver_id",
     "drop_id_field": "mint_id"
 }
@@ -49,7 +49,7 @@ export async function mintNFTs(
             { 
                 mint_id: mintId, 
                 receiver_id: minter, 
-                injected_fields,
+                keypom_args,
             }, 
             { attachedDeposit: NEAR.parse("1").toString() }
         );

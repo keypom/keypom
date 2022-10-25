@@ -320,7 +320,7 @@ test('Force Injecting Fields Attack', async t => {
                     args: JSON.stringify({
                         mint_id: "0",
                         receiver_id: ali.accountId,
-                        injected_fields: {
+                        keypom_args: {
                             account_id_field: "receiver_id",
                             drop_id_field: "mint_id"
                         }
