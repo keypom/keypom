@@ -89,6 +89,11 @@ impl Keypom {
     }
 
     /// Internal function to assert that the predecessor is the contract owner
+    pub(crate) fn assert_passwords(&mut self) {
+        
+    }
+
+    /// Internal function to assert that the predecessor is the contract owner
     pub(crate) fn assert_claim_timestamps(&mut self, drop_id: DropId, drop: &mut Drop, key_info: &mut KeyInfo, signer_pk: &PublicKey) -> bool {
         // Ensure enough time has passed if a start timestamp was specified in the config.
         let current_timestamp = env::block_timestamp();
@@ -316,7 +321,8 @@ impl Keypom {
         &mut self,
         drop_data: Drop,
         drop_id: DropId,
-        cur_key_info: KeyInfo,
+        cur_key_id: u64,
+        remaining_uses: u64,
         account_id: AccountId,
         storage_freed: u128,
         token_id: Option<String>,
@@ -363,8 +369,10 @@ impl Keypom {
                     data,
                     // Drop ID
                     drop_id,
-                    // Current number of claims left on the key before decrementing
-                    cur_key_info,
+                    // ID for the current key
+                    cur_key_id,
+                    // How many uses are remaining on the current key
+                    remaining_uses,
                     // Maximum number of claims
                     drop_data.config.and_then(|c| c.uses_per_key).unwrap_or(1),
                     // Is it an auto withdraw case

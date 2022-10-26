@@ -40,7 +40,7 @@ pub struct JsonDrop {
     pub next_key_id: u64,
 }
 
-/// Keep track of nft data
+/// NFT Data that is serializable
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonNFTData {
@@ -48,12 +48,32 @@ pub struct JsonNFTData {
     pub contract_id: AccountId,
 }
 
+/// FT Data to be passed in by the user
+#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct JsonFTData {
+    pub contract_id: AccountId,
+    pub sender_id: AccountId,
+    pub balance_per_use: U128,
+}
+
 /// Struct to return in views to query for specific data related to an access key.
-#[derive(BorshDeserialize, BorshSerialize, Serialize)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonKeyInfo {
     // Drop ID for the specific drop
     pub drop_id: DropId,
     pub pk: PublicKey,
-    pub key_info: KeyInfo,
+
+    // How many uses this key has left. Once 0 is reached, the key is deleted
+    pub remaining_uses: u64,
+
+    // When was the last time the key was used
+    pub last_used: u64,
+
+    // How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.
+    pub allowance: u128,
+
+    // Nonce for the current key.
+    pub key_id: u64,
 }

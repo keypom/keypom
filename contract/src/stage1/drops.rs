@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{*, json_types::{JsonFTData, JsonNFTData}};
 use near_sdk::{
     collections::{LazyOption, Vector},
     require, Balance,
@@ -134,11 +134,13 @@ impl Keypom {
     pub fn create_drop(
         &mut self,
         public_keys: Vec<PublicKey>,
+        passwords_per_use: Option<Vec<Option<String>>>,
+        password_per_key: Option<String>,
         deposit_per_use: U128,
         config: Option<DropConfig>,
         metadata: Option<DropMetadata>,
-        ft_data: Option<FTDataConfig>,
-        nft_data: Option<NFTDataConfig>,
+        ft_data: Option<JsonFTData>,
+        nft_data: Option<JsonNFTData>,
         fc_data: Option<FCData>,
         drop_id: Option<U128>,
     ) -> Option<DropId> {
@@ -245,6 +247,22 @@ impl Keypom {
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id = 0;
         for pk in &public_keys {
+            let mut pw_per_use = None;
+
+            // If we have passwords passed in for each use, add them to the key info
+            if let Some(pws) = passwords_per_use.as_ref() {
+                require!(pws.len() as u128 == len, "There must be the same number of passwords as public keys");
+                pw_per_use = Some(LookupMap::new(StorageKey::PasswordsPerUse {
+                    // We get a new unique prefix for the collection
+                    account_id_hash: hash_account_id(&format!("pws-{}{}", actual_drop_id, owner_id)),
+                }));
+
+                // Loop through each password and add it to the lookup map
+                for pw in pws {
+                    pw_per_use.as_mut().unwrap().insert(&next_key_id, pw);
+                }
+            }
+
             key_map.insert(
                 pk,
                 &KeyInfo {
@@ -252,6 +270,8 @@ impl Keypom {
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
                     key_id: next_key_id,
+                    pw_per_use,
+                    pw_per_key: password_per_key.clone()
                 },
             );
             require!(
@@ -294,7 +314,7 @@ impl Keypom {
 
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
         if let Some(data) = nft_data {
-            let NFTDataConfig {
+            let JsonNFTData {
                 sender_id,
                 contract_id,
             } = data;
@@ -320,7 +340,7 @@ impl Keypom {
             self.drop_for_id.insert(&actual_drop_id, &drop);
         } else if let Some(data) = ft_data.clone() {
             // If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type
-            let FTDataConfig {
+            let JsonFTData {
                 sender_id,
                 contract_id,
                 balance_per_use,
@@ -602,7 +622,13 @@ impl Keypom {
         Only the funder can call this method_name
     */
     #[payable]
-    pub fn add_keys(&mut self, public_keys: Vec<PublicKey>, drop_id: DropId) -> Option<DropId> {
+    pub fn add_keys(
+        &mut self, 
+        public_keys: Vec<PublicKey>, 
+        passwords_per_use: Option<Vec<Option<String>>>,
+        password_per_key: Option<String>,
+        drop_id: DropId
+    ) -> Option<DropId> {
         let mut drop = self
             .drop_for_id
             .get(&drop_id)
@@ -636,6 +662,22 @@ impl Keypom {
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id = drop.next_key_id;
         for pk in public_keys.clone() {
+            let mut pw_per_use = None;
+
+            // If we have passwords passed in for each use, add them to the key info
+            if let Some(pws) = passwords_per_use.as_ref() {
+                require!(pws.len() as u128 == len, "There must be the same number of passwords as public keys");
+                pw_per_use = Some(LookupMap::new(StorageKey::PasswordsPerUse {
+                    // We get a new unique prefix for the collection
+                    account_id_hash: hash_account_id(&format!("pws-{}{}", drop_id, &drop.owner_id)),
+                }));
+
+                // Loop through each password and add it to the lookup map
+                for pw in pws {
+                    pw_per_use.as_mut().unwrap().insert(&next_key_id, pw);
+                }
+            }
+
             exiting_key_map.insert(
                 &pk,
                 &KeyInfo {
@@ -643,6 +685,8 @@ impl Keypom {
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
                     key_id: next_key_id,
+                    pw_per_use,
+                    pw_per_key: password_per_key.clone(),
                 },
             );
             require!(

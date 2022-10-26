@@ -510,6 +510,7 @@ mod json_types;
 use internals::*;
 use stage1::*;
 use stage2::*;
+use json_types::*;
 
 /// Contract metadata structure
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -528,6 +529,7 @@ enum StorageKey {
     DropIdsForFunder,
     DropIdsForFunderInner { account_id_hash: CryptoHash },
     PksForDrop { account_id_hash: CryptoHash },
+    PasswordsPerUse { account_id_hash: CryptoHash },
     DropMetadata { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
     FeesPerUser,
