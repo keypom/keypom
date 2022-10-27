@@ -135,7 +135,7 @@ impl Keypom {
         &mut self,
         public_keys: Vec<PublicKey>,
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
-        password_per_key: Option<String>,
+        passwords_per_key: Option<Vec<Option<String>>>,
         deposit_per_use: U128,
         config: Option<DropConfig>,
         metadata: Option<DropMetadata>,
@@ -148,11 +148,6 @@ impl Keypom {
         let initial_storage = env::storage_usage();
 
         let mut actual_drop_id = self.next_drop_id;
-
-        near_sdk::log!(
-            "PW PER USE {:?}",
-            passwords_per_use
-        );
 
         if let Some(id) = drop_id {
             require!(
@@ -172,14 +167,6 @@ impl Keypom {
         require!(
             num_cbs_specified <= 1,
             "You cannot specify more than one callback data"
-        );
-
-        // Ensure the user has only specified either global or local but not BOTH passwords
-        let num_pw_specified =
-            password_per_key.is_some() as u8 + passwords_per_use.is_some() as u8;
-        require!(
-            num_pw_specified <= 1,
-            "You cannot specify both passwords per key AND passwords per use"
         );
 
         // Warn if the balance for each drop is less than the minimum
@@ -257,12 +244,15 @@ impl Keypom {
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
 
-        require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be less than or equal to the number of public keys");
+        require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be equal to the number of public keys");
+        require!(passwords_per_key.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per key must be equal to the number of public keys");
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = 0;
         for pk in &public_keys {
-            let mut pw_per_use = None;
+            let pw_per_key = passwords_per_key.clone().and_then(|f| f[next_key_id as usize].clone()).map(|h| hex::decode(h).unwrap());
+            near_sdk::log!("Password for key {} : {:?}", next_key_id, pw_per_key);
 
+            let mut pw_per_use = None;
             // If we have passwords for this specific key, add them to the key info
             if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[next_key_id as usize].as_ref()) {
                 
@@ -281,6 +271,8 @@ impl Keypom {
                 pw_per_use = Some(pw_map);
             }
 
+            require!(pw_per_use.is_some() as u8 + pw_per_key.is_some() as u8 <= 1, "You cannot specify both local and global passwords for a key");
+
             key_map.insert(
                 pk,
                 &KeyInfo {
@@ -289,7 +281,7 @@ impl Keypom {
                     allowance: actual_allowance,
                     key_id: next_key_id,
                     pw_per_use,
-                    pw_per_key: password_per_key.clone().map(|f| hex::decode(f).unwrap())
+                    pw_per_key, 
                 },
             );
             require!(
@@ -644,12 +636,12 @@ impl Keypom {
         &mut self, 
         public_keys: Vec<PublicKey>, 
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
-        password_per_key: Option<String>,
-        drop_id: DropId
+        passwords_per_key: Option<Vec<Option<String>>>,
+        drop_id: U128
     ) -> Option<DropId> {
         let mut drop = self
             .drop_for_id
-            .get(&drop_id)
+            .get(&drop_id.0)
             .expect("no drop found for ID");
         let config = &drop.config;
         let funder = &drop.owner_id;
@@ -660,15 +652,6 @@ impl Keypom {
         );
 
         let len = public_keys.len() as u128;
-
-        // Ensure the user has only specified either global or local but not BOTH passwords
-        let num_pw_specified =
-            password_per_key.is_some() as u8 + passwords_per_use.is_some() as u8;
-        require!(
-            num_pw_specified <= 1,
-            "You cannot specify both passwords per key AND passwords per use"
-        );
-
         /*
             Add data to storage
         */
@@ -687,17 +670,21 @@ impl Keypom {
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
         
         require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be less than or equal to the number of public keys");
+        require!(passwords_per_key.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per key must be equal to the number of public keys");
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = drop.next_key_id;
+        let mut idx = 0;
         for pk in &public_keys {
-            let mut pw_per_use = None;
+            let pw_per_key = passwords_per_key.clone().and_then(|f| f[idx as usize].clone()).map(|f| hex::decode(f).unwrap());
+            near_sdk::log!("Password for key {} : {:?}", next_key_id, pw_per_key);
 
+            let mut pw_per_use = None;
             // If we have passwords for this specific key, add them to the key info
-            if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[next_key_id as usize].as_ref()) {
+            if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[idx as usize].as_ref()) {
                 
                 let mut pw_map = LookupMap::new(StorageKey::PasswordsPerUse {
                     // We get a new unique prefix for the collection
-                    account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, drop_id, drop.owner_id)),
+                    account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, drop_id.0, drop.owner_id)),
                 });
 
                 // Loop through each password and add it to the lookup map
@@ -710,6 +697,8 @@ impl Keypom {
                 pw_per_use = Some(pw_map);
             }
 
+            require!(pw_per_use.is_some() as u8 + pw_per_key.is_some() as u8 <= 1, "You cannot specify both local and global passwords for a key");
+
             exiting_key_map.insert(
                 &pk,
                 &KeyInfo {
@@ -718,14 +707,15 @@ impl Keypom {
                     allowance: actual_allowance,
                     key_id: next_key_id,
                     pw_per_use,
-                    pw_per_key: password_per_key.clone().map(|f| hex::decode(f).unwrap())
+                    pw_per_key,
                 },
             );
             require!(
-                self.drop_id_for_pk.insert(&pk, &drop_id).is_none(),
+                self.drop_id_for_pk.insert(&pk, &drop_id.0).is_none(),
                 "Keys cannot belong to another drop"
             );
             next_key_id += 1;
+            idx += 1;
         }
 
         // Set the drop's PKs to the newly populated set
@@ -765,7 +755,7 @@ impl Keypom {
         };
 
         // Add the drop back in for the drop ID
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_for_id.insert(&drop_id.0, &drop);
 
         // Get the current balance of the funder.
         let mut current_user_balance = self
@@ -918,7 +908,7 @@ impl Keypom {
             }
 
             // Remove the drop
-            self.internal_remove_drop(&drop_id, public_keys);
+            self.internal_remove_drop(&drop_id.0, public_keys);
             // Return early
             return None;
         }
@@ -954,6 +944,6 @@ impl Keypom {
 
         env::promise_return(promise);
 
-        Some(drop_id)
+        Some(drop_id.0)
     }
 }

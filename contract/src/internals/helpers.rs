@@ -104,18 +104,21 @@ impl Keypom {
         near_sdk::log!("hashed password: {:?}", hashed);
 
         // If there is a global password per key, check that first
-        if key_info.pw_per_key.as_ref().and_then(|pw| {near_sdk::log!("pass: {:?}", pw); Some(pw != &hashed)}).unwrap_or(false) {
-            let used_gas = env::used_gas();
+        if let Some(pw) = &key_info.pw_per_key {
+            near_sdk::log!("global password: {:?}", pw);
+            if pw != &hashed {
+                let used_gas = env::used_gas();
 
-            let amount_to_decrement =
-                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-            near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
-
-            key_info.allowance -= amount_to_decrement;
-            near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(&signer_pk, &key_info);
-            self.drop_for_id.insert(&drop_id, &drop);
-            return false;
+                let amount_to_decrement =
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+    
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return false;
+            }
         }
 
         near_sdk::log!("passed global check");

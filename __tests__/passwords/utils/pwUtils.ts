@@ -12,11 +12,16 @@ export function hash(string: string, double=false) {
 
 export function generateGlobalPasswords(
     pubKeys: string[],
+    keysWithPws: string[],
     basePassword: string,
-): string[]  {
-    let passwords: string[] = [];
-    for (var key in pubKeys) {
-        passwords.push(hash(hash(basePassword + key), true));
+): Array<string | undefined>  {
+    let passwords: Array<string | undefined> = [];
+    for (var i = 0; i < pubKeys.length; i++) {
+        if (keysWithPws.includes(pubKeys[i])) {
+            passwords.push(hash(hash(basePassword + pubKeys[i]), true));
+        } else {
+            passwords.push(undefined);
+        }
     }
     return passwords;
 }
@@ -24,29 +29,30 @@ export function generateGlobalPasswords(
 export function generateLocalPasswords(
     // All pubKeys
     pubKeys: string[],
-    keysWithPws: string[],
-    usesWithPws: number[],
+    // Keys with passwords
+    keysWithPws: { [key: string]: number[] },
     basePassword: string
 ): Array<Array<{ pw: string; key_use: number } | undefined> | undefined> {
     let passwords: Array<Array<{ pw: string; key_use: number } | undefined> | undefined> = [];
     
+    // Loop through each pubKey to generate either the password or null
     for (var i = 0; i < pubKeys.length; i++) {
-        console.log('i: ', i)
-        if (keysWithPws.includes(pubKeys[i])) {
+        // If the key has a password
+        if (Object.keys(keysWithPws).includes(pubKeys[i])) {
             let passwordsPerUse: Array<{ pw: string; key_use: number }> = [];
-            for (var use in usesWithPws) {
-                console.log('use: ', use)
-                console.log("INNER HASH: ", hash(basePassword + pubKeys[i] + use.toString()))
+            // Key has passwords per use so we should add all of them
+            let keyUses = keysWithPws[pubKeys[i]];
+            for (var j = 0; j < keyUses.length; j++) {
                 let jsonPw = {
-                    pw: hash(hash(basePassword + pubKeys[i] + use.toString()), true),
-                    key_use: parseInt(use)
+                    pw: hash(hash(basePassword + pubKeys[i] + keyUses[j].toString()), true),
+                    key_use: keyUses[j]
                 }
-                console.log('jsonPw: ', jsonPw)
                 passwordsPerUse.push(jsonPw);
             }
             passwords.push(passwordsPerUse);
+
+        // Key has no password so we push undefined
         } else {
-            console.log('undefined')
             passwords.push(undefined);
         }
     }
