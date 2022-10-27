@@ -1,4 +1,4 @@
-use near_sdk::{json_types::Base64VecU8, env::sha256};
+use near_sdk::{env::sha256};
 
 use crate::*;
 
@@ -92,16 +92,17 @@ impl Keypom {
 
     /// Internal function to assert that the predecessor is the contract owner
     pub(crate) fn assert_key_password(&mut self, 
-        pw: Option<Base64VecU8>, 
+        pw: Option<String>, 
         drop_id: DropId, 
         drop: &mut Drop, 
         key_info: &mut KeyInfo,
         cur_use: &u64,
         signer_pk: &PublicKey
     ) -> bool {
-        let hashed = Base64VecU8::from(sha256(&pw.unwrap_or(Base64VecU8::from([0u8; 32].to_vec())).0));
+        let hashed = sha256(&pw.and_then(|f| hex::decode(f).ok()).unwrap_or(vec![]));
 
         near_sdk::log!("hashed password: {:?}", hashed);
+
         // If there is a global password per key, check that first
         if key_info.pw_per_key.as_ref().and_then(|pw| {near_sdk::log!("pass: {:?}", pw); Some(pw != &hashed)}).unwrap_or(false) {
             let used_gas = env::used_gas();

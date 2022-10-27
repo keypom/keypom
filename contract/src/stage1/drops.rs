@@ -1,7 +1,7 @@
 use crate::{*, json_types::{JsonFTData, JsonNFTData}};
 use near_sdk::{
     collections::{LazyOption, Vector},
-    require, Balance, json_types::Base64VecU8,
+    require, Balance,
 };
 
 pub type DropId = u128;
@@ -39,10 +39,10 @@ pub struct KeyInfo {
     pub key_id: u64,
 
     // Password for each use for this specific key
-    pub pw_per_use: Option<LookupMap<u64, Base64VecU8>>,
+    pub pw_per_use: Option<LookupMap<u64, Vec<u8>>>,
 
     // Password for the key regardless of the use
-    pub pw_per_key: Option<Base64VecU8>,
+    pub pw_per_key: Option<Vec<u8>>,
 }
 
 /// Keep track of different configuration options for each key in a drop
@@ -135,7 +135,7 @@ impl Keypom {
         &mut self,
         public_keys: Vec<PublicKey>,
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
-        password_per_key: Option<Base64VecU8>,
+        password_per_key: Option<String>,
         deposit_per_use: U128,
         config: Option<DropConfig>,
         metadata: Option<DropMetadata>,
@@ -275,7 +275,7 @@ impl Keypom {
                 for pw in pws {
                     require!(pw.key_use < num_claims_per_key, "claim out of range for password");
                     near_sdk::log!("Adding password for use {} : {:?} for key: {}", pw.key_use, pw.pw, next_key_id);
-                    pw_map.insert(&pw.key_use, &pw.pw);
+                    pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
                 }
 
                 pw_per_use = Some(pw_map);
@@ -289,7 +289,7 @@ impl Keypom {
                     allowance: actual_allowance,
                     key_id: next_key_id,
                     pw_per_use,
-                    pw_per_key: password_per_key.clone()
+                    pw_per_key: password_per_key.clone().map(|f| hex::decode(f).unwrap())
                 },
             );
             require!(
@@ -644,7 +644,7 @@ impl Keypom {
         &mut self, 
         public_keys: Vec<PublicKey>, 
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
-        password_per_key: Option<Base64VecU8>,
+        password_per_key: Option<String>,
         drop_id: DropId
     ) -> Option<DropId> {
         let mut drop = self
@@ -704,7 +704,7 @@ impl Keypom {
                 for pw in pws {
                     require!(pw.key_use < num_claims_per_key, "claim out of range for password");
                     near_sdk::log!("Adding password for use {} : {:?} for key: {}", pw.key_use, pw.pw, next_key_id);
-                    pw_map.insert(&pw.key_use, &pw.pw);
+                    pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
                 }
 
                 pw_per_use = Some(pw_map);
@@ -718,7 +718,7 @@ impl Keypom {
                     allowance: actual_allowance,
                     key_id: next_key_id,
                     pw_per_use,
-                    pw_per_key: password_per_key.clone(),
+                    pw_per_key: password_per_key.clone().map(|f| hex::decode(f).unwrap())
                 },
             );
             require!(

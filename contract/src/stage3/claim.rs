@@ -1,11 +1,9 @@
-use near_sdk::json_types::Base64VecU8;
-
 use crate::*;
 
 #[near_bindgen]
 impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: AccountId, password: Option<Base64VecU8>) {
+    pub fn claim(&mut self, account_id: AccountId, password: Option<String>) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
         let (
             drop_data_option,
@@ -79,7 +77,7 @@ impl Keypom {
         &mut self,
         new_account_id: AccountId,
         new_public_key: PublicKey,
-        password: Option<Base64VecU8>
+        password: Option<String>
     ) {
         let (
             drop_data_option,
@@ -522,7 +520,7 @@ impl Keypom {
     /// If drop is none, simulate a panic.
     fn process_claim(
         &mut self,
-        password: Option<Base64VecU8>,
+        password: Option<String>,
     ) -> (
         // Drop containing all data
         Option<Drop>,

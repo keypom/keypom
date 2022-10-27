@@ -2,12 +2,12 @@ import { KeyPair, NEAR, NearAccount, PublicKey } from "near-workspaces";
 import { generateKeyPairs, LARGE_GAS } from "../../utils/general";
 import { createHash } from "crypto";
 
-export function hash(string: string) {
-    let h1 = createHash('sha256').update(string).digest('base64');
-    console.log('h1: ', h1)
-    let h2 = btoa(string);
-    console.log('h2: ', h2)
-    return h2
+export function hash(string: string, double=false) {
+    if (double) {
+        return createHash('sha256').update(Buffer.from(string, 'hex')).digest('hex');
+    }
+
+    return createHash('sha256').update(Buffer.from(string)).digest('hex');
 }
 
 export function generateGlobalPasswords(
@@ -16,7 +16,7 @@ export function generateGlobalPasswords(
 ): string[]  {
     let passwords: string[] = [];
     for (var key in pubKeys) {
-        passwords.push(hash(hash(basePassword + key)));
+        passwords.push(hash(hash(basePassword + key), true));
     }
     return passwords;
 }
@@ -36,8 +36,9 @@ export function generateLocalPasswords(
             let passwordsPerUse: Array<{ pw: string; key_use: number }> = [];
             for (var use in usesWithPws) {
                 console.log('use: ', use)
+                console.log("INNER HASH: ", hash(basePassword + pubKeys[i] + use.toString()))
                 let jsonPw = {
-                    pw: hash(hash(basePassword + pubKeys[i] + use.toString())),
+                    pw: hash(hash(basePassword + pubKeys[i] + use.toString()), true),
                     key_use: parseInt(use)
                 }
                 console.log('jsonPw: ', jsonPw)

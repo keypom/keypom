@@ -454,6 +454,7 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 name = "keypom"
 version = "1.0.0"
 dependencies = [
+ "hex",
  "near-sdk",
 ]
 
