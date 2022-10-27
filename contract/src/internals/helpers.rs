@@ -1,3 +1,5 @@
+use near_sdk::{json_types::Base64VecU8, env::sha256};
+
 use crate::*;
 
 const GAS_PER_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas
@@ -89,8 +91,59 @@ impl Keypom {
     }
 
     /// Internal function to assert that the predecessor is the contract owner
-    pub(crate) fn assert_passwords(&mut self) {
-        
+    pub(crate) fn assert_key_password(&mut self, 
+        pw: Option<Base64VecU8>, 
+        drop_id: DropId, 
+        drop: &mut Drop, 
+        key_info: &mut KeyInfo,
+        cur_use: &u64,
+        signer_pk: &PublicKey
+    ) -> bool {
+        let hashed = Base64VecU8::from(sha256(&pw.unwrap_or(Base64VecU8::from([0u8; 32].to_vec())).0));
+
+        near_sdk::log!("hashed password: {:?}", hashed);
+        // If there is a global password per key, check that first
+        if key_info.pw_per_key.as_ref().and_then(|pw| {near_sdk::log!("pass: {:?}", pw); Some(pw != &hashed)}).unwrap_or(false) {
+            let used_gas = env::used_gas();
+
+            let amount_to_decrement =
+                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+
+            key_info.allowance -= amount_to_decrement;
+            near_sdk::log!("Allowance is now {}", key_info.allowance);
+            drop.pks.insert(&signer_pk, &key_info);
+            self.drop_for_id.insert(&drop_id, &drop);
+            return false;
+        }
+
+        near_sdk::log!("passed global check");
+
+        // If there is ALSO a password per use, check that as well.
+        if let Some(pw) = &key_info.pw_per_use {
+            let actual_pass = pw.get(cur_use).unwrap_or(hashed.clone());
+
+            near_sdk::log!("actualPass password: {:?} cur use: {}", actual_pass, cur_use);
+
+            if actual_pass != hashed {
+                let used_gas = env::used_gas();
+
+                let amount_to_decrement =
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+    
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return false;
+            }
+        }
+
+        near_sdk::log!("passed local check");
+
+        // Otherwise return true
+        true
     }
 
     /// Internal function to assert that the predecessor is the contract owner

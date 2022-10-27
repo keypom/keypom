@@ -1,7 +1,7 @@
 use crate::{*, json_types::{JsonFTData, JsonNFTData}};
 use near_sdk::{
     collections::{LazyOption, Vector},
-    require, Balance,
+    require, Balance, json_types::Base64VecU8,
 };
 
 pub type DropId = u128;
@@ -39,10 +39,10 @@ pub struct KeyInfo {
     pub key_id: u64,
 
     // Password for each use for this specific key
-    pub pw_per_use: Option<LookupMap<u64, Option<String>>>,
+    pub pw_per_use: Option<LookupMap<u64, Base64VecU8>>,
 
     // Password for the key regardless of the use
-    pub pw_per_key: Option<String>,
+    pub pw_per_key: Option<Base64VecU8>,
 }
 
 /// Keep track of different configuration options for each key in a drop
@@ -134,8 +134,8 @@ impl Keypom {
     pub fn create_drop(
         &mut self,
         public_keys: Vec<PublicKey>,
-        passwords_per_use: Option<Vec<Option<String>>>,
-        password_per_key: Option<String>,
+        passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
+        password_per_key: Option<Base64VecU8>,
         deposit_per_use: U128,
         config: Option<DropConfig>,
         metadata: Option<DropMetadata>,
@@ -148,6 +148,11 @@ impl Keypom {
         let initial_storage = env::storage_usage();
 
         let mut actual_drop_id = self.next_drop_id;
+
+        near_sdk::log!(
+            "PW PER USE {:?}",
+            passwords_per_use
+        );
 
         if let Some(id) = drop_id {
             require!(
@@ -167,6 +172,14 @@ impl Keypom {
         require!(
             num_cbs_specified <= 1,
             "You cannot specify more than one callback data"
+        );
+
+        // Ensure the user has only specified either global or local but not BOTH passwords
+        let num_pw_specified =
+            password_per_key.is_some() as u8 + passwords_per_use.is_some() as u8;
+        require!(
+            num_pw_specified <= 1,
+            "You cannot specify both passwords per key AND passwords per use"
         );
 
         // Warn if the balance for each drop is less than the minimum
@@ -244,23 +257,28 @@ impl Keypom {
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
 
+        require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be less than or equal to the number of public keys");
         // Loop through and add each drop ID to the public keys. Also populate the key set.
-        let mut next_key_id = 0;
+        let mut next_key_id: u64 = 0;
         for pk in &public_keys {
             let mut pw_per_use = None;
 
-            // If we have passwords passed in for each use, add them to the key info
-            if let Some(pws) = passwords_per_use.as_ref() {
-                require!(pws.len() as u128 == len, "There must be the same number of passwords as public keys");
-                pw_per_use = Some(LookupMap::new(StorageKey::PasswordsPerUse {
+            // If we have passwords for this specific key, add them to the key info
+            if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[next_key_id as usize].as_ref()) {
+                
+                let mut pw_map = LookupMap::new(StorageKey::PasswordsPerUse {
                     // We get a new unique prefix for the collection
-                    account_id_hash: hash_account_id(&format!("pws-{}{}", actual_drop_id, owner_id)),
-                }));
+                    account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, actual_drop_id, owner_id)),
+                });
 
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
-                    pw_per_use.as_mut().unwrap().insert(&next_key_id, pw);
+                    require!(pw.key_use < num_claims_per_key, "claim out of range for password");
+                    near_sdk::log!("Adding password for use {} : {:?} for key: {}", pw.key_use, pw.pw, next_key_id);
+                    pw_map.insert(&pw.key_use, &pw.pw);
                 }
+
+                pw_per_use = Some(pw_map);
             }
 
             key_map.insert(
@@ -625,8 +643,8 @@ impl Keypom {
     pub fn add_keys(
         &mut self, 
         public_keys: Vec<PublicKey>, 
-        passwords_per_use: Option<Vec<Option<String>>>,
-        password_per_key: Option<String>,
+        passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
+        password_per_key: Option<Base64VecU8>,
         drop_id: DropId
     ) -> Option<DropId> {
         let mut drop = self
@@ -642,6 +660,14 @@ impl Keypom {
         );
 
         let len = public_keys.len() as u128;
+
+        // Ensure the user has only specified either global or local but not BOTH passwords
+        let num_pw_specified =
+            password_per_key.is_some() as u8 + passwords_per_use.is_some() as u8;
+        require!(
+            num_pw_specified <= 1,
+            "You cannot specify both passwords per key AND passwords per use"
+        );
 
         /*
             Add data to storage
@@ -659,23 +685,29 @@ impl Keypom {
         let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
+        
+        require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be less than or equal to the number of public keys");
         // Loop through and add each drop ID to the public keys. Also populate the key set.
-        let mut next_key_id = drop.next_key_id;
-        for pk in public_keys.clone() {
+        let mut next_key_id: u64 = drop.next_key_id;
+        for pk in &public_keys {
             let mut pw_per_use = None;
 
-            // If we have passwords passed in for each use, add them to the key info
-            if let Some(pws) = passwords_per_use.as_ref() {
-                require!(pws.len() as u128 == len, "There must be the same number of passwords as public keys");
-                pw_per_use = Some(LookupMap::new(StorageKey::PasswordsPerUse {
+            // If we have passwords for this specific key, add them to the key info
+            if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[next_key_id as usize].as_ref()) {
+                
+                let mut pw_map = LookupMap::new(StorageKey::PasswordsPerUse {
                     // We get a new unique prefix for the collection
-                    account_id_hash: hash_account_id(&format!("pws-{}{}", drop_id, &drop.owner_id)),
-                }));
+                    account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, drop_id, drop.owner_id)),
+                });
 
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
-                    pw_per_use.as_mut().unwrap().insert(&next_key_id, pw);
+                    require!(pw.key_use < num_claims_per_key, "claim out of range for password");
+                    near_sdk::log!("Adding password for use {} : {:?} for key: {}", pw.key_use, pw.pw, next_key_id);
+                    pw_map.insert(&pw.key_use, &pw.pw);
                 }
+
+                pw_per_use = Some(pw_map);
             }
 
             exiting_key_map.insert(

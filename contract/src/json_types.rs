@@ -1,3 +1,5 @@
+use near_sdk::json_types::Base64VecU8;
+
 use crate::*;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
@@ -76,4 +78,14 @@ pub struct JsonKeyInfo {
 
     // Nonce for the current key.
     pub key_id: u64,
+}
+
+/// Struct to pass in for passwords pertaining to a specific use
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize, Debug, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct JsonPasswordForUse {
+    // What is the password for this use
+    pub pw: Base64VecU8,
+    // Which use does this pertain to
+    pub key_use: u64
 }

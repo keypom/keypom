@@ -1,9 +1,11 @@
+use near_sdk::json_types::Base64VecU8;
+
 use crate::*;
 
 #[near_bindgen]
 impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: AccountId, expected_uses: Option<u64>) {
+    pub fn claim(&mut self, account_id: AccountId, password: Option<Base64VecU8>) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
         let (
             drop_data_option,
@@ -14,7 +16,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(expected_uses);
+        ) = self.process_claim(password);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -77,7 +79,7 @@ impl Keypom {
         &mut self,
         new_account_id: AccountId,
         new_public_key: PublicKey,
-        expected_uses: Option<u64>,
+        password: Option<Base64VecU8>
     ) {
         let (
             drop_data_option,
@@ -88,7 +90,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(expected_uses);
+        ) = self.process_claim(password);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -520,7 +522,7 @@ impl Keypom {
     /// If drop is none, simulate a panic.
     fn process_claim(
         &mut self,
-        expected_uses: Option<u64>,
+        password: Option<Base64VecU8>,
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -592,20 +594,17 @@ impl Keypom {
             return (None, None, None, None, false, 0, 0, false);
         }
 
-        // If the key info doesn't match the expected uses, soft panic
-        if let Some(uses) = expected_uses {
-            if key_info.remaining_uses != uses {
-                let amount_to_decrement =
-                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-                near_sdk::log!("Expected key uses of {}. Found: {}. Decrementing allowance by {}. Used GAS: {}", uses, key_info.remaining_uses, amount_to_decrement, used_gas.0);
+        // If a password was passed in, check it against the key's password
+        let cur_use = &(drop
+        .config
+        .clone()
+        .and_then(|c| c.uses_per_key)
+        .unwrap_or(1)
+        - key_info.remaining_uses);
 
-                key_info.allowance -= amount_to_decrement;
-                near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
-                self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, false, 0, 0, false);
-            }
-        }
+        if self.assert_key_password(password, drop_id, &mut drop, &mut key_info, cur_use, &signer_pk) == false {
+            return (None, None, None, None, false, 0, 0, false);
+        };
 
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
         if drop.registered_uses < 1 || prepaid_gas != drop.required_gas {
