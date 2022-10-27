@@ -50,7 +50,7 @@ let fc_data = {
 			method_name: "nft_mint",
 			args: JSON.stringify({
 				"foo": "bar",
-				"injected_field": {
+				"keypom_args": {
 					"account_id_field": "receiver_id",
 					"drop_id_field" : "mint_id"
 				}

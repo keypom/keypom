@@ -47,10 +47,10 @@ pub struct FCData {
     pub config: Option<FCConfig>,
 }
 
-/// Injected Fields struct to be sent to external contracts
+/// Keypom Args struct to be sent to external contracts
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
-pub struct InjectedFields {
+pub struct KeypomArgs {
     pub account_id_field: Option<String>,
     pub drop_id_field: Option<String>,
     pub key_id_field: Option<String>,
@@ -73,7 +73,7 @@ impl Keypom {
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
         for method in methods {
-            let injected_fields = InjectedFields {
+            let keypom_args = KeypomArgs {
                 account_id_field: method.account_id_field.clone(),
                 drop_id_field: method.drop_id_field.clone(),
                 key_id_field: method.key_id_field.clone(),
@@ -81,24 +81,24 @@ impl Keypom {
 
             let mut final_args = method.args.clone();
 
-            if final_args.contains("\"injected_fields\"") {
+            if final_args.contains("\"keypom_args\"") {
                 near_sdk::log!(
-                    "Injected fields detected in client args. Returning and decrementing keys"
+                    "Keypom Args detected in client args. Returning and decrementing keys"
                 );
                 return;
             }
 
             if final_args.len() == 0 {
                 final_args = format!(
-                    "{{\"injected_fields\":{}}}",
-                    near_sdk::serde_json::to_string(&injected_fields).unwrap()
+                    "{{\"keypom_args\":{}}}",
+                    near_sdk::serde_json::to_string(&keypom_args).unwrap()
                 );
             } else {
                 final_args.insert_str(
                     final_args.len() - 1,
                     &format!(
-                        ",\"injected_fields\":{}",
-                        near_sdk::serde_json::to_string(&injected_fields).unwrap()
+                        ",\"keypom_args\":{}",
+                        near_sdk::serde_json::to_string(&keypom_args).unwrap()
                     ),
                 );
             }

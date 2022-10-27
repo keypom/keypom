@@ -284,10 +284,10 @@ specify that the first use will result in a null case and the second use will re
 If you have multiple uses but want them all to do the same thing, you don't have to repeat the same data. Passing in only 1
 vector of `MethodData` will result in  **all the uses** inheriting that data.
 
-#### Injected Fields
+#### Keypom Arguments
 
 There is one other piece of information that is **automatically** attached to the arguments being sent to the function.
-This is known as the `injected_fields`. It is a decimal representation of the optional fields specified in the method data.
+This is known as the `keypom_args`. It is a decimal representation of the optional fields specified in the method data.
 You can think of each of the `account_id_field`, `drop_id_field`, and `key_id_field` as representing a bit. If the field
 was specified, the bit is on. If it isn't, the bit is off. The binary looks as follows.
 ```
@@ -299,10 +299,10 @@ LSB
 
 As an example, say the user had `MethodData` with the `account_id_field` set to `receiver_id`. This would mean that the
 binary representation of the fields would look as follows. `001` which has a decimal equivalent to 1. The contract would
-then pass in an `injected_fields`  value of 1.
+then pass in an `keypom_args`  value of 1.
 
 If the user had `MethodData` with the `key_id_field` set to `key` and the `drop_id_field` set to "drop", the binary
-representation would be `110` which has a decimal equivalent to 6. The contract would then pass in an `injected_fields`
+representation would be `110` which has a decimal equivalent to 6. The contract would then pass in an `keypom_args`
 value of 6.
 
 ##### Motivation
@@ -325,7 +325,7 @@ and the NFT contract would have no way of knowing that the `series` value is mal
 This can be prevented if a new field is introduced representing what was automatically injected by the Keypom contract itself. At the
 end of the day, Keypom will **always** send correct information to the receiving contracts. If those contracts have a way to know what has
 been sent by Keypom and what has been manually set by users, the problem is solved. In the above scenario, the NFT contract would simply add
-an assertion that the `injected_fields` is 3 (binary 011) meaning that the drop ID and account ID fields have been sent by the Keypom contract.
+an assertion that the `keypom_args` is 3 (binary 011) meaning that the drop ID and account ID fields have been sent by the Keypom contract.
 
 ## Use Cases
 
@@ -367,7 +367,7 @@ signed. The action is only performed on the multisig contract once all links hav
 accomplishing multisig transactions with zero barrier to entry.
 
 The users don't even need to create a new account. They can simply call `claim` when the link is clicked which will fire the cross-contract call
-to the multisig contract and pass in the injected fields that will be cross-checked by that contract.
+to the multisig contract and pass in the keypom arguments that will be cross-checked by that contract.
 
 #### NFT Ticketing
 

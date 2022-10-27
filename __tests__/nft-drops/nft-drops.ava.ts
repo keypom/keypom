@@ -2,7 +2,7 @@ import anyTest, { TestFn } from "ava";
 import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { JsonKeyInfo, JsonToken } from "../utils/types";
-import { injected_fields, mintNFTs, nftMetadata, nftSeriesMetadata, sendNFTs } from "./utils/nft-utils";
+import { keypom_args, mintNFTs, nftMetadata, nftSeriesMetadata, sendNFTs } from "./utils/nft-utils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -43,7 +43,7 @@ test.beforeEach(async (t) => {
 
     // Mint the NFT
     await nftSeries.call(nftSeries, 'create_series', { mint_id: 0, metadata: nftMetadata }, { attachedDeposit: NEAR.parse("1").toString() });
-    await nftSeries.call(nftSeries, 'nft_mint', { mint_id: '0', receiver_id: minter, injected_fields }, { attachedDeposit: NEAR.parse("1").toString() });
+    await nftSeries.call(nftSeries, 'nft_mint', { mint_id: '0', receiver_id: minter, keypom_args }, { attachedDeposit: NEAR.parse("1").toString() });
 
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())
