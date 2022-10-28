@@ -250,7 +250,6 @@ impl Keypom {
         let mut next_key_id: u64 = 0;
         for pk in &public_keys {
             let pw_per_key = passwords_per_key.clone().and_then(|f| f[next_key_id as usize].clone()).map(|h| hex::decode(h).unwrap());
-            near_sdk::log!("Password for key {} : {:?}", next_key_id, pw_per_key);
 
             let mut pw_per_use = None;
             // If we have passwords for this specific key, add them to the key info
@@ -264,7 +263,6 @@ impl Keypom {
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
                     require!(pw.key_use < num_claims_per_key, "claim out of range for password");
-                    near_sdk::log!("Adding password for use {} : {:?} for key: {}", pw.key_use, pw.pw, next_key_id);
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
                 }
 
@@ -676,7 +674,6 @@ impl Keypom {
         let mut idx = 0;
         for pk in &public_keys {
             let pw_per_key = passwords_per_key.clone().and_then(|f| f[idx as usize].clone()).map(|f| hex::decode(f).unwrap());
-            near_sdk::log!("Password for key {} : {:?}", next_key_id, pw_per_key);
 
             let mut pw_per_use = None;
             // If we have passwords for this specific key, add them to the key info
@@ -690,7 +687,6 @@ impl Keypom {
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
                     require!(pw.key_use < num_claims_per_key, "claim out of range for password");
-                    near_sdk::log!("Adding password for use {} : {:?} for key: {}", pw.key_use, pw.pw, next_key_id);
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
                 }
 

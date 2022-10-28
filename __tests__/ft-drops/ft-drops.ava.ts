@@ -42,7 +42,7 @@ test.beforeEach(async (t) => {
     })
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: "0"});
 
-    // Mint the NFT
+    // Mint the FTs
     await ftContract.call(ftContract, 'storage_deposit', { account_id: minter.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
     await ftContract.call(ftContract, 'ft_transfer', { receiver_id: minter.accountId, amount: (oneGtNear * BigInt(1000)).toString() }, { attachedDeposit: "1" });
 
