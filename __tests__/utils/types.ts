@@ -1,5 +1,5 @@
 export type JsonDrop = {
-    drop_id: number;
+    drop_id: string;
     owner_id: string,
     deposit_per_use: string;
     drop_type: DropType;
@@ -57,9 +57,16 @@ export type MethodData = {
 }
 
 export type JsonKeyInfo = {
-    drop_id: number;
+    drop_id: string;
     pk: string;
-    key_info: KeyInfo
+    // How many uses this key has left. Once 0 is reached, the key is deleted
+    remaining_uses: number,
+    // When was the last time the key was used
+    last_used: number,
+    // How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.
+    allowance: number,
+    // Nonce for the current key.
+    key_id: number,
 }
 
 export type KeyInfo = {

@@ -15,7 +15,7 @@
 		"nft-create": "node deploy/nft/nft-create",
 		"fc": "yarn fc-create && yarn fc-add",
 		"fc-create": "node deploy/function-call/fc-create",
-		"test": "yarn test:internals && yarn test:stage1 && yarn test:ticketing && yarn test:poaps && yarn test:configs && yarn test:nft-drops && yarn test:ft-drops",
+		"test": "yarn test:internals && yarn test:stage1 && yarn test:ticketing && yarn test:poaps && yarn test:configs && yarn test:nft-drops && yarn test:ft-drops && yarn test:passwords",
 		"test:internals": "ava __tests__/internals/test-internals.ava.ts",
 		"test:stage1": "yarn test:stage1:simple",
 		"test:stage1:simple": "ava __tests__/stage1/test-simple.ava.ts",

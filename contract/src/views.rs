@@ -53,7 +53,7 @@ impl Keypom {
 
             if let Some(key_info) = drop.pks.get(&key) {
                 return Some(JsonKeyInfo {
-                    drop_id: drop_id.clone(),
+                    drop_id: U128(drop_id),
                     pk: key.clone(),
                     remaining_uses: key_info.remaining_uses,
                     last_used: key_info.last_used,
@@ -111,7 +111,7 @@ impl Keypom {
         };
 
         JsonDrop {
-            drop_id,
+            drop_id: U128(drop_id),
             owner_id: drop.owner_id,
             deposit_per_use: U128(drop.deposit_per_use),
             drop_type,

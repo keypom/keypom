@@ -14,7 +14,7 @@ pub enum JsonDropType {
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonDrop {
     // Drop ID for this drop
-    pub drop_id: DropId,
+    pub drop_id: U128,
     // owner of this specific drop
     pub owner_id: AccountId,
 
@@ -62,7 +62,7 @@ pub struct JsonFTData {
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonKeyInfo {
     // Drop ID for the specific drop
-    pub drop_id: DropId,
+    pub drop_id: U128,
     pub pk: PublicKey,
 
     // How many uses this key has left. Once 0 is reached, the key is deleted

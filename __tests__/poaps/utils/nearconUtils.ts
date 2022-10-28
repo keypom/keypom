@@ -47,7 +47,7 @@ export async function createDistro(
 
             await owner.call(keypom, 'add_keys', {
                 public_keys: publicKeys, 
-                drop_id: mint_id
+                drop_id: mint_id.toString()
             },{gas: LARGE_GAS});
         }
 
