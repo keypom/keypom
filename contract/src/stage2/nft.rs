@@ -1,4 +1,4 @@
-use near_sdk::collections::Vector;
+use near_sdk::store::Vector;
 
 use crate::*;
 

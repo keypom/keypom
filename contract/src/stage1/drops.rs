@@ -1,6 +1,6 @@
 use crate::*;
 use near_sdk::{
-    collections::{LazyOption, Vector},
+    store::{LazyOption, Vector},
     require, Balance,
 };
 

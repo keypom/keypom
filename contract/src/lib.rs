@@ -404,7 +404,7 @@ ticket page (when they have internet), they would be able to claim the final use
 */
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, UnorderedSet, LazyOption};
+use near_sdk::store::{LookupMap, LookupSet, UnorderedMap, UnorderedSet, LazyOption};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
@@ -610,12 +610,12 @@ impl Keypom {
             /*
                 CONTRACT METADATA
             */
-            contract_metadata: LazyOption::new(StorageKey::ContractMetadata, Some(&contract_metadata))
+            contract_metadata: LazyOption::new(StorageKey::ContractMetadata, Some(contract_metadata))
         };
 
         // Loop through and add all the default prohibited methods to the set
         for method in DEFAULT_PROHIBITED_FC_METHODS {
-            keypom.prohibited_fc_methods.insert(&method.to_string());
+            keypom.prohibited_fc_methods.insert(method.to_string());
         }
 
         keypom

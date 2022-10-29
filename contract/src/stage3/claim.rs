@@ -191,10 +191,10 @@ impl Keypom {
         } else {
             
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self
+            let mut cur_funder_balance = *self
             .user_balances
             .get(&owner_id)
-            .unwrap_or(0);
+            .unwrap_or(&0);
             cur_funder_balance += amount_to_refund;
             
             near_sdk::log!(
@@ -203,7 +203,7 @@ impl Keypom {
                 yocto_to_near(amount_to_refund)
             );
             
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.user_balances.insert(owner_id, cur_funder_balance);
         }
 
         claim_succeeded
@@ -274,10 +274,10 @@ impl Keypom {
         } else {
             
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self
+            let mut cur_funder_balance = *self
             .user_balances
             .get(&owner_id)
-            .unwrap_or(0);
+            .unwrap_or(&0);
             cur_funder_balance += amount_to_refund;
             
             near_sdk::log!(
@@ -286,7 +286,7 @@ impl Keypom {
                 yocto_to_near(amount_to_refund)
             );
             
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.user_balances.insert(owner_id, cur_funder_balance);
         }
 
         // Perform the FT transfer functionality
@@ -365,10 +365,10 @@ impl Keypom {
         } else {
             
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self
+            let mut cur_funder_balance = *self
             .user_balances
             .get(&owner_id)
-            .unwrap_or(0);
+            .unwrap_or(&0);
             cur_funder_balance += amount_to_refund;
             
             near_sdk::log!(
@@ -377,7 +377,7 @@ impl Keypom {
                 yocto_to_near(amount_to_refund)
             );
             
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.user_balances.insert(owner_id, cur_funder_balance);
         }
 
         // Transfer the NFT
@@ -485,10 +485,10 @@ impl Keypom {
         } else {
             
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self
+            let mut cur_funder_balance = *self
             .user_balances
             .get(&owner_id)
-            .unwrap_or(0);
+            .unwrap_or(&0);
             cur_funder_balance += amount_to_refund;
             
             near_sdk::log!(
@@ -497,7 +497,7 @@ impl Keypom {
                 yocto_to_near(amount_to_refund)
             );
             
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.user_balances.insert(owner_id, cur_funder_balance);
         }
 
         self.internal_fc_execute(
@@ -555,7 +555,7 @@ impl Keypom {
 
         // By default, every key should have a drop ID. If we need to remove the key, remove later.
         // Panic doesn't affect allowance
-        let drop_id = self
+        let drop_id = *self
             .drop_id_for_pk
             .get(&signer_pk)
             .expect("No drop ID found for PK");
@@ -578,8 +578,8 @@ impl Keypom {
 
             key_info.allowance -= amount_to_decrement;
             near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(&signer_pk, &key_info);
-            self.drop_for_id.insert(&drop_id, &drop);
+            drop.pks.insert(signer_pk, key_info);
+            self.drop_for_id.insert(drop_id, drop);
             return (None, None, None, None, false, current_key_info, false);
         }
 
