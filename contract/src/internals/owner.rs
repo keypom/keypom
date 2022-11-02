@@ -6,20 +6,20 @@ impl Keypom {
     #[payable]
     pub fn register_ft_contract(&mut self, account_id: AccountId) {
         self.assert_owner();
-        self.internal_register_ft_contract(&account_id, env::attached_deposit(), &env::predecessor_account_id(), false);
-        self.registered_ft_contracts.insert(&account_id);
+        self.internal_register_ft_contract(account_id.clone(), env::attached_deposit(), env::predecessor_account_id(), false);
+        self.registered_ft_contracts.insert(account_id);
     }
 
     /// Set the contract metadata with a spec and link
     pub fn set_contract_metadata(&mut self, contract_metadata: ContractSourceMetadata) {
         self.assert_owner();
-        self.contract_metadata.replace(&contract_metadata);
+        self.contract_metadata.replace(contract_metadata);
     }
 
     /// Add a prohibited method to the list of methods that can't be called by a FC Drop
     pub fn add_prohibited_method(&mut self, method: String) {
         self.assert_owner();
-        self.prohibited_fc_methods.insert(&method);
+        self.prohibited_fc_methods.insert(method);
     }
 
     /// Set the desired linkdrop contract to interact with
@@ -43,7 +43,7 @@ impl Keypom {
     pub fn set_fees_per_user(&mut self, account_id: AccountId, drop_fee: U128, key_fee: U128) {
         self.assert_owner();
         self.fees_per_user
-            .insert(&account_id, &(drop_fee.0, key_fee.0));
+            .insert(account_id, (drop_fee.0, key_fee.0));
     }
 
     /// Set the desired linkdrop contract to interact with

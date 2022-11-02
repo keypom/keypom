@@ -222,7 +222,7 @@ impl Keypom {
         // How much storage was freed when the key was claimed
         storage_used: Balance,
         // FT Data for the drop
-        ft_data: FTData,
+        ft_data: &FTData,
         // Was this function invoked via an execute (no callback)
         execute: bool,
         // Is it an auto withdraw case
@@ -300,17 +300,17 @@ impl Keypom {
     pub fn on_claim_nft(
         &mut self,
         // Account ID that claimed the linkdrop
-        account_id: AccountId,
+        account_id: &AccountId,
         // Account ID that funded the linkdrop
-        owner_id: AccountId,
+        owner_id: &AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was freed when the key was claimed
         storage_used: Balance,
         // Sender of the NFT
-        sender_id: AccountId,
+        sender_id: &AccountId,
         // Contract where the NFT is stored
-        contract_id: AccountId,
+        contract_id: &AccountId,
         // Token ID for the NFT
         token_id: String,
         // Was this function invoked via an execute (no callback)
@@ -404,7 +404,7 @@ impl Keypom {
         // How much storage was freed when the key was claimed
         storage_used: Balance,
         // FC Data for the drop
-        fc_data: FCData,
+        fc_data: &FCData,
         // Drop ID for the specific drop
         drop_id: DropId,
         // Current key info before uses were decremented
@@ -517,7 +517,7 @@ impl Keypom {
         expected_uses: Option<u64>,
     ) -> (
         // Drop containing all data
-        Option<Drop>,
+        Option<&Drop>,
         // Drop ID for the drop
         Option<DropId>,
         // How much storage was freed
@@ -561,10 +561,10 @@ impl Keypom {
             .expect("No drop ID found for PK");
         // Remove the drop. If the drop shouldn't be removed, we re-insert later.
         // Panic doesn't affect allowance
-        let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
+        let mut drop_info = self.drop_for_id.get_mut(&drop_id).expect("drop not found");
         // Remove the pk from the drop's set and check for key usage.
         // Panic doesn't affect allowance
-        let mut key_info = drop.pks.remove(&signer_pk).unwrap();
+        let mut key_info = drop_info.pks.get_mut(&signer_pk).unwrap();
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
         let current_key_info = key_info.clone();
 
@@ -578,8 +578,6 @@ impl Keypom {
 
             key_info.allowance -= amount_to_decrement;
             near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(signer_pk, key_info);
-            self.drop_for_id.insert(drop_id, drop);
             return (None, None, None, None, false, current_key_info, false);
         }
 
@@ -592,35 +590,31 @@ impl Keypom {
 
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
-                self.drop_for_id.insert(&drop_id, &drop);
                 return (None, None, None, None, false, current_key_info, false);
             }
         }
 
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
-        if drop.registered_uses < 1 || prepaid_gas != drop.required_gas {
+        if drop_info.registered_uses < 1 || prepaid_gas != drop_info.required_gas {
             used_gas = env::used_gas();
 
             let amount_to_decrement =
                 (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-            if drop.registered_uses < 1 {
+            if drop_info.registered_uses < 1 {
                 near_sdk::log!("Not enough claims left for the drop. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
             } else {
-                near_sdk::log!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop.required_gas.0, amount_to_decrement, used_gas.0);
+                near_sdk::log!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop_info.required_gas.0, amount_to_decrement, used_gas.0);
             }
 
             key_info.allowance -= amount_to_decrement;
             near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(&signer_pk, &key_info);
-            self.drop_for_id.insert(&drop_id, &drop);
             return (None, None, None, None, false, current_key_info, false);
         }
 
-        if self.assert_claim_timestamps(drop_id, &mut drop, &mut key_info, &signer_pk) == false {
+        if assert_claim_timestamps(&drop_info.config, &key_info, self.yocto_per_gas) == false {
             return (None, None, None, None, false, current_key_info, false);
         };
-
+        
         /*
             If it's an NFT drop get the token ID and remove it from the set.
             If it's an FC drop, get the next method_name data and check if it's none (to skip transfer of funds)
@@ -629,7 +623,7 @@ impl Keypom {
         let mut token_id = None;
         // Default the should continue variable to true. If the next FC method_name is None, we set it to false
         let mut should_continue = true;
-        match &mut drop.drop_type {
+        match &mut drop_info.drop_type {
             DropType::NonFungibleToken(data) => {
                 token_id = data.token_ids.pop();
             }
@@ -637,7 +631,7 @@ impl Keypom {
                 // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
                 let cur_len = data.methods.len() as u16;
                 let starting_index = if cur_len > 1 {
-                    (drop
+                    (drop_info
                         .config
                         .clone()
                         .and_then(|c| c.uses_per_key)
@@ -669,42 +663,39 @@ impl Keypom {
         // No uses left! The key should be deleted
         if key_info.remaining_uses == 1 {
             near_sdk::log!("Key has no uses left. It will be deleted");
+            // DELETE HERE
+            drop(key_info);
+            drop_info.pks.remove(&signer_pk);
+            
             self.drop_id_for_pk.remove(&signer_pk);
         } else {
             key_info.remaining_uses -= 1;
-            key_info.allowance -= drop.required_gas.0 as u128 * self.yocto_per_gas;
+            key_info.allowance -= drop_info.required_gas.0 as u128 * self.yocto_per_gas;
             near_sdk::log!(
                 "Key has {} uses left. Decrementing allowance by {}. Allowance left: {}",
                 key_info.remaining_uses,
-                drop.required_gas.0 as u128 * self.yocto_per_gas,
+                drop_info.required_gas.0 as u128 * self.yocto_per_gas,
                 key_info.allowance
             );
 
-            drop.pks.insert(&signer_pk, &key_info);
             should_delete_key = false;
         }
-
-        drop.registered_uses -= 1;
+        drop_info.registered_uses -= 1;
 
         // If there are keys still left in the drop, add the drop back in with updated data
-        if !drop.pks.is_empty() {
-            // Add drop back with the updated data.
-            self.drop_for_id.insert(&drop_id, &drop);
-        } else {
+        if drop_info.pks.is_empty() {
             // There are no keys left. We should only remove the drop if the drop's config is set to delete on empty
-            if drop
-                .config
-                .clone()
+            if drop_info.config
                 .and_then(|c| c.delete_on_empty)
                 .unwrap_or(false)
             {
                 near_sdk::log!("Drop is empty and delete_on_empty is set to true. Deleting drop");
+                self.drop_for_id.remove(&drop_id).expect("drop not found");
+
                 // Remove the drop ID from the funder's list if the drop is now empty
-                self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
+                self.internal_remove_drop_for_funder(drop_info.owner_id, &drop_id);
             } else {
                 near_sdk::log!("Drop is empty but delete_on_empty is not specified. Keeping drop");
-                // Add drop back with the updated data.
-                self.drop_for_id.insert(&drop_id, &drop);
             }
         }
 
@@ -722,7 +713,7 @@ impl Keypom {
         if should_delete_key {
             // Amount to refund is the current allowance less the current execution's max GAS
             let amount_to_refund = key_info.allowance
-                - drop.required_gas.0 as u128 * self.yocto_per_gas
+                - drop_info.required_gas.0 as u128 * self.yocto_per_gas
                 + ACCESS_KEY_STORAGE;
             near_sdk::log!(
                 "Key being deleted. Will refund: {}.
@@ -731,38 +722,38 @@ impl Keypom {
                 Access key storage: {}",
                 amount_to_refund,
                 key_info.allowance,
-                drop.required_gas.0 as u128 * self.yocto_per_gas,
+                drop_info.required_gas.0 as u128 * self.yocto_per_gas,
                 ACCESS_KEY_STORAGE
             );
 
             // Check if auto_withdrawing to the funder's entire balance 
-            let auto_withdraw = drop
+            let auto_withdraw = drop_info
                 .config
                 .clone()
                 .and_then(|c| c.auto_withdraw)
                 .unwrap_or(false);
                 
             // Get the number of drops still left for the owner
-            let cur_drop_num_for_owner = self.drop_ids_for_owner.get(&drop.owner_id).and_then(|d| Some(d.len())).unwrap_or(0);
+            let cur_drop_num_for_owner = self.drop_ids_for_owner.get(&drop_info.owner_id).and_then(|d| Some(d.len())).unwrap_or(0);
             
             // If auto_withdraw is set to true and this is the last drop for the owner, we should just withdraw the entire balance
             if auto_withdraw && cur_drop_num_for_owner == 0 {
                 should_auto_withdraw = true;
-                let mut cur_balance = self.user_balances.remove(&drop.owner_id).unwrap_or(0);
+                let mut cur_balance = self.user_balances.remove(&drop_info.owner_id).unwrap_or(0);
                 cur_balance += amount_to_refund;
                 near_sdk::log!("Auto withdrawing the entire balance of {}.", yocto_to_near(cur_balance));
                 
                 // Send cur balance to drop owner
-                Promise::new(drop.owner_id.clone()).transfer(cur_balance);
+                Promise::new(drop_info.owner_id.clone()).transfer(cur_balance);
             } else {
                 // Get the funder's balance and increment it by the amount to refund
-                let mut cur_funder_balance = self
+                let mut cur_funder_balance = *self
                     .user_balances
-                    .get(&drop.owner_id)
-                    .unwrap_or(0);
+                    .get(&drop_info.owner_id)
+                    .unwrap_or(&0);
                 cur_funder_balance += amount_to_refund;
                 self.user_balances
-                    .insert(&drop.owner_id, &cur_funder_balance);
+                    .insert(drop_info.owner_id, cur_funder_balance);
             }
 
             // Delete the key
@@ -771,7 +762,7 @@ impl Keypom {
 
         // Return the drop and optional token ID with how much storage was freed
         (
-            Some(drop),
+            Some(&drop_info),
             Some(drop_id),
             Some(total_storage_freed),
             token_id,

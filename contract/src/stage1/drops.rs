@@ -180,15 +180,15 @@ impl Keypom {
         let num_claims_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // Get the current balance of the funder.
-        let mut current_user_balance = self
+        let mut current_user_balance = *self
             .user_balances
             .get(&owner_id)
-            .unwrap_or(0);
+            .unwrap_or(&0);
         
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance
         current_user_balance += near_attached;
-        self.user_balances.insert(&owner_id, &current_user_balance);
+        self.user_balances.insert(owner_id.clone(), current_user_balance);
 
         let mut key_map: UnorderedMap<PublicKey, KeyInfo> =
             UnorderedMap::new(StorageKey::PksForDrop {
@@ -239,10 +239,10 @@ impl Keypom {
 
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id = 0;
-        for pk in &public_keys {
+        for pk in public_keys {
             key_map.insert(
                 pk,
-                &KeyInfo {
+                KeyInfo {
                     remaining_uses: num_claims_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
@@ -250,14 +250,14 @@ impl Keypom {
                 },
             );
             require!(
-                self.drop_id_for_pk.insert(pk, &actual_drop_id).is_none(),
+                self.drop_id_for_pk.insert(pk, actual_drop_id).is_none(),
                 "Keys cannot belong to another drop"
             );
             next_key_id += 1;
         }
 
         // Add this drop ID to the funder's set of drops
-        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &actual_drop_id);
+        self.internal_add_drop_to_funder(env::predecessor_account_id(), actual_drop_id);
 
         // Create drop object
         let mut drop = Drop {
@@ -276,7 +276,7 @@ impl Keypom {
                         actual_drop_id, owner_id
                     )),
                 },
-                metadata.as_ref(),
+                metadata,
             ),
             next_key_id,
         };
@@ -312,7 +312,7 @@ impl Keypom {
             drop.drop_type = DropType::NonFungibleToken(actual_nft_data);
 
             // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&actual_drop_id, &drop);
+            self.drop_for_id.insert(actual_drop_id, drop);
         } else if let Some(data) = ft_data.clone() {
             // If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type
             let FTDataConfig {
@@ -331,7 +331,7 @@ impl Keypom {
             
             // Temporarily add the FT contract. If it was already registered, don't remove but if it was, remove now.
             // This is to measure the storage cost of adding the contract.
-            let clean_insert = self.registered_ft_contracts.insert(&contract_id);
+            let clean_insert = self.registered_ft_contracts.insert(contract_id);
             was_ft_registered = !clean_insert;
             near_sdk::log!("was_ft_registered: {}", was_ft_registered); 
 
@@ -340,7 +340,7 @@ impl Keypom {
             drop.drop_type = DropType::FungibleToken(actual_ft_data);
 
             // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&actual_drop_id, &drop);
+            self.drop_for_id.insert(actual_drop_id, drop);
         } else if let Some(data) = fc_data.clone() {
             drop.drop_type = DropType::FunctionCall(data.clone());
 
@@ -421,14 +421,14 @@ impl Keypom {
             }
 
             // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&actual_drop_id, &drop);
+            self.drop_for_id.insert(actual_drop_id, drop);
         } else {
             require!(
                 deposit_per_use.0 > 0,
                 "Cannot have a simple drop with zero balance"
             );
             // In simple case, we just insert the drop with whatever it was initialized with.
-            self.drop_for_id.insert(&actual_drop_id, &drop);
+            self.drop_for_id.insert(actual_drop_id, drop);
         }
 
         // Calculate the storage being used for the entire drop
@@ -449,10 +449,10 @@ impl Keypom {
             - FC attached_deposit for each key * num Some(data) claims
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
-        let fees = self
+        let fees = *self
             .fees_per_user
             .get(&owner_id)
-            .unwrap_or((self.drop_fee, self.key_fee));
+            .unwrap_or(&(self.drop_fee, self.key_fee));
         let drop_fee = fees.0;
         let key_fee = fees.1;
         let total_key_fee = key_fee * len;
@@ -512,7 +512,7 @@ impl Keypom {
 
             // If they have a balance, insert it back into the map otherwise remove it
             if current_user_balance > 0 {
-                self.user_balances.insert(&owner_id, &current_user_balance);
+                self.user_balances.insert(owner_id, current_user_balance);
             } else {
                 self.user_balances.remove(&owner_id);
             }
@@ -530,7 +530,7 @@ impl Keypom {
 
         // Decrement the user's balance by the required attached_deposit and insert back into the map
         current_user_balance -= required_deposit;
-        self.user_balances.insert(&owner_id, &current_user_balance);
+        self.user_balances.insert(owner_id, current_user_balance);
         near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
 
         // Increment our fees earned
@@ -598,15 +598,15 @@ impl Keypom {
     */
     #[payable]
     pub fn add_keys(&mut self, public_keys: Vec<PublicKey>, drop_id: DropId) -> Option<DropId> {
-        let mut drop = self
+        let mut drop = *self
             .drop_for_id
             .get(&drop_id)
             .expect("no drop found for ID");
         let config = &drop.config;
-        let funder = &drop.owner_id;
+        let funder = drop.owner_id;
 
         require!(
-            funder == &env::predecessor_account_id(),
+            funder == env::predecessor_account_id(),
             "only funder can add to drops"
         );
 
@@ -632,8 +632,8 @@ impl Keypom {
         let mut next_key_id = drop.next_key_id;
         for pk in public_keys.clone() {
             exiting_key_map.insert(
-                &pk,
-                &KeyInfo {
+                pk,
+                KeyInfo {
                     remaining_uses: num_claims_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
@@ -641,7 +641,7 @@ impl Keypom {
                 },
             );
             require!(
-                self.drop_id_for_pk.insert(&pk, &drop_id).is_none(),
+                self.drop_id_for_pk.insert(pk, drop_id).is_none(),
                 "Keys cannot belong to another drop"
             );
             next_key_id += 1;
@@ -684,18 +684,18 @@ impl Keypom {
         };
 
         // Add the drop back in for the drop ID
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_for_id.insert(drop_id, drop);
 
         // Get the current balance of the funder.
-        let mut current_user_balance = self
+        let mut current_user_balance = *self
             .user_balances
             .get(&funder)
-            .unwrap_or(0);
+            .unwrap_or(&0);
 
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance
         current_user_balance += near_attached;
-        self.user_balances.insert(&funder, &current_user_balance);
+        self.user_balances.insert(funder, current_user_balance);
 
         // Get the required attached_deposit for all the FCs
         let mut deposit_required_for_fc_deposits = 0;
@@ -760,10 +760,10 @@ impl Keypom {
             - FC attached_deposit for each key * num Some(data) claims
             - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
         */
-        let fees = self
+        let fees = *self
             .fees_per_user
             .get(&funder)
-            .unwrap_or((self.drop_fee, self.key_fee));
+            .unwrap_or(&(self.drop_fee, self.key_fee));
         let drop_fee = fees.0;
         let key_fee = fees.1;
         let total_key_fee = key_fee * len;
@@ -826,7 +826,7 @@ impl Keypom {
 
             // If they have a balance, insert it back into the map otherwise remove it
             if current_user_balance > 0 {
-                self.user_balances.insert(&funder, &current_user_balance);
+                self.user_balances.insert(funder, current_user_balance);
             } else {
                 self.user_balances.remove(&funder);
             }
@@ -847,7 +847,7 @@ impl Keypom {
         );
         // Decrement the user's balance by the required attached_deposit and insert back into the map
         current_user_balance -= required_deposit;
-        self.user_balances.insert(&funder, &current_user_balance);
+        self.user_balances.insert(funder, current_user_balance);
         near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
 
         // Increment our fees earned

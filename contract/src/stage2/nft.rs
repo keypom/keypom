@@ -28,7 +28,7 @@ impl Keypom {
     ) -> PromiseOrValue<bool> {
         let contract_id = env::predecessor_account_id();
 
-        let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
+        let mut drop = *self.drop_for_id.get(&msg.0).expect("No drop found for ID");
         if let DropType::NonFungibleToken(mut nft_data) = drop.drop_type {
             let mut token_ids = nft_data.token_ids;
 
@@ -41,7 +41,7 @@ impl Keypom {
             let initial_storage = env::storage_usage();
 
             // Push the token ID to the back of the vector
-            token_ids.push(&token_id);
+            token_ids.push(token_id);
 
             // Re-insert the token IDs into the NFT Data struct
             nft_data.token_ids = token_ids;
@@ -54,14 +54,13 @@ impl Keypom {
             drop.drop_type = DropType::NonFungibleToken(nft_data);
 
             // Insert the drop with the updated data
-            self.drop_for_id.insert(&msg.0, &drop);
+            self.drop_for_id.insert(msg.0, drop);
 
             // Calculate the storage for inserting the token and subtract from funder's balance
             let final_storage = env::storage_usage();
             let total_required_storage =
                 Balance::from(final_storage - initial_storage) * env::storage_byte_cost();
-
-            let mut drop_funder_balance = self.user_balances.get(&drop.owner_id).unwrap_or(0);
+            let mut drop_funder_balance = *self.user_balances.get(&drop.owner_id).unwrap_or(&0);
             drop_funder_balance -= total_required_storage;
             near_sdk::log!(
                 "Subtracting {} from funder to cover storage. New balance is {}",
@@ -69,7 +68,7 @@ impl Keypom {
                 drop_funder_balance
             );
             self.user_balances
-                .insert(&drop.owner_id, &drop_funder_balance);
+                .insert(drop.owner_id, drop_funder_balance);
         } else {
             env::panic_str("drop type isn't NFT");
         }
@@ -93,16 +92,16 @@ impl Keypom {
 
         // If not successful, the length of the token IDs needs to be added back to the drop.
         if !transfer_succeeded {
-            let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
+            let mut drop = *self.drop_for_id.get(&drop_id.0).unwrap();
             drop.registered_uses += token_ids.len() as u64;
 
             if let DropType::NonFungibleToken(nft_data) = &mut drop.drop_type {
                 // Loop through and add token IDs back into the vector
-                for token in &token_ids {
+                for token in token_ids {
                     nft_data.token_ids.push(token);
                 }
             };
-            self.drop_for_id.insert(&drop_id.0, &drop);
+            self.drop_for_id.insert(drop_id.0, drop);
 
             near_sdk::log!(
                 "Transfer failed. Adding {} back to drop's keys registered and pushing all token IDs back",

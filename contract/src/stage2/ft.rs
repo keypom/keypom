@@ -39,7 +39,7 @@ impl Keypom {
     ) -> PromiseOrValue<U128> {
         let contract_id = env::predecessor_account_id();
 
-        let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
+        let mut drop = *self.drop_for_id.get(&msg.0).expect("No drop found for ID");
         if let DropType::FungibleToken(ft_data) = &drop.drop_type {
             require!(
                 amount.0 % ft_data.balance_per_use.0 == 0,
@@ -56,7 +56,7 @@ impl Keypom {
             near_sdk::log!("New claims registered {}", claims_to_register);
 
             // Insert the drop with the updated data
-            self.drop_for_id.insert(&msg.0, &drop);
+            self.drop_for_id.insert(msg.0, drop);
 
             // Everything went well and we don't need to return any tokens (if they over-sent, we keep it)
             PromiseOrValue::Value(U128(0))
@@ -141,9 +141,9 @@ impl Keypom {
         }
 
         // Transfer failed so we need to increment the claims registered and return false
-        let mut drop = self.drop_for_id.get(&drop_id).expect("no drop for ID");
+        let mut drop = *self.drop_for_id.get(&drop_id).expect("no drop for ID");
         drop.registered_uses += num_to_refund;
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_for_id.insert(drop_id, drop);
 
         near_sdk::log!("Unsuccessful refund for drop ID {}. {} keys added back as registered. Returning false.", drop_id, num_to_refund);
         false
@@ -171,7 +171,7 @@ impl Keypom {
             let owner_id = self.internal_remove_drop(&drop_id, public_keys);
 
             // Refund the user's balance for the required attached_deposit
-            let mut user_balance = self.user_balances.get(&owner_id).unwrap();
+            let mut user_balance = *self.user_balances.get(&owner_id).unwrap();
             user_balance = user_balance + required_deposit - near_attached;
 
             // Refund the funder any excess $NEAR
@@ -187,7 +187,7 @@ impl Keypom {
                 near_sdk::log!(
                     "User balance positive. Adding back into contract."
                 );
-                self.user_balances.insert(&owner_id, &user_balance);
+                self.user_balances.insert(owner_id, user_balance);
             } else {
                 near_sdk::log!(
                     "User balance zero. Removing from contract."
@@ -212,7 +212,7 @@ impl Keypom {
         if let Ok(StorageBalanceBounds { min, max: _ }) =
             near_sdk::serde_json::from_slice::<StorageBalanceBounds>(&result.unwrap())
         {
-            let mut drop = self.drop_for_id.get(&drop_id).unwrap();
+            let mut drop = *self.drop_for_id.get(&drop_id).unwrap();
             let owner_id = drop.owner_id.clone();
 
             // Get the max claims per key. Default to 1 if not specified in the drop config.
@@ -223,7 +223,7 @@ impl Keypom {
                 .unwrap_or(1);
 
             // Get the current user balance ad ensure that they have the extra $NEAR for covering the FT storage
-            let mut cur_user_balance = self.user_balances.get(&owner_id).unwrap();
+            let mut cur_user_balance = *self.user_balances.get(&owner_id).unwrap();
             let extra_storage_required = min.0 * uses_per_key as u128 * pub_keys_len + min.0;
 
             // Ensure the user's current balance can cover the extra storage required
@@ -232,7 +232,7 @@ impl Keypom {
                 let owner_id = self.internal_remove_drop(&drop_id, public_keys);
 
                 // Refund the user's balance for the required attached_deposit
-                let mut user_balance = self.user_balances.get(&owner_id).unwrap();
+                let mut user_balance = *self.user_balances.get(&owner_id).unwrap();
                 user_balance = user_balance + required_deposit - near_attached;
 
                 // Refund the funder any excess $NEAR
@@ -248,7 +248,7 @@ impl Keypom {
                     near_sdk::log!(
                         "User balance positive. Adding back into contract."
                     );
-                    self.user_balances.insert(&owner_id, &user_balance);
+                    self.user_balances.insert(owner_id, user_balance);
                 } else {
                     near_sdk::log!(
                         "User balance zero. Removing from contract."
@@ -274,7 +274,7 @@ impl Keypom {
                 ft_data.ft_storage = min;
                 drop.drop_type = DropType::FungibleToken(ft_data.clone());
 
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(drop_id, drop);
 
                 // Decrement the user's balance by the extra required and insert back into the map
                 cur_user_balance -= extra_storage_required;
@@ -283,7 +283,7 @@ impl Keypom {
                     yocto_to_near(extra_storage_required),
                     yocto_to_near(cur_user_balance)
                 );
-                self.user_balances.insert(&owner_id, &cur_user_balance);
+                self.user_balances.insert(owner_id, cur_user_balance);
 
                 // Create the keys for the contract
                 let promise = env::promise_batch_create(&env::current_account_id());
@@ -323,7 +323,7 @@ impl Keypom {
 
                 env::promise_return(promise);
 
-                self.internal_register_ft_contract(&ft_data.contract_id, min.0, &owner_id, true);
+                self.internal_register_ft_contract(ft_data.contract_id, min.0, owner_id, true);
 
                 // Everything went well and we return true
                 return true;
@@ -335,7 +335,7 @@ impl Keypom {
             let owner_id = self.internal_remove_drop(&drop_id, public_keys);
 
             // Refund the user's balance for the required attached_deposit
-            let mut user_balance = self.user_balances.get(&owner_id).unwrap();
+            let mut user_balance = *self.user_balances.get(&owner_id).unwrap();
             user_balance = user_balance + required_deposit - near_attached;
 
             // Refund the funder any excess $NEAR
@@ -351,7 +351,7 @@ impl Keypom {
                 near_sdk::log!(
                     "User balance positive. Adding back into contract."
                 );
-                self.user_balances.insert(&owner_id, &user_balance);
+                self.user_balances.insert(owner_id, user_balance);
             } else {
                 near_sdk::log!(
                     "User balance zero. Removing from contract."
@@ -377,7 +377,7 @@ impl Keypom {
     pub(crate) fn internal_ft_transfer(
         &mut self,
         claim_succeeded: bool,
-        ft_data: FTData,
+        ft_data: &FTData,
         account_id: AccountId,
     ) {
         /*

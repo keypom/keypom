@@ -142,10 +142,10 @@ impl Keypom {
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
-                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
+                self.internal_remove_drop_for_funder(owner_id, &drop_id);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(drop_id, drop);
             }
 
             // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -205,7 +205,7 @@ impl Keypom {
             );
         } else {
             // If no PKs were passed in, attempt to remove limit or 100 keys at a time
-            keys_to_delete = drop.pks.keys().take(limit.unwrap_or(100).into()).collect();
+            keys_to_delete = drop.pks.keys().cloned().take(limit.unwrap_or(100).into()).collect();
 
             let len = keys_to_delete.len() as u128;
             near_sdk::log!("Removing {} keys from the drop", len);
@@ -269,10 +269,10 @@ impl Keypom {
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
-                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
+                self.internal_remove_drop_for_funder(owner_id, &drop_id);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(drop_id, drop);
             }
 
             // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -333,7 +333,7 @@ impl Keypom {
         }
 
         // Refund the user
-        let mut cur_balance = self.user_balances.get(&owner_id).unwrap_or(0);
+        let mut cur_balance = *self.user_balances.get(&owner_id).unwrap_or(&0);
         near_sdk::log!(
             "Refunding user {} old balance: {}. Total allowance left: {}",
             yocto_to_near(total_refund_amount),
@@ -341,7 +341,7 @@ impl Keypom {
             yocto_to_near(total_allowance_left)
         );
         cur_balance += total_refund_amount;
-        self.user_balances.insert(&owner_id, &cur_balance);
+        self.user_balances.insert(owner_id, cur_balance);
 
         // Loop through and delete keys
         for key in &keys_to_delete {
@@ -360,7 +360,7 @@ impl Keypom {
     */
     pub fn refund_assets(&mut self, drop_id: DropId, assets_to_refund: Option<u64>) {
         // get the drop object
-        let mut drop = self.drop_for_id.get(&drop_id).expect("No drop found");
+        let mut drop = *self.drop_for_id.get(&drop_id).expect("No drop found");
         let owner_id = drop.owner_id.clone();
         require!(
             owner_id == env::predecessor_account_id(),
@@ -380,7 +380,7 @@ impl Keypom {
 
         // Decrement the drop's keys registered temporarily. If the transfer is unsuccessful, revert in callback.
         drop.registered_uses -= num_to_refund;
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_for_id.insert(drop_id, drop);
 
         match &mut drop.drop_type {
             DropType::NonFungibleToken(data) => {
@@ -409,7 +409,7 @@ impl Keypom {
                     );
                 }
 
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(drop_id, drop);
 
                 // Create the second batch promise to execute after the nft_batch_index batch is finished executing.
                 // It will execute on the current account ID (this contract)

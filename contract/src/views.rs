@@ -77,7 +77,7 @@ impl Keypom {
         CUSTOM
     */
     /// Query for the total supply of keys on the contract
-    pub fn get_key_total_supply(&self) -> u64 {
+    pub fn get_key_total_supply(&self) -> u32 {
         //return the length of the data_for_pk set
         self.drop_id_for_pk.len()
     }
@@ -147,7 +147,7 @@ impl Keypom {
 
         // If the user specifies a key, use that to get the drop ID.
         if let Some(key) = key {
-            drop_id = self.drop_id_for_pk.get(&key).expect("no drop ID for PK");
+            drop_id = *self.drop_id_for_pk.get(&key).expect("no drop ID for PK");
         }
 
         let drop = self
@@ -155,31 +155,31 @@ impl Keypom {
             .get(&drop_id)
             .expect("no drop found for drop ID");
 
-        let drop_type: JsonDropType = match drop.drop_type {
-            DropType::FunctionCall(data) => JsonDropType::FunctionCall(data),
+        let drop_type: JsonDropType = match &drop.drop_type {
+            DropType::FunctionCall(data) => JsonDropType::FunctionCall(data.clone()),
             DropType::NonFungibleToken(data) => JsonDropType::NonFungibleToken(JsonNFTData {
-                contract_id: data.contract_id,
-                sender_id: data.sender_id,
+                contract_id: data.contract_id.clone(),
+                sender_id: data.sender_id.clone(),
             }),
-            DropType::FungibleToken(data) => JsonDropType::FungibleToken(data),
+            DropType::FungibleToken(data) => JsonDropType::FungibleToken(data.clone()),
             _simple => JsonDropType::Simple,
         };
 
         JsonDrop {
             drop_id,
-            owner_id: drop.owner_id,
+            owner_id: drop.owner_id.clone(),
             deposit_per_use: U128(drop.deposit_per_use),
             drop_type,
-            config: drop.config,
+            config: drop.config.clone(),
             registered_uses: drop.registered_uses,
             required_gas: drop.required_gas,
-            metadata: drop.metadata.get(),
+            metadata: drop.metadata.get().clone(),
             next_key_id: drop.next_key_id,
         }
     }
 
     /// Returns the total supply of active keys for a given drop
-    pub fn get_key_supply_for_drop(&self, drop_id: DropId) -> u64 {
+    pub fn get_key_supply_for_drop(&self, drop_id: DropId) -> u32 {
         // Get the drop object and return the length
         self.drop_for_id
             .get(&drop_id)
@@ -215,7 +215,7 @@ impl Keypom {
     }
 
     /// Returns the total supply of active drops for a given owner
-    pub fn get_drop_supply_for_owner(&self, account_id: AccountId) -> u64 {
+    pub fn get_drop_supply_for_owner(&self, account_id: AccountId) -> u32 {
         //get the set of drops for the passed in owner
         let drops_for_owner = self.drop_ids_for_owner.get(&account_id);
 
@@ -249,7 +249,7 @@ impl Keypom {
                 // Take the first "limit" elements in the vector. If we didn't specify a limit, use 50
                 .take(limit.unwrap_or(50) as usize)
                 // Convert each ID into a JsonDrop
-                .map(|id| self.get_drop_information(Some(id), None))
+                .map(|id| self.get_drop_information(Some(*id), None))
                 // Collect all JsonDrops into a vector and return it
                 .collect()
         } else {
@@ -258,9 +258,9 @@ impl Keypom {
     }
 
     /// Return the total supply of token IDs for a given drop
-    pub fn get_nft_supply_for_drop(&self, drop_id: DropId) -> u64 {
+    pub fn get_nft_supply_for_drop(&self, drop_id: DropId) -> u32 {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
+        if let DropType::NonFungibleToken(nft_data) = &drop.drop_type {
             return nft_data.token_ids.len();
         } else {
             return 0;
@@ -275,8 +275,8 @@ impl Keypom {
         limit: Option<u64>,
     ) -> Vec<String> {
         let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
-            let token_ids = nft_data.token_ids;
+        if let DropType::NonFungibleToken(nft_data) = &drop.drop_type {
+            let token_ids = &nft_data.token_ids;
 
             // Where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
             let start = u128::from(from_index.unwrap_or(U128(0)));
@@ -284,6 +284,7 @@ impl Keypom {
             // Iterate through each token ID using an iterator
             token_ids
                 .iter()
+                .cloned()
                 //skip to the index we specified in the start variable
                 .skip(start as usize)
                 //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
@@ -324,7 +325,7 @@ impl Keypom {
     }
 
     /// Returns the current contract source metadata
-    pub fn contract_source_metadata(&self) -> ContractSourceMetadata {
-        self.contract_metadata.get().unwrap()
+    pub fn contract_source_metadata(&self) -> &ContractSourceMetadata {
+        self.contract_metadata.get().as_ref().unwrap()
     }
 }
