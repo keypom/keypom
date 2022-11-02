@@ -39,7 +39,7 @@ pub struct KeyInfo {
     pub key_id: u64,
 
     // Password for each use for this specific key
-    pub pw_per_use: Option<LookupMap<u64, Vec<u8>>>,
+    pub pw_per_use: Option<UnorderedMap<u64, Vec<u8>>>,
 
     // Password for the key regardless of the use
     pub pw_per_key: Option<Vec<u8>>,
@@ -244,6 +244,9 @@ impl Keypom {
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
 
+        if passwords_per_use.is_some() {
+            require!(len <= 50, "Cannot add 50 keys at once with passwords");
+        }
         require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be equal to the number of public keys");
         require!(passwords_per_key.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per key must be equal to the number of public keys");
         // Loop through and add each drop ID to the public keys. Also populate the key set.
@@ -255,7 +258,7 @@ impl Keypom {
             // If we have passwords for this specific key, add them to the key info
             if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[next_key_id as usize].as_ref()) {
                 
-                let mut pw_map = LookupMap::new(StorageKey::PasswordsPerUse {
+                let mut pw_map = UnorderedMap::new(StorageKey::PasswordsPerUse {
                     // We get a new unique prefix for the collection
                     account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, actual_drop_id, owner_id)),
                 });
@@ -607,7 +610,7 @@ impl Keypom {
                 Get the storage required by the FT contract and ensure the user has attached enough
                 attached_deposit to cover the storage and perform refunds if they overpayed.
             */
-
+            near_sdk::log!("Performing CCC to get storage from FT contract");
             ext_ft_contract::ext(ft_contract)
                 // Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.
                 .with_static_gas(GAS_FOR_STORAGE_BALANCE_BOUNDS)
@@ -667,6 +670,9 @@ impl Keypom {
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
         
+        if passwords_per_use.is_some() {
+            require!(len <= 50, "Cannot add 50 keys at once with passwords");
+        }
         require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be less than or equal to the number of public keys");
         require!(passwords_per_key.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per key must be equal to the number of public keys");
         // Loop through and add each drop ID to the public keys. Also populate the key set.
@@ -679,7 +685,7 @@ impl Keypom {
             // If we have passwords for this specific key, add them to the key info
             if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[idx as usize].as_ref()) {
                 
-                let mut pw_map = LookupMap::new(StorageKey::PasswordsPerUse {
+                let mut pw_map = UnorderedMap::new(StorageKey::PasswordsPerUse {
                     // We get a new unique prefix for the collection
                     account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, drop_id.0, drop.owner_id)),
                 });

@@ -523,7 +523,7 @@ test('Paying with Attached Deposit. Not enough deposit to cover callback registr
     let b2 = await owner.availableBalance();
     console.log('b2: ', b2.toString())
     // Should only go down by about 20 TGas
-    t.assert(assertBalanceChange(b1, b2, NEAR.parse("0.0021"), 0.01), "balance didn't decrement properly with 1% precision");
+    t.assert(assertBalanceChange(b1, b2, NEAR.parse("0.0021"), 0.02), "balance didn't decrement properly with 2% precision");
 
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 

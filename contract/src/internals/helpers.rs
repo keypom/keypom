@@ -292,8 +292,16 @@ impl Keypom {
     pub(crate) fn internal_remove_drop(&mut self, drop_id: &u128, public_keys: Vec<PublicKey>) -> AccountId {
         // Remove the drop
         let mut drop = self.drop_for_id.remove(drop_id).expect("drop not found");
-        // Clear the map
-        drop.pks.clear();
+
+        // Loop through public keys and remove all the keys and remove the key / passwrds per key
+        for pk in &public_keys {
+            if let Some(mut k) = drop.pks.remove(pk).unwrap().pw_per_use {
+                k.clear();
+            }
+        }
+        assert!(drop.pks.is_empty(), "drop not empty");
+        //drop.pks.clear();
+
         let owner_id = drop.owner_id.clone();
 
         // Remove the drop ID from the funder's list

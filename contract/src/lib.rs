@@ -444,8 +444,8 @@ const MIN_GAS_FOR_RESOLVE_TRANSFER: Gas =
 /// No unspent GAS will be attached on top of this (weight of 0)
 const GAS_FOR_STORAGE_BALANCE_BOUNDS: Gas = Gas(10_000_000_000_000);
 /// Minimum Gas required to resolve the cross contract call to the FT contract checking for storage balances.
-/// This value equates to 25 TGas
-const MIN_GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(25_000_000_000_000);
+/// This value equates to 150 TGas
+const MIN_GAS_FOR_RESOLVE_STORAGE_CHECK: Gas = Gas(150_000_000_000_000);
 /// Minimum Gas required to perform a simple transfer of fungible tokens.
 /// This value equates to 5 TGas
 const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
