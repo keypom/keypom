@@ -3,7 +3,7 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: AccountId, expected_uses: Option<u64>) {
+    pub fn claim(&mut self, account_id: AccountId, password: Option<String>) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
         let (
             drop_data_option,
@@ -11,9 +11,10 @@ impl Keypom {
             storage_freed_option,
             token_id,
             should_continue,
-            cur_key_info, 
+            cur_key_id,
+            remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(expected_uses);
+        ) = self.process_claim(password);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -52,7 +53,8 @@ impl Keypom {
         self.internal_execute(
             drop_data,
             drop_id.unwrap(),
-            cur_key_info,
+            cur_key_id,
+            remaining_uses,
             account_id,
             storage_freed,
             token_id,
@@ -75,7 +77,7 @@ impl Keypom {
         &mut self,
         new_account_id: AccountId,
         new_public_key: PublicKey,
-        expected_uses: Option<u64>,
+        password: Option<String>
     ) {
         let (
             drop_data_option,
@@ -83,9 +85,10 @@ impl Keypom {
             storage_freed_option,
             token_id,
             should_continue,
-            cur_key_info,
-            auto_withdraw
-        ) = self.process_claim(expected_uses);
+            cur_key_id,
+            remaining_uses,
+            auto_withdraw,
+        ) = self.process_claim(password);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -117,7 +120,8 @@ impl Keypom {
         self.internal_execute(
             drop_data,
             drop_id.unwrap(),
-            cur_key_info,
+            cur_key_id,
+            remaining_uses,
             new_account_id,
             storage_freed,
             token_id,
@@ -407,8 +411,10 @@ impl Keypom {
         fc_data: FCData,
         // Drop ID for the specific drop
         drop_id: DropId,
-        // Current key info before uses were decremented
-        cur_key_info: KeyInfo,
+        // ID for the current key
+        cur_key_id: u64,
+        // How many uses are remaining on the current key
+        remaining_uses: u64,
         // How many uses the key had left before sit was decremented
         uses_per_key: u64,
         // Was this function invoked via an execute (no callback)
@@ -445,7 +451,7 @@ impl Keypom {
         // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
         let cur_len = fc_data.methods.len() as u16;
         let starting_index = if cur_len > 1 {
-            (uses_per_key - cur_key_info.remaining_uses) as usize
+            (uses_per_key - remaining_uses) as usize
         } else {
             0 as usize
         };
@@ -503,7 +509,7 @@ impl Keypom {
         self.internal_fc_execute(
             &cur_method_data,
             fc_data.config,
-            cur_key_info.key_id,
+            cur_key_id,
             account_id,
             drop_id,
         );
@@ -514,7 +520,7 @@ impl Keypom {
     /// If drop is none, simulate a panic.
     fn process_claim(
         &mut self,
-        expected_uses: Option<u64>,
+        password: Option<String>,
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -526,8 +532,10 @@ impl Keypom {
         Option<String>,
         // Should we return and not do anything once the drop is claimed (if FC data is none)
         bool,
-        // Current key info before decrementing
-        KeyInfo,
+        // ID for the current key
+        u64,
+        // How many uses are remaining on the current key
+        u64,
         // Should we auto withdraw and send the refund to the drop owner's bal
         bool,
     ) {
@@ -566,7 +574,8 @@ impl Keypom {
         // Panic doesn't affect allowance
         let mut key_info = drop.pks.remove(&signer_pk).unwrap();
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
-        let current_key_info = key_info.clone();
+        let cur_key_id = key_info.key_id;
+        let remaining_uses = key_info.remaining_uses;
 
         // Ensure the key has enough allowance
         if key_info.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas {
@@ -580,23 +589,20 @@ impl Keypom {
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, false, current_key_info, false);
+            return (None, None, None, None, false, 0, 0, false);
         }
 
-        // If the key info doesn't match the expected uses, soft panic
-        if let Some(uses) = expected_uses {
-            if key_info.remaining_uses != uses {
-                let amount_to_decrement =
-                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-                near_sdk::log!("Expected key uses of {}. Found: {}. Decrementing allowance by {}. Used GAS: {}", uses, key_info.remaining_uses, amount_to_decrement, used_gas.0);
+        // If a password was passed in, check it against the key's password
+        let cur_use = &(drop
+        .config
+        .clone()
+        .and_then(|c| c.uses_per_key)
+        .unwrap_or(1)
+        - key_info.remaining_uses);
 
-                key_info.allowance -= amount_to_decrement;
-                near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
-                self.drop_for_id.insert(&drop_id, &drop);
-                return (None, None, None, None, false, current_key_info, false);
-            }
-        }
+        if self.assert_key_password(password, drop_id, &mut drop, &mut key_info, cur_use, &signer_pk) == false {
+            return (None, None, None, None, false, 0, 0, false);
+        };
 
         // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
         if drop.registered_uses < 1 || prepaid_gas != drop.required_gas {
@@ -614,11 +620,11 @@ impl Keypom {
             near_sdk::log!("Allowance is now {}", key_info.allowance);
             drop.pks.insert(&signer_pk, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
-            return (None, None, None, None, false, current_key_info, false);
+            return (None, None, None, None, false, 0, 0, false);
         }
 
         if self.assert_claim_timestamps(drop_id, &mut drop, &mut key_info, &signer_pk) == false {
-            return (None, None, None, None, false, current_key_info, false);
+            return (None, None, None, None, false, 0, 0, false);
         };
 
         /*
@@ -776,7 +782,8 @@ impl Keypom {
             Some(total_storage_freed),
             token_id,
             should_continue,
-            current_key_info,
+            cur_key_id,
+            remaining_uses,
             should_auto_withdraw
         )
     }

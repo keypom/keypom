@@ -1,3 +1,5 @@
+use near_sdk::{env::sha256};
+
 use crate::*;
 
 const GAS_PER_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas
@@ -86,6 +88,66 @@ impl Keypom {
             self.owner_id,
             "predecessor != owner"
         );
+    }
+
+    /// Internal function to assert that the predecessor is the contract owner
+    pub(crate) fn assert_key_password(&mut self, 
+        pw: Option<String>, 
+        drop_id: DropId, 
+        drop: &mut Drop, 
+        key_info: &mut KeyInfo,
+        cur_use: &u64,
+        signer_pk: &PublicKey
+    ) -> bool {
+        let hashed = sha256(&pw.and_then(|f| hex::decode(f).ok()).unwrap_or(vec![]));
+
+        near_sdk::log!("hashed password: {:?}", hashed);
+
+        // If there is a global password per key, check that first
+        if let Some(pw) = &key_info.pw_per_key {
+            near_sdk::log!("global password: {:?}", pw);
+            if pw != &hashed {
+                let used_gas = env::used_gas();
+
+                let amount_to_decrement =
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+    
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return false;
+            }
+        }
+
+        near_sdk::log!("passed global check");
+
+        // If there is ALSO a password per use, check that as well.
+        if let Some(pw) = &key_info.pw_per_use {
+            let actual_pass = pw.get(cur_use).unwrap_or(hashed.clone());
+
+            near_sdk::log!("actualPass password: {:?} cur use: {}", actual_pass, cur_use);
+
+            if actual_pass != hashed {
+                let used_gas = env::used_gas();
+
+                let amount_to_decrement =
+                    (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+                near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+    
+                key_info.allowance -= amount_to_decrement;
+                near_sdk::log!("Allowance is now {}", key_info.allowance);
+                drop.pks.insert(&signer_pk, &key_info);
+                self.drop_for_id.insert(&drop_id, &drop);
+                return false;
+            }
+        }
+
+        near_sdk::log!("passed local check");
+
+        // Otherwise return true
+        true
     }
 
     /// Internal function to assert that the predecessor is the contract owner
@@ -230,8 +292,16 @@ impl Keypom {
     pub(crate) fn internal_remove_drop(&mut self, drop_id: &u128, public_keys: Vec<PublicKey>) -> AccountId {
         // Remove the drop
         let mut drop = self.drop_for_id.remove(drop_id).expect("drop not found");
-        // Clear the map
-        drop.pks.clear();
+
+        // Loop through public keys and remove all the keys and remove the key / passwrds per key
+        for pk in &public_keys {
+            if let Some(mut k) = drop.pks.remove(pk).unwrap().pw_per_use {
+                k.clear();
+            }
+        }
+        assert!(drop.pks.is_empty(), "drop not empty");
+        //drop.pks.clear();
+
         let owner_id = drop.owner_id.clone();
 
         // Remove the drop ID from the funder's list
@@ -316,7 +386,8 @@ impl Keypom {
         &mut self,
         drop_data: Drop,
         drop_id: DropId,
-        cur_key_info: KeyInfo,
+        cur_key_id: u64,
+        remaining_uses: u64,
         account_id: AccountId,
         storage_freed: u128,
         token_id: Option<String>,
@@ -363,8 +434,10 @@ impl Keypom {
                     data,
                     // Drop ID
                     drop_id,
-                    // Current number of claims left on the key before decrementing
-                    cur_key_info,
+                    // ID for the current key
+                    cur_key_id,
+                    // How many uses are remaining on the current key
+                    remaining_uses,
                     // Maximum number of claims
                     drop_data.config.and_then(|c| c.uses_per_key).unwrap_or(1),
                     // Is it an auto withdraw case

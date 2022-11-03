@@ -11,15 +11,6 @@ pub struct FTData {
     pub ft_storage: U128,
 }
 
-/// FT Data to be passed in by the user
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct FTDataConfig {
-    pub contract_id: AccountId,
-    pub sender_id: AccountId,
-    pub balance_per_use: U128,
-}
-
 // Returned from the storage balance bounds cross contract call on the FT contract
 #[derive(Deserialize)]
 #[serde(crate = "near_sdk::serde")]

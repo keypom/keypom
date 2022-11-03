@@ -42,7 +42,7 @@ test.beforeEach(async (t) => {
     })
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: "0"});
 
-    // Mint the NFT
+    // Mint the FTs
     await ftContract.call(ftContract, 'storage_deposit', { account_id: minter.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
     await ftContract.call(ftContract, 'ft_transfer', { receiver_id: minter.accountId, amount: (oneGtNear * BigInt(1000)).toString() }, { attachedDeposit: "1" });
 
@@ -231,7 +231,7 @@ test('OverRegister FTs and add multi use key later', async t => {
     t.is(keypomBal, (oneGtNear * BigInt(10)).toString());
 
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
-    await owner.call(keypom, 'add_keys', {drop_id: 0, public_keys: [publicKeys[0]]}, {gas: LARGE_GAS});
+    await owner.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[0]]}, {gas: LARGE_GAS});
     await keypom.setKey(keys[0]);
     await keypom.updateAccessKey(
         keys[0],  // public key
@@ -310,7 +310,7 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
     await owner.call(keypom, 'add_keys', {
         public_keys: [publicKeys[0]],
-        drop_id: 0
+        drop_id: '0'
     },{gas: LARGE_GAS});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating key: ', ownerBal)
@@ -523,7 +523,7 @@ test('Paying with Attached Deposit. Not enough deposit to cover callback registr
     let b2 = await owner.availableBalance();
     console.log('b2: ', b2.toString())
     // Should only go down by about 20 TGas
-    t.assert(assertBalanceChange(b1, b2, NEAR.parse("0.0021"), 0.01), "balance didn't decrement properly with 1% precision");
+    t.assert(assertBalanceChange(b1, b2, NEAR.parse("0.0021"), 0.02), "balance didn't decrement properly with 2% precision");
 
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 

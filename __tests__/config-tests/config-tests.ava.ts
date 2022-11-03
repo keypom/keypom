@@ -215,7 +215,7 @@ test('Testing Throttle Timestamp', async t => {
 
     let keyInformation: JsonKeyInfo = await keypom.view('get_key_information', {key: publicKeys[0]});
     console.log('keyInformation: ', keyInformation)
-    t.is(keyInformation.key_info.remaining_uses, 1);
+    t.is(keyInformation.remaining_uses, 1);
 
     // Wait 30 seconds and call the claim method again
     await new Promise(r => setTimeout(r, 30000));

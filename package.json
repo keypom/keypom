@@ -6,33 +6,36 @@
 	"scripts": {
 		"pub-docs": "rm -rf doc && mkdir doc && cargo doc --no-deps && cp -r target/doc/* doc && gh-pages -d doc",
 		"dev-deploy": "echo building contract && yarn build-contract && echo removing neardev && rm -rf neardev && echo deploying && (near dev-deploy --wasmFile out/keypom.wasm || exit 0)",
-			"build-contract": "./build.sh",
+		"build-contract": "./build.sh",
 		"simple": "yarn simple-create && yarn simple-add",
-			"simple-create": "node deploy/simple/simple-create",
+		"simple-create": "node deploy/simple/simple-create",
 		"ft": "yarn ft-create && yarn ft-add",
-			"ft-create": "node deploy/ft/ft-create",
+		"ft-create": "node deploy/ft/ft-create",
 		"nft": "yarn nft-create && yarn nft-add",
-			"nft-create": "node deploy/nft/nft-create",
+		"nft-create": "node deploy/nft/nft-create",
 		"fc": "yarn fc-create && yarn fc-add",
-			"fc-create": "node deploy/function-call/fc-create",
-		"test": "yarn test:internals && yarn test:stage1 && yarn test:ticketing && yarn test:poaps && yarn test:configs && yarn test:nft-drops && yarn test:ft-drops",
-			"test:internals": "ava __tests__/internals/test-internals.ava.ts",
-			"test:stage1": "yarn test:stage1:simple",
-				"test:stage1:simple": "ava __tests__/stage1/test-simple.ava.ts",
-			"test:ticketing": "ava __tests__/ticketing/ticketing-tests.ava.ts",
-			"test:poaps": "ava __tests__/poaps/poap-tests.ava.ts",
-			"test:configs": "ava __tests__/config-tests/config-tests.ava.ts",
-			"test:nft-drops": "ava __tests__/nft-drops/nft-drops.ava.ts",
-			"test:ft-drops": "ava __tests__/ft-drops/ft-drops.ava.ts",
-			"test:profiling" : "ava __tests__/profiling/profiling.ava.ts"
+		"fc-create": "node deploy/function-call/fc-create",
+		"test": "yarn test:internals && yarn test:stage1 && yarn test:ticketing && yarn test:poaps && yarn test:configs && yarn test:nft-drops && yarn test:ft-drops && yarn test:passwords",
+		"test:internals": "ava __tests__/internals/test-internals.ava.ts",
+		"test:stage1": "yarn test:stage1:simple",
+		"test:stage1:simple": "ava __tests__/stage1/test-simple.ava.ts",
+		"test:ticketing": "ava __tests__/ticketing/ticketing-tests.ava.ts",
+		"test:poaps": "ava __tests__/poaps/poap-tests.ava.ts",
+		"test:configs": "ava __tests__/config-tests/config-tests.ava.ts",
+		"test:nft-drops": "ava __tests__/nft-drops/nft-drops.ava.ts",
+		"test:ft-drops": "ava __tests__/ft-drops/ft-drops.ava.ts",
+		"test:profiling": "ava __tests__/profiling/profiling.ava.ts",
+		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"crypto": "^1.0.1"
+	},
 	"devDependencies": {
+		"@types/bn.js": "^5.1.0",
 		"ava": "^4.2.0",
-		"near-workspaces": "3.2.0",
 		"near-api-js": "^0.44.2",
-		"typescript": "^4.6.4",
+		"near-workspaces": "3.2.0",
 		"ts-node": "^10.8.0",
-		"@types/bn.js": "^5.1.0"
+		"typescript": "^4.6.4"
 	}
 }

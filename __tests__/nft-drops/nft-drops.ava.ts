@@ -208,7 +208,7 @@ test('OverRegister NFTs and add multi use key later', async t => {
     t.is(tokenInfos.length, 10);
 
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
-    await owner.call(keypom, 'add_keys', {drop_id: 0, public_keys: [publicKeys[0]]}, {gas: LARGE_GAS});
+    await owner.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[0]]}, {gas: LARGE_GAS});
     await keypom.setKey(keys[0]);
     await keypom.updateAccessKey(
         keys[0],  // public key
@@ -338,7 +338,7 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
     await owner.call(keypom, 'add_keys', {
         public_keys: [publicKeys[0]],
-        drop_id: 0
+        drop_id: '0'
     },{gas: LARGE_GAS});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating key: ', ownerBal)

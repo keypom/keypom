@@ -51,7 +51,7 @@ test('Create empty drop check views', async t => {
     t.is(result.keyTotalSupply, 0);
     t.deepEqual(result.keys, []);
     let jsonDrop = result.dropInformation!;
-    t.is(jsonDrop.drop_id, 0);
+    t.is(jsonDrop.drop_id, '0');
     t.is(jsonDrop.owner_id, ali.accountId);
     t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
     t.is(jsonDrop.drop_type.toString(), 'Simple');
@@ -77,7 +77,7 @@ test('Create drop with 1000 keys', async t => {
     let {keys, publicKeys} = await generateKeyPairs(1);
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
     await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString(), config: dropConfig});
-    await ali.call(keypom, 'add_keys', {drop_id: 0, public_keys: [publicKeys[0]]});
+    await ali.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[0]]});
 
     let foo = await keypom.view('get_user_balance', {account_id: ali.accountId});
     console.log('foo: ', foo)

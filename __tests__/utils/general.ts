@@ -72,7 +72,22 @@ export async function queryAllViewFunctions(
     limit?: number | null,
     account_id?: string | null
   }
-) {
+): Promise<{
+  keyBalance: string | null,
+  keyInformation: JsonKeyInfo | null,
+  dropInformation: JsonDrop | null,
+  keySupplyForDrop: number | null,
+  keysForDrop: JsonKeyInfo[] | null,
+  tokenIdsForDrop: string[] | null,
+  dropSupplyForOwner: number | null,
+  dropsForOwner: JsonDrop[] | null,
+  gasPrice: number,
+  rootAccount: string,
+  feesCollected: string,
+  nextDropId: number,
+  keyTotalSupply: number,
+  keys: JsonKeyInfo[],
+}> {
   let getGasPrice: number = await contract.view('get_gas_price', {});
   let getRootAccount: string = await contract.view('get_root_account', {});
   let getFeesCollected: string = await contract.view('get_fees_collected', {});

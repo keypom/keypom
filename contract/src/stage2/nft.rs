@@ -10,14 +10,6 @@ pub struct NFTData {
     pub token_ids: Vector<String>,
 }
 
-/// Keep track of nft data. This is passed in by the user
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct NFTDataConfig {
-    pub sender_id: AccountId,
-    pub contract_id: AccountId,
-}
-
 #[near_bindgen]
 impl Keypom {
     pub fn nft_on_transfer(

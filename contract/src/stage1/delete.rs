@@ -88,6 +88,10 @@ impl Keypom {
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
                 let key_info = drop.pks.remove(key).expect("public key must be in drop");
+                if let Some(mut k) = key_info.pw_per_use {
+                    k.clear();
+                }
+
                 total_num_claims_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
@@ -216,6 +220,9 @@ impl Keypom {
                 self.drop_id_for_pk.remove(key);
                 // Attempt to remove the public key. panic if it didn't exist
                 let key_info = drop.pks.remove(key).expect("public key must be in drop");
+                if let Some(mut k) = key_info.pw_per_use {
+                    k.clear();
+                }
                 total_num_claims_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of

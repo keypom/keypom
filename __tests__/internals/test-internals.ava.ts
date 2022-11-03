@@ -114,7 +114,7 @@ test('Withdrawing fees earned', async t => {
     t.is(result, NEAR.parse("1").toString());
     
     let keyPair = await KeyPairEd25519.fromRandom();
-    await ali.call(keypom, 'add_keys', {public_keys: [keyPair.publicKey.toString()], drop_id: 0})
+    await ali.call(keypom, 'add_keys', {public_keys: [keyPair.publicKey.toString()], drop_id: '0'})
 
     result = await keypom.view('get_fees_collected', {});
     t.is(result, NEAR.parse('1005 mN').toString());
@@ -145,7 +145,7 @@ test('Custom fees earned', async t => {
     t.is(result, NEAR.parse("5").toString());
     
     let keyPair = await KeyPairEd25519.fromRandom();
-    await ali.call(keypom, 'add_keys', {public_keys: [keyPair.publicKey.toString()], drop_id: 0})
+    await ali.call(keypom, 'add_keys', {public_keys: [keyPair.publicKey.toString()], drop_id: '0'})
 
     result = await keypom.view('get_fees_collected', {});
     t.is(result, NEAR.parse('5').toString());

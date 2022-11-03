@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 near-sdk = "4.0.0"
+hex = "0.4.3"
