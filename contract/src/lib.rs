@@ -573,6 +573,19 @@ would hash this and compare it to the value stored on-chain.
 The difference is that each individual key use can have a different value stored on-chain such that the user can be forced to input a different hash each time.
 This `SOMETHING` that is hashed can be similar to the global password per key example but this time, the desired key use is added: `hash("mypassword1" + key1_public_key + use_number)`
 
+In order to pass in the passwords per use, a new data structure is introduced so you only need to pass in passwords for the uses that have them. This is known as the 
+`JsonPasswordForUse` and is as follows:
+
+```rust
+pub struct JsonPasswordForUse {
+    /// What is the password for this use (such as `hash("mypassword1" + key1_public_key + use_number)`)
+    pub pw: String,
+    /// Which use does this pertain to
+    /// This is *zero indexed*. The first use starts at 0.
+    pub key_use: u64
+}
+````
+
 ## Adding Your First Password
 
 Whenever keys are added to Keypom, if there's passwords involved, they must be passed in using the following format. 
@@ -622,20 +635,20 @@ passwords_per_key: Some(vec![
     // Key B
     vec![
         {
-            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "1")),
-            key_use: 1
+            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "0")),
+            key_use: 0
         },
         {
-            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "2")),
-            key_use: 2
+            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "1")),
+            key_use: 1
         }
     ]
 
     // Key C
     vec![
         {
-            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "1")),
-            key_use: 1
+            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "0")),
+            key_use: 0
         }
     ]
 
@@ -660,14 +673,14 @@ Similarly, if Charlie tried to look at the explorer when Alice created the keys 
 the contract would attempt to hash this and it would NOT match up with what's in the storage.
 
 ### Key B
-Alice gives Eve Key B and she would need a password for claim 1 and 2. For the first claim, she needs to pass in: `hash("keys_bc_base_password" + key_b_public_key + "1")`.
+Alice gives Eve Key B and she would need a password for claim 1 and 2. For the first claim, she needs to pass in: `hash("keys_bc_base_password" + key_b_public_key + "0")`.
 The contract would then check and see if the hashed version of this matches up with what's stored on-chain for that use.
 
-The second time Eve uses the key, she needs to pass in hash("keys_bc_base_password" + key_b_public_key + "2") and the same check is done.
+The second time Eve uses the key, she needs to pass in hash("keys_bc_base_password" + key_b_public_key + "1") and the same check is done.
 
-If Eve tries to pass in `hash("keys_bc_base_password" + key_b_public_key + "1")` for the second key use, the contract would hash it and check:
+If Eve tries to pass in `hash("keys_bc_base_password" + key_b_public_key + "0")` for the second key use, the contract would hash it and check:
 
-hash(hash("keys_bc_base_password" + key_b_public_key + "1")) == hash(hash("keys_bc_base_password" + key_b_public_key + "2"))
+hash(hash("keys_bc_base_password" + key_b_public_key + "0")) == hash(hash("keys_bc_base_password" + key_b_public_key + "1"))
 
 Which is incorrect and the key would not be claimed.
 

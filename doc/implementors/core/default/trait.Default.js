@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["keypom"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.61.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"keypom/struct.Keypom.html\" title=\"struct keypom::Keypom\">Keypom</a>","synthetic":false,"types":["keypom::Keypom"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
