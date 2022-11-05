@@ -33,7 +33,7 @@
   - [Function Call Drops](#function-call-drops)
   - [Password Protected Keys](#password-protected-keys)
   - [dApp Free Trials for Users](#dapp-free-trials-for-users)
-- [Costs](#how-it-works)
+- [Costs](#costs)
   - [Per Drop](#per-drop)
   - [Per Key](#per-key)
   - [Deleting Keys and Drops](#deleting-keys-and-drops)
@@ -42,7 +42,7 @@
 - [How Linkdrops Work](#how-linkdrops-work)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [Deploy Scripts](#quickstart)  
+  - [Deploy Scripts](#deploy-scripts)  
 - [Query Information From Keypom](#query-information-from-keypom)
   - [Key Specific](#key-specific)
   - [Drop Specific](#drop-specific)    
@@ -882,7 +882,7 @@ This account balance is not *required*, however. You can create a drop by attach
 - [near-sdk-rs](https://github.com/near/near-sdk-rs)
 - [near-api-js](https://github.com/near/near-api-js)
 
-# How Linkdrops Works
+# How Linkdrops Work
 
 For some background as to how linkdrops works on NEAR: 
 
