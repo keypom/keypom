@@ -2,9 +2,10 @@ const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/for
 const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
-const { initiateNearConnection, getFtCosts, estimateRequiredDeposit, ATTACHED_GAS_FROM_WALLET } = require("../utils/general");
+const { initiateNearConnection, getFtCosts, ATTACHED_GAS_FROM_WALLET } = require("../utils/general");
 const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT } = require("./configurations");
 const { KeyPair } = require("near-api-js");
+const { estimateRequiredDeposit } = require("keypom-js");
 
 async function start() {
 	// Initiate connection to the NEAR blockchain.
@@ -12,13 +13,13 @@ async function start() {
 	let near = await initiateNearConnection(NETWORK_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
-	let requiredDeposit = await estimateRequiredDeposit(
-		near,
-		DEPOSIT_PER_USE,
-		NUM_KEYS,
-		DROP_CONFIG.uses_per_key,
-		ATTACHED_GAS_FROM_WALLET,
-	)
+	let requiredDeposit = await estimateRequiredDeposit({
+			near,
+			depositPerUse: DEPOSIT_PER_USE,
+			numKeys: NUM_KEYS,
+			usesPerKey: DROP_CONFIG.uses_per_key,
+			attachedGas: ATTACHED_GAS_FROM_WALLET,
+	})
 	
 	// Keep track of an array of the keyPairs we create
 	let keyPairs = [];
@@ -44,7 +45,6 @@ async function start() {
 	}
 
 	try {
-		DROP_CONFIG.end_timestamp = (Date.now() * 1e6) + 1e9 * 120;
 		await fundingAccount.functionCall(
 			KEYPOM_CONTRACT, 
 			'create_drop', 

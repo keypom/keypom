@@ -1,10 +1,10 @@
 const { parseNearAmount } = require("near-api-js/lib/utils/format");
 
-const KEYPOM_CONTRACT = "dev-1666537803546-29997036387462"
+const KEYPOM_CONTRACT = "v1.keypom.testnet"
 const FUNDING_ACCOUNT_ID = "benjiman.testnet";
 const NETWORK_ID = "testnet";
-const DEPOSIT_PER_USE = parseNearAmount("1");
-const NUM_KEYS = 1;
+const DEPOSIT_PER_USE = parseNearAmount("10");
+const NUM_KEYS = 10;
 
 const DROP_CONFIG = {
     // How many claims can each key have.
@@ -33,8 +33,6 @@ const DROP_CONFIG = {
 
     // Root account that all sub-accounts will default to. If None, default to the global drop root.
     drop_root: null,
-
-    end_timestamp: (Date.now() * 1000000) + 1e9 * 20
 }
 
 const DROP_METADATA = "";
