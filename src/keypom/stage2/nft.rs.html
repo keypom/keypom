@@ -204,14 +204,6 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">near_sdk::collections::Vector</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="kw-2">*</span>;
@@ -222,14 +214,6 @@
     <span class="kw">pub</span> <span class="ident">sender_id</span>: <span class="ident">AccountId</span>,
     <span class="kw">pub</span> <span class="ident">contract_id</span>: <span class="ident">AccountId</span>,
     <span class="kw">pub</span> <span class="ident">token_ids</span>: <span class="ident">Vector</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-}
-
-<span class="doccomment">/// Keep track of nft data. This is passed in by the user</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">BorshDeserialize</span>, <span class="ident">BorshSerialize</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="kw">crate</span> <span class="op">=</span> <span class="string">&quot;near_sdk::serde&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NFTDataConfig</span> {
-    <span class="kw">pub</span> <span class="ident">sender_id</span>: <span class="ident">AccountId</span>,
-    <span class="kw">pub</span> <span class="ident">contract_id</span>: <span class="ident">AccountId</span>,
 }
 
 <span class="attribute">#[<span class="ident">near_bindgen</span>]</span>

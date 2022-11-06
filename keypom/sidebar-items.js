@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Keypom","Main contract struct that holds all the contract data"],["KeypomExt",""]]};
+window.SIDEBAR_ITEMS = {"struct":[["ContractSourceMetadata","Contract metadata structure"],["Keypom","Main contract struct that holds all the contract data"],["KeypomExt",""]]};

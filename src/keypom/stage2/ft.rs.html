@@ -413,6 +413,50 @@
 <span id="407">407</span>
 <span id="408">408</span>
 <span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">near_sdk::GasWeight</span>;
 
@@ -424,15 +468,6 @@
     <span class="kw">pub</span> <span class="ident">sender_id</span>: <span class="ident">AccountId</span>,
     <span class="kw">pub</span> <span class="ident">balance_per_use</span>: <span class="ident">U128</span>,
     <span class="kw">pub</span> <span class="ident">ft_storage</span>: <span class="ident">U128</span>,
-}
-
-<span class="doccomment">/// FT Data to be passed in by the user</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PanicOnDefault</span>, <span class="ident">BorshDeserialize</span>, <span class="ident">BorshSerialize</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="kw">crate</span> <span class="op">=</span> <span class="string">&quot;near_sdk::serde&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FTDataConfig</span> {
-    <span class="kw">pub</span> <span class="ident">contract_id</span>: <span class="ident">AccountId</span>,
-    <span class="kw">pub</span> <span class="ident">sender_id</span>: <span class="ident">AccountId</span>,
-    <span class="kw">pub</span> <span class="ident">balance_per_use</span>: <span class="ident">U128</span>,
 }
 
 <span class="comment">// Returned from the storage balance bounds cross contract call on the FT contract</span>
@@ -542,7 +577,7 @@
 
     <span class="attribute">#[<span class="ident">private</span>]</span>
     <span class="doccomment">/// Self callback checks if fungible tokens were successfully refunded. If yes, set keys registered to 0.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ft_resolve_refund</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">drop_id</span>: <span class="ident">DropId</span>, <span class="ident">num_to_refund</span>: <span class="ident">u64</span>, <span class="ident">ft_storage</span>: <span class="ident">U128</span>, <span class="ident">funder</span>: <span class="ident">AccountId</span>) -&gt; <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ft_resolve_refund</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">drop_id</span>: <span class="ident">DropId</span>, <span class="ident">num_to_refund</span>: <span class="ident">u64</span>) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">transfer_succeeded</span> <span class="op">=</span> <span class="macro">matches!</span>(<span class="ident">env::promise_result</span>(<span class="number">0</span>), <span class="ident">PromiseResult::Successful</span>(<span class="kw">_</span>));
 
         <span class="comment">// Everything went well so we return true since the keys registered have already been decremented</span>
@@ -552,11 +587,6 @@
                 <span class="ident">drop_id</span>,
                 <span class="ident">num_to_refund</span>
             );
-            <span class="kw">let</span> <span class="ident">amount_to_refund</span> <span class="op">=</span> <span class="ident">ft_storage</span>.<span class="number">0</span> <span class="op">*</span> <span class="ident">num_to_refund</span> <span class="kw">as</span> <span class="ident">u128</span>;
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_user_bal</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">funder</span>).<span class="ident">expect</span>(<span class="string">&quot;no user balance&quot;</span>);
-            <span class="ident">cur_user_bal</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
-            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">funder</span>, <span class="kw-2">&amp;</span><span class="ident">cur_user_bal</span>);
-            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Refunding user {}. Num to refund: {}. FT storage: {}&quot;</span>, <span class="ident">amount_to_refund</span>, <span class="ident">num_to_refund</span>, <span class="ident">ft_storage</span>.<span class="number">0</span>);
             <span class="kw">return</span> <span class="bool-val">true</span>;
         }
 
@@ -582,31 +612,48 @@
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">promise_result_as_success</span>();
         <span class="kw">let</span> <span class="ident">pub_keys_len</span> <span class="op">=</span> <span class="ident">public_keys</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u128</span>;
 
+        <span class="comment">// Get the attached deposit originally sent by the user (if any)</span>
+        <span class="kw">let</span> <span class="ident">near_attached</span> <span class="op">=</span> <span class="ident">env::attached_deposit</span>();
+
         <span class="comment">// If things went wrong, we need to delete the data and refund the user.</span>
         <span class="kw">if</span> <span class="ident">result</span>.<span class="ident">is_none</span>() {
-            <span class="comment">// Refund the funder any excess $NEAR</span>
-            <span class="macro">near_sdk::log!</span>(
-                <span class="string">&quot;Unsuccessful query to get storage. Refunding funder&#39;s balance: {}&quot;</span>,
-                <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>)
-            );
-            <span class="comment">// Remove the drop</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">drop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>).<span class="ident">expect</span>(<span class="string">&quot;drop not found&quot;</span>);
-            <span class="comment">// Clear the map</span>
-            <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">clear</span>();
-            <span class="kw">let</span> <span class="ident">owner_id</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">owner_id</span>.<span class="ident">clone</span>();
-
-            <span class="comment">// Remove the drop ID from the funder&#39;s list</span>
-            <span class="self">self</span>.<span class="ident">internal_remove_drop_for_funder</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop_id</span>);
-
-            <span class="comment">// Loop through the keys and remove the public keys&#39; mapping</span>
-            <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="ident">public_keys</span> {
-                <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">clone</span>());
-            }
+            <span class="comment">// Remove the drop and get the owner ID back</span>
+            <span class="kw">let</span> <span class="ident">owner_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">internal_remove_drop</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="ident">public_keys</span>);
 
             <span class="comment">// Refund the user&#39;s balance for the required attached_deposit</span>
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">user_balance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>).<span class="ident">unwrap</span>();
-            <span class="ident">user_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">required_deposit</span>;
-            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">user_balance</span>);
+            <span class="ident">user_balance</span> <span class="op">=</span> <span class="ident">user_balance</span> <span class="op">+</span> <span class="ident">required_deposit</span> <span class="op">-</span> <span class="ident">near_attached</span>;
+
+            <span class="comment">// Refund the funder any excess $NEAR</span>
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Unsuccessful query to get storage. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}&quot;</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">near_attached</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">user_balance</span>)
+            );
+
+            <span class="kw">if</span> <span class="ident">user_balance</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="comment">// Refund the funder any excess $NEAR</span>
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;User balance positive. Adding back into contract.&quot;</span>
+                );
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">user_balance</span>);
+            } <span class="kw">else</span> {
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;User balance zero. Removing from contract.&quot;</span>
+                );
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>);
+            }
+
+            <span class="comment">// Refund the predecessor for their attached deposit if it&#39;s greater than 0</span>
+            <span class="kw">if</span> <span class="ident">near_attached</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;Refunding user for attached deposit of: {}&quot;</span>,
+                    <span class="ident">yocto_to_near</span>(<span class="ident">near_attached</span>)
+                );
+
+                <span class="ident">Promise::new</span>(<span class="ident">env::predecessor_account_id</span>()).<span class="ident">transfer</span>(<span class="ident">near_attached</span>);
+            }
 
             <span class="kw">return</span> <span class="bool-val">false</span>;
         }
@@ -627,27 +674,47 @@
 
             <span class="comment">// Get the current user balance ad ensure that they have the extra $NEAR for covering the FT storage</span>
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_user_balance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>).<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">extra_storage_required</span> <span class="op">=</span> <span class="ident">min</span>.<span class="number">0</span> <span class="op">*</span> <span class="ident">uses_per_key</span> <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="ident">pub_keys_len</span>;
+            <span class="kw">let</span> <span class="ident">extra_storage_required</span> <span class="op">=</span> <span class="ident">min</span>.<span class="number">0</span> <span class="op">*</span> <span class="ident">uses_per_key</span> <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="ident">pub_keys_len</span> <span class="op">+</span> <span class="ident">min</span>.<span class="number">0</span>;
 
             <span class="comment">// Ensure the user&#39;s current balance can cover the extra storage required</span>
             <span class="kw">if</span> <span class="ident">cur_user_balance</span> <span class="op">&lt;</span> <span class="ident">extra_storage_required</span> {
-                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough balance to cover FT storage for each key and their claims. Refunding funder&#39;s balance: {}&quot;</span>, <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>));
-                <span class="comment">// Remove the drop</span>
-                <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>).<span class="ident">unwrap</span>();
-                <span class="comment">// Clear the map</span>
-                <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">clear</span>();
-
-                <span class="comment">// Remove the drop ID from the funder&#39;s list</span>
-                <span class="self">self</span>.<span class="ident">internal_remove_drop_for_funder</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop_id</span>);
-
-                <span class="comment">// Loop through the keys and remove the keys from the drop and remove the drop ID for the key</span>
-                <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="ident">public_keys</span> {
-                    <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">clone</span>());
-                }
+                <span class="comment">// Remove the drop and get the owner ID back</span>
+                <span class="kw">let</span> <span class="ident">owner_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">internal_remove_drop</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="ident">public_keys</span>);
 
                 <span class="comment">// Refund the user&#39;s balance for the required attached_deposit</span>
-                <span class="ident">cur_user_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">required_deposit</span>;
-                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_user_balance</span>);
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">user_balance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>).<span class="ident">unwrap</span>();
+                <span class="ident">user_balance</span> <span class="op">=</span> <span class="ident">user_balance</span> <span class="op">+</span> <span class="ident">required_deposit</span> <span class="op">-</span> <span class="ident">near_attached</span>;
+
+                <span class="comment">// Refund the funder any excess $NEAR</span>
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;Not enough balance to cover FT storage for each key and their claims. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}&quot;</span>,
+                    <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>),
+                    <span class="ident">yocto_to_near</span>(<span class="ident">near_attached</span>),
+                    <span class="ident">yocto_to_near</span>(<span class="ident">user_balance</span>)
+                );
+
+                <span class="kw">if</span> <span class="ident">user_balance</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                    <span class="comment">// Refund the funder any excess $NEAR</span>
+                    <span class="macro">near_sdk::log!</span>(
+                        <span class="string">&quot;User balance positive. Adding back into contract.&quot;</span>
+                    );
+                    <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">user_balance</span>);
+                } <span class="kw">else</span> {
+                    <span class="macro">near_sdk::log!</span>(
+                        <span class="string">&quot;User balance zero. Removing from contract.&quot;</span>
+                    );
+                    <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>);
+                }
+
+                <span class="comment">// Refund the predecessor for their attached deposit if it&#39;s greater than 0</span>
+                <span class="kw">if</span> <span class="ident">near_attached</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                    <span class="macro">near_sdk::log!</span>(
+                        <span class="string">&quot;Refunding user for attached deposit of: {}&quot;</span>,
+                        <span class="ident">yocto_to_near</span>(<span class="ident">near_attached</span>)
+                    );
+                    
+                    <span class="ident">Promise::new</span>(<span class="ident">owner_id</span>).<span class="ident">transfer</span>(<span class="ident">near_attached</span>);
+                }
 
                 <span class="kw">return</span> <span class="bool-val">false</span>;
             }
@@ -655,12 +722,17 @@
             <span class="comment">// Update the FT data to include the storage and insert the drop back with the updated FT data</span>
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">DropType::FungibleToken</span>(<span class="kw-2">mut</span> <span class="ident">ft_data</span>) <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">drop_type</span> {
                 <span class="ident">ft_data</span>.<span class="ident">ft_storage</span> <span class="op">=</span> <span class="ident">min</span>;
-                <span class="ident">drop</span>.<span class="ident">drop_type</span> <span class="op">=</span> <span class="ident">DropType::FungibleToken</span>(<span class="ident">ft_data</span>);
+                <span class="ident">drop</span>.<span class="ident">drop_type</span> <span class="op">=</span> <span class="ident">DropType::FungibleToken</span>(<span class="ident">ft_data</span>.<span class="ident">clone</span>());
 
                 <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
 
                 <span class="comment">// Decrement the user&#39;s balance by the extra required and insert back into the map</span>
                 <span class="ident">cur_user_balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">extra_storage_required</span>;
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;User has enough balance to cover FT storage. Subtracting {} from user balance. User balance is now {}&quot;</span>,
+                    <span class="ident">yocto_to_near</span>(<span class="ident">extra_storage_required</span>),
+                    <span class="ident">yocto_to_near</span>(<span class="ident">cur_user_balance</span>)
+                );
                 <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_user_balance</span>);
 
                 <span class="comment">// Create the keys for the contract</span>
@@ -701,35 +773,51 @@
 
                 <span class="ident">env::promise_return</span>(<span class="ident">promise</span>);
 
+                <span class="self">self</span>.<span class="ident">internal_register_ft_contract</span>(<span class="kw-2">&amp;</span><span class="ident">ft_data</span>.<span class="ident">contract_id</span>, <span class="ident">min</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="bool-val">true</span>);
+
                 <span class="comment">// Everything went well and we return true</span>
                 <span class="kw">return</span> <span class="bool-val">true</span>;
             } <span class="kw">else</span> {
                 <span class="bool-val">false</span>
             }
         } <span class="kw">else</span> {
-            <span class="comment">// Refund the funder any excess $NEAR</span>
-            <span class="macro">near_sdk::log!</span>(
-                <span class="string">&quot;Unsuccessful query to get storage. Refunding funder&#39;s balance: {}&quot;</span>,
-                <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>)
-            );
-            <span class="comment">// Remove the drop</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">drop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>).<span class="ident">expect</span>(<span class="string">&quot;drop not found&quot;</span>);
-            <span class="comment">// Clear the map</span>
-            <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">clear</span>();
-            <span class="kw">let</span> <span class="ident">owner_id</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">owner_id</span>.<span class="ident">clone</span>();
-
-            <span class="comment">// Remove the drop ID from the funder&#39;s list</span>
-            <span class="self">self</span>.<span class="ident">internal_remove_drop_for_funder</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop_id</span>);
-
-            <span class="comment">// Loop through the keys and remove the public keys&#39; mapping</span>
-            <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="ident">public_keys</span> {
-                <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">clone</span>());
-            }
+            <span class="comment">// Remove the drop and get the owner ID back</span>
+            <span class="kw">let</span> <span class="ident">owner_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">internal_remove_drop</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="ident">public_keys</span>);
 
             <span class="comment">// Refund the user&#39;s balance for the required attached_deposit</span>
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">user_balance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>).<span class="ident">unwrap</span>();
-            <span class="ident">user_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">required_deposit</span>;
-            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">user_balance</span>);
+            <span class="ident">user_balance</span> <span class="op">=</span> <span class="ident">user_balance</span> <span class="op">+</span> <span class="ident">required_deposit</span> <span class="op">-</span> <span class="ident">near_attached</span>;
+
+            <span class="comment">// Refund the funder any excess $NEAR</span>
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Unsuccessful query to get storage. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}&quot;</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">near_attached</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">user_balance</span>)
+            );
+
+            <span class="kw">if</span> <span class="ident">user_balance</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="comment">// Refund the funder any excess $NEAR</span>
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;User balance positive. Adding back into contract.&quot;</span>
+                );
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">user_balance</span>);
+            } <span class="kw">else</span> {
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;User balance zero. Removing from contract.&quot;</span>
+                );
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>);
+            }
+
+            <span class="comment">// Refund the predecessor for their attached deposit if it&#39;s greater than 0</span>
+            <span class="kw">if</span> <span class="ident">near_attached</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="macro">near_sdk::log!</span>(
+                    <span class="string">&quot;Refunding user for attached deposit of: {}&quot;</span>,
+                    <span class="ident">yocto_to_near</span>(<span class="ident">near_attached</span>)
+                );
+                
+                <span class="ident">Promise::new</span>(<span class="ident">env::predecessor_account_id</span>()).<span class="ident">transfer</span>(<span class="ident">near_attached</span>);
+            }
 
             <span class="kw">return</span> <span class="bool-val">false</span>;
         }

@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["keypom"] = [{"text":"impl&lt;'de&gt; <a class=\"trait\" href=\"https://docs.rs/serde/1.0.147/serde/de/trait.Deserialize.html\" title=\"trait serde::de::Deserialize\">Deserialize</a>&lt;'de&gt; for <a class=\"struct\" href=\"keypom/struct.ContractSourceMetadata.html\" title=\"struct keypom::ContractSourceMetadata\">ContractSourceMetadata</a>","synthetic":false,"types":["keypom::ContractSourceMetadata"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

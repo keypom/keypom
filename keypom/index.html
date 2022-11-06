@@ -1,26 +1,65 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Keypom is an access key factory created as a result of 3 common problems that arose in the ecosystem."><meta name="keywords" content="rust, rustlang, rust-lang, keypom"><title>keypom - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../dark.css" disabled><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../storage.js"></script><script defer src="../crates.js"></script><script defer src="../main.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../favicon.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../keypom/index.html"><div class="logo-container"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></div>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Introduction"><meta name="keywords" content="rust, rustlang, rust-lang, keypom"><title>keypom - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../dark.css" disabled><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../storage.js"></script><script defer src="../crates.js"></script><script defer src="../main.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../favicon.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../keypom/index.html"><div class="logo-container"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></div>
         </a><h2 class="location"></h2>
     </nav>
     <nav class="sidebar"><a class="sidebar-logo" href="../keypom/index.html"><div class="logo-container"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></div>
         </a><h2 class="location"><a href="#">Crate keypom</a></h2><div class="sidebar-elems"><div class="block"><ul><li class="version">Version 1.0.0</li><li><a id="all-types" href="all.html">All Items</a></li></ul></div><section><div class="block"><ul><li><a href="#structs">Structs</a></li></ul></div></section></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../keypom/index.html"><img class="rust-logo" src="../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
                                 <a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../wheel.svg"></a></div>
                         </div></form></nav></div><section id="main-content" class="content"><div class="main-heading">
-    <h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">keypom</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../src/keypom/lib.rs.html#1-599">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Keypom is an access key factory created as a result of 3 common problems that arose in the ecosystem.</p>
+    <h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">keypom</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span></h1><span class="out-of-band"><a class="srclink" href="../src/keypom/lib.rs.html#1-960">source</a> · <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="introduction"><a href="#introduction">Introduction</a></h2>
+<p>Keypom is an access key factory created as a result of 3 common problems that arose in the ecosystem.</p>
 <ol>
 <li>People want a <em>cheap, customizable, and unique</em> onboarding experience for users.</li>
 <li>Companies don’t want to expose <strong>full access keys</strong> in their backend servers.</li>
-<li>dApps want a <em>smooth UX</em> for interactions that require deposits.</li>
+<li>dApps want a <em>smooth UX</em> with zero barrier to entry onboarding.</li>
 </ol>
-<p>To solve this, Keypom allows for the creation of highly customizable access keys. Each access key
-has a different functionality depending on which type of <em>drop</em> they derive from. A drop can be thought
-of as a bucket that access keys can be part of. An owner will create drops of a certain type
-with a set of features that all the keys within it will derive from. A drop can be one of four
-different types:</p>
+<blockquote>
+<p>To view our debut talk at NEARCON 2022, click <a href="https://www.youtube.com/watch?v=J-BOnfhHV50">here</a>.</p>
+</blockquote>
+<p>Blockchain technology comes with many benefits such as sovereign ownership, digital rights, privacy, freedom, 
+peer to peer coordination and much more. The problem with this technology, however, is that there is an extremely 
+high barrier to entry for an everyday individual. None of it matters if nobody can onboard.</p>
+<p>It’s confusing to create and fund a crypto wallet. People are unfamiliar with the process, technical jargon, 
+and the general flow. NEAR’s account model is powerful, but extremely underutilized because it’s complex for 
+developers to take full advantage of. Keypom wraps this up in a single API call.</p>
+<p>With NEAR’s goal of onboarding 1 billion users to Web3, there needs to be a solution to this high barrier to 
+entry for developers building on NEAR and users onboarding to their apps and the NEAR ecosystem.</p>
+<p>Below is a table outlining the minimum costs to onboard a new user onto NEAR with a named account.</p>
+<div><table><thead><tr><th></th><th>1 Account</th><th>1,000 Accounts</th><th>1,000,000 Accounts</th></tr></thead><tbody>
+<tr><td>Traditional Linkdrop</td><td>~1 NEAR</td><td>~1,003 NEAR</td><td>~1,002,840 NEAR</td></tr>
+<tr><td>Keypom</td><td>~0.0035 NEAR</td><td>~3.5 NEAR</td><td>~3,500 NEAR</td></tr>
+<tr><td></td><td>~99.65% Cheaper</td><td>~99.65% Cheaper</td><td>~99.65% Cheaper</td></tr>
+</tbody></table>
+</div>
+<p>Keypom allows anyone to create highly customizable onboarding experiences for their users. These experiences 
+can be both for new, or existing users. If someone already has a wallet, they can still use a Keypom link to 
+experience an app, and then transfer the assets later.</p>
+<h3 id="comparable-solutions"><a href="#comparable-solutions">Comparable Solutions</a></h3><div><table><thead><tr><th></th><th><strong>Keypom</strong></th><th><strong>NEAR Drop</strong></th><th><strong>Satori</strong></th></tr></thead><tbody>
+<tr><td>NEAR Drop</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<tr><td>FT Drop</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>NFT Drop</td><td>✅</td><td>❌</td><td>✅</td></tr>
+<tr><td>Function Call Drop</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Embeddable in Dapps</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Wallet Selector Integration</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>No Fee</td><td>✅</td><td>Maybe?</td><td>❌</td></tr>
+<tr><td>No Backend / 3rd Party</td><td>✅</td><td>✅</td><td>❌</td></tr>
+<tr><td>Campaigns</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>Multi-Step e.g. Tickets click &gt; scan &gt; claim</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Password Protected Drops</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Timed Drops e.g. recurring payments</td><td>✅</td><td>❌</td><td>❌</td></tr>
+<tr><td>Custom Names e.g. user.myapp.near</td><td>✅</td><td>❌</td><td>❌</td></tr>
+</tbody></table>
+</div><h2 id="our-solution"><a href="#our-solution">Our Solution</a></h2>
+<p>Keypom allows for the creation of highly customizable access keys. These keys can be thought of as having their
+own <em>smart contracts</em>. Each access key derives from what’s known as a <em>drop</em>. These drops outline the different 
+functionalities and behaviors the key will have. A drop can be thought of as a bucket that access keys belong to.
+You can create many different buckets and fill them each with their own keys. Each key will act in accordance to the
+drop, or bucket, it belongs to.</p>
+<p>A drop can be one of four different types:</p>
 <ol>
-<li>Simple drops</li>
-<li>Non Fungible Token drops</li>
-<li>Fungible Token drops</li>
-<li>Function Call drops.</li>
+<li>Simple drop.</li>
+<li>Non Fungible Token drop.</li>
+<li>Fungible Token drop.</li>
+<li>Function Call drop.</li>
 </ol>
 <p>Once a drop has been created, all keys added will share the same behaviour as outlined by the type of drop
 and the configurations present. These keys can be used to either claim with:</p>
@@ -45,7 +84,7 @@ These are outlined below.</p>
 <span class="doccomment">/// Metadata for the drop in the form of stringified JSON. The format is completely up to the</span>
 <span class="doccomment">/// user and there are no standards for format.</span>
 <span class="kw">pub</span> <span class="ident">metadata</span>: <span class="ident">LazyOption</span><span class="op">&lt;</span><span class="ident">DropMetadata</span><span class="op">&gt;</span>,</code></pre></div>
-<p>Within the config, there are a suite of features that can be customized as well.</p>
+<p>Within the config, there are a suite of features that can be customized as well:</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="doccomment">/// How many uses can each key have before it&#39;s deleted. If None, default to 1.</span>
 <span class="kw">pub</span> <span class="ident">uses_per_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
@@ -54,9 +93,20 @@ These are outlined below.</p>
 <span class="doccomment">/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
 <span class="kw">pub</span> <span class="ident">start_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 
+<span class="doccomment">/// Block timestamp that keys must be before. If None, keys can be used indefinitely</span>
+<span class="doccomment">/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
+<span class="kw">pub</span> <span class="ident">end_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+
 <span class="doccomment">/// How often can a key be used. This specifies the time between each use.</span>
 <span class="doccomment">/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
 <span class="kw">pub</span> <span class="ident">throttle_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// Interval of time after the `start_timestamp` that must pass before a key can be used.</span>
+<span class="doccomment">/// If multiple intervals pass, the key can be used multiple times. This has nothing to do</span>
+<span class="doccomment">/// With the throttle timestamp. It only pertains to the start timestamp and the current </span>
+<span class="doccomment">/// timestamp. The last_used timestamp is not taken into account.</span>
+<span class="doccomment">/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
+<span class="kw">pub</span> <span class="ident">claim_interval</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 
 <span class="doccomment">/// If claim is called, refund the `deposit_per_use` to the owner&#39;s account directly. If None,</span>
 <span class="doccomment">/// default to false.</span>
@@ -71,7 +121,14 @@ These are outlined below.</p>
 <span class="doccomment">/// users to create specific drops that can create sub-accounts of a predefined root.</span>
 <span class="doccomment">/// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then</span>
 <span class="doccomment">/// be `ACCOUNT.fayyr.near`</span>
-<span class="kw">pub</span> <span class="ident">drop_root</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountId</span><span class="op">&gt;</span>,</code></pre></div>
+<span class="kw">pub</span> <span class="ident">drop_root</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountId</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and</span>
+<span class="doccomment">/// Must be overwritten</span>
+<span class="kw">pub</span> <span class="ident">delete_on_empty</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+
+<span class="doccomment">/// When this drop is deleted and it is the owner&#39;s *last* drop, automatically withdraw their balance.</span>
+<span class="kw">pub</span> <span class="ident">auto_withdraw</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,</code></pre></div>
 <h2 id="simple-drops"><a href="#simple-drops">Simple Drops</a></h2>
 <p>The most basic type of drop is the simple kind. Any keys that are part of a simple drop can
 only be used for 1 thing: <strong>transferring $NEAR</strong>. Once the key is claimed, the claiming account
@@ -85,9 +142,10 @@ In the drop, you’d specify that each time the key is claimed, the specified ac
 receive 10 $NEAR.</p>
 <h5 id="recurring-payments"><a href="#recurring-payments">Recurring Payments</a></h5>
 <p>Recurring payments are quite a common situation. If you need to send someone 10 $NEAR once a
-month for 6 months, you could create a simple drop that has a <code>throttle_timestamp</code> of 1 month
-in between uses and everytime it’s used, 10 $NEAR is sent to the account. In addition, you
-could specify a <code>start_timestamp</code> to determine the date at which the key can first be used.</p>
+month for 6 months, you could create a simple drop that has a <code>claim_interval</code> of 1 month with
+a <code>start_timestamp</code> of next week. Everytime the key is used, 10 $NEAR is sent to the account. If
+the contractor missed a month’s payment, they can claim the key late but can never use the key more
+than what is intended.</p>
 <h5 id="quick-onboarding"><a href="#quick-onboarding">Quick Onboarding</a></h5>
 <p>If you need to quickly onboard users onto NEAR, you could create a simple drop with a
 small amount of $NEAR (enough to create a wallet) and set the claim permission to be
@@ -136,7 +194,7 @@ you must specify the following pieces of information when the drop is created.</
 <h2 id="fungible-token-drops"><a href="#fungible-token-drops">Fungible Token Drops</a></h2>
 <p>A Fungible Token drop is also a light wrapper around the simple drop. It works very similarly to how its NFT
 counterpart does. First, you’ll need to create the drop and then you can fund it with assets and register
-key uses. The only difference between NFT and FT drops is that for FTs, you can over-register assets.</p>
+key uses.</p>
 <p>You can preload a drop with as many FTs as you’d like even if you don’t have the keys yet. This will spike the
 <code>registered_uses</code> and then you can create keys and slowly eat away from this “total supply” overtime. If the
 drop runs out, you can send it more FTs to top up. All the keys in the FT drop will share from this supply
@@ -154,16 +212,16 @@ usable. This process is done through the <code>ft_transfer_call</code> workflow 
 It’s up to the owner to facilitate this process.</li>
 </ul>
 <h3 id="use-cases-1"><a href="#use-cases-1">Use Cases</a></h3>
-<p>FT drops work really due to the fact that they support all the functionalities of the Simple drops, just with
+<p>FT drops have some awesome flexibility due to the fact that they support all the functionalities of the Simple drops, just with
 more use-cases and possibilities. Let’s look at some use cases to see how fungible token drops can be used.</p>
 <h5 id="recurring-payments-1"><a href="#recurring-payments-1">Recurring Payments</a></h5>
 <p>Recurring payments are quite a common situation. Let’s say you need to send someone $50 USDC every week. You
-could create a key with 5 claims that has a throttle_timestamp` of 1 week. You would then pre-load maybe the
+could create a key with 5 claims that has a claim_interval` of 1 week. You would then pre-load maybe the
 first week’s deposit of $50 USDC and register 1 use or you could send $500 USDC for the first 10 weeks. At that
 point, you would simply hand over the key to the user and they can claim once a week.</p>
 <h5 id="backend-servers-1"><a href="#backend-servers-1">Backend Servers</a></h5>
 <p>Taking the recurring payments problem to another level, imagine that instead of leaving the claims up to the
-person, you wanted to automatically pay them through a backend server. They would give you their NEAR account
+contractor, you wanted to automatically pay them through a backend server. They would give you their NEAR account
 and you would send them FTs. The problem is that you don’t want to expose your full access key in the server.
 By creating a FT drop, you can store <strong>only the function call access key</strong> created by Keypom in the server.
 Your backend would them use the key to call the <code>claim</code> function and pass in the user’s account ID to send
@@ -197,9 +255,9 @@ you can send as many FTs as you’d like and can over-pay, you <em>must</em> sen
 and cannot break it up into separate calls where you send 5 one time and 5 another.</p>
 <h2 id="function-call-drops"><a href="#function-call-drops">Function Call Drops</a></h2>
 <p>Function call drops are by far the most powerful feature that Keypom provides. FC drops allow <strong>any</strong> method on <strong>any</strong>
-contract to be executed. In addition, there are a huge variety of customizations and features you can choose from when
+contract to be executed (with some exceptions). In addition, there are a huge variety of customizations and features you can choose from when
 defining the drop that come on top of the global options. The possibilities are almost endless. State of the art NFT ticketing,
-lazy minting NFTs, auto registration into DAOs, recursive key creation, analytics for marketing at events and much more.</p>
+lazy minting NFTs, auto registration into DAOs, analytics for marketing at events and much more.</p>
 <h3 id="how-does-it-work-2"><a href="#how-does-it-work-2">How does it work?</a></h3>
 <p>Unlike NFT and FT drops, the function calls must have everything paid for <strong>upfront</strong>. There is no two step process
 so the creation is similar to Simple drops. Once the drop is created and keys are added, you can immediately start using it.</p>
@@ -219,6 +277,35 @@ config similar to how the <em>general</em> config works.</p>
 <p>In addition to the global config, the user can specify a set of what’s known as <code>MethodData</code>. This represents the
 information for the function being called. Within this data, there are also a few optional configurations you can use
 to extend your use cases. You’ll see how powerful these can be in the use cases <a href="#use-cases">section</a>.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MethodData</span> {
+    <span class="doccomment">/// Contract that will be called</span>
+    <span class="kw">pub</span> <span class="ident">receiver_id</span>: <span class="ident">AccountId</span>,
+    <span class="doccomment">/// Method to call on receiver_id contract</span>
+    <span class="kw">pub</span> <span class="ident">method_name</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// Arguments to pass in (stringified JSON)</span>
+    <span class="kw">pub</span> <span class="ident">args</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// Amount of yoctoNEAR to attach along with the call</span>
+    <span class="kw">pub</span> <span class="ident">attached_deposit</span>: <span class="ident">U128</span>,
+    <span class="doccomment">/// Specifies what field the claiming account should go in when calling the function</span>
+    <span class="doccomment">/// If None, this isn&#39;t attached to the args</span>
+    <span class="kw">pub</span> <span class="ident">account_id_field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Specifies what field the drop ID should go in when calling the function.</span>
+    <span class="doccomment">/// If Some(String), attach drop ID to args. Else, don&#39;t attach.</span>
+    <span class="kw">pub</span> <span class="ident">drop_id_field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Specifies what field the key ID should go in when calling the function.</span>
+    <span class="doccomment">/// If Some(String), attach key ID to args. Else, don&#39;t attach.</span>
+    <span class="kw">pub</span> <span class="ident">key_id_field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}</code></pre></div>
+<p>The MethodData keeps track of the method being called, receiver, arguments, and attached deposit. In addition, there are
+some optional fields that can be used to extend the use cases. If you have a contract that requires some more context from
+Keypom such as the drop ID, key ID, or account ID that used the key, these can all be specified.</p>
+<p>We’ve kept it generic such that you can specify the actual argument name that these will be passed in as. For example, if you
+had a contract that would lazy mint an NFT and it required the account to be passed in as <code>receiver_id</code>, you could specify
+an <code>account_id_field</code> set to <code>receiver_id</code> such that Keypom will automatically pass in the account ID that used the key under the
+field <code>receiver_id</code>.</p>
+<p>This logic extends to the drop ID, and key Id as well.</p>
+<h5 id="key-uses"><a href="#key-uses">Key Uses</a></h5>
 <p>For <strong>every key use</strong>, you can specify a <em>vector</em> of <code>MethodData</code> which allows you to execute multiple function calls each
 time a key is used. These calls are scheduled 1 by 1 using a simple for loop. This means that most of the time, the function
 calls will be executed in the order specified in the vector but it is not <em>guaranteed</em>.</p>
@@ -234,26 +321,36 @@ be explored in the use cases <a href="#use-cases">section</a>.</p>
 specify that the first use will result in a null case and the second use will result in a lazy minting function being called.
 If you have multiple uses but want them all to do the same thing, you don’t have to repeat the same data. Passing in only 1
 vector of <code>MethodData</code> will result in  <strong>all the uses</strong> inheriting that data.</p>
-<h5 id="injected-fields"><a href="#injected-fields">Injected Fields</a></h5>
-<p>There is one other piece of information that is <strong>automatically</strong> attached to the arguments being sent to the function.
-This is known as the <code>injected_fields</code>. It is a decimal representation of the optional fields specified in the method data.
-You can think of each of the <code>account_id_field</code>, <code>drop_id_field</code>, and <code>key_id_field</code> as representing a bit. If the field
-was specified, the bit is on. If it isn’t, the bit is off. The binary looks as follows.</p>
+<h3 id="security"><a href="#security">Security</a></h3>
+<p>Since all FC drops will be signed by the Keypom contract, there are a few restrictions in place to avoid malicious behaviors.
+To avoid users from stealing registered assets from other drops, the following methods cannot be called via FC Drops:</p>
 
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="ident">LSB</span>
-<span class="number">2</span><span class="op">^</span><span class="number">0</span> -&gt; <span class="ident">account_id_field</span>
-<span class="number">2</span><span class="op">^</span><span class="number">1</span> -&gt; <span class="ident">drop_id_field</span>
-<span class="number">2</span><span class="op">^</span><span class="number">2</span> -&gt; <span class="ident">key_id_field</span></code></pre></div>
-<p>As an example, say the user had <code>MethodData</code> with the <code>account_id_field</code> set to <code>receiver_id</code>. This would mean that the
-binary representation of the fields would look as follows. <code>001</code> which has a decimal equivalent to 1. The contract would
-then pass in an <code>injected_fields</code>  value of 1.</p>
-<p>If the user had <code>MethodData</code> with the <code>key_id_field</code> set to <code>key</code> and the <code>drop_id_field</code> set to “drop”, the binary
-representation would be <code>110</code> which has a decimal equivalent to 6. The contract would then pass in an <code>injected_fields</code>
-value of 6.</p>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="doccomment">/// Which methods are prohibited from being called by an FC drop</span>
+<span class="kw">const</span> <span class="ident">DEFAULT_PROHIBITED_FC_METHODS</span>: [<span class="kw-2">&amp;</span><span class="ident">str</span>; <span class="number">6</span>] <span class="op">=</span> [
+    <span class="string">&quot;nft_transfer&quot;</span>,
+    <span class="string">&quot;nft_transfer_call&quot;</span>,
+    <span class="string">&quot;nft_approve&quot;</span>,
+    <span class="string">&quot;nft_transfer_payout&quot;</span>,
+    <span class="string">&quot;ft_transfer&quot;</span>,
+    <span class="string">&quot;ft_transfer_call&quot;</span>,
+];</code></pre></div>
+<p>In addition, the Keypom contract cannot be the receiver of any function call. This is to avoid people
+from calling private methods through FC Drops.</p>
+<h5 id="keypom-arguments"><a href="#keypom-arguments">Keypom Arguments</a></h5>
+<p>When a key is used and a function is called, there is a data structure that is <strong>automatically</strong> attached to the arguments.
+This is known as the <code>keypom_args</code>. It contains the information that the drop creator specified in the <code>MethodData</code>. </p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeypomArgs</span> {
+    <span class="kw">pub</span> <span class="ident">account_id_field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">drop_id_field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">key_id_field</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}</code></pre></div>
 <h6 id="motivation"><a href="#motivation">Motivation</a></h6>
 <p>Let’s say there was an exclusive NFT contract that allowed the Keypom contract to mint NFTs as part of an FC drop. Only Keypom
-had access to mint and NFTs could only be minted the arguments coming into the function contained a field <code>series</code> with a valid
-number. Let’s say the owner created an exclusive drop that happened to have a drop ID of 5. They could then go to the NFT contract
+was given access to mint the NFTs so they could be given out as linkdrops. The organizer only wanted links that were part of their
+drop to be valid. For this reason, the NFT contract would only mint if Keypom called the <code>nft_mint</code> function and there was a field 
+<code>series</code> passed in and it was equal to the drop ID created by the organizer.</p>
+<p>Let’s say the owner created an exclusive drop that happened to have a drop ID of 5. They could then go to the NFT contract
 and restrict NFTs to only be minted if:</p>
 <ul>
 <li><code>series</code> had a value of 5.</li>
@@ -261,14 +358,13 @@ and restrict NFTs to only be minted if:</p>
 </ul>
 <p>In order for this to work, when creating the drop, the owner would need to specify that the<code>drop_id_field</code> was set to a value of <code>series</code>
 such that the drop ID is correctly passed into the function.</p>
-<p>The problem with this approach is that the receiving contract has no way of knowing which arguments were sent by the <strong>user</strong> upon drop creation
-and which arguments are populated by the Keypom contract. There is nothing stopping a malicious user from creating a new drop that has an ID of 6 but
-hardcoding in the actual arguments that <code>series</code> should have a value of 5. In this case, the malicious drop would have <em>no</em> <code>drop_id_field</code>
-and the NFT contract would have no way of knowing that the <code>series</code> value is malicious.</p>
+<p>The problem with this approach is that the NFT contract has no way of knowing which arguments were sent by the <strong>user</strong> when the drop 
+was created <code>as part of the MethodData </code>args<code>and which arguments are automatically populated by the Keypom contract. There is nothing  stopping a malicious user from creating a new drop that has an ID of 6 but hardcoding in the actual arguments that</code>series<code>should have  a value of 5. In this case, the malicious drop would have *no*</code>drop_id_field<code>and the NFT contract would have no way of knowing that the </code>series` value is malicious.</p>
 <p>This can be prevented if a new field is introduced representing what was automatically injected by the Keypom contract itself. At the
 end of the day, Keypom will <strong>always</strong> send correct information to the receiving contracts. If those contracts have a way to know what has
 been sent by Keypom and what has been manually set by users, the problem is solved. In the above scenario, the NFT contract would simply add
-an assertion that the <code>injected_fields</code> is 3 (binary 011) meaning that the drop ID and account ID fields have been sent by the Keypom contract.</p>
+an assertion that the <code>keypom_args</code> had the <code>account_id_field</code> set to <code>Some(series)</code> meaning that the incoming <code>series</code> field was set by Keypom
+and not by a malicious user.</p>
 <h3 id="use-cases-2"><a href="#use-cases-2">Use Cases</a></h3>
 <p>Function call drops are the bread and butter of the Keypom contract. They are the most powerful and complex drops that can currently be created.
 With this complexity, there are an almost infinite number of use-cases that arise.</p>
@@ -297,7 +393,7 @@ chain is required.</p>
 signed. The action is only performed on the multisig contract once all links have been clicked. This is an extremely powerful way of doing
 accomplishing multisig transactions with zero barrier to entry.</p>
 <p>The users don’t even need to create a new account. They can simply call <code>claim</code> when the link is clicked which will fire the cross-contract call
-to the multisig contract and pass in the injected fields that will be cross-checked by that contract.</p>
+to the multisig contract and pass in the keypom arguments that will be cross-checked by that contract.</p>
 <h5 id="nft-ticketing"><a href="#nft-ticketing">NFT Ticketing</a></h5>
 <p>The problem with current NFT ticketing systems is that they require users to have a wallet. This is a huge barrier to entry for people that
 are attending events but don’t have wallets. In addition, there is often no proof of attendance for the event as the NFT is burned in order
@@ -330,7 +426,162 @@ This QR code would appear once the first link is clicked and contains the privat
 to get in as they only need to show the bouncer the QR code. Once the bouncer scans it, the site would ensure that they have exactly 2 out of
 the 3 uses left. If they don’t, they’re not let in. At that point, a use is decremented from the key and the next time they visit the
 ticket page (when they have internet), they would be able to claim the final use and be onboarded / receive a POAP.</p>
+<h2 id="password-protected-keys"><a href="#password-protected-keys">Password Protected Keys</a></h2>
+<p>Password protecting key uses is an extremely powerful feature that can unlock many use-cases. Keypom has baked flexibility and customization
+into the contract such that almost all use-cases involving password protection can be accomplished. Whenever a key is added to a drop, it can
+have a unique password for each individual use, or it can one password for all uses in general.</p>
+<h3 id="how-does-it-work-3"><a href="#how-does-it-work-3">How Does It Work?</a></h3>
+<p>The Keypom implementation has been carefully designed so that users can’t look at the NEAR Explorer to view what was passed into the contract
+either when the drop was created or when a key was used to try and copy those passwords. We also want passwords to be unique across keys so that
+if you know the password for 1 key, it doesn’t work on a different key. In order to accomplish this, we use the concept of hashing.</p>
+<p>Imagine you have a drop with 2 keys and you want to password protect each key. Rather than forcing the drop funder to input a unique password for 
+each key and having them remember each one, we can have them input a single <strong>base password</strong> and derive unique passwords from it that are paired 
+with the key’s public key.</p>
+<p>This is the most scalable option as it allows the drop funder to only need to remember 1 password and they can derive all the other ones using the
+hashing algorithm and public key.</p>
+<p>In the above scenario, let’s say the funder inputs the base password as <code>mypassword1</code>. If a user wanted to claim the first key, they would need to input
+into the contract:</p>
+<p><code>hash(&quot;mypassword1&quot; + key1_public_key)</code></p>
+<p>The funder would need to give the user this hash somehow (such as embedding it into the link or having an app that can derive it). It’s important to note 
+that the funder should probably <strong>NOT</strong> give them the base password otherwise the user could derive the passwords for all other keys (assuming those keys have 
+the same base password).</p>
+<h4 id="what-is-stored-on-chain"><a href="#what-is-stored-on-chain">What is Stored On-Chain?</a></h4>
+<p>How does Keypom verify that the user passed in the correct password? If the funder were to simply pass in <code>hash(&quot;mypassword1&quot; + key1_public_key)</code> into the
+contract as an argument when the key is created, users could just look at the NEAR Explorer and copy that value. </p>
+<p>Instead, the funder needs to pass in a double hash when the key is created: <code>hash(hash(&quot;mypassword1&quot; + key1_public_key))</code>. </p>
+<p>This is the value that is stored on-chain and when the user tries to claim the key, they would pass in just the single hash: <code>hash(&quot;mypassword1&quot; + key1_public_key)</code>.<br />
+The contract would then compute <code>hash(hash(&quot;mypassword1&quot; + key1_public_key))</code> and compare it to the value stored on-chain. If they match, the key is claimed.</p>
+<p>Using this method, the base password is not exposed to the user, nobody can look on-chain or at the NEAR explorer and derive the password, and the password is unique
+across multiple keys.</p>
+<h3 id="passwords-per-key-use"><a href="#passwords-per-key-use">Passwords Per Key Use</a></h3>
+<p>Unlike the passwords per key which is the same for all uses of a key, the drop creator can specify a password for each individual key use. This password follows
+the same pattern as the passwords per key in that the funder inputs a <code>hash(hash(SOMETHING))</code> and then the user would input <code>hash(SOMETHING)</code> and the contract
+would hash this and compare it to the value stored on-chain.</p>
+<p>The difference is that each individual key use can have a different value stored on-chain such that the user can be forced to input a different hash each time.
+This <code>SOMETHING</code> that is hashed can be similar to the global password per key example but this time, the desired key use is added: <code>hash(&quot;mypassword1&quot; + key1_public_key + use_number)</code></p>
+<p>In order to pass in the passwords per use, a new data structure is introduced so you only need to pass in passwords for the uses that have them. This is known as the 
+<code>JsonPasswordForUse</code> and is as follows:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">JsonPasswordForUse</span> {
+    <span class="doccomment">/// What is the password for this use (such as `hash(&quot;mypassword1&quot; + key1_public_key + use_number)`)</span>
+    <span class="kw">pub</span> <span class="ident">pw</span>: <span class="ident">String</span>,
+    <span class="doccomment">/// Which use does this pertain to</span>
+    <span class="doccomment">/// This is *zero indexed*. The first use starts at 0.</span>
+    <span class="kw">pub</span> <span class="ident">key_use</span>: <span class="ident">u64</span>
+}</code></pre></div>
+<h3 id="adding-your-first-password"><a href="#adding-your-first-password">Adding Your First Password</a></h3>
+<p>Whenever keys are added to Keypom, if there’s passwords involved, they must be passed in using the following format. </p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="ident">passwords_per_use</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">JsonPasswordForUse</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="ident">passwords_per_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,</code></pre></div>
+<p>Each key that is being added either has a password, or doesn’t. This is through the <code>Vec&lt;Option&lt;&gt;</code>. This vector <strong>MUST</strong> be the same length as the number of keys created.This doesn’t 
+mean that every key needs a password, but the Vector must be the same length as the keys.</p>
+<p>As an example, if you wanted to add 3 keys to a drop and wanted only the first and last key to have a password_per_key, you would pass in:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="ident">passwords_per_key</span>: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(<span class="ident">hash</span>(<span class="ident">hash</span>(<span class="ident">STUFF</span>))), <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="ident">hash</span>(<span class="ident">hash</span>(<span class="ident">STUFF2</span>)))])</code></pre></div>
+<h3 id="complex-example"><a href="#complex-example">Complex Example</a></h3>
+<p>To help solidify the concept of password protected keys, let’s go through a complex example. Imagine Alice created a drop with a <code>uses_per_key</code> of 3.
+She wants to create 4 keys: </p>
+<ul>
+<li>Key A: No password protection.</li>
+<li>Key B: Password for uses 1 and 2.</li>
+<li>Key C: Password for use 1 only.</li>
+<li>Key D: Password that doesn’t depend on the use.</li>
+</ul>
+<p>In this case, for Keys B and C, they will have the same base password but Alice wants to switch things up and have a different base password for Key D.
+When these keys are added on-chain, the <code>passwords_per_key</code> will be passed in as such:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="ident">passwords_per_key</span>: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
+    <span class="prelude-val">None</span>, <span class="comment">// Key A</span>
+    <span class="prelude-val">None</span>, <span class="comment">// Key B</span>
+    <span class="prelude-val">None</span>, <span class="comment">// Key C</span>
+    <span class="comment">// Key D</span>
+    <span class="prelude-val">Some</span>(
+        <span class="ident">hash</span>(<span class="ident">hash</span>(<span class="string">&quot;key_d_base_password&quot;</span> <span class="op">+</span> <span class="ident">key_d_public_key</span>))
+    ), 
+]),</code></pre></div>
+<p>The passwords for Key B and Key C will be passed in as such:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="ident">passwords_per_key</span>: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
+    <span class="prelude-val">None</span>, <span class="comment">// Key A</span>
+
+    <span class="comment">// Key B</span>
+    <span class="macro">vec!</span>[
+        {
+            <span class="ident">pw</span>: <span class="ident">hash</span>(<span class="ident">hash</span>(<span class="string">&quot;keys_bc_base_password&quot;</span> <span class="op">+</span> <span class="ident">key_b_public_key</span> <span class="op">+</span> <span class="string">&quot;0&quot;</span>)),
+            <span class="ident">key_use</span>: <span class="number">0</span>
+        },
+        {
+            <span class="ident">pw</span>: <span class="ident">hash</span>(<span class="ident">hash</span>(<span class="string">&quot;keys_bc_base_password&quot;</span> <span class="op">+</span> <span class="ident">key_b_public_key</span> <span class="op">+</span> <span class="string">&quot;1&quot;</span>)),
+            <span class="ident">key_use</span>: <span class="number">1</span>
+        }
+    ]
+
+    <span class="comment">// Key C</span>
+    <span class="macro">vec!</span>[
+        {
+            <span class="ident">pw</span>: <span class="ident">hash</span>(<span class="ident">hash</span>(<span class="string">&quot;keys_bc_base_password&quot;</span> <span class="op">+</span> <span class="ident">key_b_public_key</span> <span class="op">+</span> <span class="string">&quot;0&quot;</span>)),
+            <span class="ident">key_use</span>: <span class="number">0</span>
+        }
+    ]
+
+    <span class="prelude-val">None</span> <span class="comment">// Key D</span>
+]),</code></pre></div>
+<p>The drop funder would then give the keys out to people:</p>
+<h4 id="key-a"><a href="#key-a">Key A</a></h4>
+<p>Alice gives Bob Key A and he would be able to claim it 3 times with no password required.</p>
+<h4 id="key-d"><a href="#key-d">Key D</a></h4>
+<p>Alice gives Charlie Key D and he would be able to claim it 3 times with the hashed global key password: <code>hash(&quot;key_d_base_password&quot; + key_d_public_key)</code>.
+When Charlie claims the key, he would input the password <code>hash(&quot;key_d_base_password&quot; + key_d_public_key)</code> and the contract would hash that and check to see
+if it matches what is stored on-chain (which it does).</p>
+<p>If anyone tried to look at what Charlie passes in through the explorer, it wouldn’t work since his hash contains the public key for key D and as such it is only
+valid for Key D.</p>
+<p>Similarly, if Charlie tried to look at the explorer when Alice created the keys and attempted to pass in <code>hash(hash(&quot;key_d_base_password&quot; + key_d_public_key))</code>, 
+the contract would attempt to hash this and it would NOT match up with what’s in the storage.</p>
+<h4 id="key-b"><a href="#key-b">Key B</a></h4>
+<p>Alice gives Eve Key B and she would need a password for claim 1 and 2. For the first claim, she needs to pass in: <code>hash(&quot;keys_bc_base_password&quot; + key_b_public_key + &quot;0&quot;)</code>.
+The contract would then check and see if the hashed version of this matches up with what’s stored on-chain for that use.</p>
+<p>The second time Eve uses the key, she needs to pass in hash(“keys_bc_base_password” + key_b_public_key + “1”) and the same check is done.</p>
+<p>If Eve tries to pass in <code>hash(&quot;keys_bc_base_password&quot; + key_b_public_key + &quot;0&quot;)</code> for the second key use, the contract would hash it and check:</p>
+<p>hash(hash(“keys_bc_base_password” + key_b_public_key + “0”)) == hash(hash(“keys_bc_base_password” + key_b_public_key + “1”))</p>
+<p>Which is incorrect and the key would not be claimed.</p>
+<p>Once Eve claims the key 2 times, the last claim is not password protected and she’s free to claim it.</p>
+<p>Key C is similar to Key B except that it only has 1 password for the first use.</p>
+<h3 id="use-cases-3"><a href="#use-cases-3">Use-Cases</a></h3>
+<p>Password protecting key uses is a true game changer for a lot of use-cases spanning from ticketing to simple marketing and engagement.</p>
+<h4 id="ticketing-and-poaps"><a href="#ticketing-and-poaps">Ticketing and POAPs</a></h4>
+<p>Imagine you had an event and wanted to give out exclusive POAPs to people that came. You didn’t want to force users to: </p>
+<ul>
+<li>Have a NEAR wallet</li>
+<li>Have wifi at the door.</li>
+<li>Burn NFTs or tokens to get into the event.</li>
+</ul>
+<p>The important thing to note is that by using password protected key uses, you can <strong>GUARANTEE</strong> that anyone that received a POAP had to
+<strong>PHYSICALLY</strong> show up to the event. This is because the POAP would be guarded by a password.</p>
+<p>You could create a ticketing event using Keypom as outlined in the <a href="#nft-ticketing">Ticketing</a> section and have a key with 2 uses. The first use 
+would be password protected and the second use is not. The first use will get you through the door and into the event and the second
+contains the exclusive POAP and can onboard you. This means that anyone with the ticket, or key, can only receive the POAP if they know the password.</p>
+<p>You can have a scanner app that would scan people’s tickets (tickets are just the private key). In this scanner app, the <em>base password</em> is stored and 
+whenever the ticket is scanned, the public key is taken and the following hash is created:</p>
+<p><code>hash(base password + public key)</code></p>
+<p>This hash is then used to claim a use of the key and you will be let into the party. The scanner app can deterministically generate all the
+necessary hashes for all the tickets by simply scanning the QR code (which has the private key exposed). The tickets are worthless unless
+you actually show up to the event and are scanned.</p>
+<p>Once you’re scanned, you can refresh your ticket page and the use the second key claim which is not password protected. This use contains the
+exclusive POAP and you can onboard onto NEAR.</p>
+<h4 id="marketing-and-engagement"><a href="#marketing-and-engagement">Marketing and Engagement</a></h4>
+<p>Let’s say that you’re at an event and want people to show up to your talks and learn about your project. You can have a scanner app similar to the
+one mentioned in the ticketing scenario that derives the password for any use on any key.</p>
+<p>At the beginning of the event, you can give out a bunch of keys that have progressively increasing rewards gated by a password. At the end, the last
+key use contains a special reward that is only unlocked if the user has claimed all the previous key uses.</p>
+<p>In order for these uses to be unlocked, People must show up to your talks and get scanned. The scanner will derive the necessary password and unlock 
+the rewards. Users will only get the exclusive reward if they come to ALL your talks.</p>
+<p>This idea can be further expanded outside the physical realm to boost engagement on your websites as an example:</p>
+<p>You want users to interact with new features of your site or join your mailing list.</p>
+<p>You can have links where uses are ONLY unlocked if the user interacts with special parts of your site such as buying a new NFT or joining your mailing list 
+or clicking an easter egg button on your site etc.</p>
 </div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
-<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Keypom.html" title="keypom::Keypom struct">Keypom</a></div><div class="item-right docblock-short"><p>Main contract struct that holds all the contract data</p>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.ContractSourceMetadata.html" title="keypom::ContractSourceMetadata struct">ContractSourceMetadata</a></div><div class="item-right docblock-short"><p>Contract metadata structure</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Keypom.html" title="keypom::Keypom struct">Keypom</a></div><div class="item-right docblock-short"><p>Main contract struct that holds all the contract data</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.KeypomExt.html" title="keypom::KeypomExt struct">KeypomExt</a></div><div class="item-right docblock-short"></div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../" data-current-crate="keypom" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (848090dcd 2022-07-22)" ></div>
 </body></html>

@@ -785,13 +785,185 @@
 <span id="779">779</span>
 <span id="780">780</span>
 <span id="781">781</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::<span class="kw-2">*</span>;
+<span id="782">782</span>
+<span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
+<span id="787">787</span>
+<span id="788">788</span>
+<span id="789">789</span>
+<span id="790">790</span>
+<span id="791">791</span>
+<span id="792">792</span>
+<span id="793">793</span>
+<span id="794">794</span>
+<span id="795">795</span>
+<span id="796">796</span>
+<span id="797">797</span>
+<span id="798">798</span>
+<span id="799">799</span>
+<span id="800">800</span>
+<span id="801">801</span>
+<span id="802">802</span>
+<span id="803">803</span>
+<span id="804">804</span>
+<span id="805">805</span>
+<span id="806">806</span>
+<span id="807">807</span>
+<span id="808">808</span>
+<span id="809">809</span>
+<span id="810">810</span>
+<span id="811">811</span>
+<span id="812">812</span>
+<span id="813">813</span>
+<span id="814">814</span>
+<span id="815">815</span>
+<span id="816">816</span>
+<span id="817">817</span>
+<span id="818">818</span>
+<span id="819">819</span>
+<span id="820">820</span>
+<span id="821">821</span>
+<span id="822">822</span>
+<span id="823">823</span>
+<span id="824">824</span>
+<span id="825">825</span>
+<span id="826">826</span>
+<span id="827">827</span>
+<span id="828">828</span>
+<span id="829">829</span>
+<span id="830">830</span>
+<span id="831">831</span>
+<span id="832">832</span>
+<span id="833">833</span>
+<span id="834">834</span>
+<span id="835">835</span>
+<span id="836">836</span>
+<span id="837">837</span>
+<span id="838">838</span>
+<span id="839">839</span>
+<span id="840">840</span>
+<span id="841">841</span>
+<span id="842">842</span>
+<span id="843">843</span>
+<span id="844">844</span>
+<span id="845">845</span>
+<span id="846">846</span>
+<span id="847">847</span>
+<span id="848">848</span>
+<span id="849">849</span>
+<span id="850">850</span>
+<span id="851">851</span>
+<span id="852">852</span>
+<span id="853">853</span>
+<span id="854">854</span>
+<span id="855">855</span>
+<span id="856">856</span>
+<span id="857">857</span>
+<span id="858">858</span>
+<span id="859">859</span>
+<span id="860">860</span>
+<span id="861">861</span>
+<span id="862">862</span>
+<span id="863">863</span>
+<span id="864">864</span>
+<span id="865">865</span>
+<span id="866">866</span>
+<span id="867">867</span>
+<span id="868">868</span>
+<span id="869">869</span>
+<span id="870">870</span>
+<span id="871">871</span>
+<span id="872">872</span>
+<span id="873">873</span>
+<span id="874">874</span>
+<span id="875">875</span>
+<span id="876">876</span>
+<span id="877">877</span>
+<span id="878">878</span>
+<span id="879">879</span>
+<span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
+<span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="kw-2">*</span>, <span class="ident">json_types</span>::{<span class="ident">JsonFTData</span>, <span class="ident">JsonNFTData</span>}};
 <span class="kw">use</span> <span class="ident">near_sdk</span>::{
     <span class="ident">collections</span>::{<span class="ident">LazyOption</span>, <span class="ident">Vector</span>},
     <span class="ident">require</span>, <span class="ident">Balance</span>,
 };
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">DropId</span> <span class="op">=</span> <span class="ident">u128</span>;
+
+<span class="kw">const</span> <span class="ident">MIN_DROP_ID_PASSED_IN</span>: <span class="ident">u128</span> <span class="op">=</span> <span class="number">1_000_000_000</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">BorshSerialize</span>, <span class="ident">BorshDeserialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">DropType</span> {
@@ -809,8 +981,7 @@
 }
 
 <span class="doccomment">/// Keep track of different configuration options for each key in a drop</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">BorshDeserialize</span>, <span class="ident">BorshSerialize</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="kw">crate</span> <span class="op">=</span> <span class="string">&quot;near_sdk::serde&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">BorshDeserialize</span>, <span class="ident">BorshSerialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyInfo</span> {
     <span class="comment">// How many uses this key has left. Once 0 is reached, the key is deleted</span>
     <span class="kw">pub</span> <span class="ident">remaining_uses</span>: <span class="ident">u64</span>,
@@ -823,6 +994,12 @@
 
     <span class="comment">// Nonce for the current key.</span>
     <span class="kw">pub</span> <span class="ident">key_id</span>: <span class="ident">u64</span>,
+
+    <span class="comment">// Password for each use for this specific key</span>
+    <span class="kw">pub</span> <span class="ident">pw_per_use</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UnorderedMap</span><span class="op">&lt;</span><span class="ident">u64</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+
+    <span class="comment">// Password for the key regardless of the use</span>
+    <span class="kw">pub</span> <span class="ident">pw_per_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Keep track of different configuration options for each key in a drop</span>
@@ -832,13 +1009,24 @@
     <span class="comment">// How many claims can each key have. If None, default to 1.</span>
     <span class="kw">pub</span> <span class="ident">uses_per_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 
-    <span class="comment">// Minimum block timestamp that keys can be used. If None, keys can be used immediately</span>
+    <span class="comment">// Minimum block timestamp before keys can be used. If None, keys can be used immediately</span>
     <span class="comment">// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
     <span class="kw">pub</span> <span class="ident">start_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 
-    <span class="comment">// How often can a key be used</span>
+    <span class="comment">// Block timestamp that keys must be before. If None, keys can be used indefinitely</span>
+    <span class="comment">// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
+    <span class="kw">pub</span> <span class="ident">end_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+
+    <span class="comment">// Time interval between each key use. If None, there is no delay between key uses.</span>
     <span class="comment">// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
     <span class="kw">pub</span> <span class="ident">throttle_timestamp</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+
+    <span class="comment">// Interval of time after the `start_timestamp` that must pass before a key can be used.</span>
+    <span class="comment">// If multiple intervals pass, the key can be used multiple times. This has nothing to do</span>
+    <span class="comment">// With the throttle timestamp. It only pertains to the start timestamp and the current </span>
+    <span class="comment">// timestamp. The last_used timestamp is not taken into account.</span>
+    <span class="comment">// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.</span>
+    <span class="kw">pub</span> <span class="ident">claim_interval</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 
     <span class="comment">// If claim is called, refund the deposit to the owner&#39;s balance. If None, default to false.</span>
     <span class="kw">pub</span> <span class="ident">on_claim_refund_deposit</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
@@ -852,6 +1040,9 @@
     <span class="comment">// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and</span>
     <span class="comment">// Must be overwritten</span>
     <span class="kw">pub</span> <span class="ident">delete_on_empty</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+
+    <span class="comment">// When this drop is deleted and it is the owner&#39;s *last* drop, automatically withdraw their balance.</span>
+    <span class="kw">pub</span> <span class="ident">auto_withdraw</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
 }
 
 <span class="comment">// Drop Metadata should be a string which can be JSON or anything the users want.</span>
@@ -900,13 +1091,33 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_drop</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">public_keys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PublicKey</span><span class="op">&gt;</span>,
+        <span class="ident">passwords_per_use</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">JsonPasswordForUse</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">passwords_per_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">deposit_per_use</span>: <span class="ident">U128</span>,
         <span class="ident">config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DropConfig</span><span class="op">&gt;</span>,
         <span class="ident">metadata</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DropMetadata</span><span class="op">&gt;</span>,
-        <span class="ident">ft_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FTDataConfig</span><span class="op">&gt;</span>,
-        <span class="ident">nft_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NFTDataConfig</span><span class="op">&gt;</span>,
+        <span class="ident">ft_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JsonFTData</span><span class="op">&gt;</span>,
+        <span class="ident">nft_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">JsonNFTData</span><span class="op">&gt;</span>,
         <span class="ident">fc_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FCData</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">DropId</span> {
+        <span class="ident">drop_id</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">U128</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DropId</span><span class="op">&gt;</span> {
+        <span class="comment">// Pessimistically measure storage</span>
+        <span class="kw">let</span> <span class="ident">initial_storage</span> <span class="op">=</span> <span class="ident">env::storage_usage</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">actual_drop_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_drop_id</span>;
+
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">id</span>) <span class="op">=</span> <span class="ident">drop_id</span> {
+            <span class="macro">require!</span>(
+                <span class="op">!</span><span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>.<span class="ident">into</span>()),
+                <span class="string">&quot;Drop ID already exists&quot;</span>
+            );
+            <span class="macro">require!</span>(<span class="ident">id</span>.<span class="number">0</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">MIN_DROP_ID_PASSED_IN</span>, <span class="string">&quot;drop ID too small&quot;</span>);
+            <span class="ident">actual_drop_id</span> <span class="op">=</span> <span class="ident">id</span>.<span class="number">0</span>;
+        } <span class="kw">else</span> {
+            <span class="comment">// Increment the drop ID nonce only if no drop Id was passed in</span>
+            <span class="self">self</span>.<span class="ident">next_drop_id</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        }
+
         <span class="comment">// Ensure the user has only specified one type of callback data</span>
         <span class="kw">let</span> <span class="ident">num_cbs_specified</span> <span class="op">=</span>
             <span class="ident">ft_data</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">u8</span> <span class="op">+</span> <span class="ident">nft_data</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">u8</span> <span class="op">+</span> <span class="ident">fc_data</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">u8</span>;
@@ -922,11 +1133,13 @@
                 <span class="ident">NEW_ACCOUNT_BASE</span>
             );
         }
+        
+        <span class="comment">// Ensure the user has specified a valid drop config</span>
+        <span class="ident">assert_valid_drop_config</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>);
 
         <span class="comment">// Funder is the predecessor</span>
         <span class="kw">let</span> <span class="ident">owner_id</span> <span class="op">=</span> <span class="ident">env::predecessor_account_id</span>();
         <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">public_keys</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u128</span>;
-        <span class="kw">let</span> <span class="ident">drop_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">next_drop_id</span>;
         <span class="comment">// Get the number of claims per key to dictate what key usage data we should put in the map</span>
         <span class="kw">let</span> <span class="ident">num_claims_per_key</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">uses_per_key</span>).<span class="ident">unwrap_or</span>(<span class="number">1</span>);
 
@@ -934,14 +1147,17 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_user_balance</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">user_balances</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;No user balance found&quot;</span>);
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+        
+        <span class="kw">let</span> <span class="ident">near_attached</span> <span class="op">=</span> <span class="ident">env::attached_deposit</span>();
+        <span class="comment">// Add the attached deposit to their balance</span>
+        <span class="ident">current_user_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">near_attached</span>;
+        <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">current_user_balance</span>);
 
-        <span class="comment">// Pessimistically measure storage</span>
-        <span class="kw">let</span> <span class="ident">initial_storage</span> <span class="op">=</span> <span class="ident">env::storage_usage</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">key_map</span>: <span class="ident">UnorderedMap</span><span class="op">&lt;</span><span class="ident">PublicKey</span>, <span class="ident">KeyInfo</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">UnorderedMap::new</span>(<span class="ident">StorageKey::PksForDrop</span> {
                 <span class="comment">// We get a new unique prefix for the collection</span>
-                <span class="ident">account_id_hash</span>: <span class="ident">hash_account_id</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="self">self</span>.<span class="ident">next_drop_id</span>, <span class="ident">owner_id</span>)),
+                <span class="ident">account_id_hash</span>: <span class="ident">hash_account_id</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}{}&quot;</span>, <span class="ident">actual_drop_id</span>, <span class="ident">owner_id</span>)),
             });
 
         <span class="comment">// Decide what methods the access keys can call</span>
@@ -985,9 +1201,36 @@
         <span class="comment">// The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.</span>
         <span class="kw">let</span> <span class="ident">actual_allowance</span> <span class="op">=</span> <span class="ident">calculated_base_allowance</span> <span class="op">*</span> <span class="ident">num_claims_per_key</span> <span class="kw">as</span> <span class="ident">u128</span>;
 
+        <span class="kw">if</span> <span class="ident">passwords_per_use</span>.<span class="ident">is_some</span>() {
+            <span class="macro">require!</span>(<span class="ident">len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">50</span>, <span class="string">&quot;Cannot add 50 keys at once with passwords&quot;</span>);
+        }
+        <span class="macro">require!</span>(<span class="ident">passwords_per_use</span>.<span class="ident">clone</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u128</span>).<span class="ident">unwrap_or</span>(<span class="ident">len</span>) <span class="op">==</span> <span class="ident">len</span>, <span class="string">&quot;Passwords per use must be equal to the number of public keys&quot;</span>);
+        <span class="macro">require!</span>(<span class="ident">passwords_per_key</span>.<span class="ident">clone</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u128</span>).<span class="ident">unwrap_or</span>(<span class="ident">len</span>) <span class="op">==</span> <span class="ident">len</span>, <span class="string">&quot;Passwords per key must be equal to the number of public keys&quot;</span>);
         <span class="comment">// Loop through and add each drop ID to the public keys. Also populate the key set.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_key_id</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_key_id</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">public_keys</span> {
+            <span class="kw">let</span> <span class="ident">pw_per_key</span> <span class="op">=</span> <span class="ident">passwords_per_key</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>[<span class="ident">next_key_id</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">clone</span>()).<span class="ident">map</span>(<span class="op">|</span><span class="ident">h</span><span class="op">|</span> <span class="ident">hex::decode</span>(<span class="ident">h</span>).<span class="ident">unwrap</span>());
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pw_per_use</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+            <span class="comment">// If we have passwords for this specific key, add them to the key info</span>
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pws</span>) <span class="op">=</span> <span class="ident">passwords_per_use</span>.<span class="ident">as_ref</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>[<span class="ident">next_key_id</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">as_ref</span>()) {
+                
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pw_map</span> <span class="op">=</span> <span class="ident">UnorderedMap::new</span>(<span class="ident">StorageKey::PasswordsPerUse</span> {
+                    <span class="comment">// We get a new unique prefix for the collection</span>
+                    <span class="ident">account_id_hash</span>: <span class="ident">hash_account_id</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;pws-{}{}{}&quot;</span>, <span class="ident">next_key_id</span>, <span class="ident">actual_drop_id</span>, <span class="ident">owner_id</span>)),
+                });
+
+                <span class="comment">// Loop through each password and add it to the lookup map</span>
+                <span class="kw">for</span> <span class="ident">pw</span> <span class="kw">in</span> <span class="ident">pws</span> {
+                    <span class="macro">require!</span>(<span class="ident">pw</span>.<span class="ident">key_use</span> <span class="op">&lt;</span> <span class="ident">num_claims_per_key</span>, <span class="string">&quot;claim out of range for password&quot;</span>);
+                    <span class="ident">pw_map</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">pw</span>.<span class="ident">key_use</span>, <span class="kw-2">&amp;</span><span class="ident">hex::decode</span>(<span class="ident">pw</span>.<span class="ident">pw</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>());
+                }
+
+                <span class="ident">pw_per_use</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">pw_map</span>);
+            }
+
+            <span class="macro">require!</span>(<span class="ident">pw_per_use</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">u8</span> <span class="op">+</span> <span class="ident">pw_per_key</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">u8</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">1</span>, <span class="string">&quot;You cannot specify both local and global passwords for a key&quot;</span>);
+
             <span class="ident">key_map</span>.<span class="ident">insert</span>(
                 <span class="ident">pk</span>,
                 <span class="kw-2">&amp;</span><span class="ident">KeyInfo</span> {
@@ -995,17 +1238,19 @@
                     <span class="ident">last_used</span>: <span class="number">0</span>, <span class="comment">// Set to 0 since this will make the key always claimable.</span>
                     <span class="ident">allowance</span>: <span class="ident">actual_allowance</span>,
                     <span class="ident">key_id</span>: <span class="ident">next_key_id</span>,
+                    <span class="ident">pw_per_use</span>,
+                    <span class="ident">pw_per_key</span>, 
                 },
             );
             <span class="macro">require!</span>(
-                <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">insert</span>(<span class="ident">pk</span>, <span class="kw-2">&amp;</span><span class="ident">drop_id</span>).<span class="ident">is_none</span>(),
+                <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">insert</span>(<span class="ident">pk</span>, <span class="kw-2">&amp;</span><span class="ident">actual_drop_id</span>).<span class="ident">is_none</span>(),
                 <span class="string">&quot;Keys cannot belong to another drop&quot;</span>
             );
             <span class="ident">next_key_id</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         }
 
         <span class="comment">// Add this drop ID to the funder&#39;s set of drops</span>
-        <span class="self">self</span>.<span class="ident">internal_add_drop_to_funder</span>(<span class="kw-2">&amp;</span><span class="ident">env::predecessor_account_id</span>(), <span class="kw-2">&amp;</span><span class="ident">drop_id</span>);
+        <span class="self">self</span>.<span class="ident">internal_add_drop_to_funder</span>(<span class="kw-2">&amp;</span><span class="ident">env::predecessor_account_id</span>(), <span class="kw-2">&amp;</span><span class="ident">actual_drop_id</span>);
 
         <span class="comment">// Create drop object</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">drop</span> <span class="op">=</span> <span class="ident">Drop</span> {
@@ -1021,7 +1266,7 @@
                     <span class="comment">// We get a new unique prefix for the collection</span>
                     <span class="ident">account_id_hash</span>: <span class="ident">hash_account_id</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
                         <span class="string">&quot;metadata-{}{}&quot;</span>,
-                        <span class="self">self</span>.<span class="ident">next_drop_id</span>, <span class="ident">owner_id</span>
+                        <span class="ident">actual_drop_id</span>, <span class="ident">owner_id</span>
                     )),
                 },
                 <span class="ident">metadata</span>.<span class="ident">as_ref</span>(),
@@ -1033,9 +1278,11 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">deposit_required_for_fc_deposits</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="comment">// Keep track of the number of none FCs so we don&#39;t charge the user</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">num_none_fcs</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">was_ft_registered</span> <span class="op">=</span> <span class="bool-val">false</span>;
+
         <span class="comment">// If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">data</span>) <span class="op">=</span> <span class="ident">nft_data</span> {
-            <span class="kw">let</span> <span class="ident">NFTDataConfig</span> {
+            <span class="kw">let</span> <span class="ident">JsonNFTData</span> {
                 <span class="ident">sender_id</span>,
                 <span class="ident">contract_id</span>,
             } <span class="op">=</span> <span class="ident">data</span>;
@@ -1043,7 +1290,7 @@
             <span class="comment">// Create the token ID vector</span>
             <span class="kw">let</span> <span class="ident">token_ids</span> <span class="op">=</span> <span class="ident">Vector::new</span>(<span class="ident">StorageKey::TokenIdsForDrop</span> {
                 <span class="comment">//we get a new unique prefix for the collection</span>
-                <span class="ident">account_id_hash</span>: <span class="ident">hash_account_id</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;nft-{}{}&quot;</span>, <span class="self">self</span>.<span class="ident">next_drop_id</span>, <span class="ident">owner_id</span>)),
+                <span class="ident">account_id_hash</span>: <span class="ident">hash_account_id</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;nft-{}{}&quot;</span>, <span class="ident">actual_drop_id</span>, <span class="ident">owner_id</span>)),
             });
 
             <span class="comment">// Create the NFT data</span>
@@ -1058,10 +1305,10 @@
             <span class="ident">drop</span>.<span class="ident">drop_type</span> <span class="op">=</span> <span class="ident">DropType::NonFungibleToken</span>(<span class="ident">actual_nft_data</span>);
 
             <span class="comment">// Add the drop with the empty token IDs</span>
-            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">actual_drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
         } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">data</span>) <span class="op">=</span> <span class="ident">ft_data</span>.<span class="ident">clone</span>() {
             <span class="comment">// If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type</span>
-            <span class="kw">let</span> <span class="ident">FTDataConfig</span> {
+            <span class="kw">let</span> <span class="ident">JsonFTData</span> {
                 <span class="ident">sender_id</span>,
                 <span class="ident">contract_id</span>,
                 <span class="ident">balance_per_use</span>,
@@ -1069,18 +1316,24 @@
 
             <span class="comment">// Create the NFT data</span>
             <span class="kw">let</span> <span class="ident">actual_ft_data</span> <span class="op">=</span> <span class="ident">FTData</span> {
-                <span class="ident">contract_id</span>,
+                <span class="ident">contract_id</span>: <span class="ident">contract_id</span>.<span class="ident">clone</span>(),
                 <span class="ident">sender_id</span>,
                 <span class="ident">balance_per_use</span>,
                 <span class="ident">ft_storage</span>: <span class="ident">U128</span>(<span class="ident">u128::MAX</span>),
             };
+            
+            <span class="comment">// Temporarily add the FT contract. If it was already registered, don&#39;t remove but if it was, remove now.</span>
+            <span class="comment">// This is to measure the storage cost of adding the contract.</span>
+            <span class="kw">let</span> <span class="ident">clean_insert</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">registered_ft_contracts</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">contract_id</span>);
+            <span class="ident">was_ft_registered</span> <span class="op">=</span> <span class="op">!</span><span class="ident">clean_insert</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;was_ft_registered: {}&quot;</span>, <span class="ident">was_ft_registered</span>); 
 
             <span class="comment">// The number of claims is 0 until FTs are sent to the contract</span>
             <span class="ident">drop</span>.<span class="ident">registered_uses</span> <span class="op">=</span> <span class="number">0</span>;
             <span class="ident">drop</span>.<span class="ident">drop_type</span> <span class="op">=</span> <span class="ident">DropType::FungibleToken</span>(<span class="ident">actual_ft_data</span>);
 
             <span class="comment">// Add the drop with the empty token IDs</span>
-            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">actual_drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
         } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">data</span>) <span class="op">=</span> <span class="ident">fc_data</span>.<span class="ident">clone</span>() {
             <span class="ident">drop</span>.<span class="ident">drop_type</span> <span class="op">=</span> <span class="ident">DropType::FunctionCall</span>(<span class="ident">data</span>.<span class="ident">clone</span>());
 
@@ -1161,14 +1414,14 @@
             }
 
             <span class="comment">// Add the drop with the empty token IDs</span>
-            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">actual_drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
         } <span class="kw">else</span> {
             <span class="macro">require!</span>(
                 <span class="ident">deposit_per_use</span>.<span class="number">0</span> <span class="op">&gt;</span> <span class="number">0</span>,
                 <span class="string">&quot;Cannot have a simple drop with zero balance&quot;</span>
             );
             <span class="comment">// In simple case, we just insert the drop with whatever it was initialized with.</span>
-            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">actual_drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
         }
 
         <span class="comment">// Calculate the storage being used for the entire drop</span>
@@ -1176,9 +1429,6 @@
         <span class="kw">let</span> <span class="ident">total_required_storage</span> <span class="op">=</span>
             <span class="ident">Balance::from</span>(<span class="ident">final_storage</span> <span class="op">-</span> <span class="ident">initial_storage</span>) <span class="op">*</span> <span class="ident">env::storage_byte_cost</span>();
         <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Total required storage Yocto {}&quot;</span>, <span class="ident">total_required_storage</span>);
-
-        <span class="comment">// Increment the drop ID nonce</span>
-        <span class="self">self</span>.<span class="ident">next_drop_id</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
 
         <span class="comment">/*
             Required attached_deposit consists of:
@@ -1249,10 +1499,28 @@
         <span class="comment">/*
             Ensure the attached attached_deposit can cover:
         */</span>
-        <span class="macro">require!</span>(
-            <span class="ident">current_user_balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">required_deposit</span>,
-            <span class="string">&quot;Not enough attached_deposit&quot;</span>
-        );
+        <span class="kw">if</span> <span class="ident">current_user_balance</span> <span class="op">&lt;</span> <span class="ident">required_deposit</span> {
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough user balance. Found {} expected: {}&quot;</span>, <span class="ident">yocto_to_near</span>(<span class="ident">current_user_balance</span>), <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>));
+            <span class="ident">current_user_balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">near_attached</span>;
+
+            <span class="comment">// If they have a balance, insert it back into the map otherwise remove it</span>
+            <span class="kw">if</span> <span class="ident">current_user_balance</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">current_user_balance</span>);
+            } <span class="kw">else</span> {
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>);
+            }
+
+            <span class="comment">// Refund the predecessor for their attached deposit if it&#39;s greater than 0</span>
+            <span class="kw">if</span> <span class="ident">near_attached</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="ident">Promise::new</span>(<span class="ident">env::predecessor_account_id</span>()).<span class="ident">transfer</span>(<span class="ident">near_attached</span>);
+            }
+
+            <span class="comment">// Remove the drop</span>
+            <span class="self">self</span>.<span class="ident">internal_remove_drop</span>(<span class="kw-2">&amp;</span><span class="ident">actual_drop_id</span>, <span class="ident">public_keys</span>);
+            <span class="comment">// Return early</span>
+            <span class="kw">return</span> <span class="prelude-val">None</span>;
+        }
+
         <span class="comment">// Decrement the user&#39;s balance by the required attached_deposit and insert back into the map</span>
         <span class="ident">current_user_balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">required_deposit</span>;
         <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">current_user_balance</span>);
@@ -1287,12 +1555,20 @@
 
             <span class="ident">env::promise_return</span>(<span class="ident">promise</span>);
         } <span class="kw">else</span> {
+            <span class="kw">let</span> <span class="ident">ft_contract</span> <span class="op">=</span> <span class="ident">ft_data</span>.<span class="ident">unwrap</span>().<span class="ident">contract_id</span>;
+            <span class="comment">// If the ft contract was NOT already registered, we should remove it from the set here and add it</span>
+            <span class="comment">// Only if everything went well in the callback.</span>
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">was_ft_registered</span> {
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;FT contract was not already registered. Removing from set&quot;</span>);
+                <span class="self">self</span>.<span class="ident">registered_ft_contracts</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">ft_contract</span>);
+            }
+
             <span class="comment">/*
                 Get the storage required by the FT contract and ensure the user has attached enough
                 attached_deposit to cover the storage and perform refunds if they overpayed.
             */</span>
-
-            <span class="ident">ext_ft_contract::ext</span>(<span class="ident">ft_data</span>.<span class="ident">unwrap</span>().<span class="ident">contract_id</span>)
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Performing CCC to get storage from FT contract&quot;</span>);
+            <span class="ident">ext_ft_contract::ext</span>(<span class="ident">ft_contract</span>)
                 <span class="comment">// Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.</span>
                 .<span class="ident">with_static_gas</span>(<span class="ident">GAS_FOR_STORAGE_BALANCE_BOUNDS</span>)
                 .<span class="ident">with_unused_gas_weight</span>(<span class="number">0</span>)
@@ -1300,12 +1576,13 @@
                 .<span class="ident">then</span>(
                     <span class="ident"><span class="self">Self</span>::ext</span>(<span class="ident">current_account_id</span>)
                         <span class="comment">// Resolve the promise with the min GAS. All unspent GAS will be added to this call.</span>
+                        .<span class="ident">with_attached_deposit</span>(<span class="ident">near_attached</span>)
                         .<span class="ident">with_static_gas</span>(<span class="ident">MIN_GAS_FOR_RESOLVE_STORAGE_CHECK</span>)
-                        .<span class="ident">resolve_storage_check</span>(<span class="ident">public_keys</span>, <span class="ident">drop_id</span>, <span class="ident">required_deposit</span>),
+                        .<span class="ident">resolve_storage_check</span>(<span class="ident">public_keys</span>, <span class="ident">actual_drop_id</span>, <span class="ident">required_deposit</span>),
                 );
         }
 
-        <span class="ident">drop_id</span>
+        <span class="prelude-val">Some</span>(<span class="ident">actual_drop_id</span>)
     }
 
     <span class="comment">/*
@@ -1313,10 +1590,16 @@
         Only the funder can call this method_name
     */</span>
     <span class="attribute">#[<span class="ident">payable</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_keys</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">public_keys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PublicKey</span><span class="op">&gt;</span>, <span class="ident">drop_id</span>: <span class="ident">DropId</span>) -&gt; <span class="ident">DropId</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_keys</span>(
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>, 
+        <span class="ident">public_keys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PublicKey</span><span class="op">&gt;</span>, 
+        <span class="ident">passwords_per_use</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">JsonPasswordForUse</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">passwords_per_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">drop_id</span>: <span class="ident">U128</span>
+    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DropId</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">drop</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">drop_for_id</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>)
+            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>.<span class="number">0</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;no drop found for ID&quot;</span>);
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">config</span>;
         <span class="kw">let</span> <span class="ident">funder</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>;
@@ -1327,7 +1610,6 @@
         );
 
         <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">public_keys</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u128</span>;
-
         <span class="comment">/*
             Add data to storage
         */</span>
@@ -1344,9 +1626,38 @@
         <span class="kw">let</span> <span class="ident">calculated_base_allowance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">calculate_base_allowance</span>(<span class="ident">drop</span>.<span class="ident">required_gas</span>);
         <span class="comment">// The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.</span>
         <span class="kw">let</span> <span class="ident">actual_allowance</span> <span class="op">=</span> <span class="ident">calculated_base_allowance</span> <span class="op">*</span> <span class="ident">num_claims_per_key</span> <span class="kw">as</span> <span class="ident">u128</span>;
+        
+        <span class="kw">if</span> <span class="ident">passwords_per_use</span>.<span class="ident">is_some</span>() {
+            <span class="macro">require!</span>(<span class="ident">len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">50</span>, <span class="string">&quot;Cannot add 50 keys at once with passwords&quot;</span>);
+        }
+        <span class="macro">require!</span>(<span class="ident">passwords_per_use</span>.<span class="ident">clone</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u128</span>).<span class="ident">unwrap_or</span>(<span class="ident">len</span>) <span class="op">==</span> <span class="ident">len</span>, <span class="string">&quot;Passwords per use must be less than or equal to the number of public keys&quot;</span>);
+        <span class="macro">require!</span>(<span class="ident">passwords_per_key</span>.<span class="ident">clone</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u128</span>).<span class="ident">unwrap_or</span>(<span class="ident">len</span>) <span class="op">==</span> <span class="ident">len</span>, <span class="string">&quot;Passwords per key must be equal to the number of public keys&quot;</span>);
         <span class="comment">// Loop through and add each drop ID to the public keys. Also populate the key set.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_key_id</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">next_key_id</span>;
-        <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="ident">public_keys</span>.<span class="ident">clone</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_key_id</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">next_key_id</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">idx</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">public_keys</span> {
+            <span class="kw">let</span> <span class="ident">pw_per_key</span> <span class="op">=</span> <span class="ident">passwords_per_key</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">f</span>[<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">clone</span>()).<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">hex::decode</span>(<span class="ident">f</span>).<span class="ident">unwrap</span>());
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pw_per_use</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+            <span class="comment">// If we have passwords for this specific key, add them to the key info</span>
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pws</span>) <span class="op">=</span> <span class="ident">passwords_per_use</span>.<span class="ident">as_ref</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>[<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">as_ref</span>()) {
+                
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pw_map</span> <span class="op">=</span> <span class="ident">UnorderedMap::new</span>(<span class="ident">StorageKey::PasswordsPerUse</span> {
+                    <span class="comment">// We get a new unique prefix for the collection</span>
+                    <span class="ident">account_id_hash</span>: <span class="ident">hash_account_id</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;pws-{}{}{}&quot;</span>, <span class="ident">next_key_id</span>, <span class="ident">drop_id</span>.<span class="number">0</span>, <span class="ident">drop</span>.<span class="ident">owner_id</span>)),
+                });
+
+                <span class="comment">// Loop through each password and add it to the lookup map</span>
+                <span class="kw">for</span> <span class="ident">pw</span> <span class="kw">in</span> <span class="ident">pws</span> {
+                    <span class="macro">require!</span>(<span class="ident">pw</span>.<span class="ident">key_use</span> <span class="op">&lt;</span> <span class="ident">num_claims_per_key</span>, <span class="string">&quot;claim out of range for password&quot;</span>);
+                    <span class="ident">pw_map</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">pw</span>.<span class="ident">key_use</span>, <span class="kw-2">&amp;</span><span class="ident">hex::decode</span>(<span class="ident">pw</span>.<span class="ident">pw</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>());
+                }
+
+                <span class="ident">pw_per_use</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">pw_map</span>);
+            }
+
+            <span class="macro">require!</span>(<span class="ident">pw_per_use</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">u8</span> <span class="op">+</span> <span class="ident">pw_per_key</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">u8</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">1</span>, <span class="string">&quot;You cannot specify both local and global passwords for a key&quot;</span>);
+
             <span class="ident">exiting_key_map</span>.<span class="ident">insert</span>(
                 <span class="kw-2">&amp;</span><span class="ident">pk</span>,
                 <span class="kw-2">&amp;</span><span class="ident">KeyInfo</span> {
@@ -1354,13 +1665,16 @@
                     <span class="ident">last_used</span>: <span class="number">0</span>, <span class="comment">// Set to 0 since this will make the key always claimable.</span>
                     <span class="ident">allowance</span>: <span class="ident">actual_allowance</span>,
                     <span class="ident">key_id</span>: <span class="ident">next_key_id</span>,
+                    <span class="ident">pw_per_use</span>,
+                    <span class="ident">pw_per_key</span>,
                 },
             );
             <span class="macro">require!</span>(
-                <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>, <span class="kw-2">&amp;</span><span class="ident">drop_id</span>).<span class="ident">is_none</span>(),
+                <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>, <span class="kw-2">&amp;</span><span class="ident">drop_id</span>.<span class="number">0</span>).<span class="ident">is_none</span>(),
                 <span class="string">&quot;Keys cannot belong to another drop&quot;</span>
             );
             <span class="ident">next_key_id</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+            <span class="ident">idx</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         }
 
         <span class="comment">// Set the drop&#39;s PKs to the newly populated set</span>
@@ -1400,13 +1714,18 @@
         };
 
         <span class="comment">// Add the drop back in for the drop ID</span>
-        <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+        <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
 
         <span class="comment">// Get the current balance of the funder.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_user_balance</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">user_balances</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">funder</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;No user balance found&quot;</span>);
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+
+        <span class="kw">let</span> <span class="ident">near_attached</span> <span class="op">=</span> <span class="ident">env::attached_deposit</span>();
+        <span class="comment">// Add the attached deposit to their balance</span>
+        <span class="ident">current_user_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">near_attached</span>;
+        <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">funder</span>, <span class="kw-2">&amp;</span><span class="ident">current_user_balance</span>);
 
         <span class="comment">// Get the required attached_deposit for all the FCs</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">deposit_required_for_fc_deposits</span> <span class="op">=</span> <span class="number">0</span>;
@@ -1531,6 +1850,27 @@
         <span class="comment">/*
             Ensure the attached attached_deposit can cover:
         */</span>
+        <span class="kw">if</span> <span class="ident">current_user_balance</span> <span class="op">&lt;</span> <span class="ident">required_deposit</span> {
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough user balance. Found {} expected: {}&quot;</span>, <span class="ident">yocto_to_near</span>(<span class="ident">current_user_balance</span>), <span class="ident">yocto_to_near</span>(<span class="ident">required_deposit</span>));
+            <span class="ident">current_user_balance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">near_attached</span>;
+
+            <span class="comment">// If they have a balance, insert it back into the map otherwise remove it</span>
+            <span class="kw">if</span> <span class="ident">current_user_balance</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">funder</span>, <span class="kw-2">&amp;</span><span class="ident">current_user_balance</span>);
+            } <span class="kw">else</span> {
+                <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">funder</span>);
+            }
+
+            <span class="comment">// Refund the predecessor for their attached deposit if it&#39;s greater than 0</span>
+            <span class="kw">if</span> <span class="ident">near_attached</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="ident">Promise::new</span>(<span class="ident">env::predecessor_account_id</span>()).<span class="ident">transfer</span>(<span class="ident">near_attached</span>);
+            }
+
+            <span class="comment">// Remove the drop</span>
+            <span class="self">self</span>.<span class="ident">internal_remove_drop</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>.<span class="number">0</span>, <span class="ident">public_keys</span>);
+            <span class="comment">// Return early</span>
+            <span class="kw">return</span> <span class="prelude-val">None</span>;
+        }
         <span class="macro">require!</span>(
             <span class="ident">current_user_balance</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">required_deposit</span>,
             <span class="string">&quot;Not enough attached_deposit&quot;</span>
@@ -1563,7 +1903,7 @@
 
         <span class="ident">env::promise_return</span>(<span class="ident">promise</span>);
 
-        <span class="ident">drop_id</span>
+        <span class="prelude-val">Some</span>(<span class="ident">drop_id</span>.<span class="number">0</span>)
     }
 }
 </code></pre></div>

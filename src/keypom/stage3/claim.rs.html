@@ -724,12 +724,82 @@
 <span id="718">718</span>
 <span id="719">719</span>
 <span id="720">720</span>
+<span id="721">721</span>
+<span id="722">722</span>
+<span id="723">723</span>
+<span id="724">724</span>
+<span id="725">725</span>
+<span id="726">726</span>
+<span id="727">727</span>
+<span id="728">728</span>
+<span id="729">729</span>
+<span id="730">730</span>
+<span id="731">731</span>
+<span id="732">732</span>
+<span id="733">733</span>
+<span id="734">734</span>
+<span id="735">735</span>
+<span id="736">736</span>
+<span id="737">737</span>
+<span id="738">738</span>
+<span id="739">739</span>
+<span id="740">740</span>
+<span id="741">741</span>
+<span id="742">742</span>
+<span id="743">743</span>
+<span id="744">744</span>
+<span id="745">745</span>
+<span id="746">746</span>
+<span id="747">747</span>
+<span id="748">748</span>
+<span id="749">749</span>
+<span id="750">750</span>
+<span id="751">751</span>
+<span id="752">752</span>
+<span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
+<span id="760">760</span>
+<span id="761">761</span>
+<span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
+<span id="766">766</span>
+<span id="767">767</span>
+<span id="768">768</span>
+<span id="769">769</span>
+<span id="770">770</span>
+<span id="771">771</span>
+<span id="772">772</span>
+<span id="773">773</span>
+<span id="774">774</span>
+<span id="775">775</span>
+<span id="776">776</span>
+<span id="777">777</span>
+<span id="778">778</span>
+<span id="779">779</span>
+<span id="780">780</span>
+<span id="781">781</span>
+<span id="782">782</span>
+<span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
+<span id="787">787</span>
+<span id="788">788</span>
+<span id="789">789</span>
+<span id="790">790</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::<span class="kw-2">*</span>;
 
 <span class="attribute">#[<span class="ident">near_bindgen</span>]</span>
 <span class="kw">impl</span> <span class="ident">Keypom</span> {
     <span class="doccomment">/// Claim tokens for specific account that are attached to the public key this tx is signed with.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">claim</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">account_id</span>: <span class="ident">AccountId</span>, <span class="ident">expected_uses</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">claim</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">account_id</span>: <span class="ident">AccountId</span>, <span class="ident">password</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
         <span class="comment">// Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.</span>
         <span class="kw">let</span> (
             <span class="ident">drop_data_option</span>,
@@ -737,8 +807,10 @@
             <span class="ident">storage_freed_option</span>,
             <span class="ident">token_id</span>,
             <span class="ident">should_continue</span>,
-            <span class="ident">cur_key_info</span>,
-        ) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_claim</span>(<span class="ident">expected_uses</span>);
+            <span class="ident">cur_key_id</span>,
+            <span class="ident">remaining_uses</span>,
+            <span class="ident">auto_withdraw</span>,
+        ) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_claim</span>(<span class="ident">password</span>);
 
         <span class="kw">if</span> <span class="ident">drop_data_option</span>.<span class="ident">is_none</span>() {
             <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Invalid claim. Returning.&quot;</span>);
@@ -777,10 +849,12 @@
         <span class="self">self</span>.<span class="ident">internal_execute</span>(
             <span class="ident">drop_data</span>,
             <span class="ident">drop_id</span>.<span class="ident">unwrap</span>(),
-            <span class="ident">cur_key_info</span>,
+            <span class="ident">cur_key_id</span>,
+            <span class="ident">remaining_uses</span>,
             <span class="ident">account_id</span>,
             <span class="ident">storage_freed</span>,
             <span class="ident">token_id</span>,
+            <span class="ident">auto_withdraw</span>,
             <span class="ident">promise</span>,
         );
 
@@ -799,7 +873,7 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">new_account_id</span>: <span class="ident">AccountId</span>,
         <span class="ident">new_public_key</span>: <span class="ident">PublicKey</span>,
-        <span class="ident">expected_uses</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+        <span class="ident">password</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>
     ) {
         <span class="kw">let</span> (
             <span class="ident">drop_data_option</span>,
@@ -807,8 +881,10 @@
             <span class="ident">storage_freed_option</span>,
             <span class="ident">token_id</span>,
             <span class="ident">should_continue</span>,
-            <span class="ident">cur_key_info</span>,
-        ) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_claim</span>(<span class="ident">expected_uses</span>);
+            <span class="ident">cur_key_id</span>,
+            <span class="ident">remaining_uses</span>,
+            <span class="ident">auto_withdraw</span>,
+        ) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_claim</span>(<span class="ident">password</span>);
 
         <span class="kw">if</span> <span class="ident">drop_data_option</span>.<span class="ident">is_none</span>() {
             <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Invalid claim. Returning.&quot;</span>);
@@ -840,10 +916,12 @@
         <span class="self">self</span>.<span class="ident">internal_execute</span>(
             <span class="ident">drop_data</span>,
             <span class="ident">drop_id</span>.<span class="ident">unwrap</span>(),
-            <span class="ident">cur_key_info</span>,
+            <span class="ident">cur_key_id</span>,
+            <span class="ident">remaining_uses</span>,
             <span class="ident">new_account_id</span>,
             <span class="ident">storage_freed</span>,
             <span class="ident">token_id</span>,
+            <span class="ident">auto_withdraw</span>,
             <span class="prelude-val">Some</span>(<span class="ident">promise</span>),
         );
 
@@ -867,6 +945,8 @@
         <span class="ident">balance</span>: <span class="ident">U128</span>,
         <span class="comment">// How much storage was freed when the key was claimed</span>
         <span class="ident">storage_used</span>: <span class="ident">Balance</span>,
+        <span class="comment">// Is it an auto withdraw case</span>
+        <span class="ident">auto_withdraw</span>: <span class="ident">bool</span>
     ) -&gt; <span class="ident">bool</span> {
         <span class="comment">// Get the status of the cross contract call</span>
         <span class="kw">let</span> <span class="ident">claim_succeeded</span> <span class="op">=</span> <span class="ident">check_promise_result</span>();
@@ -884,8 +964,9 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">amount_to_refund</span> <span class="op">=</span> <span class="ident">storage_used</span>;
 
         <span class="macro">near_sdk::log!</span>(
-            <span class="string">&quot;Refund Amount (storage used): {}&quot;</span>,
+            <span class="string">&quot;Refund Amount (storage used): {}. Auto withdraw: {}&quot;</span>,
             <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>),
+            <span class="ident">auto_withdraw</span>
         );
 
         <span class="comment">// If not successful, the balance is added to the amount to refund since it was never transferred.</span>
@@ -897,19 +978,33 @@
             <span class="ident">amount_to_refund</span> <span class="op">+</span><span class="op">=</span> <span class="ident">balance</span>.<span class="number">0</span>
         }
 
-        <span class="macro">near_sdk::log!</span>(
-            <span class="string">&quot;Refunding funder: {:?} For amount: {:?}&quot;</span>,
-            <span class="ident">owner_id</span>,
-            <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
-        );
-
-        <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
+        
+        <span class="kw">if</span> <span class="ident">auto_withdraw</span> {
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Auto withdraw. Refunding funder: {:?} balance For amount: {:?}&quot;</span>,
+                <span class="ident">owner_id</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="comment">// Send the funds to the funder</span>
+            <span class="ident">Promise::new</span>(<span class="ident">owner_id</span>).<span class="ident">transfer</span>(<span class="ident">amount_to_refund</span>);
+        } <span class="kw">else</span> {
+            
+            <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">user_balances</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;No funder balance found&quot;</span>);
-        <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
-        <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+            <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
+            
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Refunding funder&#39;s balance: {:?} For amount: {:?}&quot;</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">cur_funder_balance</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+        }
 
         <span class="ident">claim_succeeded</span>
     }
@@ -930,6 +1025,8 @@
         <span class="ident">ft_data</span>: <span class="ident">FTData</span>,
         <span class="comment">// Was this function invoked via an execute (no callback)</span>
         <span class="ident">execute</span>: <span class="ident">bool</span>,
+        <span class="comment">// Is it an auto withdraw case</span>
+        <span class="ident">auto_withdraw</span>: <span class="ident">bool</span>
     ) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
         <span class="kw">let</span> <span class="ident">prepaid_gas</span> <span class="op">=</span> <span class="ident">env::prepaid_gas</span>();
@@ -951,8 +1048,9 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">amount_to_refund</span> <span class="op">=</span> <span class="ident">storage_used</span>;
 
         <span class="macro">near_sdk::log!</span>(
-            <span class="string">&quot;Refund Amount (storage used): {}&quot;</span>,
+            <span class="string">&quot;Refund Amount (storage used): {}. Auto withdraw: {}&quot;</span>,
             <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>),
+            <span class="ident">auto_withdraw</span>
         );
 
         <span class="comment">// If not successful, the balance is added to the amount to refund since it was never transferred.</span>
@@ -964,18 +1062,32 @@
             <span class="ident">amount_to_refund</span> <span class="op">+</span><span class="op">=</span> <span class="ident">balance</span>.<span class="number">0</span>
         }
 
-        <span class="macro">near_sdk::log!</span>(
-            <span class="string">&quot;Refunding funder: {:?} balance For amount: {:?}&quot;</span>,
-            <span class="ident">owner_id</span>,
-            <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
-        );
-        <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">if</span> <span class="ident">auto_withdraw</span> {
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Auto withdraw. Refunding funder: {:?} balance For amount: {:?}&quot;</span>,
+                <span class="ident">owner_id</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="comment">// Send the funds to the funder</span>
+            <span class="ident">Promise::new</span>(<span class="ident">owner_id</span>).<span class="ident">transfer</span>(<span class="ident">amount_to_refund</span>);
+        } <span class="kw">else</span> {
+            
+            <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">user_balances</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;No funder balance found&quot;</span>);
-        <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
-        <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+            <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
+            
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Refunding funder&#39;s balance: {:?} For amount: {:?}&quot;</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">cur_funder_balance</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+        }
 
         <span class="comment">// Perform the FT transfer functionality</span>
         <span class="self">self</span>.<span class="ident">internal_ft_transfer</span>(<span class="ident">claim_succeeded</span>, <span class="ident">ft_data</span>, <span class="ident">account_id</span>);
@@ -1003,6 +1115,8 @@
         <span class="ident">token_id</span>: <span class="ident">String</span>,
         <span class="comment">// Was this function invoked via an execute (no callback)</span>
         <span class="ident">execute</span>: <span class="ident">bool</span>,
+        <span class="comment">// Is it an auto withdraw case</span>
+        <span class="ident">auto_withdraw</span>: <span class="ident">bool</span>
     ) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
         <span class="kw">let</span> <span class="ident">prepaid_gas</span> <span class="op">=</span> <span class="ident">env::prepaid_gas</span>();
@@ -1025,10 +1139,9 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">amount_to_refund</span> <span class="op">=</span> <span class="ident">storage_used</span>;
 
         <span class="macro">near_sdk::log!</span>(
-            <span class="string">&quot;Refund Amount: {}, 
-            Storage Used: {}&quot;</span>,
+            <span class="string">&quot;Refund Amount (storage used): {}. Auto withdraw: {}&quot;</span>,
             <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>),
-            <span class="ident">yocto_to_near</span>(<span class="ident">storage_used</span>),
+            <span class="ident">auto_withdraw</span>
         );
 
         <span class="comment">// If not successful, the balance is added to the amount to refund since it was never transferred.</span>
@@ -1040,18 +1153,32 @@
             <span class="ident">amount_to_refund</span> <span class="op">+</span><span class="op">=</span> <span class="ident">balance</span>.<span class="number">0</span>
         }
 
-        <span class="macro">near_sdk::log!</span>(
-            <span class="string">&quot;Refunding funder: {:?} balance For amount: {:?}&quot;</span>,
-            <span class="ident">owner_id</span>,
-            <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
-        );
-        <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">if</span> <span class="ident">auto_withdraw</span> {
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Auto withdraw. Refunding funder: {:?} balance For amount: {:?}&quot;</span>,
+                <span class="ident">owner_id</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="comment">// Send the funds to the funder</span>
+            <span class="ident">Promise::new</span>(<span class="ident">owner_id</span>).<span class="ident">transfer</span>(<span class="ident">amount_to_refund</span>);
+        } <span class="kw">else</span> {
+            
+            <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">user_balances</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;No funder balance found&quot;</span>);
-        <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
-        <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+            <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
+            
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Refunding funder&#39;s balance: {:?} For amount: {:?}&quot;</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">cur_funder_balance</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+        }
 
         <span class="comment">// Transfer the NFT</span>
         <span class="self">self</span>.<span class="ident">internal_nft_transfer</span>(
@@ -1080,12 +1207,16 @@
         <span class="ident">fc_data</span>: <span class="ident">FCData</span>,
         <span class="comment">// Drop ID for the specific drop</span>
         <span class="ident">drop_id</span>: <span class="ident">DropId</span>,
-        <span class="comment">// Current key info before uses were decremented</span>
-        <span class="ident">cur_key_info</span>: <span class="ident">KeyInfo</span>,
-        <span class="comment">// How many uses the key had left before it was decremented</span>
+        <span class="comment">// ID for the current key</span>
+        <span class="ident">cur_key_id</span>: <span class="ident">u64</span>,
+        <span class="comment">// How many uses are remaining on the current key</span>
+        <span class="ident">remaining_uses</span>: <span class="ident">u64</span>,
+        <span class="comment">// How many uses the key had left before sit was decremented</span>
         <span class="ident">uses_per_key</span>: <span class="ident">u64</span>,
         <span class="comment">// Was this function invoked via an execute (no callback)</span>
         <span class="ident">execute</span>: <span class="ident">bool</span>,
+        <span class="comment">// Is it an auto withdraw case</span>
+        <span class="ident">auto_withdraw</span>: <span class="ident">bool</span>
     ) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
         <span class="kw">let</span> <span class="ident">prepaid_gas</span> <span class="op">=</span> <span class="ident">env::prepaid_gas</span>();
@@ -1108,14 +1239,15 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">amount_to_refund</span> <span class="op">=</span> <span class="ident">storage_used</span>;
 
         <span class="macro">near_sdk::log!</span>(
-            <span class="string">&quot;Refund Amount (storage used): {}&quot;</span>,
+            <span class="string">&quot;Refund Amount (storage used): {}. Auto withdraw: {}&quot;</span>,
             <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>),
+            <span class="ident">auto_withdraw</span>
         );
 
         <span class="comment">// The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead</span>
         <span class="kw">let</span> <span class="ident">cur_len</span> <span class="op">=</span> <span class="ident">fc_data</span>.<span class="ident">methods</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u16</span>;
         <span class="kw">let</span> <span class="ident">starting_index</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">cur_len</span> <span class="op">&gt;</span> <span class="number">1</span> {
-            (<span class="ident">uses_per_key</span> <span class="op">-</span> <span class="ident">cur_key_info</span>.<span class="ident">remaining_uses</span>) <span class="kw">as</span> <span class="ident">usize</span>
+            (<span class="ident">uses_per_key</span> <span class="op">-</span> <span class="ident">remaining_uses</span>) <span class="kw">as</span> <span class="ident">usize</span>
         } <span class="kw">else</span> {
             <span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>
         };
@@ -1143,18 +1275,37 @@
             <span class="ident">amount_to_refund</span> <span class="op">+</span><span class="op">=</span> <span class="ident">balance</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">total_attached_deposit</span>
         }
 
-        <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">if</span> <span class="ident">auto_withdraw</span> {
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Auto withdraw. Refunding funder: {:?} balance For amount: {:?}&quot;</span>,
+                <span class="ident">owner_id</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="comment">// Send the funds to the funder</span>
+            <span class="ident">Promise::new</span>(<span class="ident">owner_id</span>).<span class="ident">transfer</span>(<span class="ident">amount_to_refund</span>);
+        } <span class="kw">else</span> {
+            
+            <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">user_balances</span>
             .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;No funder balance found&quot;</span>);
-        <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
-        <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+            <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
+            
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Refunding funder&#39;s balance: {:?} For amount: {:?}&quot;</span>,
+                <span class="ident">yocto_to_near</span>(<span class="ident">cur_funder_balance</span>),
+                <span class="ident">yocto_to_near</span>(<span class="ident">amount_to_refund</span>)
+            );
+            
+            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+        }
 
         <span class="self">self</span>.<span class="ident">internal_fc_execute</span>(
             <span class="kw-2">&amp;</span><span class="ident">cur_method_data</span>,
             <span class="ident">fc_data</span>.<span class="ident">config</span>,
-            <span class="ident">cur_key_info</span>.<span class="ident">key_id</span>,
+            <span class="ident">cur_key_id</span>,
             <span class="ident">account_id</span>,
             <span class="ident">drop_id</span>,
         );
@@ -1165,7 +1316,7 @@
     <span class="doccomment">/// If drop is none, simulate a panic.</span>
     <span class="kw">fn</span> <span class="ident">process_claim</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">expected_uses</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+        <span class="ident">password</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     ) -&gt; (
         <span class="comment">// Drop containing all data</span>
         <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Drop</span><span class="op">&gt;</span>,
@@ -1177,8 +1328,12 @@
         <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
         <span class="comment">// Should we return and not do anything once the drop is claimed (if FC data is none)</span>
         <span class="ident">bool</span>,
-        <span class="comment">// Current key info before decrementing</span>
-        <span class="ident">KeyInfo</span>,
+        <span class="comment">// ID for the current key</span>
+        <span class="ident">u64</span>,
+        <span class="comment">// How many uses are remaining on the current key</span>
+        <span class="ident">u64</span>,
+        <span class="comment">// Should we auto withdraw and send the refund to the drop owner&#39;s bal</span>
+        <span class="ident">bool</span>,
     ) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
         <span class="kw">let</span> <span class="ident">prepaid_gas</span> <span class="op">=</span> <span class="ident">env::prepaid_gas</span>();
@@ -1215,22 +1370,35 @@
         <span class="comment">// Panic doesn&#39;t affect allowance</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">key_info</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>).<span class="ident">unwrap</span>();
         <span class="comment">// Keep track of the current number of uses so that it can be used to index into FCData Method Data</span>
-        <span class="kw">let</span> <span class="ident">current_key_info</span> <span class="op">=</span> <span class="ident">key_info</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">cur_key_id</span> <span class="op">=</span> <span class="ident">key_info</span>.<span class="ident">key_id</span>;
+        <span class="kw">let</span> <span class="ident">remaining_uses</span> <span class="op">=</span> <span class="ident">key_info</span>.<span class="ident">remaining_uses</span>;
 
-        <span class="comment">// If the key info doesn&#39;t match the expected uses, soft panic</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">uses</span>) <span class="op">=</span> <span class="ident">expected_uses</span> {
-            <span class="kw">if</span> <span class="ident">key_info</span>.<span class="ident">remaining_uses</span> <span class="op">!</span><span class="op">=</span> <span class="ident">uses</span> {
-                <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
-                    (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
-                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Expected key uses of {}. Found: {}. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">uses</span>, <span class="ident">key_info</span>.<span class="ident">remaining_uses</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+        <span class="comment">// Ensure the key has enough allowance</span>
+        <span class="kw">if</span> <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">&lt;</span> <span class="ident">prepaid_gas</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span> {
+            <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
 
-                <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
-                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
-                <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
-                <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
-                <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="ident">current_key_info</span>);
-            }
+            <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
+                (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough allowance on the key {}. Decrementing allowance by {} Used GAS: {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+
+            <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
+            <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
+            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+            <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="bool-val">false</span>);
         }
+
+        <span class="comment">// If a password was passed in, check it against the key&#39;s password</span>
+        <span class="kw">let</span> <span class="ident">cur_use</span> <span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">drop</span>
+        .<span class="ident">config</span>
+        .<span class="ident">clone</span>()
+        .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">uses_per_key</span>)
+        .<span class="ident">unwrap_or</span>(<span class="number">1</span>)
+        <span class="op">-</span> <span class="ident">key_info</span>.<span class="ident">remaining_uses</span>);
+
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">assert_key_password</span>(<span class="ident">password</span>, <span class="ident">drop_id</span>, <span class="kw-2">&amp;mut</span> <span class="ident">drop</span>, <span class="kw-2">&amp;mut</span> <span class="ident">key_info</span>, <span class="ident">cur_use</span>, <span class="kw-2">&amp;</span><span class="ident">signer_pk</span>) <span class="op">==</span> <span class="bool-val">false</span> {
+            <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="bool-val">false</span>);
+        };
 
         <span class="comment">// Ensure there&#39;s enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)</span>
         <span class="kw">if</span> <span class="ident">drop</span>.<span class="ident">registered_uses</span> <span class="op">&lt;</span> <span class="number">1</span> <span class="op">|</span><span class="op">|</span> <span class="ident">prepaid_gas</span> <span class="op">!</span><span class="op">=</span> <span class="ident">drop</span>.<span class="ident">required_gas</span> {
@@ -1248,30 +1416,12 @@
             <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
             <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
             <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
-            <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="ident">current_key_info</span>);
+            <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="bool-val">false</span>);
         }
 
-        <span class="comment">// Ensure enough time has passed if a start timestamp was specified in the config.</span>
-        <span class="kw">let</span> <span class="ident">current_timestamp</span> <span class="op">=</span> <span class="ident">env::block_timestamp</span>();
-        <span class="kw">let</span> <span class="ident">desired_timestamp</span> <span class="op">=</span> <span class="ident">drop</span>
-            .<span class="ident">config</span>
-            .<span class="ident">clone</span>()
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">start_timestamp</span>)
-            .<span class="ident">unwrap_or</span>(<span class="ident">current_timestamp</span>);
-
-        <span class="kw">if</span> <span class="ident">current_timestamp</span> <span class="op">&lt;</span> <span class="ident">desired_timestamp</span> {
-            <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
-
-            <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
-                (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
-            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Drop isn&#39;t claimable until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">desired_timestamp</span>, <span class="ident">current_timestamp</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
-
-            <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
-            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
-            <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
-            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
-            <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="ident">current_key_info</span>);
-        }
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">assert_claim_timestamps</span>(<span class="ident">drop_id</span>, <span class="kw-2">&amp;mut</span> <span class="ident">drop</span>, <span class="kw-2">&amp;mut</span> <span class="ident">key_info</span>, <span class="kw-2">&amp;</span><span class="ident">signer_pk</span>) <span class="op">==</span> <span class="bool-val">false</span> {
+            <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="bool-val">false</span>);
+        };
 
         <span class="comment">/*
             If it&#39;s an NFT drop get the token ID and remove it from the set.
@@ -1317,40 +1467,6 @@
             <span class="ident">key_info</span>.<span class="ident">last_used</span>,
             <span class="ident">key_info</span>.<span class="ident">remaining_uses</span>
         );
-
-        <span class="comment">// Ensure the key is within the interval if specified</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">interval</span>) <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">config</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">throttle_timestamp</span>) {
-            <span class="macro">near_sdk::log!</span>(
-                <span class="string">&quot;Current timestamp {} last used: {} subs: {} interval: {}&quot;</span>,
-                <span class="ident">current_timestamp</span>,
-                <span class="ident">key_info</span>.<span class="ident">last_used</span>,
-                <span class="ident">current_timestamp</span> <span class="op">-</span> <span class="ident">key_info</span>.<span class="ident">last_used</span>,
-                <span class="ident">interval</span>
-            );
-
-            <span class="kw">if</span> (<span class="ident">current_timestamp</span> <span class="op">-</span> <span class="ident">key_info</span>.<span class="ident">last_used</span>) <span class="op">&lt;</span> <span class="ident">interval</span>
-                <span class="op">|</span><span class="op">|</span> <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">&lt;</span> <span class="ident">prepaid_gas</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>
-            {
-                <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
-
-                <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
-                    (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
-                <span class="kw">if</span> (<span class="ident">current_timestamp</span> <span class="op">-</span> <span class="ident">key_info</span>.<span class="ident">last_used</span>) <span class="op">&lt;</span> <span class="ident">interval</span> {
-                    <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough time has passed since the key was last used. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
-                } <span class="kw">else</span> {
-                    <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough allowance on the key {}. Decrementing allowance by {} Used GAS: {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
-                }
-
-                <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
-                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
-                <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
-                <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
-                <span class="kw">return</span> (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="ident">current_key_info</span>);
-            }
-
-            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Enough time has passed for key to be used. Setting last used to current timestamp {}&quot;</span>, <span class="ident">current_timestamp</span>);
-            <span class="ident">key_info</span>.<span class="ident">last_used</span> <span class="op">=</span> <span class="ident">current_timestamp</span>;
-        }
 
         <span class="comment">// No uses left! The key should be deleted</span>
         <span class="kw">if</span> <span class="ident">key_info</span>.<span class="ident">remaining_uses</span> <span class="op">==</span> <span class="number">1</span> {
@@ -1404,6 +1520,7 @@
             <span class="ident">initial_storage</span>,
             <span class="ident">final_storage</span>
         );
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">should_auto_withdraw</span> <span class="op">=</span> <span class="bool-val">false</span>;
         <span class="kw">if</span> <span class="ident">should_delete_key</span> {
             <span class="comment">// Amount to refund is the current allowance less the current execution&#39;s max GAS</span>
             <span class="kw">let</span> <span class="ident">amount_to_refund</span> <span class="op">=</span> <span class="ident">key_info</span>.<span class="ident">allowance</span>
@@ -1420,14 +1537,35 @@
                 <span class="ident">ACCESS_KEY_STORAGE</span>
             );
 
-            <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">user_balances</span>
-                .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>)
-                .<span class="ident">expect</span>(<span class="string">&quot;No funder balance found&quot;</span>);
-            <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
-            <span class="self">self</span>.<span class="ident">user_balances</span>
-                .<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+            <span class="comment">// Check if auto_withdrawing to the funder&#39;s entire balance </span>
+            <span class="kw">let</span> <span class="ident">auto_withdraw</span> <span class="op">=</span> <span class="ident">drop</span>
+                .<span class="ident">config</span>
+                .<span class="ident">clone</span>()
+                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">auto_withdraw</span>)
+                .<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>);
+                
+            <span class="comment">// Get the number of drops still left for the owner</span>
+            <span class="kw">let</span> <span class="ident">cur_drop_num_for_owner</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">drop_ids_for_owner</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="prelude-val">Some</span>(<span class="ident">d</span>.<span class="ident">len</span>())).<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+            
+            <span class="comment">// If auto_withdraw is set to true and this is the last drop for the owner, we should just withdraw the entire balance</span>
+            <span class="kw">if</span> <span class="ident">auto_withdraw</span> <span class="op">&amp;&amp;</span> <span class="ident">cur_drop_num_for_owner</span> <span class="op">==</span> <span class="number">0</span> {
+                <span class="ident">should_auto_withdraw</span> <span class="op">=</span> <span class="bool-val">true</span>;
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_balance</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>).<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+                <span class="ident">cur_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Auto withdrawing the entire balance of {}.&quot;</span>, <span class="ident">yocto_to_near</span>(<span class="ident">cur_balance</span>));
+                
+                <span class="comment">// Send cur balance to drop owner</span>
+                <span class="ident">Promise::new</span>(<span class="ident">drop</span>.<span class="ident">owner_id</span>.<span class="ident">clone</span>()).<span class="ident">transfer</span>(<span class="ident">cur_balance</span>);
+            } <span class="kw">else</span> {
+                <span class="comment">// Get the funder&#39;s balance and increment it by the amount to refund</span>
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_funder_balance</span> <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">user_balances</span>
+                    .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>)
+                    .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+                <span class="ident">cur_funder_balance</span> <span class="op">+</span><span class="op">=</span> <span class="ident">amount_to_refund</span>;
+                <span class="self">self</span>.<span class="ident">user_balances</span>
+                    .<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">cur_funder_balance</span>);
+            }
 
             <span class="comment">// Delete the key</span>
             <span class="ident">Promise::new</span>(<span class="ident">env::current_account_id</span>()).<span class="ident">delete_key</span>(<span class="ident">signer_pk</span>);
@@ -1440,7 +1578,9 @@
             <span class="prelude-val">Some</span>(<span class="ident">total_storage_freed</span>),
             <span class="ident">token_id</span>,
             <span class="ident">should_continue</span>,
-            <span class="ident">current_key_info</span>,
+            <span class="ident">cur_key_id</span>,
+            <span class="ident">remaining_uses</span>,
+            <span class="ident">should_auto_withdraw</span>
         )
     }
 }

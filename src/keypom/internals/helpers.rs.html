@@ -219,7 +219,296 @@
 <span id="213">213</span>
 <span id="214">214</span>
 <span id="215">215</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::<span class="kw-2">*</span>;
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">near_sdk</span>::{<span class="ident">env::sha256</span>};
+
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="kw-2">*</span>;
 
 <span class="kw">const</span> <span class="ident">GAS_PER_CCC</span>: <span class="ident">Gas</span> <span class="op">=</span> <span class="ident">Gas</span>(<span class="number">5_000_000_000_000</span>); <span class="comment">// 5 TGas</span>
 <span class="kw">const</span> <span class="ident">RECEIPT_GAS_COST</span>: <span class="ident">Gas</span> <span class="op">=</span> <span class="ident">Gas</span>(<span class="number">2_500_000_000_000</span>); <span class="comment">// 2.5 TGas</span>
@@ -229,11 +518,11 @@
     <span class="ident">env::sha256_array</span>(<span class="ident">account_id</span>.<span class="ident">as_bytes</span>())
 }
 
-<span class="doccomment">/// Helper function to convert yoctoNEAR to $NEAR with 4 decimals of precision.</span>
+<span class="doccomment">/// Helper function to convert yoctoNEAR to $NEAR with 7 decimals of precision.</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">yocto_to_near</span>(<span class="ident">yocto</span>: <span class="ident">u128</span>) -&gt; <span class="ident">f64</span> {
-    <span class="comment">//10^20 yoctoNEAR (1 NEAR would be 10_000). This is to give a precision of 4 decimal places.</span>
-    <span class="kw">let</span> <span class="ident">formatted_near</span> <span class="op">=</span> <span class="ident">yocto</span> <span class="op">/</span> <span class="number">100_000_000_000_000_000_000</span>;
-    <span class="kw">let</span> <span class="ident">near</span> <span class="op">=</span> <span class="ident">formatted_near</span> <span class="kw">as</span> <span class="ident">f64</span> <span class="op">/</span> <span class="number">10_000_f64</span>;
+    <span class="comment">//10^17 yoctoNEAR (1 NEAR would be 10_000_000). This is to give a precision of 7 decimal places.</span>
+    <span class="kw">let</span> <span class="ident">formatted_near</span> <span class="op">=</span> <span class="ident">yocto</span> <span class="op">/</span> <span class="number">100_000_000_000_000_000</span>;
+    <span class="kw">let</span> <span class="ident">near</span> <span class="op">=</span> <span class="ident">formatted_near</span> <span class="kw">as</span> <span class="ident">f64</span> <span class="op">/</span> <span class="number">10_000_000f64</span>;
 
     <span class="ident">near</span>
 }
@@ -261,7 +550,280 @@
     }
 }
 
+<span class="doccomment">/// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">assert_valid_drop_config</span>(<span class="ident">drop_config</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DropConfig</span><span class="op">&gt;</span>) {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="ident">drop_config</span> {
+        <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Current Block Timestamp: {}&quot;</span>, <span class="ident">env::block_timestamp</span>());
+        
+        <span class="comment">// Assert that if uses per key is passed in, it cannot equal 0</span>
+        <span class="macro">assert!</span>(
+            <span class="ident">config</span>.<span class="ident">uses_per_key</span>.<span class="ident">unwrap_or</span>(<span class="number">1</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span>,
+            <span class="string">&quot;Cannot have 0 uses per key for a drop config&quot;</span>
+        );
+
+        <span class="comment">// Assert that if the claim_interval is some, the start_timestamp is also some</span>
+        <span class="macro">assert!</span>(
+            (<span class="ident">config</span>.<span class="ident">claim_interval</span>.<span class="ident">is_some</span>() <span class="op">&amp;&amp;</span> <span class="ident">config</span>.<span class="ident">start_timestamp</span>.<span class="ident">is_none</span>()) <span class="op">==</span> <span class="bool-val">false</span>,
+            <span class="string">&quot;If you want to set a claim interval, you must also set a start timestamp&quot;</span>
+        );
+
+        <span class="comment">// Assert that both the start_timestamp and end timestamps are greater than the current block</span>
+        <span class="macro">assert!</span>(
+            <span class="ident">config</span>.<span class="ident">start_timestamp</span>.<span class="ident">unwrap_or</span>(<span class="ident">env::block_timestamp</span>()) <span class="op">&gt;</span><span class="op">=</span> <span class="ident">env::block_timestamp</span>(),
+            <span class="string">&quot;The start timestamp must be greater than the current block timestamp&quot;</span>
+        );
+        <span class="macro">assert!</span>(
+            <span class="ident">config</span>.<span class="ident">end_timestamp</span>.<span class="ident">unwrap_or</span>(<span class="ident">env::block_timestamp</span>()) <span class="op">&gt;</span><span class="op">=</span> <span class="ident">env::block_timestamp</span>(),
+            <span class="string">&quot;The end timestamp must be greater than the current block timestamp&quot;</span>
+        );
+
+
+        <span class="comment">// If both the start timestamp and end timestamp are set, ensure that the start timestamp is less than the end timestamp</span>
+        <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">start_timestamp</span>.<span class="ident">is_some</span>() <span class="op">&amp;&amp;</span> <span class="ident">config</span>.<span class="ident">end_timestamp</span>.<span class="ident">is_some</span>() {
+            <span class="macro">assert!</span>(
+                <span class="ident">config</span>.<span class="ident">start_timestamp</span>.<span class="ident">unwrap</span>() <span class="op">&lt;</span> <span class="ident">config</span>.<span class="ident">end_timestamp</span>.<span class="ident">unwrap</span>(),
+                <span class="string">&quot;The start timestamp must be less than the end timestamp&quot;</span>
+            );
+        }
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">Keypom</span> {
+    <span class="doccomment">/// Internal function to assert that the predecessor is the contract owner</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">assert_owner</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
+        <span class="macro">assert_eq!</span>(
+            <span class="ident">env::predecessor_account_id</span>(),
+            <span class="self">self</span>.<span class="ident">owner_id</span>,
+            <span class="string">&quot;predecessor != owner&quot;</span>
+        );
+    }
+
+    <span class="doccomment">/// Internal function to assert that the predecessor is the contract owner</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">assert_key_password</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, 
+        <span class="ident">pw</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, 
+        <span class="ident">drop_id</span>: <span class="ident">DropId</span>, 
+        <span class="ident">drop</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Drop</span>, 
+        <span class="ident">key_info</span>: <span class="kw-2">&amp;mut</span> <span class="ident">KeyInfo</span>,
+        <span class="ident">cur_use</span>: <span class="kw-2">&amp;</span><span class="ident">u64</span>,
+        <span class="ident">signer_pk</span>: <span class="kw-2">&amp;</span><span class="ident">PublicKey</span>
+    ) -&gt; <span class="ident">bool</span> {
+        <span class="kw">let</span> <span class="ident">hashed</span> <span class="op">=</span> <span class="ident">sha256</span>(<span class="kw-2">&amp;</span><span class="ident">pw</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> <span class="ident">hex::decode</span>(<span class="ident">f</span>).<span class="ident">ok</span>()).<span class="ident">unwrap_or</span>(<span class="macro">vec!</span>[]));
+
+        <span class="macro">near_sdk::log!</span>(<span class="string">&quot;hashed password: {:?}&quot;</span>, <span class="ident">hashed</span>);
+
+        <span class="comment">// If there is a global password per key, check that first</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pw</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">key_info</span>.<span class="ident">pw_per_key</span> {
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;global password: {:?}&quot;</span>, <span class="ident">pw</span>);
+            <span class="kw">if</span> <span class="ident">pw</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">hashed</span> {
+                <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
+
+                <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
+                    (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Incorrect password. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+    
+                <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
+                <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
+                <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+                <span class="kw">return</span> <span class="bool-val">false</span>;
+            }
+        }
+
+        <span class="macro">near_sdk::log!</span>(<span class="string">&quot;passed global check&quot;</span>);
+
+        <span class="comment">// If there is ALSO a password per use, check that as well.</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">pw</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">key_info</span>.<span class="ident">pw_per_use</span> {
+            <span class="kw">let</span> <span class="ident">actual_pass</span> <span class="op">=</span> <span class="ident">pw</span>.<span class="ident">get</span>(<span class="ident">cur_use</span>).<span class="ident">unwrap_or</span>(<span class="ident">hashed</span>.<span class="ident">clone</span>());
+
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;actualPass password: {:?} cur use: {}&quot;</span>, <span class="ident">actual_pass</span>, <span class="ident">cur_use</span>);
+
+            <span class="kw">if</span> <span class="ident">actual_pass</span> <span class="op">!</span><span class="op">=</span> <span class="ident">hashed</span> {
+                <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
+
+                <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
+                    (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Incorrect password. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+    
+                <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
+                <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
+                <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+                <span class="kw">return</span> <span class="bool-val">false</span>;
+            }
+        }
+
+        <span class="macro">near_sdk::log!</span>(<span class="string">&quot;passed local check&quot;</span>);
+
+        <span class="comment">// Otherwise return true</span>
+        <span class="bool-val">true</span>
+    }
+
+    <span class="doccomment">/// Internal function to assert that the predecessor is the contract owner</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">assert_claim_timestamps</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">drop_id</span>: <span class="ident">DropId</span>, <span class="ident">drop</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Drop</span>, <span class="ident">key_info</span>: <span class="kw-2">&amp;mut</span> <span class="ident">KeyInfo</span>, <span class="ident">signer_pk</span>: <span class="kw-2">&amp;</span><span class="ident">PublicKey</span>) -&gt; <span class="ident">bool</span> {
+        <span class="comment">// Ensure enough time has passed if a start timestamp was specified in the config.</span>
+        <span class="kw">let</span> <span class="ident">current_timestamp</span> <span class="op">=</span> <span class="ident">env::block_timestamp</span>();
+        <span class="kw">let</span> <span class="ident">desired_start_timestamp</span> <span class="op">=</span> <span class="ident">drop</span>
+            .<span class="ident">config</span>
+            .<span class="ident">clone</span>()
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">start_timestamp</span>)
+            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+
+        <span class="kw">if</span> <span class="ident">current_timestamp</span> <span class="op">&lt;</span> <span class="ident">desired_start_timestamp</span> {
+            <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
+
+            <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
+                (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Drop isn&#39;t claimable until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">desired_start_timestamp</span>, <span class="ident">current_timestamp</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+
+            <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
+            <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
+            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+            <span class="kw">return</span> <span class="bool-val">false</span>;
+        }
+
+        <span class="comment">// Ensure the end timestamp hasn&#39;t passed and the key is still usable</span>
+        <span class="kw">let</span> <span class="ident">desired_end_timestamp</span> <span class="op">=</span> <span class="ident">drop</span>
+            .<span class="ident">config</span>
+            .<span class="ident">clone</span>()
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">end_timestamp</span>)
+            .<span class="ident">unwrap_or</span>(<span class="ident">u64::MAX</span>);
+        <span class="kw">if</span> <span class="ident">current_timestamp</span> <span class="op">&gt;</span> <span class="ident">desired_end_timestamp</span> {
+            <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
+
+            <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
+                (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Drop claim period passed. Claimable up until {}. Current timestamp is {}. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">desired_end_timestamp</span>, <span class="ident">current_timestamp</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+
+            <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
+            <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
+            <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+            <span class="kw">return</span> <span class="bool-val">false</span>;
+        }
+
+        <span class="comment">// Ensure the key is within the interval if specified</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">interval</span>) <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">config</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">throttle_timestamp</span>) {
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Current timestamp {} last used: {} subs: {} interval: {}&quot;</span>,
+                <span class="ident">current_timestamp</span>,
+                <span class="ident">key_info</span>.<span class="ident">last_used</span>,
+                <span class="ident">current_timestamp</span> <span class="op">-</span> <span class="ident">key_info</span>.<span class="ident">last_used</span>,
+                <span class="ident">interval</span>
+            );
+
+            <span class="kw">if</span> (<span class="ident">current_timestamp</span> <span class="op">-</span> <span class="ident">key_info</span>.<span class="ident">last_used</span>) <span class="op">&lt;</span> <span class="ident">interval</span> {
+                <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
+
+                <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
+                    (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough time has passed since the key was last used. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+
+                <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
+                <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
+                <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+                <span class="kw">return</span> <span class="bool-val">false</span>;
+            }
+
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Enough time has passed for key to be used. Setting last used to current timestamp {}&quot;</span>, <span class="ident">current_timestamp</span>);
+            <span class="ident">key_info</span>.<span class="ident">last_used</span> <span class="op">=</span> <span class="ident">current_timestamp</span>;
+        }
+
+        <span class="comment">// Ensure the key is within the claim interval if specified</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">interval</span>) <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">config</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">claim_interval</span>) {
+            <span class="kw">let</span> <span class="ident">start_timestamp</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">config</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">start_timestamp</span>).<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">total_num_claims</span> <span class="op">=</span> (<span class="ident">env::block_timestamp</span>() <span class="op">-</span> <span class="ident">start_timestamp</span>) <span class="op">/</span> <span class="ident">interval</span>;
+            <span class="kw">let</span> <span class="ident">uses_per_key</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">config</span>.<span class="ident">clone</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">uses_per_key</span>).<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+            <span class="kw">let</span> <span class="ident">claims_left</span> <span class="op">=</span> <span class="ident">total_num_claims</span> <span class="op">+</span> <span class="ident">key_info</span>.<span class="ident">remaining_uses</span> <span class="op">-</span> <span class="ident">uses_per_key</span> ;
+           
+            <span class="macro">near_sdk::log!</span>(
+                <span class="string">&quot;Current timestamp {} start timestamp: {} claim interval: {} total num claims: {} total uses per key: {} remaining uses: {} num remaining claims: {}&quot;</span>,
+                <span class="ident">current_timestamp</span>,
+                <span class="ident">start_timestamp</span>,
+                <span class="ident">interval</span>,
+                <span class="ident">total_num_claims</span>,
+                <span class="ident">uses_per_key</span>,
+                <span class="ident">key_info</span>.<span class="ident">remaining_uses</span>,
+                <span class="ident">claims_left</span>
+            );
+
+            <span class="kw">if</span> <span class="ident">claims_left</span> <span class="op">&lt;</span> <span class="number">1</span> {
+                <span class="kw">let</span> <span class="ident">used_gas</span> <span class="op">=</span> <span class="ident">env::used_gas</span>();
+
+                <span class="kw">let</span> <span class="ident">amount_to_decrement</span> <span class="op">=</span>
+                    (<span class="ident">used_gas</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">GAS_FOR_PANIC_OFFSET</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u128</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">yocto_per_gas</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Not enough time has passed before the key can be used. Decrementing allowance by {}. Used GAS: {}&quot;</span>, <span class="ident">amount_to_decrement</span>, <span class="ident">used_gas</span>.<span class="number">0</span>);
+
+                <span class="ident">key_info</span>.<span class="ident">allowance</span> <span class="op">-</span><span class="op">=</span> <span class="ident">amount_to_decrement</span>;
+                <span class="macro">near_sdk::log!</span>(<span class="string">&quot;Allowance is now {}&quot;</span>, <span class="ident">key_info</span>.<span class="ident">allowance</span>);
+                <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">signer_pk</span>, <span class="kw-2">&amp;</span><span class="ident">key_info</span>);
+                <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="ident">drop_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop</span>);
+                <span class="kw">return</span> <span class="bool-val">false</span>;
+            }
+        }
+
+        <span class="bool-val">true</span>
+    }
+
+    <span class="doccomment">/// Internal function to register Keypom on a given FT contract</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">internal_register_ft_contract</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">ft_contract_id</span>: <span class="kw-2">&amp;</span><span class="ident">AccountId</span>, <span class="ident">storage_required</span>: <span class="ident">u128</span>, <span class="ident">account_to_refund</span>: <span class="kw-2">&amp;</span><span class="ident">AccountId</span>, <span class="ident">refund_balance</span>: <span class="ident">bool</span>) {
+        <span class="comment">// Check if the ft contract is already in the registered ft contracts list</span>
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">registered_ft_contracts</span>.<span class="ident">contains</span>(<span class="ident">ft_contract_id</span>) {
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;FT contract not registered. Performing cross contract call to {} and inserting back into set&quot;</span>, <span class="ident">ft_contract_id</span>);
+
+            <span class="comment">// Perform a cross contract call to fire and forget. Attach the storage required</span>
+            <span class="ident">ext_ft_contract::ext</span>(<span class="ident">ft_contract_id</span>.<span class="ident">clone</span>())
+                <span class="comment">// Call storage balance bounds with exactly this amount of GAS. No unspent GAS will be added on top.</span>
+                .<span class="ident">with_static_gas</span>(<span class="ident">MIN_GAS_FOR_FT_TRANSFER</span>)
+                .<span class="ident">with_attached_deposit</span>(<span class="ident">storage_required</span>)
+                .<span class="ident">storage_deposit</span>(<span class="prelude-val">Some</span>(<span class="ident">env::current_account_id</span>()), <span class="prelude-val">None</span>);
+            
+            <span class="self">self</span>.<span class="ident">registered_ft_contracts</span>.<span class="ident">insert</span>(<span class="ident">ft_contract_id</span>);
+            <span class="kw">return</span>;
+        }
+
+        <span class="comment">// If we should refund the account&#39;s balance, do it here. Otherwise, just transfer the funds directly.</span>
+        <span class="kw">if</span> <span class="ident">refund_balance</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_user_bal</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">get</span>(<span class="ident">account_to_refund</span>).<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+            <span class="ident">cur_user_bal</span> <span class="op">+</span><span class="op">=</span> <span class="ident">storage_required</span>;
+            <span class="macro">near_sdk::log!</span>(<span class="string">&quot;FT contract already registered. Refunding user balance for {}. Balance is now {}&quot;</span>, <span class="ident">yocto_to_near</span>(<span class="ident">storage_required</span>), <span class="ident">yocto_to_near</span>(<span class="ident">cur_user_bal</span>));
+            <span class="self">self</span>.<span class="ident">user_balances</span>.<span class="ident">insert</span>(<span class="ident">account_to_refund</span>, <span class="kw-2">&amp;</span><span class="ident">cur_user_bal</span>);
+            <span class="kw">return</span>;
+        }
+
+        <span class="macro">near_sdk::log!</span>(<span class="string">&quot;FT contract already registered. Transferring user for: {}&quot;</span>, <span class="ident">yocto_to_near</span>(<span class="ident">storage_required</span>));
+        <span class="ident">Promise::new</span>(<span class="ident">account_to_refund</span>.<span class="ident">clone</span>()).<span class="ident">transfer</span>(<span class="ident">storage_required</span>);
+    }
+
+    <span class="doccomment">/// Internal function to force remove a drop from the contract&#39;s state</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">internal_remove_drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">drop_id</span>: <span class="kw-2">&amp;</span><span class="ident">u128</span>, <span class="ident">public_keys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PublicKey</span><span class="op">&gt;</span>) -&gt; <span class="ident">AccountId</span> {
+        <span class="comment">// Remove the drop</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">drop</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">drop_for_id</span>.<span class="ident">remove</span>(<span class="ident">drop_id</span>).<span class="ident">expect</span>(<span class="string">&quot;drop not found&quot;</span>);
+
+        <span class="comment">// Loop through public keys and remove all the keys and remove the key / passwrds per key</span>
+        <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">public_keys</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">k</span>) <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">remove</span>(<span class="ident">pk</span>).<span class="ident">unwrap</span>().<span class="ident">pw_per_use</span> {
+                <span class="ident">k</span>.<span class="ident">clear</span>();
+            }
+        }
+        <span class="macro">assert!</span>(<span class="ident">drop</span>.<span class="ident">pks</span>.<span class="ident">is_empty</span>(), <span class="string">&quot;drop not empty&quot;</span>);
+        <span class="comment">//drop.pks.clear();</span>
+
+        <span class="kw">let</span> <span class="ident">owner_id</span> <span class="op">=</span> <span class="ident">drop</span>.<span class="ident">owner_id</span>.<span class="ident">clone</span>();
+
+        <span class="comment">// Remove the drop ID from the funder&#39;s list</span>
+        <span class="self">self</span>.<span class="ident">internal_remove_drop_for_funder</span>(<span class="kw-2">&amp;</span><span class="ident">drop</span>.<span class="ident">owner_id</span>, <span class="kw-2">&amp;</span><span class="ident">drop_id</span>);
+
+        <span class="comment">// Loop through the keys and remove the public keys&#39; mapping</span>
+        <span class="kw">for</span> <span class="ident">pk</span> <span class="kw">in</span> <span class="ident">public_keys</span> {
+            <span class="self">self</span>.<span class="ident">drop_id_for_pk</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">clone</span>());
+        };
+
+        <span class="comment">// Return the owner ID</span>
+        <span class="ident">owner_id</span>
+    }
+
     <span class="doccomment">/// Used to calculate the base allowance needed given attached GAS</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">calculate_base_allowance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">attached_gas</span>: <span class="ident">Gas</span>) -&gt; <span class="ident">u128</span> {
         <span class="comment">// Get the number of CCCs you can make with the attached GAS</span>
@@ -332,10 +894,12 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">drop_data</span>: <span class="ident">Drop</span>,
         <span class="ident">drop_id</span>: <span class="ident">DropId</span>,
-        <span class="ident">cur_key_info</span>: <span class="ident">KeyInfo</span>,
+        <span class="ident">cur_key_id</span>: <span class="ident">u64</span>,
+        <span class="ident">remaining_uses</span>: <span class="ident">u64</span>,
         <span class="ident">account_id</span>: <span class="ident">AccountId</span>,
         <span class="ident">storage_freed</span>: <span class="ident">u128</span>,
         <span class="ident">token_id</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">auto_withdraw</span>: <span class="ident">bool</span>,
         <span class="ident">promise</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Promise</span><span class="op">&gt;</span>,
     ) {
         <span class="macro">macro_rules!</span> <span class="ident">resolve_promise_or_call</span> {
@@ -378,10 +942,14 @@
                     <span class="ident">data</span>,
                     <span class="comment">// Drop ID</span>
                     <span class="ident">drop_id</span>,
-                    <span class="comment">// Current number of claims left on the key before decrementing</span>
-                    <span class="ident">cur_key_info</span>,
+                    <span class="comment">// ID for the current key</span>
+                    <span class="ident">cur_key_id</span>,
+                    <span class="comment">// How many uses are remaining on the current key</span>
+                    <span class="ident">remaining_uses</span>,
                     <span class="comment">// Maximum number of claims</span>
                     <span class="ident">drop_data</span>.<span class="ident">config</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>.<span class="ident">uses_per_key</span>).<span class="ident">unwrap_or</span>(<span class="number">1</span>),
+                    <span class="comment">// Is it an auto withdraw case</span>
+                    <span class="ident">auto_withdraw</span>,
                 ));
             }
             <span class="ident">DropType::NonFungibleToken</span>(<span class="ident">data</span>) =&gt; {
@@ -400,6 +968,8 @@
                     <span class="ident">data</span>.<span class="ident">contract_id</span>,
                     <span class="comment">// Token ID for the NFT</span>
                     <span class="ident">token_id</span>.<span class="ident">expect</span>(<span class="string">&quot;no token ID found&quot;</span>),
+                    <span class="comment">// Is it an auto withdraw case</span>
+                    <span class="ident">auto_withdraw</span>,
                 ));
             }
             <span class="ident">DropType::FungibleToken</span>(<span class="ident">data</span>) =&gt; {
@@ -414,6 +984,8 @@
                     <span class="ident">storage_freed</span>,
                     <span class="comment">// FT Data to be used</span>
                     <span class="ident">data</span>,
+                    <span class="comment">// Is it an auto withdraw case</span>
+                    <span class="ident">auto_withdraw</span>,
                 ));
             }
             <span class="ident">DropType::Simple</span> =&gt; {
@@ -428,6 +1000,8 @@
                             <span class="ident">U128</span>(<span class="ident">drop_data</span>.<span class="ident">deposit_per_use</span>),
                             <span class="comment">// How much storage was freed when the key was claimed</span>
                             <span class="ident">storage_freed</span>,
+                            <span class="comment">// Is it an auto withdraw case</span>
+                            <span class="ident">auto_withdraw</span>,
                         ),
                 );
             }
