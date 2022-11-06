@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["ContractSourceMetadata","Contract metadata structure"],["Keypom","Main contract struct that holds all the contract data"],["KeypomExt",""]]});
