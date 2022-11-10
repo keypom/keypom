@@ -647,7 +647,7 @@ passwords_per_key: Some(vec![
     // Key C
     vec![
         {
-            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "0")),
+            pw: hash(hash("keys_bc_base_password" + key_c_public_key + "0")),
             key_use: 0
         }
     ]
