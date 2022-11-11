@@ -79,7 +79,7 @@ impl Keypom {
     /// Returns the JsonDrop corresponding to a drop ID. If a key is specified, it will return the drop info for that key.
     pub fn get_drop_information(
         &self,
-        drop_id: Option<DropId>,
+        drop_id: Option<DropIdJson>,
         key: Option<PublicKey>,
     ) -> JsonDrop {
         // If the user doesn't specify a drop ID or a key, panic.
@@ -88,7 +88,7 @@ impl Keypom {
         }
 
         // Set the drop ID to be what was passed in. If they didn't pass in a drop ID, get it
-        let mut drop_id = drop_id.unwrap_or(0);
+        let mut drop_id:u128 = drop_id.unwrap_or_else(|| DefaultDropIdJson).0;
 
         // If the user specifies a key, use that to get the drop ID.
         if let Some(key) = key {

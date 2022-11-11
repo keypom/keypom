@@ -5,6 +5,8 @@ use near_sdk::{
 };
 
 pub type DropId = u128;
+pub type DropIdJson = U128;
+pub const DefaultDropIdJson: U128 = U128(0);
 
 const MIN_DROP_ID_PASSED_IN: u128 = 1_000_000_000;
 
