@@ -88,7 +88,7 @@ impl Keypom {
         }
 
         // Set the drop ID to be what was passed in. If they didn't pass in a drop ID, get it
-        let mut drop_id:u128 = drop_id.unwrap_or_else(|| DefaultDropIdJson).0;
+        let mut drop_id:u128 = drop_id.unwrap_or(DefaultDropIdJson).0;
 
         // If the user specifies a key, use that to get the drop ID.
         if let Some(key) = key {
