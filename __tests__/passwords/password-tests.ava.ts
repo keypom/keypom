@@ -532,7 +532,7 @@ test('Create 50 key drop and delete after', async t => {
     console.log('keypom stateStaked INITIAL: ', kpBalInit1.stateStaked.toString())
     console.log('keypom total INITIAL: ', kpBalInit1.total.toString())
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0}, {gas: LARGE_GAS});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
 
     let kpBalFin1 = await keypom.balance();
     console.log('keypom available FINAL: ', kpBalFin1.available.toString())

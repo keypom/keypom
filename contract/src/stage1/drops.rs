@@ -5,6 +5,10 @@ use near_sdk::{
 };
 
 pub type DropId = u128;
+pub type DropIdJson = U128;
+// Drop Metadata should be a string which can be JSON or anything the users want.
+pub type DropMetadata = String;
+pub const DEFAULT_DROP_ID_JSON: U128 = U128(0);
 
 const MIN_DROP_ID_PASSED_IN: u128 = 1_000_000_000;
 
@@ -88,9 +92,6 @@ pub struct DropConfig {
     pub auto_withdraw: Option<bool>,
 }
 
-// Drop Metadata should be a string which can be JSON or anything the users want.
-pub type DropMetadata = String;
-
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Drop {
@@ -142,8 +143,8 @@ impl Keypom {
         ft_data: Option<JsonFTData>,
         nft_data: Option<JsonNFTData>,
         fc_data: Option<FCData>,
-        drop_id: Option<U128>,
-    ) -> Option<DropId> {
+        drop_id: Option<DropIdJson>,
+    ) -> Option<DropIdJson> {
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
 
@@ -625,7 +626,7 @@ impl Keypom {
                 );
         }
 
-        Some(actual_drop_id)
+        Some(U128(actual_drop_id))
     }
 
     /*
@@ -638,8 +639,8 @@ impl Keypom {
         public_keys: Vec<PublicKey>, 
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
-        drop_id: U128
-    ) -> Option<DropId> {
+        drop_id: DropIdJson
+    ) -> Option<DropIdJson> {
         let mut drop = self
             .drop_for_id
             .get(&drop_id.0)
@@ -946,6 +947,6 @@ impl Keypom {
 
         env::promise_return(promise);
 
-        Some(drop_id.0)
+        Some(drop_id)
     }
 }

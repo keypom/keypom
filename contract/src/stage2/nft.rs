@@ -16,7 +16,7 @@ impl Keypom {
         &mut self,
         token_id: String,
         sender_id: AccountId,
-        msg: U128,
+        msg: DropIdJson,
     ) -> PromiseOrValue<bool> {
         let contract_id = env::predecessor_account_id();
 

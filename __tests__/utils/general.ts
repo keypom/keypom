@@ -66,7 +66,7 @@ export async function queryAllViewFunctions(
   }: 
   {
     contract: NearAccount,
-    drop_id?: number | null,
+    drop_id?: string | null,
     key?: string | null,
     from_index?: string | null,
     limit?: number | null,
