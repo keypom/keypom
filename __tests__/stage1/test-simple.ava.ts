@@ -44,7 +44,7 @@ test('Create empty drop check views', async t => {
     
     let result = await queryAllViewFunctions({
         contract: keypom, 
-        drop_id: 0, 
+        drop_id: "0", 
         account_id: ali.accountId
     });
 

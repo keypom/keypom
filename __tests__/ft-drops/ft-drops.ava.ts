@@ -104,7 +104,7 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -120,7 +120,7 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -160,14 +160,14 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
     t.is(viewFunctions.dropInformation?.registered_uses, 0);
     t.is(viewFunctions.keysForDrop?.length, 0);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0})
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"})
     let ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal !== "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -215,7 +215,7 @@ test('OverRegister FTs and add multi use key later', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -261,14 +261,14 @@ test('OverRegister FTs and add multi use key later', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
     t.is(viewFunctions.dropInformation?.registered_uses, 0);
     t.is(viewFunctions.keysForDrop?.length, 0);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0})
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"})
     let ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal !== "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -319,14 +319,14 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'withdraw_from_balance', {});
 
     // Remove the key and ensure the owner balance goes up by the same net cost
-    await owner.call(keypom, 'delete_keys', {drop_id: 0, delete_on_empty: false});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0", delete_on_empty: false});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('new ownerBal after del: ', ownerBal)
     t.is(NEAR.from(ownerBal).toString(), netCostAddingOneKey.toString());
 
     // Delete the drop and ensure the owner balance goes up by the net cost
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('new ownerBal after del drop: ', ownerBal)
     t.is(NEAR.from(ownerBal).toString(), netCostCreatingDrop.toString());
@@ -415,7 +415,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
@@ -423,14 +423,14 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     t.is(viewFunctions.keysForDrop?.length, 1);
 
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'refund_assets', {drop_id: 0})
+    await owner.call(keypom, 'refund_assets', {drop_id: "0"})
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.is(ownerBal, "0");
 
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
@@ -446,7 +446,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     t.is(minterBal, (oneGtNear * BigInt(995)).toString());
 
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal > "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -618,8 +618,8 @@ test('Automatically Register Keypom Contract', async t => {
     console.log('storageBal: ', storageBal)
     t.not(storageBal, null);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
-    await owner.call(keypom, 'delete_keys', {drop_id: 1});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
+    await owner.call(keypom, 'delete_keys', {drop_id: "1"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal > "0");
     await owner.call(keypom, 'withdraw_from_balance', {});

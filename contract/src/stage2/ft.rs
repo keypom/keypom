@@ -26,7 +26,7 @@ impl Keypom {
         &mut self,
         sender_id: AccountId,
         amount: U128,
-        msg: U128,
+        msg: DropIdJson,
     ) -> PromiseOrValue<U128> {
         let contract_id = env::predecessor_account_id();
 

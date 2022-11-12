@@ -88,7 +88,7 @@ impl Keypom {
         }
 
         // Set the drop ID to be what was passed in. If they didn't pass in a drop ID, get it
-        let mut drop_id:u128 = drop_id.unwrap_or(DefaultDropIdJson).0;
+        let mut drop_id: u128 = drop_id.unwrap_or(DEFAULT_DROP_ID_JSON).0;
 
         // If the user specifies a key, use that to get the drop ID.
         if let Some(key) = key {
@@ -124,10 +124,10 @@ impl Keypom {
     }
 
     /// Returns the total supply of active keys for a given drop
-    pub fn get_key_supply_for_drop(&self, drop_id: DropId) -> u64 {
+    pub fn get_key_supply_for_drop(&self, drop_id: DropIdJson) -> u64 {
         // Get the drop object and return the length
         self.drop_for_id
-            .get(&drop_id)
+            .get(&drop_id.0)
             .expect("no drop found")
             .pks
             .len()
@@ -136,7 +136,7 @@ impl Keypom {
     /// Paginate through keys in a specific drop
     pub fn get_keys_for_drop(
         &self,
-        drop_id: DropId,
+        drop_id: DropIdJson,
         from_index: Option<U128>,
         limit: Option<u64>,
     ) -> Vec<JsonKeyInfo> {
@@ -145,7 +145,7 @@ impl Keypom {
 
         //iterate through each key using an iterator
         self.drop_for_id
-            .get(&drop_id)
+            .get(&drop_id.0)
             .expect("No drop for given ID")
             .pks
             .keys()
@@ -194,7 +194,7 @@ impl Keypom {
                 // Take the first "limit" elements in the vector. If we didn't specify a limit, use 50
                 .take(limit.unwrap_or(50) as usize)
                 // Convert each ID into a JsonDrop
-                .map(|id| self.get_drop_information(Some(id), None))
+                .map(|id| self.get_drop_information(Some(U128(id)), None))
                 // Collect all JsonDrops into a vector and return it
                 .collect()
         } else {
@@ -203,8 +203,8 @@ impl Keypom {
     }
 
     /// Return the total supply of token IDs for a given drop
-    pub fn get_nft_supply_for_drop(&self, drop_id: DropId) -> u64 {
-        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
+    pub fn get_nft_supply_for_drop(&self, drop_id: DropIdJson) -> u64 {
+        let drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
         if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
             return nft_data.token_ids.len();
         } else {
@@ -215,11 +215,11 @@ impl Keypom {
     /// Paginate through token IDs in a drop
     pub fn get_nft_token_ids_for_drop(
         &self,
-        drop_id: DropId,
+        drop_id: DropIdJson,
         from_index: Option<U128>,
         limit: Option<u64>,
     ) -> Vec<String> {
-        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
+        let drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
         if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
             let token_ids = nft_data.token_ids;
 

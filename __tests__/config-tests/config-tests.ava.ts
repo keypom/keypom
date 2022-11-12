@@ -113,7 +113,7 @@ test('Testing Delete On Empty Config', async t => {
     console.log('dropSupplyForOwner: ', dropSupplyForOwner)
     t.is(dropSupplyForOwner, 1);
 
-    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 1});
+    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "1"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 0);
 });
@@ -154,7 +154,7 @@ test('Testing Start Timestamp', async t => {
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 1);
 
@@ -162,7 +162,7 @@ test('Testing Start Timestamp', async t => {
     await new Promise(r => setTimeout(r, 30000));
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 0);
 
@@ -209,7 +209,7 @@ test('Testing Throttle Timestamp', async t => {
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("1").toString());
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 1);
 
@@ -221,7 +221,7 @@ test('Testing Throttle Timestamp', async t => {
     await new Promise(r => setTimeout(r, 30000));
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 0);
 
@@ -276,7 +276,7 @@ test('Testing On Claim Refund Deposit', async t => {
     console.log('dropSupplyForOwner: ', dropSupplyForOwner)
     t.is(dropSupplyForOwner, 1);
 
-    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 0);
 });
@@ -380,7 +380,7 @@ test('Testing Auto Withdraw', async t => {
     t.assert(userBal > "0");
     
     // Delete the first drop
-    await owner.call(keypom, 'delete_keys', {drop_id: 0}, {gas: LARGE_GAS});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
 
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
@@ -585,7 +585,7 @@ test('Testing End Timestamp', async t => {
         config,
     },{gas: LARGE_GAS});
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 2);
 
@@ -605,7 +605,7 @@ test('Testing End Timestamp', async t => {
     // THIS SHOULD PASS
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 1);
 
@@ -617,7 +617,7 @@ test('Testing End Timestamp', async t => {
         await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     } catch(e) {}
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 1);
 });
@@ -639,7 +639,7 @@ test('Testing End Timestamp Key Drainage', async t => {
         config,
     },{gas: LARGE_GAS});
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 1);
 
@@ -663,7 +663,7 @@ test('Testing End Timestamp Key Drainage', async t => {
         } catch(e) {}
     }
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 1);
 });
@@ -714,7 +714,7 @@ test('Testing Claim Interval', async t => {
         await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     }
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
     console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
     t.is(getKeySupplyForDrop, 0);
 

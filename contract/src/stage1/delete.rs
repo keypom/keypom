@@ -14,7 +14,7 @@ impl Keypom {
     */
     pub fn delete_keys(
         &mut self,
-        drop_id: DropId,
+        drop_id: DropIdJson,
         public_keys: Option<Vec<PublicKey>>,
         limit: Option<u8>,
         delete_on_empty: Option<bool>
@@ -23,7 +23,7 @@ impl Keypom {
         let initial_storage = env::storage_usage();
 
         // get the drop object
-        let mut drop = self.drop_for_id.remove(&drop_id).expect("No drop found");
+        let mut drop = self.drop_for_id.remove(&drop_id.0).expect("No drop found");
         let owner_id = drop.owner_id.clone();
         let drop_type = &drop.drop_type;
         require!(
@@ -146,10 +146,10 @@ impl Keypom {
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
-                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
+                self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(&drop_id.0, &drop);
             }
 
             // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -276,10 +276,10 @@ impl Keypom {
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
-                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
+                self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(&drop_id.0, &drop);
             }
 
             // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -365,9 +365,9 @@ impl Keypom {
         Refund NFTs or FTs for a drop. User can optionally pass in a number of assets to
         refund. If not, it will try to refund all assets.
     */
-    pub fn refund_assets(&mut self, drop_id: DropId, assets_to_refund: Option<u64>) {
+    pub fn refund_assets(&mut self, drop_id: DropIdJson, assets_to_refund: Option<u64>) {
         // get the drop object
-        let mut drop = self.drop_for_id.get(&drop_id).expect("No drop found");
+        let mut drop = self.drop_for_id.get(&drop_id.0).expect("No drop found");
         let owner_id = drop.owner_id.clone();
         require!(
             owner_id == env::predecessor_account_id(),
@@ -387,7 +387,7 @@ impl Keypom {
 
         // Decrement the drop's keys registered temporarily. If the transfer is unsuccessful, revert in callback.
         drop.registered_uses -= num_to_refund;
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_for_id.insert(&drop_id.0, &drop);
 
         match &mut drop.drop_type {
             DropType::NonFungibleToken(data) => {
@@ -416,7 +416,7 @@ impl Keypom {
                     );
                 }
 
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(&drop_id.0, &drop);
 
                 // Create the second batch promise to execute after the nft_batch_index batch is finished executing.
                 // It will execute on the current account ID (this contract)
@@ -429,7 +429,7 @@ impl Keypom {
                 env::promise_batch_action_function_call_weight(
                     batch_ft_resolve_promise_id,
                     "nft_resolve_refund",
-                    json!({ "drop_id": U128(drop_id), "token_ids": token_ids })
+                    json!({ "drop_id": drop_id, "token_ids": token_ids })
                         .to_string()
                         .as_bytes(),
                     NO_DEPOSIT,
@@ -451,7 +451,7 @@ impl Keypom {
                     .then(
                         // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
                         Self::ext(env::current_account_id())
-                            .ft_resolve_refund(drop_id, num_to_refund),
+                            .ft_resolve_refund(drop_id.0, num_to_refund),
                     )
                     .as_return();
             }
