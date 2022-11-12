@@ -17,7 +17,7 @@ impl Keypom {
         drop_id: DropIdJson,
         public_keys: Option<Vec<PublicKey>>,
         limit: Option<u8>,
-        delete_on_empty: Option<bool>
+        delete_on_empty: Option<bool>,
     ) {
         // Measure initial storage before doing any operations
         let initial_storage = env::storage_usage();

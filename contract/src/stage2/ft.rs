@@ -175,14 +175,10 @@ impl Keypom {
 
             if user_balance > 0 {
                 // Refund the funder any excess $NEAR
-                near_sdk::log!(
-                    "User balance positive. Adding back into contract."
-                );
+                near_sdk::log!("User balance positive. Adding back into contract.");
                 self.user_balances.insert(&owner_id, &user_balance);
             } else {
-                near_sdk::log!(
-                    "User balance zero. Removing from contract."
-                );
+                near_sdk::log!("User balance zero. Removing from contract.");
                 self.user_balances.remove(&owner_id);
             }
 
@@ -236,14 +232,10 @@ impl Keypom {
 
                 if user_balance > 0 {
                     // Refund the funder any excess $NEAR
-                    near_sdk::log!(
-                        "User balance positive. Adding back into contract."
-                    );
+                    near_sdk::log!("User balance positive. Adding back into contract.");
                     self.user_balances.insert(&owner_id, &user_balance);
                 } else {
-                    near_sdk::log!(
-                        "User balance zero. Removing from contract."
-                    );
+                    near_sdk::log!("User balance zero. Removing from contract.");
                     self.user_balances.remove(&owner_id);
                 }
 
@@ -253,7 +245,7 @@ impl Keypom {
                         "Refunding user for attached deposit of: {}",
                         yocto_to_near(near_attached)
                     );
-                    
+
                     Promise::new(owner_id).transfer(near_attached);
                 }
 
@@ -339,14 +331,10 @@ impl Keypom {
 
             if user_balance > 0 {
                 // Refund the funder any excess $NEAR
-                near_sdk::log!(
-                    "User balance positive. Adding back into contract."
-                );
+                near_sdk::log!("User balance positive. Adding back into contract.");
                 self.user_balances.insert(&owner_id, &user_balance);
             } else {
-                near_sdk::log!(
-                    "User balance zero. Removing from contract."
-                );
+                near_sdk::log!("User balance zero. Removing from contract.");
                 self.user_balances.remove(&owner_id);
             }
 
@@ -356,7 +344,7 @@ impl Keypom {
                     "Refunding user for attached deposit of: {}",
                     yocto_to_near(near_attached)
                 );
-                
+
                 Promise::new(env::predecessor_account_id()).transfer(near_attached);
             }
 

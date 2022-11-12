@@ -58,7 +58,7 @@ impl Keypom {
                     remaining_uses: key_info.remaining_uses,
                     last_used: key_info.last_used,
                     allowance: key_info.allowance,
-                    key_id: key_info.key_id
+                    key_id: key_info.key_id,
                 });
             }
 

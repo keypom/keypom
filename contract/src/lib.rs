@@ -9,15 +9,15 @@ Keypom is an access key factory created as a result of 3 common problems that ar
 
 > To view our debut talk at NEARCON 2022, click [here](https://www.youtube.com/watch?v=J-BOnfhHV50).
 
-Blockchain technology comes with many benefits such as sovereign ownership, digital rights, privacy, freedom, 
-peer to peer coordination and much more. The problem with this technology, however, is that there is an extremely 
+Blockchain technology comes with many benefits such as sovereign ownership, digital rights, privacy, freedom,
+peer to peer coordination and much more. The problem with this technology, however, is that there is an extremely
 high barrier to entry for an everyday individual. None of it matters if nobody can onboard.
 
-It’s confusing to create and fund a crypto wallet. People are unfamiliar with the process, technical jargon, 
-and the general flow. NEAR’s account model is powerful, but extremely underutilized because it’s complex for 
+It’s confusing to create and fund a crypto wallet. People are unfamiliar with the process, technical jargon,
+and the general flow. NEAR’s account model is powerful, but extremely underutilized because it’s complex for
 developers to take full advantage of. Keypom wraps this up in a single API call.
 
-With NEAR’s goal of onboarding 1 billion users to Web3, there needs to be a solution to this high barrier to 
+With NEAR’s goal of onboarding 1 billion users to Web3, there needs to be a solution to this high barrier to
 entry for developers building on NEAR and users onboarding to their apps and the NEAR ecosystem.
 
 Below is a table outlining the minimum costs to onboard a new user onto NEAR with a named account.
@@ -28,8 +28,8 @@ Below is a table outlining the minimum costs to onboard a new user onto NEAR wit
 | Keypom               | ~0.0035 NEAR    | ~3.5 NEAR       | ~3,500 NEAR        |
 |                      | ~99.65% Cheaper | ~99.65% Cheaper | ~99.65% Cheaper    |
 
-Keypom allows anyone to create highly customizable onboarding experiences for their users. These experiences 
-can be both for new, or existing users. If someone already has a wallet, they can still use a Keypom link to 
+Keypom allows anyone to create highly customizable onboarding experiences for their users. These experiences
+can be both for new, or existing users. If someone already has a wallet, they can still use a Keypom link to
 experience an app, and then transfer the assets later.
 
 ## Comparable Solutions
@@ -53,7 +53,7 @@ experience an app, and then transfer the assets later.
 # Our Solution
 
 Keypom allows for the creation of highly customizable access keys. These keys can be thought of as having their
-own *smart contracts*. Each access key derives from what's known as a *drop*. These drops outline the different 
+own *smart contracts*. Each access key derives from what's known as a *drop*. These drops outline the different
 functionalities and behaviors the key will have. A drop can be thought of as a bucket that access keys belong to.
 You can create many different buckets and fill them each with their own keys. Each key will act in accordance to the
 drop, or bucket, it belongs to.
@@ -111,7 +111,7 @@ pub throttle_timestamp: Option<u64>,
 
 /// Interval of time after the `start_timestamp` that must pass before a key can be used.
 /// If multiple intervals pass, the key can be used multiple times. This has nothing to do
-/// With the throttle timestamp. It only pertains to the start timestamp and the current 
+/// With the throttle timestamp. It only pertains to the start timestamp and the current
 /// timestamp. The last_used timestamp is not taken into account.
 /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
 pub claim_interval: Option<u64>,
@@ -411,7 +411,7 @@ from calling private methods through FC Drops.
 #### Keypom Arguments
 
 When a key is used and a function is called, there is a data structure that is **automatically** attached to the arguments.
-This is known as the `keypom_args`. It contains the information that the drop creator specified in the `MethodData`. 
+This is known as the `keypom_args`. It contains the information that the drop creator specified in the `MethodData`.
 
 ```rust
 pub struct KeypomArgs {
@@ -425,7 +425,7 @@ pub struct KeypomArgs {
 
 Let's say there was an exclusive NFT contract that allowed the Keypom contract to mint NFTs as part of an FC drop. Only Keypom
 was given access to mint the NFTs so they could be given out as linkdrops. The organizer only wanted links that were part of their
-drop to be valid. For this reason, the NFT contract would only mint if Keypom called the `nft_mint` function and there was a field 
+drop to be valid. For this reason, the NFT contract would only mint if Keypom called the `nft_mint` function and there was a field
 `series` passed in and it was equal to the drop ID created by the organizer.
 
 Let's say the owner created an exclusive drop that happened to have a drop ID of 5. They could then go to the NFT contract
@@ -436,10 +436,10 @@ and restrict NFTs to only be minted if:
 In order for this to work, when creating the drop, the owner would need to specify that the`drop_id_field` was set to a value of `series`
 such that the drop ID is correctly passed into the function.
 
-The problem with this approach is that the NFT contract has no way of knowing which arguments were sent by the **user** when the drop 
-was created `as part of the MethodData `args` and which arguments are automatically populated by the Keypom contract. There is nothing 
-stopping a malicious user from creating a new drop that has an ID of 6 but hardcoding in the actual arguments that `series` should have 
-a value of 5. In this case, the malicious drop would have *no* `drop_id_field` and the NFT contract would have no way of knowing that the 
+The problem with this approach is that the NFT contract has no way of knowing which arguments were sent by the **user** when the drop
+was created `as part of the MethodData `args` and which arguments are automatically populated by the Keypom contract. There is nothing
+stopping a malicious user from creating a new drop that has an ID of 6 but hardcoding in the actual arguments that `series` should have
+a value of 5. In this case, the malicious drop would have *no* `drop_id_field` and the NFT contract would have no way of knowing that the
 `series` value is malicious.
 
 This can be prevented if a new field is introduced representing what was automatically injected by the Keypom contract itself. At the
@@ -535,8 +535,8 @@ The Keypom implementation has been carefully designed so that users can't look a
 either when the drop was created or when a key was used to try and copy those passwords. We also want passwords to be unique across keys so that
 if you know the password for 1 key, it doesn't work on a different key. In order to accomplish this, we use the concept of hashing.
 
-Imagine you have a drop with 2 keys and you want to password protect each key. Rather than forcing the drop funder to input a unique password for 
-each key and having them remember each one, we can have them input a single **base password** and derive unique passwords from it that are paired 
+Imagine you have a drop with 2 keys and you want to password protect each key. Rather than forcing the drop funder to input a unique password for
+each key and having them remember each one, we can have them input a single **base password** and derive unique passwords from it that are paired
 with the key's public key.
 
 This is the most scalable option as it allows the drop funder to only need to remember 1 password and they can derive all the other ones using the
@@ -547,18 +547,18 @@ into the contract:
 
 `hash("mypassword1" + key1_public_key)`
 
-The funder would need to give the user this hash somehow (such as embedding it into the link or having an app that can derive it). It's important to note 
-that the funder should probably **NOT** give them the base password otherwise the user could derive the passwords for all other keys (assuming those keys have 
+The funder would need to give the user this hash somehow (such as embedding it into the link or having an app that can derive it). It's important to note
+that the funder should probably **NOT** give them the base password otherwise the user could derive the passwords for all other keys (assuming those keys have
 the same base password).
 
 ### What is Stored On-Chain?
 
 How does Keypom verify that the user passed in the correct password? If the funder were to simply pass in `hash("mypassword1" + key1_public_key)` into the
-contract as an argument when the key is created, users could just look at the NEAR Explorer and copy that value. 
+contract as an argument when the key is created, users could just look at the NEAR Explorer and copy that value.
 
-Instead, the funder needs to pass in a double hash when the key is created: `hash(hash("mypassword1" + key1_public_key))`. 
+Instead, the funder needs to pass in a double hash when the key is created: `hash(hash("mypassword1" + key1_public_key))`.
 
-This is the value that is stored on-chain and when the user tries to claim the key, they would pass in just the single hash: `hash("mypassword1" + key1_public_key)`.  
+This is the value that is stored on-chain and when the user tries to claim the key, they would pass in just the single hash: `hash("mypassword1" + key1_public_key)`.
 The contract would then compute `hash(hash("mypassword1" + key1_public_key))` and compare it to the value stored on-chain. If they match, the key is claimed.
 
 Using this method, the base password is not exposed to the user, nobody can look on-chain or at the NEAR explorer and derive the password, and the password is unique
@@ -573,7 +573,7 @@ would hash this and compare it to the value stored on-chain.
 The difference is that each individual key use can have a different value stored on-chain such that the user can be forced to input a different hash each time.
 This `SOMETHING` that is hashed can be similar to the global password per key example but this time, the desired key use is added: `hash("mypassword1" + key1_public_key + use_number)`
 
-In order to pass in the passwords per use, a new data structure is introduced so you only need to pass in passwords for the uses that have them. This is known as the 
+In order to pass in the passwords per use, a new data structure is introduced so you only need to pass in passwords for the uses that have them. This is known as the
 `JsonPasswordForUse` and is as follows:
 
 ```rust
@@ -588,14 +588,14 @@ pub struct JsonPasswordForUse {
 
 ## Adding Your First Password
 
-Whenever keys are added to Keypom, if there's passwords involved, they must be passed in using the following format. 
+Whenever keys are added to Keypom, if there's passwords involved, they must be passed in using the following format.
 
 ```rust
 passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
 passwords_per_key: Option<Vec<Option<String>>>,
 ```
 
-Each key that is being added either has a password, or doesn't. This is through the `Vec<Option<>`. This vector **MUST** be the same length as the number of keys created.This doesn't 
+Each key that is being added either has a password, or doesn't. This is through the `Vec<Option<>`. This vector **MUST** be the same length as the number of keys created.This doesn't
 mean that every key needs a password, but the Vector must be the same length as the keys.
 
 As an example, if you wanted to add 3 keys to a drop and wanted only the first and last key to have a password_per_key, you would pass in:
@@ -606,7 +606,7 @@ passwords_per_key: Some(vec![Some(hash(hash(STUFF))), None, Some(hash(hash(STUFF
 ## Complex Example
 
 To help solidify the concept of password protected keys, let's go through a complex example. Imagine Alice created a drop with a `uses_per_key` of 3.
-She wants to create 4 keys: 
+She wants to create 4 keys:
 - Key A: No password protection.
 - Key B: Password for uses 1 and 2.
 - Key C: Password for use 1 only.
@@ -623,7 +623,7 @@ passwords_per_key: Some(vec![
     // Key D
     Some(
         hash(hash("key_d_base_password" + key_d_public_key))
-    ), 
+    ),
 ]),
 ```
 The passwords for Key B and Key C will be passed in as such:
@@ -669,7 +669,7 @@ if it matches what is stored on-chain (which it does).
 If anyone tried to look at what Charlie passes in through the explorer, it wouldn't work since his hash contains the public key for key D and as such it is only
 valid for Key D.
 
-Similarly, if Charlie tried to look at the explorer when Alice created the keys and attempted to pass in `hash(hash("key_d_base_password" + key_d_public_key))`, 
+Similarly, if Charlie tried to look at the explorer when Alice created the keys and attempted to pass in `hash(hash("key_d_base_password" + key_d_public_key))`,
 the contract would attempt to hash this and it would NOT match up with what's in the storage.
 
 ### Key B
@@ -694,7 +694,7 @@ Password protecting key uses is a true game changer for a lot of use-cases spann
 
 ### Ticketing and POAPs
 
-Imagine you had an event and wanted to give out exclusive POAPs to people that came. You didn't want to force users to: 
+Imagine you had an event and wanted to give out exclusive POAPs to people that came. You didn't want to force users to:
 - Have a NEAR wallet
 - Have wifi at the door.
 - Burn NFTs or tokens to get into the event.
@@ -702,11 +702,11 @@ Imagine you had an event and wanted to give out exclusive POAPs to people that c
 The important thing to note is that by using password protected key uses, you can **GUARANTEE** that anyone that received a POAP had to
 **PHYSICALLY** show up to the event. This is because the POAP would be guarded by a password.
 
-You could create a ticketing event using Keypom as outlined in the [Ticketing](#nft-ticketing) section and have a key with 2 uses. The first use 
+You could create a ticketing event using Keypom as outlined in the [Ticketing](#nft-ticketing) section and have a key with 2 uses. The first use
 would be password protected and the second use is not. The first use will get you through the door and into the event and the second
 contains the exclusive POAP and can onboard you. This means that anyone with the ticket, or key, can only receive the POAP if they know the password.
 
-You can have a scanner app that would scan people's tickets (tickets are just the private key). In this scanner app, the *base password* is stored and 
+You can have a scanner app that would scan people's tickets (tickets are just the private key). In this scanner app, the *base password* is stored and
 whenever the ticket is scanned, the public key is taken and the following hash is created:
 
 `hash(base password + public key)`
@@ -726,19 +726,19 @@ one mentioned in the ticketing scenario that derives the password for any use on
 At the beginning of the event, you can give out a bunch of keys that have progressively increasing rewards gated by a password. At the end, the last
 key use contains a special reward that is only unlocked if the user has claimed all the previous key uses.
 
-In order for these uses to be unlocked, People must show up to your talks and get scanned. The scanner will derive the necessary password and unlock 
+In order for these uses to be unlocked, People must show up to your talks and get scanned. The scanner will derive the necessary password and unlock
 the rewards. Users will only get the exclusive reward if they come to ALL your talks.
 
 This idea can be further expanded outside the physical realm to boost engagement on your websites as an example:
 
 You want users to interact with new features of your site or join your mailing list.
 
-You can have links where uses are ONLY unlocked if the user interacts with special parts of your site such as buying a new NFT or joining your mailing list 
+You can have links where uses are ONLY unlocked if the user interacts with special parts of your site such as buying a new NFT or joining your mailing list
 or clicking an easter egg button on your site etc.
 */
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, UnorderedSet, LazyOption};
+use near_sdk::collections::{LazyOption, LookupMap, LookupSet, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
@@ -835,16 +835,16 @@ const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
 ];
 
 mod internals;
+mod json_types;
 mod stage1;
 mod stage2;
 mod stage3;
 mod views;
-mod json_types;
 
 use internals::*;
+use json_types::*;
 use stage1::*;
 use stage2::*;
-use json_types::*;
 
 /// Contract metadata structure
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -852,8 +852,8 @@ use json_types::*;
 pub struct ContractSourceMetadata {
     /// Commit hash being used for the currently deployed wasm. If the contract is not open-sourced, this could also be a numbering system for internal organization / tracking such as "1.0.0" and "2.1.0".
     pub version: String,
-    /// Link to open source code such as a Github repository or a CID to somewhere on IPFS. 
-    pub link: String, 
+    /// Link to open source code such as a Github repository or a CID to somewhere on IPFS.
+    pub link: String,
 }
 
 #[derive(BorshSerialize, BorshStorageKey)]
@@ -870,7 +870,7 @@ enum StorageKey {
     UserBalances,
     ProhibitedMethods,
     RegisteredFtContracts,
-    ContractMetadata
+    ContractMetadata,
 }
 
 #[near_bindgen]
@@ -917,14 +917,18 @@ pub struct Keypom {
     pub registered_ft_contracts: LookupSet<AccountId>,
 
     /// Source metadata extension:
-    pub contract_metadata: LazyOption<ContractSourceMetadata>
+    pub contract_metadata: LazyOption<ContractSourceMetadata>,
 }
 
 #[near_bindgen]
 impl Keypom {
     /// Initialize contract and pass in the desired deployed linkdrop contract (i.e testnet or near)
     #[init]
-    pub fn new(root_account: AccountId, owner_id: AccountId, contract_metadata: ContractSourceMetadata) -> Self {
+    pub fn new(
+        root_account: AccountId,
+        owner_id: AccountId,
+        contract_metadata: ContractSourceMetadata,
+    ) -> Self {
         let mut keypom = Self {
             owner_id,
             root_account,
@@ -947,7 +951,10 @@ impl Keypom {
             /*
                 CONTRACT METADATA
             */
-            contract_metadata: LazyOption::new(StorageKey::ContractMetadata, Some(&contract_metadata))
+            contract_metadata: LazyOption::new(
+                StorageKey::ContractMetadata,
+                Some(&contract_metadata),
+            ),
         };
 
         // Loop through and add all the default prohibited methods to the set

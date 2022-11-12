@@ -1,4 +1,4 @@
-use near_sdk::{env::sha256};
+use near_sdk::env::sha256;
 
 use crate::*;
 
@@ -46,7 +46,7 @@ pub(crate) fn check_promise_result() -> bool {
 pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
     if let Some(config) = drop_config {
         near_sdk::log!("Current Block Timestamp: {}", env::block_timestamp());
-        
+
         // Assert that if uses per key is passed in, it cannot equal 0
         assert!(
             config.uses_per_key.unwrap_or(1) != 0,
@@ -69,7 +69,6 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
             "The end timestamp must be greater than the current block timestamp"
         );
 
-
         // If both the start timestamp and end timestamp are set, ensure that the start timestamp is less than the end timestamp
         if config.start_timestamp.is_some() && config.end_timestamp.is_some() {
             assert!(
@@ -91,13 +90,14 @@ impl Keypom {
     }
 
     /// Internal function to assert that the predecessor is the contract owner
-    pub(crate) fn assert_key_password(&mut self, 
-        pw: Option<String>, 
-        drop_id: DropId, 
-        drop: &mut Drop, 
+    pub(crate) fn assert_key_password(
+        &mut self,
+        pw: Option<String>,
+        drop_id: DropId,
+        drop: &mut Drop,
         key_info: &mut KeyInfo,
         cur_use: &u64,
-        signer_pk: &PublicKey
+        signer_pk: &PublicKey,
     ) -> bool {
         let hashed = sha256(&pw.and_then(|f| hex::decode(f).ok()).unwrap_or(vec![]));
 
@@ -111,8 +111,12 @@ impl Keypom {
 
                 let amount_to_decrement =
                     (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-                near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
-    
+                near_sdk::log!(
+                    "Incorrect password. Decrementing allowance by {}. Used GAS: {}",
+                    amount_to_decrement,
+                    used_gas.0
+                );
+
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
                 drop.pks.insert(&signer_pk, &key_info);
@@ -127,15 +131,23 @@ impl Keypom {
         if let Some(pw) = &key_info.pw_per_use {
             let actual_pass = pw.get(cur_use).unwrap_or(hashed.clone());
 
-            near_sdk::log!("actualPass password: {:?} cur use: {}", actual_pass, cur_use);
+            near_sdk::log!(
+                "actualPass password: {:?} cur use: {}",
+                actual_pass,
+                cur_use
+            );
 
             if actual_pass != hashed {
                 let used_gas = env::used_gas();
 
                 let amount_to_decrement =
                     (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
-                near_sdk::log!("Incorrect password. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
-    
+                near_sdk::log!(
+                    "Incorrect password. Decrementing allowance by {}. Used GAS: {}",
+                    amount_to_decrement,
+                    used_gas.0
+                );
+
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
                 drop.pks.insert(&signer_pk, &key_info);
@@ -151,7 +163,13 @@ impl Keypom {
     }
 
     /// Internal function to assert that the predecessor is the contract owner
-    pub(crate) fn assert_claim_timestamps(&mut self, drop_id: DropId, drop: &mut Drop, key_info: &mut KeyInfo, signer_pk: &PublicKey) -> bool {
+    pub(crate) fn assert_claim_timestamps(
+        &mut self,
+        drop_id: DropId,
+        drop: &mut Drop,
+        key_info: &mut KeyInfo,
+        signer_pk: &PublicKey,
+    ) -> bool {
         // Ensure enough time has passed if a start timestamp was specified in the config.
         let current_timestamp = env::block_timestamp();
         let desired_start_timestamp = drop
@@ -226,9 +244,13 @@ impl Keypom {
         if let Some(interval) = drop.config.clone().and_then(|c| c.claim_interval) {
             let start_timestamp = drop.config.clone().and_then(|c| c.start_timestamp).unwrap();
             let total_num_claims = (env::block_timestamp() - start_timestamp) / interval;
-            let uses_per_key = drop.config.clone().and_then(|c| c.uses_per_key).unwrap_or(0);
-            let claims_left = total_num_claims + key_info.remaining_uses - uses_per_key ;
-           
+            let uses_per_key = drop
+                .config
+                .clone()
+                .and_then(|c| c.uses_per_key)
+                .unwrap_or(0);
+            let claims_left = total_num_claims + key_info.remaining_uses - uses_per_key;
+
             near_sdk::log!(
                 "Current timestamp {} start timestamp: {} claim interval: {} total num claims: {} total uses per key: {} remaining uses: {} num remaining claims: {}",
                 current_timestamp,
@@ -259,7 +281,13 @@ impl Keypom {
     }
 
     /// Internal function to register Keypom on a given FT contract
-    pub(crate) fn internal_register_ft_contract(&mut self, ft_contract_id: &AccountId, storage_required: u128, account_to_refund: &AccountId, refund_balance: bool) {
+    pub(crate) fn internal_register_ft_contract(
+        &mut self,
+        ft_contract_id: &AccountId,
+        storage_required: u128,
+        account_to_refund: &AccountId,
+        refund_balance: bool,
+    ) {
         // Check if the ft contract is already in the registered ft contracts list
         if !self.registered_ft_contracts.contains(ft_contract_id) {
             near_sdk::log!("FT contract not registered. Performing cross contract call to {} and inserting back into set", ft_contract_id);
@@ -270,7 +298,7 @@ impl Keypom {
                 .with_static_gas(MIN_GAS_FOR_FT_TRANSFER)
                 .with_attached_deposit(storage_required)
                 .storage_deposit(Some(env::current_account_id()), None);
-            
+
             self.registered_ft_contracts.insert(ft_contract_id);
             return;
         }
@@ -279,17 +307,28 @@ impl Keypom {
         if refund_balance {
             let mut cur_user_bal = self.user_balances.get(account_to_refund).unwrap_or(0);
             cur_user_bal += storage_required;
-            near_sdk::log!("FT contract already registered. Refunding user balance for {}. Balance is now {}", yocto_to_near(storage_required), yocto_to_near(cur_user_bal));
+            near_sdk::log!(
+                "FT contract already registered. Refunding user balance for {}. Balance is now {}",
+                yocto_to_near(storage_required),
+                yocto_to_near(cur_user_bal)
+            );
             self.user_balances.insert(account_to_refund, &cur_user_bal);
             return;
         }
 
-        near_sdk::log!("FT contract already registered. Transferring user for: {}", yocto_to_near(storage_required));
+        near_sdk::log!(
+            "FT contract already registered. Transferring user for: {}",
+            yocto_to_near(storage_required)
+        );
         Promise::new(account_to_refund.clone()).transfer(storage_required);
     }
 
     /// Internal function to force remove a drop from the contract's state
-    pub(crate) fn internal_remove_drop(&mut self, drop_id: &u128, public_keys: Vec<PublicKey>) -> AccountId {
+    pub(crate) fn internal_remove_drop(
+        &mut self,
+        drop_id: &u128,
+        public_keys: Vec<PublicKey>,
+    ) -> AccountId {
         // Remove the drop
         let mut drop = self.drop_for_id.remove(drop_id).expect("drop not found");
 
@@ -310,7 +349,7 @@ impl Keypom {
         // Loop through the keys and remove the public keys' mapping
         for pk in public_keys {
             self.drop_id_for_pk.remove(&pk.clone());
-        };
+        }
 
         // Return the owner ID
         owner_id

@@ -85,5 +85,5 @@ pub struct JsonPasswordForUse {
     // What is the password for this use
     pub pw: String,
     // Which use does this pertain to
-    pub key_use: u64
+    pub key_use: u64,
 }

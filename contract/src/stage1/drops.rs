@@ -1,4 +1,7 @@
-use crate::{*, json_types::{JsonFTData, JsonNFTData}};
+use crate::{
+    json_types::{JsonFTData, JsonNFTData},
+    *,
+};
 use near_sdk::{
     collections::{LazyOption, Vector},
     require, Balance,
@@ -70,7 +73,7 @@ pub struct DropConfig {
 
     // Interval of time after the `start_timestamp` that must pass before a key can be used.
     // If multiple intervals pass, the key can be used multiple times. This has nothing to do
-    // With the throttle timestamp. It only pertains to the start timestamp and the current 
+    // With the throttle timestamp. It only pertains to the start timestamp and the current
     // timestamp. The last_used timestamp is not taken into account.
     // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
     pub claim_interval: Option<u64>,
@@ -177,7 +180,7 @@ impl Keypom {
                 NEW_ACCOUNT_BASE
             );
         }
-        
+
         // Ensure the user has specified a valid drop config
         assert_valid_drop_config(&config);
 
@@ -188,11 +191,8 @@ impl Keypom {
         let num_claims_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // Get the current balance of the funder.
-        let mut current_user_balance = self
-            .user_balances
-            .get(&owner_id)
-            .unwrap_or(0);
-        
+        let mut current_user_balance = self.user_balances.get(&owner_id).unwrap_or(0);
+
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance
         current_user_balance += near_attached;
@@ -248,32 +248,60 @@ impl Keypom {
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");
         }
-        require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be equal to the number of public keys");
-        require!(passwords_per_key.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per key must be equal to the number of public keys");
+        require!(
+            passwords_per_use
+                .clone()
+                .map(|f| f.len() as u128)
+                .unwrap_or(len)
+                == len,
+            "Passwords per use must be equal to the number of public keys"
+        );
+        require!(
+            passwords_per_key
+                .clone()
+                .map(|f| f.len() as u128)
+                .unwrap_or(len)
+                == len,
+            "Passwords per key must be equal to the number of public keys"
+        );
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = 0;
         for pk in &public_keys {
-            let pw_per_key = passwords_per_key.clone().and_then(|f| f[next_key_id as usize].clone()).map(|h| hex::decode(h).unwrap());
+            let pw_per_key = passwords_per_key
+                .clone()
+                .and_then(|f| f[next_key_id as usize].clone())
+                .map(|h| hex::decode(h).unwrap());
 
             let mut pw_per_use = None;
             // If we have passwords for this specific key, add them to the key info
-            if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[next_key_id as usize].as_ref()) {
-                
+            if let Some(pws) = passwords_per_use
+                .as_ref()
+                .and_then(|p| p[next_key_id as usize].as_ref())
+            {
                 let mut pw_map = UnorderedMap::new(StorageKey::PasswordsPerUse {
                     // We get a new unique prefix for the collection
-                    account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, actual_drop_id, owner_id)),
+                    account_id_hash: hash_account_id(&format!(
+                        "pws-{}{}{}",
+                        next_key_id, actual_drop_id, owner_id
+                    )),
                 });
 
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
-                    require!(pw.key_use < num_claims_per_key, "claim out of range for password");
+                    require!(
+                        pw.key_use < num_claims_per_key,
+                        "claim out of range for password"
+                    );
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
                 }
 
                 pw_per_use = Some(pw_map);
             }
 
-            require!(pw_per_use.is_some() as u8 + pw_per_key.is_some() as u8 <= 1, "You cannot specify both local and global passwords for a key");
+            require!(
+                pw_per_use.is_some() as u8 + pw_per_key.is_some() as u8 <= 1,
+                "You cannot specify both local and global passwords for a key"
+            );
 
             key_map.insert(
                 pk,
@@ -283,7 +311,7 @@ impl Keypom {
                     allowance: actual_allowance,
                     key_id: next_key_id,
                     pw_per_use,
-                    pw_per_key, 
+                    pw_per_key,
                 },
             );
             require!(
@@ -365,12 +393,12 @@ impl Keypom {
                 balance_per_use,
                 ft_storage: U128(u128::MAX),
             };
-            
+
             // Temporarily add the FT contract. If it was already registered, don't remove but if it was, remove now.
             // This is to measure the storage cost of adding the contract.
             let clean_insert = self.registered_ft_contracts.insert(&contract_id);
             was_ft_registered = !clean_insert;
-            near_sdk::log!("was_ft_registered: {}", was_ft_registered); 
+            near_sdk::log!("was_ft_registered: {}", was_ft_registered);
 
             // The number of claims is 0 until FTs are sent to the contract
             drop.registered_uses = 0;
@@ -544,7 +572,11 @@ impl Keypom {
             Ensure the attached attached_deposit can cover:
         */
         if current_user_balance < required_deposit {
-            near_sdk::log!("Not enough user balance. Found {} expected: {}", yocto_to_near(current_user_balance), yocto_to_near(required_deposit));
+            near_sdk::log!(
+                "Not enough user balance. Found {} expected: {}",
+                yocto_to_near(current_user_balance),
+                yocto_to_near(required_deposit)
+            );
             current_user_balance -= near_attached;
 
             // If they have a balance, insert it back into the map otherwise remove it
@@ -635,11 +667,11 @@ impl Keypom {
     */
     #[payable]
     pub fn add_keys(
-        &mut self, 
-        public_keys: Vec<PublicKey>, 
+        &mut self,
+        public_keys: Vec<PublicKey>,
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
-        drop_id: DropIdJson
+        drop_id: DropIdJson,
     ) -> Option<DropIdJson> {
         let mut drop = self
             .drop_for_id
@@ -670,37 +702,65 @@ impl Keypom {
         let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
         // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
-        
+
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");
         }
-        require!(passwords_per_use.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per use must be less than or equal to the number of public keys");
-        require!(passwords_per_key.clone().map(|f| f.len() as u128).unwrap_or(len) == len, "Passwords per key must be equal to the number of public keys");
+        require!(
+            passwords_per_use
+                .clone()
+                .map(|f| f.len() as u128)
+                .unwrap_or(len)
+                == len,
+            "Passwords per use must be less than or equal to the number of public keys"
+        );
+        require!(
+            passwords_per_key
+                .clone()
+                .map(|f| f.len() as u128)
+                .unwrap_or(len)
+                == len,
+            "Passwords per key must be equal to the number of public keys"
+        );
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = drop.next_key_id;
         let mut idx = 0;
         for pk in &public_keys {
-            let pw_per_key = passwords_per_key.clone().and_then(|f| f[idx as usize].clone()).map(|f| hex::decode(f).unwrap());
+            let pw_per_key = passwords_per_key
+                .clone()
+                .and_then(|f| f[idx as usize].clone())
+                .map(|f| hex::decode(f).unwrap());
 
             let mut pw_per_use = None;
             // If we have passwords for this specific key, add them to the key info
-            if let Some(pws) = passwords_per_use.as_ref().and_then(|p| p[idx as usize].as_ref()) {
-                
+            if let Some(pws) = passwords_per_use
+                .as_ref()
+                .and_then(|p| p[idx as usize].as_ref())
+            {
                 let mut pw_map = UnorderedMap::new(StorageKey::PasswordsPerUse {
                     // We get a new unique prefix for the collection
-                    account_id_hash: hash_account_id(&format!("pws-{}{}{}", next_key_id, drop_id.0, drop.owner_id)),
+                    account_id_hash: hash_account_id(&format!(
+                        "pws-{}{}{}",
+                        next_key_id, drop_id.0, drop.owner_id
+                    )),
                 });
 
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
-                    require!(pw.key_use < num_claims_per_key, "claim out of range for password");
+                    require!(
+                        pw.key_use < num_claims_per_key,
+                        "claim out of range for password"
+                    );
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
                 }
 
                 pw_per_use = Some(pw_map);
             }
 
-            require!(pw_per_use.is_some() as u8 + pw_per_key.is_some() as u8 <= 1, "You cannot specify both local and global passwords for a key");
+            require!(
+                pw_per_use.is_some() as u8 + pw_per_key.is_some() as u8 <= 1,
+                "You cannot specify both local and global passwords for a key"
+            );
 
             exiting_key_map.insert(
                 &pk,
@@ -761,10 +821,7 @@ impl Keypom {
         self.drop_for_id.insert(&drop_id.0, &drop);
 
         // Get the current balance of the funder.
-        let mut current_user_balance = self
-            .user_balances
-            .get(&funder)
-            .unwrap_or(0);
+        let mut current_user_balance = self.user_balances.get(&funder).unwrap_or(0);
 
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance
@@ -895,7 +952,11 @@ impl Keypom {
             Ensure the attached attached_deposit can cover:
         */
         if current_user_balance < required_deposit {
-            near_sdk::log!("Not enough user balance. Found {} expected: {}", yocto_to_near(current_user_balance), yocto_to_near(required_deposit));
+            near_sdk::log!(
+                "Not enough user balance. Found {} expected: {}",
+                yocto_to_near(current_user_balance),
+                yocto_to_near(required_deposit)
+            );
             current_user_balance -= near_attached;
 
             // If they have a balance, insert it back into the map otherwise remove it
