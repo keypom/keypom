@@ -733,7 +733,7 @@ impl Keypom {
             DropType::simple(simple_data) => {
                 lazy_register = simple_data.lazy_register.unwrap_or(false);
 
-                if lazy_register {
+                if !lazy_register {
                     drop.registered_uses += num_uses_per_key * len as u64;
                 }
             }
@@ -931,5 +931,43 @@ impl Keypom {
         env::promise_return(promise);
 
         Some(drop_id)
+    }
+
+    #[payable]
+    pub fn register_uses(
+        &mut self,
+        drop_id: DropIdJson,
+        num_uses: u64
+    ) {
+        // Get the drop and ensure the owner is calling this method
+        let mut drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
+        require!(env::predecessor_account_id() == drop.owner_id, "only owner can register uses");
+
+        // Get the attached deposit and add it to the user's balance
+        let attached_deposit = env::attached_deposit();
+        if attached_deposit > 0 {
+            self.internal_modify_user_balance(&env::predecessor_account_id(), attached_deposit, false);
+        }
+
+        // Ensure the drop's drop type is simple
+        if let DropType::simple(simple_data) = &drop.drop_type {
+            require!(simple_data.lazy_register == Some(true), "drop must be set to lazy register");
+            
+            // Ensure that if the num uses were to be registered, it would not exceed the max possible uses given the amount of PKs in the drop
+            let num_keys = drop.pks.len();
+            let uses_per_key = drop.config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
+            let cur_uses_registered = drop.registered_uses;
+            require!(cur_uses_registered + num_uses <= num_keys as u64 * uses_per_key as u64, "Cannot over-register uses");
+
+            // Get the required cost and decrement the user balance. If the user balance is not enough, the decrement will fail
+            let required_cost = num_uses as u128 * drop.deposit_per_use;
+            self.internal_modify_user_balance(&env::predecessor_account_id(), required_cost, true);
+
+            // Increment the registered uses
+            drop.registered_uses += num_uses;
+            self.drop_for_id.insert(&drop_id.0, &drop);
+        } else {
+            env::panic_str("Drop must be simple type");
+        }
     }
 }

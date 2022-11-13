@@ -36,6 +36,14 @@ export async function getKeyInformation(
   return keyInformation;
 }
 
+export async function getDropInformation(
+  keypom: NearAccount,
+  dropId: string
+): Promise<JsonDrop> {
+  const dropInfo: JsonDrop = await keypom.view('get_drop_information', {drop_id: dropId});
+  return dropInfo;
+}
+
 export async function generateKeyPairs(
   numKeys: number,
 ): Promise<{ keys: KeyPair[]; publicKeys: string[] }> {

@@ -6,8 +6,8 @@ export type JsonDrop = {
     nft?: JsonNFTData;
     ft?: FTData;
     fc?: FCData;
-    config?: DropConfig;
-    metadata?: string;
+    config: DropConfig | null;
+    metadata: string | null;
     registered_uses: number;
     required_gas: string;
     next_key_id: number;

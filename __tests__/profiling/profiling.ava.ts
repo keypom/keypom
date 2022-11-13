@@ -1,6 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS } from "../utils/general";
+import { DropConfig } from "../utils/types";
 
 const path = require("path");
 const homedir = require("os").homedir();
@@ -73,9 +74,11 @@ test('Simple Drop Upfront', async t => {
     // dataToWrite is an object containing strings that map to objects
     let dataToWrite: Record<string, Record<string, string>> = {};
 
-    let config = {
-        delete_on_empty: true,
-        auto_withdraw: true
+    let config: DropConfig = {
+        usage: {
+            auto_withdraw: true,
+            auto_delete_drop: true
+        }
     }
     
     // Loop through and create a drop with 0 all the way to 100 keys per drop and check the net user costs
@@ -119,9 +122,11 @@ test('Simple Drop NET', async t => {
     // dataToWrite is an object containing strings that map to objects
     let dataToWrite: Record<string, Record<string, string>> = {};
 
-    let config = {
-        delete_on_empty: true,
-        auto_withdraw: true
+    let config: DropConfig = {
+        usage: {
+            auto_withdraw: true,
+            auto_delete_drop: true
+        }
     }
     
     // Loop through and create a drop with 0 all the way to 100 keys per drop and check the net user costs

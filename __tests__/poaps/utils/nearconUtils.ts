@@ -1,5 +1,6 @@
 import { KeyPair, NEAR, NearAccount } from "near-workspaces";
 import { generateKeyPairs, LARGE_GAS } from "../../utils/general";
+import { DropConfig } from "../../utils/types";
 
 export const nftSeriesMetadata = {
     "spec": "nft-1.0.99",
@@ -33,7 +34,7 @@ export async function createDistro(
         await owner.call(keypom, 'create_drop', {
             public_keys: [], 
             deposit_per_use: depositPerUse,
-            fc_data: getNEARConFCData(nftSeries),
+            fc: getNEARConFCData(nftSeries),
             config: null
         },{gas: LARGE_GAS});
 
@@ -85,9 +86,11 @@ export const pagodaNftMetadataPizza = {
     "copies": 1000,
 };
 
-export const dropConfig = {
+export const dropConfig: DropConfig = {
     uses_per_key: 3,
-    on_claim_refund_deposit: true
+    usage: {
+        refund_deposit: true
+    }
 }
 
 export const keypomMetadata = {
