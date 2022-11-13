@@ -41,10 +41,10 @@ impl Keypom {
                 "FT data must match what was sent"
             );
 
-            // Get the number of claims to register with the amount that is sent.
-            let claims_to_register = (amount.0 / ft_data.balance_per_use.0) as u64;
-            drop.registered_uses += claims_to_register;
-            near_sdk::log!("New claims registered {}", claims_to_register);
+            // Get the number of uses to register with the amount that is sent.
+            let uses_to_register = (amount.0 / ft_data.balance_per_use.0) as u64;
+            drop.registered_uses += uses_to_register;
+            near_sdk::log!("New uses registered {}", uses_to_register);
 
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
@@ -131,7 +131,7 @@ impl Keypom {
             return true;
         }
 
-        // Transfer failed so we need to increment the claims registered and return false
+        // Transfer failed so we need to increment the uses registered and return false
         let mut drop = self.drop_for_id.get(&drop_id).expect("no drop for ID");
         drop.registered_uses += num_to_refund;
         self.drop_for_id.insert(&drop_id, &drop);
@@ -202,7 +202,7 @@ impl Keypom {
             let mut drop = self.drop_for_id.get(&drop_id).unwrap();
             let owner_id = drop.owner_id.clone();
 
-            // Get the max claims per key. Default to 1 if not specified in the drop config.
+            // Get the max uses per key. Default to 1 if not specified in the drop config.
             let uses_per_key = drop
                 .config
                 .clone()
@@ -224,7 +224,7 @@ impl Keypom {
 
                 // Refund the funder any excess $NEAR
                 near_sdk::log!(
-                    "Not enough balance to cover FT storage for each key and their claims. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}",
+                    "Not enough balance to cover FT storage for each key and their uses. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}",
                     yocto_to_near(required_deposit),
                     yocto_to_near(near_attached),
                     yocto_to_near(user_balance)
@@ -285,12 +285,12 @@ impl Keypom {
                     }
                 }
 
-                // Get the number of claims per key
-                let num_claims_per_key = drop.config.and_then(|c| c.uses_per_key).unwrap_or(1);
+                // Get the number of uses per key
+                let num_uses_per_key = drop.config.and_then(|c| c.uses_per_key).unwrap_or(1);
                 // Calculate the base allowance to attach
                 let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
-                // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
-                let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
+                // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
+                let actual_allowance = calculated_base_allowance * num_uses_per_key as u128;
 
                 // Loop through each public key and create the access keys
                 for pk in public_keys.clone() {

@@ -56,7 +56,7 @@ pub struct KeyInfo {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct DropConfig {
-    // How many claims can each key have. If None, default to 1.
+    // How many uses can each key have. If None, default to 1.
     pub uses_per_key: Option<u64>,
 
     // Minimum block timestamp before keys can be used. If None, keys can be used immediately
@@ -187,8 +187,8 @@ impl Keypom {
         // Funder is the predecessor
         let owner_id = env::predecessor_account_id();
         let len = public_keys.len() as u128;
-        // Get the number of claims per key to dictate what key usage data we should put in the map
-        let num_claims_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
+        // Get the number of uses per key to dictate what key usage data we should put in the map
+        let num_uses_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // Get the current balance of the funder.
         let mut current_user_balance = self.user_balances.get(&owner_id).unwrap_or(0);
@@ -242,8 +242,8 @@ impl Keypom {
 
         // Calculate the base allowance to attach
         let calculated_base_allowance = self.calculate_base_allowance(gas_to_attach);
-        // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
-        let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
+        // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
+        let actual_allowance = calculated_base_allowance * num_uses_per_key as u128;
 
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");
@@ -289,7 +289,7 @@ impl Keypom {
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
                     require!(
-                        pw.key_use < num_claims_per_key,
+                        pw.key_use < num_uses_per_key,
                         "claim out of range for password"
                     );
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
@@ -306,7 +306,7 @@ impl Keypom {
             key_map.insert(
                 pk,
                 &KeyInfo {
-                    remaining_uses: num_claims_per_key,
+                    remaining_uses: num_uses_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
                     key_id: next_key_id,
@@ -331,7 +331,7 @@ impl Keypom {
             pks: key_map,
             drop_type: DropType::Simple, // Default to simple but will overwrite if not
             config: config.clone(),
-            registered_uses: num_claims_per_key * len as u64,
+            registered_uses: num_uses_per_key * len as u64,
             required_gas: gas_to_attach,
             metadata: LazyOption::new(
                 StorageKey::DropMetadata {
@@ -372,7 +372,7 @@ impl Keypom {
                 token_ids,
             };
 
-            // The number of claims is 0 until NFTs are sent to the contract
+            // The number of uses is 0 until NFTs are sent to the contract
             drop.registered_uses = 0;
             drop.drop_type = DropType::NonFungibleToken(actual_nft_data);
 
@@ -400,7 +400,7 @@ impl Keypom {
             was_ft_registered = !clean_insert;
             near_sdk::log!("was_ft_registered: {}", was_ft_registered);
 
-            // The number of claims is 0 until FTs are sent to the contract
+            // The number of uses is 0 until FTs are sent to the contract
             drop.registered_uses = 0;
             drop.drop_type = DropType::FungibleToken(actual_ft_data);
 
@@ -412,22 +412,22 @@ impl Keypom {
             // Ensure proper method data is passed in
             let num_method_data = data.clone().methods.len() as u64;
             // If there's 1 claim, there should be 1 method data defined
-            if num_claims_per_key == 1 {
+            if num_uses_per_key == 1 {
                 require!(
                     num_method_data == 1,
-                    "Cannot have more Method Data than the number of claims per key"
+                    "Cannot have more Method Data than the number of uses per key"
                 );
-            // If there's more than 1 method data defined and the number of claims per key more than 1, the number of methods should equal the number of claims per key
+            // If there's more than 1 method data defined and the number of uses per key more than 1, the number of methods should equal the number of uses per key
             } else if num_method_data > 1 {
                 require!(
-                    num_method_data == num_claims_per_key,
-                    "Number of FCs must match number of claims per key if more than 1 is specified"
+                    num_method_data == num_uses_per_key,
+                    "Number of FCs must match number of uses per key if more than 1 is specified"
                 );
             }
 
             // If there's one method data specified and more than 1 claim per key, that data is to be used
-            // For all the claims. In this case, we need to tally all the deposits for each method in all method data.
-            if num_claims_per_key > 1 && num_method_data == 1 {
+            // For all the uses. In this case, we need to tally all the deposits for each method in all method data.
+            if num_uses_per_key > 1 && num_method_data == 1 {
                 let method_data = data
                     .methods
                     .iter()
@@ -454,7 +454,7 @@ impl Keypom {
                     );
                 }
 
-                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
+                deposit_required_for_fc_deposits = num_uses_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
@@ -508,11 +508,11 @@ impl Keypom {
             - TOTAL Storage
             - Total access key allowance for EACH key
             - Access key storage for EACH key
-            - Balance for each key * (number of claims - claims with None for FC Data)
+            - Balance for each key * (number of uses - uses with None for FC Data)
 
             Optional:
-            - FC attached_deposit for each key * num Some(data) claims
-            - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+            - FC attached_deposit for each key * num Some(data) uses
+            - FT storage registration cost for each key * uses (calculated in resolve storage calculation function)
         */
         let fees = self
             .fees_per_user
@@ -523,7 +523,7 @@ impl Keypom {
         let total_key_fee = key_fee * len;
         let total_allowance = actual_allowance * len;
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
-        let total_deposits = deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128 * len;
+        let total_deposits = deposit_per_use.0 * (num_uses_per_key - num_none_fcs) as u128 * len;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
 
         let required_deposit = drop_fee
@@ -544,7 +544,7 @@ impl Keypom {
             access key storage: {} total access key storage: {},
             deposits less none FCs: {} total deposits: {},
             deposits for FCs: {} total deposits for FCs: {},
-            Claims per key: {}
+            uses per key: {}
             None FCs: {},
             length: {}
             GAS to attach: {}",
@@ -558,11 +558,11 @@ impl Keypom {
             yocto_to_near(total_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(total_access_key_storage),
-            yocto_to_near(deposit_per_use.0 * (num_claims_per_key - num_none_fcs) as u128),
+            yocto_to_near(deposit_per_use.0 * (num_uses_per_key - num_none_fcs) as u128),
             yocto_to_near(total_deposits),
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(total_deposits_for_fc),
-            num_claims_per_key,
+            num_uses_per_key,
             num_none_fcs,
             len,
             gas_to_attach.0
@@ -692,16 +692,16 @@ impl Keypom {
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
 
-        // Get the number of claims per key
-        let num_claims_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
+        // Get the number of uses per key
+        let num_uses_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // get the existing key set and add new PKs
         let mut exiting_key_map = drop.pks;
 
         // Calculate the base allowance to attach
         let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
-        // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
-        let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
+        // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
+        let actual_allowance = calculated_base_allowance * num_uses_per_key as u128;
 
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");
@@ -748,7 +748,7 @@ impl Keypom {
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
                     require!(
-                        pw.key_use < num_claims_per_key,
+                        pw.key_use < num_uses_per_key,
                         "claim out of range for password"
                     );
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
@@ -765,7 +765,7 @@ impl Keypom {
             exiting_key_map.insert(
                 &pk,
                 &KeyInfo {
-                    remaining_uses: num_claims_per_key,
+                    remaining_uses: num_uses_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
                     key_id: next_key_id,
@@ -801,10 +801,10 @@ impl Keypom {
             }
         }
 
-        // Increment the claims registered if drop is FC or Simple
+        // Increment the uses registered if drop is FC or Simple
         match &drop.drop_type {
             DropType::FunctionCall(data) => {
-                drop.registered_uses += num_claims_per_key * len as u64;
+                drop.registered_uses += num_uses_per_key * len as u64;
 
                 // If GAS is specified, set the GAS to attach for allowance calculations
                 if let Some(_) = data.config.clone().and_then(|c| c.attached_gas) {
@@ -812,7 +812,7 @@ impl Keypom {
                 }
             }
             DropType::Simple => {
-                drop.registered_uses += num_claims_per_key * len as u64;
+                drop.registered_uses += num_uses_per_key * len as u64;
             }
             _ => {}
         };
@@ -837,8 +837,8 @@ impl Keypom {
             let num_method_data = data.clone().methods.len() as u64;
 
             // If there's one method data specified and more than 1 claim per key, that data is to be used
-            // For all the claims. In this case, we need to tally all the deposits for each method in all method data.
-            if num_claims_per_key > 1 && num_method_data == 1 {
+            // For all the uses. In this case, we need to tally all the deposits for each method in all method data.
+            if num_uses_per_key > 1 && num_method_data == 1 {
                 let attached_deposit = data
                     .methods
                     .iter()
@@ -850,7 +850,7 @@ impl Keypom {
                     .iter()
                     .fold(0, |acc, x| acc + x.attached_deposit.0);
 
-                deposit_required_for_fc_deposits = num_claims_per_key as u128 * attached_deposit;
+                deposit_required_for_fc_deposits = num_uses_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
             } else {
@@ -885,11 +885,11 @@ impl Keypom {
             - TOTAL Storage
             - Total access key allowance for EACH key
             - Access key storage for EACH key
-            - Balance for each key * (number of claims - claims with None for FC Data)
+            - Balance for each key * (number of uses - uses with None for FC Data)
 
             Optional:
-            - FC attached_deposit for each key * num Some(data) claims
-            - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+            - FC attached_deposit for each key * num Some(data) uses
+            - FT storage registration cost for each key * uses (calculated in resolve storage calculation function)
         */
         let fees = self
             .fees_per_user
@@ -901,9 +901,9 @@ impl Keypom {
         let total_allowance = actual_allowance * len;
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
         let total_deposits =
-            drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128 * len;
+            drop.deposit_per_use * (num_uses_per_key - num_none_fcs) as u128 * len;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
-        let total_ft_costs = ft_optional_costs_per_claim * num_claims_per_key as u128 * len;
+        let total_ft_costs = ft_optional_costs_per_claim * num_uses_per_key as u128 * len;
 
         let required_deposit = total_required_storage
             + total_key_fee
@@ -924,7 +924,7 @@ impl Keypom {
             deposits less none FCs: {} total deposits: {},
             deposits for FCs: {} total deposits for FCs: {},
             FT Costs per claim {} total FT Costs: {},
-            Claims per key: {}
+            uses per key: {}
             None FCs: {},
             length: {}",
             yocto_to_near(current_user_balance),
@@ -937,13 +937,13 @@ impl Keypom {
             yocto_to_near(total_allowance),
             yocto_to_near(ACCESS_KEY_STORAGE),
             yocto_to_near(total_access_key_storage),
-            yocto_to_near(drop.deposit_per_use * (num_claims_per_key - num_none_fcs) as u128),
+            yocto_to_near(drop.deposit_per_use * (num_uses_per_key - num_none_fcs) as u128),
             yocto_to_near(total_deposits),
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(total_deposits_for_fc),
             yocto_to_near(ft_optional_costs_per_claim),
             yocto_to_near(total_ft_costs),
-            num_claims_per_key,
+            num_uses_per_key,
             num_none_fcs,
             len
         );

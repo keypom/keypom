@@ -38,7 +38,7 @@ impl Keypom {
             // Re-insert the token IDs into the NFT Data struct
             nft_data.token_ids = token_ids;
 
-            // Increment the claims registered
+            // Increment the uses registered
             drop.registered_uses += 1;
             near_sdk::log!("drop.registered_uses {}", drop.registered_uses);
 
