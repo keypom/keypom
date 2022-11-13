@@ -43,13 +43,13 @@ impl Keypom {
 
         // ensure that there are no FTs or NFTs left to be refunded
         match drop_type {
-            DropType::NonFungibleToken(_) => {
+            DropType::nft(_) => {
                 require!(
                     drop.registered_uses == 0,
                     "NFTs must be refunded before keys are deleted"
                 );
             }
-            DropType::FungibleToken(data) => {
+            DropType::ft(data) => {
                 require!(
                     drop.registered_uses == 0,
                     "FTs must be refunded before keys are deleted"
@@ -96,7 +96,7 @@ impl Keypom {
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
                 // Uses and get the deposits left along with the total number of None FCs
-                if let DropType::FunctionCall(data) = &drop.drop_type {
+                if let DropType::fc(data) = &drop.drop_type {
                     let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
@@ -227,7 +227,7 @@ impl Keypom {
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
                 // Uses and get the deposits left along with the total number of None FCs
-                if let DropType::FunctionCall(data) = &drop.drop_type {
+                if let DropType::fc(data) = &drop.drop_type {
                     let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
@@ -381,7 +381,7 @@ impl Keypom {
         self.drop_for_id.insert(&drop_id.0, &drop);
 
         match &mut drop.drop_type {
-            DropType::NonFungibleToken(data) => {
+            DropType::nft(data) => {
                 /*
                     NFTs need to be batched together. Loop through and transfer all NFTs.
                     Keys registered will be decremented and the token IDs will be removed
@@ -428,7 +428,7 @@ impl Keypom {
                     GasWeight(10),
                 );
             }
-            DropType::FungibleToken(data) => {
+            DropType::ft(data) => {
                 // All FTs can be refunded at once. Funder responsible for registering themselves
                 ext_ft_contract::ext(data.contract_id.clone())
                     // Call ft transfer with 1 yoctoNEAR. 1/2 unspent GAS will be added on top

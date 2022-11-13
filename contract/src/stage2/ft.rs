@@ -1,16 +1,6 @@
 use crate::*;
 use near_sdk::GasWeight;
 
-/// Keep track fungible token data for an access key. This is stored on the contract
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct FTData {
-    pub contract_id: AccountId,
-    pub sender_id: AccountId,
-    pub balance_per_use: U128,
-    pub ft_storage: U128,
-}
-
 // Returned from the storage balance bounds cross contract call on the FT contract
 #[derive(Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -31,7 +21,7 @@ impl Keypom {
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
-        if let DropType::FungibleToken(ft_data) = &drop.drop_type {
+        if let DropType::ft(ft_data) = &drop.drop_type {
             require!(
                 amount.0 % ft_data.balance_per_use.0 == 0,
                 "amount must be a multiple of the drop balance"
@@ -253,9 +243,9 @@ impl Keypom {
             }
 
             // Update the FT data to include the storage and insert the drop back with the updated FT data
-            if let DropType::FungibleToken(mut ft_data) = drop.drop_type {
+            if let DropType::ft(mut ft_data) = drop.drop_type {
                 ft_data.ft_storage = min;
-                drop.drop_type = DropType::FungibleToken(ft_data.clone());
+                drop.drop_type = DropType::ft(ft_data.clone());
 
                 self.drop_for_id.insert(&drop_id, &drop);
 
@@ -273,13 +263,13 @@ impl Keypom {
 
                 // Decide what methods the access keys can call
                 let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-                if let Some(perms) = drop.config.clone().and_then(|c| c.claim_permission) {
+                if let Some(perms) = drop.config.clone().and_then(|c| c.usage).and_then(|u| u.permissions) {
                     match perms {
                         // If we have a config, use the config to determine what methods the access keys can call
-                        ClaimPermissions::Claim => {
+                        ClaimPermissions::claim => {
                             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                         }
-                        ClaimPermissions::CreateAccountAndClaim => {
+                        ClaimPermissions::create_account_and_claim => {
                             access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
                         }
                     }

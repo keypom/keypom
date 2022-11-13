@@ -100,27 +100,40 @@ impl Keypom {
             .get(&drop_id)
             .expect("no drop found for drop ID");
 
-        let drop_type: JsonDropType = match drop.drop_type {
-            DropType::FunctionCall(data) => JsonDropType::FunctionCall(data),
-            DropType::NonFungibleToken(data) => JsonDropType::NonFungibleToken(JsonNFTData {
-                contract_id: data.contract_id,
-                sender_id: data.sender_id,
-            }),
-            DropType::FungibleToken(data) => JsonDropType::FungibleToken(data),
-            _simple => JsonDropType::Simple,
-        };
-
-        JsonDrop {
+        let mut json_drop = JsonDrop {
             drop_id: U128(drop_id),
             owner_id: drop.owner_id,
             deposit_per_use: U128(drop.deposit_per_use),
-            drop_type,
+            simple: None,
+            ft: None,
+            fc: None,
+            nft: None,
             config: drop.config,
             registered_uses: drop.registered_uses,
             required_gas: drop.required_gas,
             metadata: drop.metadata.get(),
             next_key_id: drop.next_key_id,
-        }
+        };
+
+        match drop.drop_type {
+            DropType::fc(data) => {
+                json_drop.fc = Some(data)
+            }
+            DropType::nft(data) => {
+                json_drop.nft = Some(JsonNFTData {
+                    contract_id: data.contract_id,
+                    sender_id: data.sender_id,
+                })
+            }
+            DropType::ft(data) => {
+                json_drop.ft = Some(data)
+            }
+            DropType::simple(data) => {
+                json_drop.simple = Some(data)
+            }
+        };
+
+        json_drop
     }
 
     /// Returns the total supply of active keys for a given drop
@@ -205,7 +218,7 @@ impl Keypom {
     /// Return the total supply of token IDs for a given drop
     pub fn get_nft_supply_for_drop(&self, drop_id: DropIdJson) -> u64 {
         let drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
-        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
+        if let DropType::nft(nft_data) = drop.drop_type {
             return nft_data.token_ids.len();
         } else {
             return 0;
@@ -220,7 +233,7 @@ impl Keypom {
         limit: Option<u64>,
     ) -> Vec<String> {
         let drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
-        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
+        if let DropType::nft(nft_data) = drop.drop_type {
             let token_ids = nft_data.token_ids;
 
             // Where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index

@@ -1,129 +1,9 @@
-use crate::{
-    json_types::{JsonFTData, JsonNFTData},
-    *,
-};
+use crate::*;
+
 use near_sdk::{
     collections::{LazyOption, Vector},
     require, Balance,
 };
-
-pub type DropId = u128;
-pub type DropIdJson = U128;
-// Drop Metadata should be a string which can be JSON or anything the users want.
-pub type DropMetadata = String;
-pub const DEFAULT_DROP_ID_JSON: U128 = U128(0);
-
-const MIN_DROP_ID_PASSED_IN: u128 = 1_000_000_000;
-
-#[derive(BorshSerialize, BorshDeserialize)]
-pub enum DropType {
-    Simple,
-    NonFungibleToken(NFTData),
-    FungibleToken(FTData),
-    FunctionCall(FCData),
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub enum ClaimPermissions {
-    Claim,
-    CreateAccountAndClaim,
-}
-
-/// Keep track of different configuration options for each key in a drop
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct KeyInfo {
-    // How many uses this key has left. Once 0 is reached, the key is deleted
-    pub remaining_uses: u64,
-
-    // When was the last time the key was used
-    pub last_used: u64,
-
-    // How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.
-    pub allowance: u128,
-
-    // Nonce for the current key.
-    pub key_id: u64,
-
-    // Password for each use for this specific key
-    pub pw_per_use: Option<UnorderedMap<u64, Vec<u8>>>,
-
-    // Password for the key regardless of the use
-    pub pw_per_key: Option<Vec<u8>>,
-}
-
-/// Keep track of different configuration options for each key in a drop
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct DropConfig {
-    // How many uses can each key have. If None, default to 1.
-    pub uses_per_key: Option<u64>,
-
-    // Minimum block timestamp before keys can be used. If None, keys can be used immediately
-    // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-    pub start_timestamp: Option<u64>,
-
-    // Block timestamp that keys must be before. If None, keys can be used indefinitely
-    // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-    pub end_timestamp: Option<u64>,
-
-    // Time interval between each key use. If None, there is no delay between key uses.
-    // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-    pub throttle_timestamp: Option<u64>,
-
-    // Interval of time after the `start_timestamp` that must pass before a key can be used.
-    // If multiple intervals pass, the key can be used multiple times. This has nothing to do
-    // With the throttle timestamp. It only pertains to the start timestamp and the current
-    // timestamp. The last_used timestamp is not taken into account.
-    // Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-    pub claim_interval: Option<u64>,
-
-    // If claim is called, refund the deposit to the owner's balance. If None, default to false.
-    pub on_claim_refund_deposit: Option<bool>,
-
-    // Can the access key only call the claim method_name? Default to both method_name callable
-    pub claim_permission: Option<ClaimPermissions>,
-
-    // Root account that all sub-accounts will default to. If None, default to the global drop root.
-    pub drop_root: Option<AccountId>,
-
-    // Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
-    // Must be overwritten
-    pub delete_on_empty: Option<bool>,
-
-    // When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
-    pub auto_withdraw: Option<bool>,
-}
-
-/// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct Drop {
-    // Funder of this specific drop
-    pub owner_id: AccountId,
-    // Set of public keys associated with this drop mapped to their usages
-    pub pks: UnorderedMap<PublicKey, KeyInfo>,
-
-    // Balance for all keys of this drop. Can be 0 if specified.
-    pub deposit_per_use: u128,
-
-    // How many uses are registered (for FTs and NFTs)
-    pub registered_uses: u64,
-
-    // Ensure this drop can only be used when the function has the required gas to attach
-    pub required_gas: Gas,
-
-    // Every drop must have a type
-    pub drop_type: DropType,
-
-    // The drop as a whole can have a config as well
-    pub config: Option<DropConfig>,
-
-    // Metadata for the drop
-    pub metadata: LazyOption<DropMetadata>,
-
-    // Keep track of the next nonce to give out to a key
-    pub next_key_id: u64,
-}
 
 #[near_bindgen]
 impl Keypom {
@@ -137,16 +17,27 @@ impl Keypom {
     #[payable]
     pub fn create_drop(
         &mut self,
+        // Public keys to add when creating the drop (can be empty)
         public_keys: Vec<PublicKey>,
+        // How much $NEAR should be transferred everytime a key is used? Can be 0.
+        deposit_per_use: U128,
+
+        // Overload the specific drop ID
+        drop_id: Option<DropIdJson>,
+        // Configure behaviors for the drop
+        config: Option<DropConfig>,
+        // Give the drop some metadata (simple string)
+        metadata: Option<DropMetadata>,
+
+        // Mutually Exclusive. Use-case specific configurations
+        simple: Option<SimpleData>,
+        ft: Option<JsonFTData>,
+        nft: Option<JsonNFTData>,
+        fc: Option<FCData>,
+
+        // Passwords for the keys
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
-        deposit_per_use: U128,
-        config: Option<DropConfig>,
-        metadata: Option<DropMetadata>,
-        ft_data: Option<JsonFTData>,
-        nft_data: Option<JsonNFTData>,
-        fc_data: Option<FCData>,
-        drop_id: Option<DropIdJson>,
     ) -> Option<DropIdJson> {
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
@@ -166,11 +57,11 @@ impl Keypom {
         }
 
         // Ensure the user has only specified one type of callback data
-        let num_cbs_specified =
-            ft_data.is_some() as u8 + nft_data.is_some() as u8 + fc_data.is_some() as u8;
+        let num_drop_types =
+            ft.is_some() as u8 + nft.is_some() as u8 + fc.is_some() as u8 + simple.is_some() as u8;
         require!(
-            num_cbs_specified <= 1,
-            "You cannot specify more than one callback data"
+            num_drop_types <= 1,
+            "You cannot specify more than one drop type data"
         );
 
         // Warn if the balance for each drop is less than the minimum
@@ -192,7 +83,6 @@ impl Keypom {
 
         // Get the current balance of the funder.
         let mut current_user_balance = self.user_balances.get(&owner_id).unwrap_or(0);
-
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance
         current_user_balance += near_attached;
@@ -206,13 +96,13 @@ impl Keypom {
 
         // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if let Some(perms) = config.clone().and_then(|c| c.claim_permission) {
+        if let Some(perms) = config.clone().and_then(|c| c.usage).and_then(|u| u.permissions) {
             match perms {
                 // If we have a config, use the config to determine what methods the access keys can call
-                ClaimPermissions::Claim => {
+                ClaimPermissions::claim => {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
-                ClaimPermissions::CreateAccountAndClaim => {
+                ClaimPermissions::create_account_and_claim => {
                     access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
                 }
             }
@@ -221,7 +111,7 @@ impl Keypom {
         // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
         let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
         // Depending on the FC Data, set the Gas to attach and the access key method_name names
-        if let Some(gas) = fc_data
+        if let Some(gas) = fc
             .clone()
             .and_then(|d| d.config.and_then(|c| c.attached_gas))
         {
@@ -329,7 +219,12 @@ impl Keypom {
             owner_id: env::predecessor_account_id(),
             deposit_per_use: deposit_per_use.0,
             pks: key_map,
-            drop_type: DropType::Simple, // Default to simple but will overwrite if not
+            // Default to simple but will overwrite if not
+            drop_type: DropType::simple(
+                SimpleData {
+                    lazy_register: None
+                }
+            ),
             config: config.clone(),
             registered_uses: num_uses_per_key * len as u64,
             required_gas: gas_to_attach,
@@ -346,6 +241,7 @@ impl Keypom {
             next_key_id,
         };
 
+        let lazy_register = simple.clone().and_then(|s| s.lazy_register).unwrap_or(false);
         // Keep track of the total attached_deposit required for the FC data (depending on None and Some cases)
         let mut deposit_required_for_fc_deposits = 0;
         // Keep track of the number of none FCs so we don't charge the user
@@ -353,7 +249,9 @@ impl Keypom {
         let mut was_ft_registered = false;
 
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
-        if let Some(data) = nft_data {
+        if let Some(data) = nft {
+            require!(lazy_register == false, "lazy_register is reserved for simple drops only");
+
             let JsonNFTData {
                 sender_id,
                 contract_id,
@@ -366,7 +264,7 @@ impl Keypom {
             });
 
             // Create the NFT data
-            let actual_nft_data = NFTData {
+            let actual_nft = NFTData {
                 sender_id,
                 contract_id,
                 token_ids,
@@ -374,11 +272,13 @@ impl Keypom {
 
             // The number of uses is 0 until NFTs are sent to the contract
             drop.registered_uses = 0;
-            drop.drop_type = DropType::NonFungibleToken(actual_nft_data);
+            drop.drop_type = DropType::nft(actual_nft);
 
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&actual_drop_id, &drop);
-        } else if let Some(data) = ft_data.clone() {
+        } else if let Some(data) = ft.clone() {
+            require!(lazy_register == false, "lazy_register is reserved for simple drops only");
+
             // If FT Data was provided, we need to cast the FT Config to actual FT data and insert into the drop type
             let JsonFTData {
                 sender_id,
@@ -387,7 +287,7 @@ impl Keypom {
             } = data;
 
             // Create the NFT data
-            let actual_ft_data = FTData {
+            let actual_ft = FTData {
                 contract_id: contract_id.clone(),
                 sender_id,
                 balance_per_use,
@@ -402,12 +302,14 @@ impl Keypom {
 
             // The number of uses is 0 until FTs are sent to the contract
             drop.registered_uses = 0;
-            drop.drop_type = DropType::FungibleToken(actual_ft_data);
+            drop.drop_type = DropType::ft(actual_ft);
 
             // Add the drop with the empty token IDs
             self.drop_for_id.insert(&actual_drop_id, &drop);
-        } else if let Some(data) = fc_data.clone() {
-            drop.drop_type = DropType::FunctionCall(data.clone());
+        } else if let Some(data) = fc.clone() {
+            require!(lazy_register == false, "lazy_register is reserved for simple drops only");
+
+            drop.drop_type = DropType::fc(data.clone());
 
             // Ensure proper method data is passed in
             let num_method_data = data.clone().methods.len() as u64;
@@ -492,6 +394,16 @@ impl Keypom {
                 deposit_per_use.0 > 0,
                 "Cannot have a simple drop with zero balance"
             );
+
+            // If the user wants to register keys later, they can.
+            if lazy_register {
+                drop.registered_uses = 0;
+            }
+
+            if let Some(simple_data) = simple {
+                drop.drop_type = DropType::simple(simple_data);
+            }
+
             // In simple case, we just insert the drop with whatever it was initialized with.
             self.drop_for_id.insert(&actual_drop_id, &drop);
         }
@@ -523,7 +435,7 @@ impl Keypom {
         let total_key_fee = key_fee * len;
         let total_allowance = actual_allowance * len;
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
-        let total_deposits = deposit_per_use.0 * (num_uses_per_key - num_none_fcs) as u128 * len;
+        let total_deposits = (deposit_per_use.0 * (num_uses_per_key - num_none_fcs) as u128 * len) * !lazy_register as u128;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
 
         let required_deposit = drop_fee
@@ -542,7 +454,7 @@ impl Keypom {
             Key Fee: {} Total Key Fee: {},
             allowance: {} total allowance: {},
             access key storage: {} total access key storage: {},
-            deposits less none FCs: {} total deposits: {},
+            deposits less none FCs: {} total deposits: {} lazy registration: {},
             deposits for FCs: {} total deposits for FCs: {},
             uses per key: {}
             None FCs: {},
@@ -560,6 +472,7 @@ impl Keypom {
             yocto_to_near(total_access_key_storage),
             yocto_to_near(deposit_per_use.0 * (num_uses_per_key - num_none_fcs) as u128),
             yocto_to_near(total_deposits),
+            lazy_register,
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(total_deposits_for_fc),
             num_uses_per_key,
@@ -612,7 +525,7 @@ impl Keypom {
             Only add the access keys if it's not a FT drop. If it is,
             keys will be added in the FT resolver
         */
-        if ft_data.is_none() {
+        if ft.is_none() {
             // Create a new promise batch to create all the access keys
             let promise = env::promise_batch_create(&current_account_id);
 
@@ -631,7 +544,7 @@ impl Keypom {
 
             env::promise_return(promise);
         } else {
-            let ft_contract = ft_data.unwrap().contract_id;
+            let ft_contract = ft.unwrap().contract_id;
             // If the ft contract was NOT already registered, we should remove it from the set here and add it
             // Only if everything went well in the callback.
             if !was_ft_registered {
@@ -668,10 +581,14 @@ impl Keypom {
     #[payable]
     pub fn add_keys(
         &mut self,
+        // Public keys to add when creating the drop (can be empty)
         public_keys: Vec<PublicKey>,
+        // Overload the specific drop ID
+        drop_id: DropIdJson,
+
+        // Passwords for the keys
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
-        drop_id: DropIdJson,
     ) -> Option<DropIdJson> {
         let mut drop = self
             .drop_for_id
@@ -787,23 +704,25 @@ impl Keypom {
         drop.next_key_id = next_key_id;
 
         // Decide what methods the access keys can call
-        // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if let Some(perms) = config.clone().and_then(|c| c.claim_permission) {
+        if let Some(perms) = config.clone().and_then(|c| c.usage).and_then(|u| u.permissions) {
             match perms {
                 // If we have a config, use the config to determine what methods the access keys can call
-                ClaimPermissions::Claim => {
+                ClaimPermissions::claim => {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
-                ClaimPermissions::CreateAccountAndClaim => {
+                ClaimPermissions::create_account_and_claim => {
                     access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
                 }
             }
         }
 
+        // Should we register the keys for simple drops now or later?
+        let mut lazy_register = false;
+
         // Increment the uses registered if drop is FC or Simple
         match &drop.drop_type {
-            DropType::FunctionCall(data) => {
+            DropType::fc(data) => {
                 drop.registered_uses += num_uses_per_key * len as u64;
 
                 // If GAS is specified, set the GAS to attach for allowance calculations
@@ -811,8 +730,12 @@ impl Keypom {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
             }
-            DropType::Simple => {
-                drop.registered_uses += num_uses_per_key * len as u64;
+            DropType::simple(simple_data) => {
+                lazy_register = simple_data.lazy_register.unwrap_or(false);
+
+                if lazy_register {
+                    drop.registered_uses += num_uses_per_key * len as u64;
+                }
             }
             _ => {}
         };
@@ -822,7 +745,6 @@ impl Keypom {
 
         // Get the current balance of the funder.
         let mut current_user_balance = self.user_balances.get(&funder).unwrap_or(0);
-
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance
         current_user_balance += near_attached;
@@ -832,7 +754,7 @@ impl Keypom {
         let mut deposit_required_for_fc_deposits = 0;
         // Get the number of none FCs in FCData (if there are any)
         let mut num_none_fcs = 0;
-        if let DropType::FunctionCall(data) = &drop.drop_type {
+        if let DropType::fc(data) = &drop.drop_type {
             // Ensure proper method data is passed in
             let num_method_data = data.clone().methods.len() as u64;
 
@@ -870,7 +792,7 @@ impl Keypom {
         // Get optional costs
         let mut ft_optional_costs_per_claim = 0;
         match drop.drop_type {
-            DropType::FungibleToken(data) => ft_optional_costs_per_claim = data.ft_storage.0,
+            DropType::ft(data) => ft_optional_costs_per_claim = data.ft_storage.0,
             _ => {}
         };
 
@@ -900,8 +822,7 @@ impl Keypom {
         let total_key_fee = key_fee * len;
         let total_allowance = actual_allowance * len;
         let total_access_key_storage = ACCESS_KEY_STORAGE * len;
-        let total_deposits =
-            drop.deposit_per_use * (num_uses_per_key - num_none_fcs) as u128 * len;
+        let total_deposits = (drop.deposit_per_use * (num_uses_per_key - num_none_fcs) as u128 * len) * !lazy_register as u128;
         let total_deposits_for_fc = deposit_required_for_fc_deposits * len;
         let total_ft_costs = ft_optional_costs_per_claim * num_uses_per_key as u128 * len;
 
@@ -921,7 +842,7 @@ impl Keypom {
             Key Fee: {} Total Key Fee: {},
             allowance: {} total allowance: {},
             access key storage: {} total access key storage: {},
-            deposits less none FCs: {} total deposits: {},
+            deposits less none FCs: {} total deposits: {} lazy registration: {},
             deposits for FCs: {} total deposits for FCs: {},
             FT Costs per claim {} total FT Costs: {},
             uses per key: {}
@@ -939,6 +860,7 @@ impl Keypom {
             yocto_to_near(total_access_key_storage),
             yocto_to_near(drop.deposit_per_use * (num_uses_per_key - num_none_fcs) as u128),
             yocto_to_near(total_deposits),
+            lazy_register,
             yocto_to_near(deposit_required_for_fc_deposits),
             yocto_to_near(total_deposits_for_fc),
             yocto_to_near(ft_optional_costs_per_claim),

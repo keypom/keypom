@@ -835,15 +835,14 @@ const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
 ];
 
 mod internals;
-mod json_types;
+mod models;
 mod stage1;
 mod stage2;
 mod stage3;
 mod views;
 
 use internals::*;
-use json_types::*;
-use stage1::*;
+use models::*;
 use stage2::*;
 
 /// Contract metadata structure
