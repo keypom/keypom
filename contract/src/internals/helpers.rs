@@ -80,6 +80,38 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
 }
 
 impl Keypom {
+    /// Internal function to modify the user's balance. Defaults to adding the amount but decrement can also be specified
+    pub(crate) fn internal_modify_user_balance(&mut self, account_id: &AccountId, amount: u128, decrement: bool) {
+        // Get the balance of the account (if the account isn't in the map we default to a balance of 0)
+        let mut balance: u128 = self
+            .user_balances
+            .get(account_id)
+            .unwrap_or(0);
+
+        // Either add or subtract the amount from the balance depending on whether or not decrement was passed in
+        if decrement == true {
+            near_sdk::log!(
+                "User balance decremented by {}. Old: {} new: {}",
+                yocto_to_near(amount),
+                yocto_to_near(balance),
+                yocto_to_near(balance - amount)
+            );    
+            balance -= amount;
+        } else {
+            near_sdk::log!(
+                "User balance incremented by {}. Old: {} new: {}",
+                yocto_to_near(amount),
+                yocto_to_near(balance),
+                yocto_to_near(balance + amount)
+            );  
+            balance += amount;
+        }
+
+        // Insert the balance back into the map for that account ID
+        self.user_balances
+            .insert(account_id, &balance);
+    }
+
     /// Internal function to assert that the predecessor is the contract owner
     pub(crate) fn assert_owner(&mut self) {
         assert_eq!(
@@ -243,26 +275,26 @@ impl Keypom {
         // Ensure the key is within the claim interval if specified
         if let Some(interval) = drop.config.clone().and_then(|c| c.claim_interval) {
             let start_timestamp = drop.config.clone().and_then(|c| c.start_timestamp).unwrap();
-            let total_num_claims = (env::block_timestamp() - start_timestamp) / interval;
+            let total_num_uses = (env::block_timestamp() - start_timestamp) / interval;
             let uses_per_key = drop
                 .config
                 .clone()
                 .and_then(|c| c.uses_per_key)
                 .unwrap_or(0);
-            let claims_left = total_num_claims + key_info.remaining_uses - uses_per_key;
+            let uses_left = total_num_uses + key_info.remaining_uses - uses_per_key;
 
             near_sdk::log!(
-                "Current timestamp {} start timestamp: {} claim interval: {} total num claims: {} total uses per key: {} remaining uses: {} num remaining claims: {}",
+                "Current timestamp {} start timestamp: {} claim interval: {} total num uses: {} total uses per key: {} remaining uses: {} num remaining uses: {}",
                 current_timestamp,
                 start_timestamp,
                 interval,
-                total_num_claims,
+                total_num_uses,
                 uses_per_key,
                 key_info.remaining_uses,
-                claims_left
+                uses_left
             );
 
-            if claims_left < 1 {
+            if uses_left < 1 {
                 let used_gas = env::used_gas();
 
                 let amount_to_decrement =
@@ -477,7 +509,7 @@ impl Keypom {
                     cur_key_id,
                     // How many uses are remaining on the current key
                     remaining_uses,
-                    // Maximum number of claims
+                    // Maximum number of uses
                     drop_data.config.and_then(|c| c.uses_per_key).unwrap_or(1),
                     // Is it an auto withdraw case
                     auto_withdraw,

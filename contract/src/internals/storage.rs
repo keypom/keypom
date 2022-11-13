@@ -8,16 +8,7 @@ impl Keypom {
         // Get the attached_deposit value which is how much the user wants to add to their storage
         let attached_deposit = env::attached_deposit();
 
-        // Get the balance of the account (if the account isn't in the map we default to a balance of 0)
-        let mut balance: u128 = self
-            .user_balances
-            .get(&env::predecessor_account_id())
-            .unwrap_or(0);
-        // Add the attached_deposit to their balance
-        balance += attached_deposit;
-        // Insert the balance back into the map for that account ID
-        self.user_balances
-            .insert(&env::predecessor_account_id(), &balance);
+        self.internal_modify_user_balance(&env::predecessor_account_id(), attached_deposit, false);
     }
 
     // Allows users to withdraw their balance
@@ -25,7 +16,7 @@ impl Keypom {
         // the account to withdraw storage to is always the predecessor
         let owner_id = env::predecessor_account_id();
         //get the amount that the user has by removing them from the map. If they're not in the map, default to 0
-        let amount = self.user_balances.insert(&owner_id, &0).unwrap_or(0);
+        let amount = self.user_balances.remove(&owner_id).unwrap_or(0);
 
         //if that excess to withdraw is > 0, we transfer the amount to the user.
         if amount > 0 {

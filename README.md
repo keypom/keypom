@@ -337,7 +337,7 @@ more use-cases and possibilities. Let's look at some use cases to see how fungib
 #### Recurring Payments
 
 Recurring payments are quite a common situation. Let's say you need to send someone $50 USDC every week. You
-could create a key with 5 claims that has a claim_interval` of 1 week. You would then pre-load maybe the
+could create a key with 5 uses that has a claim_interval` of 1 week. You would then pre-load maybe the
 first week's deposit of $50 USDC and register 1 use or you could send $500 USDC for the first 10 weeks. At that
 point, you would simply hand over the key to the user and they can claim once a week.
 
@@ -731,7 +731,7 @@ Alice gives Bob Key A and he would be able to claim it 3 times with no password 
 
 ### Key D
 Alice gives Charlie Key D and he would be able to claim it 3 times with the hashed global key password: `hash("key_d_base_password" + key_d_public_key)`.
-When Charlie claims the key, he would input the password `hash("key_d_base_password" + key_d_public_key)` and the contract would hash that and check to see
+When Charlie uses the key, he would input the password `hash("key_d_base_password" + key_d_public_key)` and the contract would hash that and check to see
 if it matches what is stored on-chain (which it does).
 
 If anyone tried to look at what Charlie passes in through the explorer, it wouldn't work since his hash contains the public key for key D and as such it is only
@@ -752,7 +752,7 @@ hash(hash("keys_bc_base_password" + key_b_public_key + "0")) == hash(hash("keys_
 
 Which is incorrect and the key would not be claimed.
 
-Once Eve claims the key 2 times, the last claim is not password protected and she's free to claim it.
+Once Eve uses the key 2 times, the last claim is not password protected and she's free to claim it.
 
 Key C is similar to Key B except that it only has 1 password for the first use.
 
@@ -969,7 +969,7 @@ pub struct JsonDrop {
     pub config: Option<DropConfig>,
     // Metadata for the drop
     pub metadata: Option<DropMetadata>,
-    // How many claims
+    // How many uses are registered
     pub registered_uses: u64,
     // Ensure this drop can only be used when the function has the required gas to attach
     pub required_gas: Gas,

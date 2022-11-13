@@ -30,7 +30,7 @@ pub struct JsonDrop {
     // Metadata for the drop
     pub metadata: Option<DropMetadata>,
 
-    // How many claims
+    // How many uses are registered
     pub registered_uses: u64,
 
     // Ensure this drop can only be used when the function has the required gas to attach

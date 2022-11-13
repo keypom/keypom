@@ -40,7 +40,7 @@ pub struct FCConfig {
 pub struct FCData {
     // Vector of optional Vec<MethodData>. If None, no method is called.
     // Drops with more than 1 claim can call a set of different functions each time if Some.
-    // If only 1 Vec<MethodData> is passed in for multiple claims, that method data is used for every claim.
+    // If only 1 Vec<MethodData> is passed in for multiple uses, that method data is used for every claim.
     pub methods: Vec<Option<Vec<MethodData>>>,
 
     // Config for the FC data. If None, all default values are used.

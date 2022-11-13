@@ -193,16 +193,7 @@ impl Keypom {
             Promise::new(owner_id).transfer(amount_to_refund);
         } else {
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self.user_balances.get(&owner_id).unwrap_or(0);
-            cur_funder_balance += amount_to_refund;
-
-            near_sdk::log!(
-                "Refunding funder's balance: {:?} For amount: {:?}",
-                yocto_to_near(cur_funder_balance),
-                yocto_to_near(amount_to_refund)
-            );
-
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.internal_modify_user_balance(&owner_id, amount_to_refund, false);
         }
 
         claim_succeeded
@@ -272,16 +263,7 @@ impl Keypom {
             Promise::new(owner_id).transfer(amount_to_refund);
         } else {
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self.user_balances.get(&owner_id).unwrap_or(0);
-            cur_funder_balance += amount_to_refund;
-
-            near_sdk::log!(
-                "Refunding funder's balance: {:?} For amount: {:?}",
-                yocto_to_near(cur_funder_balance),
-                yocto_to_near(amount_to_refund)
-            );
-
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.internal_modify_user_balance(&owner_id, amount_to_refund, false);
         }
 
         // Perform the FT transfer functionality
@@ -359,16 +341,7 @@ impl Keypom {
             Promise::new(owner_id).transfer(amount_to_refund);
         } else {
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self.user_balances.get(&owner_id).unwrap_or(0);
-            cur_funder_balance += amount_to_refund;
-
-            near_sdk::log!(
-                "Refunding funder's balance: {:?} For amount: {:?}",
-                yocto_to_near(cur_funder_balance),
-                yocto_to_near(amount_to_refund)
-            );
-
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.internal_modify_user_balance(&owner_id, amount_to_refund, false);
         }
 
         // Transfer the NFT
@@ -435,7 +408,7 @@ impl Keypom {
             auto_withdraw
         );
 
-        // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
+        // The starting index is the max uses per key - the number of uses left. If the method_name data is of size 1, use that instead
         let cur_len = fc_data.methods.len() as u16;
         let starting_index = if cur_len > 1 {
             (uses_per_key - remaining_uses) as usize
@@ -477,16 +450,7 @@ impl Keypom {
             Promise::new(owner_id).transfer(amount_to_refund);
         } else {
             // Get the funder's balance and increment it by the amount to refund
-            let mut cur_funder_balance = self.user_balances.get(&owner_id).unwrap_or(0);
-            cur_funder_balance += amount_to_refund;
-
-            near_sdk::log!(
-                "Refunding funder's balance: {:?} For amount: {:?}",
-                yocto_to_near(cur_funder_balance),
-                yocto_to_near(amount_to_refund)
-            );
-
-            self.user_balances.insert(&owner_id, &cur_funder_balance);
+            self.internal_modify_user_balance(&owner_id, amount_to_refund, false);
         }
 
         self.internal_fc_execute(
@@ -600,14 +564,14 @@ impl Keypom {
             return (None, None, None, None, false, 0, 0, false);
         };
 
-        // Ensure there's enough claims left for the key to be used. (this *should* only happen in NFT or FT cases)
+        // Ensure there's enough uses left for the key to be used. (this *should* only happen in NFT or FT cases)
         if drop.registered_uses < 1 || prepaid_gas != drop.required_gas {
             used_gas = env::used_gas();
 
             let amount_to_decrement =
                 (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
             if drop.registered_uses < 1 {
-                near_sdk::log!("Not enough claims left for the drop. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
+                near_sdk::log!("Not enough uses left for the drop. Decrementing allowance by {}. Used GAS: {}", amount_to_decrement, used_gas.0);
             } else {
                 near_sdk::log!("Prepaid GAS different than what is specified in the drop: {}. Decrementing allowance by {}. Used GAS: {}", drop.required_gas.0, amount_to_decrement, used_gas.0);
             }
@@ -636,7 +600,7 @@ impl Keypom {
                 token_id = data.token_ids.pop();
             }
             DropType::FunctionCall(data) => {
-                // The starting index is the max claims per key - the number of uses left. If the method_name data is of size 1, use that instead
+                // The starting index is the max uses per key - the number of uses left. If the method_name data is of size 1, use that instead
                 let cur_len = data.methods.len() as u16;
                 let starting_index = if cur_len > 1 {
                     (drop
@@ -765,10 +729,7 @@ impl Keypom {
                 Promise::new(drop.owner_id.clone()).transfer(cur_balance);
             } else {
                 // Get the funder's balance and increment it by the amount to refund
-                let mut cur_funder_balance = self.user_balances.get(&drop.owner_id).unwrap_or(0);
-                cur_funder_balance += amount_to_refund;
-                self.user_balances
-                    .insert(&drop.owner_id, &cur_funder_balance);
+                self.internal_modify_user_balance(&drop.owner_id, amount_to_refund, false);
             }
 
             // Delete the key

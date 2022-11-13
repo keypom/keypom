@@ -31,7 +31,7 @@ impl Keypom {
             "only drop funder can delete keys"
         );
 
-        // Get the max claims per key. Default to 1 if not specified in the drop config.
+        // Get the max uses per key. Default to 1 if not specified in the drop config.
         let uses_per_key = drop
             .config
             .clone()
@@ -66,8 +66,8 @@ impl Keypom {
         let keys_to_delete;
         let mut total_allowance_left = 0;
 
-        // Get the total number of claims and none FCs across all keys being deleted
-        let mut total_num_claims_refunded = 0;
+        // Get the total number of uses and none FCs across all keys being deleted
+        let mut total_num_uses_refunded = 0;
         let mut total_num_none_fcs = 0;
         let mut total_fc_deposits = 0;
         // If the user passed in public keys, loop through and remove them from the drop
@@ -92,15 +92,15 @@ impl Keypom {
                     k.clear();
                 }
 
-                total_num_claims_refunded += key_info.remaining_uses;
+                total_num_uses_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
-                // Claims and get the deposits left along with the total number of None FCs
+                // Uses and get the deposits left along with the total number of None FCs
                 if let DropType::FunctionCall(data) = &drop.drop_type {
                     let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
-                    // For all the claims. In this case, we need to tally all the deposits for each claim.
+                    // For all the uses. In this case, we need to tally all the deposits for each claim.
                     if uses_per_key > 1 && num_fcs == 1 {
                         let attached_deposit = data
                             .methods
@@ -167,16 +167,16 @@ impl Keypom {
                 - TOTAL Storage freed
                 - Total access key allowance for EACH key
                 - Access key storage for EACH key
-                - Balance for each key * (number of claims - claims with None for FC Data)
+                - Balance for each key * (number of uses - uses with None for FC Data)
 
                 Optional:
                 - total FC deposits
-                - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+                - FT storage registration cost for each key * uses (calculated in resolve storage calculation function)
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_claims_refunded - total_num_none_fcs) as u128;
-            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_refunded as u128;
+                drop.deposit_per_use * (total_num_uses_refunded - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
             total_refund_amount = total_storage_freed
                 + total_allowance_left
@@ -193,7 +193,7 @@ impl Keypom {
                 total deposits: {}
                 total fc deposits: {}
                 total ft costs: {}
-                total num claims left: {}
+                total num uses left: {}
                 total num none FCs {}
                 len: {}",
                 yocto_to_near(total_refund_amount),
@@ -203,7 +203,7 @@ impl Keypom {
                 yocto_to_near(total_deposits),
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
-                total_num_claims_refunded,
+                total_num_uses_refunded,
                 total_num_none_fcs,
                 len
             );
@@ -223,15 +223,15 @@ impl Keypom {
                 if let Some(mut k) = key_info.pw_per_use {
                     k.clear();
                 }
-                total_num_claims_refunded += key_info.remaining_uses;
+                total_num_uses_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
-                // Claims and get the deposits left along with the total number of None FCs
+                // Uses and get the deposits left along with the total number of None FCs
                 if let DropType::FunctionCall(data) = &drop.drop_type {
                     let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
-                    // For all the claims. In this case, we need to tally all the deposits for each claim.
+                    // For all the uses. In this case, we need to tally all the deposits for each claim.
                     if uses_per_key > 1 && num_fcs == 1 {
                         let attached_deposit = data
                             .methods
@@ -297,16 +297,16 @@ impl Keypom {
                 - TOTAL Storage freed
                 - Total access key allowance for EACH key
                 - Access key storage for EACH key
-                - Balance for each key * (number of claims - claims with None for FC Data)
+                - Balance for each key * (number of uses - uses with None for FC Data)
 
                 Optional:
                 - total FC deposits
-                - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+                - FT storage registration cost for each key * uses (calculated in resolve storage calculation function)
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_claims_refunded - total_num_none_fcs) as u128;
-            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_refunded as u128;
+                drop.deposit_per_use * (total_num_uses_refunded - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
             total_refund_amount = total_storage_freed
                 + total_allowance_left
@@ -323,7 +323,7 @@ impl Keypom {
                 total deposits: {}
                 total fc deposits: {}
                 total ft costs: {}
-                total num claims left: {}
+                total num uses left: {}
                 total num none FCs {}
                 len: {}",
                 yocto_to_near(total_refund_amount),
@@ -333,22 +333,13 @@ impl Keypom {
                 yocto_to_near(total_deposits),
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
-                total_num_claims_refunded,
+                total_num_uses_refunded,
                 total_num_none_fcs,
                 len
             );
         }
 
-        // Refund the user
-        let mut cur_balance = self.user_balances.get(&owner_id).unwrap_or(0);
-        near_sdk::log!(
-            "Refunding user {} old balance: {}. Total allowance left: {}",
-            yocto_to_near(total_refund_amount),
-            yocto_to_near(cur_balance),
-            yocto_to_near(total_allowance_left)
-        );
-        cur_balance += total_refund_amount;
-        self.user_balances.insert(&owner_id, &cur_balance);
+        self.internal_modify_user_balance(&owner_id, total_refund_amount, false);
 
         // Loop through and delete keys
         for key in &keys_to_delete {
@@ -374,14 +365,14 @@ impl Keypom {
             "only drop funder can delete keys"
         );
 
-        // Get the number of claims registered for the drop.
-        let claims_registered = drop.registered_uses;
-        require!(claims_registered > 0, "no claims left to unregister");
+        // Get the number of uses registered for the drop.
+        let uses_registered = drop.registered_uses;
+        require!(uses_registered > 0, "no uses left to unregister");
 
-        // Get the claims to refund. If not specified, this is the number of claims currently registered.
-        let num_to_refund = assets_to_refund.unwrap_or(claims_registered);
+        // Get the uses to refund. If not specified, this is the number of uses currently registered.
+        let num_to_refund = assets_to_refund.unwrap_or(uses_registered);
         require!(
-            num_to_refund <= claims_registered,
+            num_to_refund <= uses_registered,
             "can only refund less than or equal to the amount of keys registered"
         );
 
