@@ -35,7 +35,6 @@ export type FTData = {
     sender_id: string;
     contract_id: string;
     balance_per_use: string;
-    ft_storage: string;
 }
 
 export type FCData = {
