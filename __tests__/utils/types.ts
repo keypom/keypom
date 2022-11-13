@@ -2,9 +2,12 @@ export type JsonDrop = {
     drop_id: string;
     owner_id: string,
     deposit_per_use: string;
-    drop_type: DropType;
-    config: DropConfig | null;
-    metadata: string | null;
+    simple?: SimpleData;
+    nft?: JsonNFTData;
+    ft?: FTData;
+    fc?: FCData;
+    config?: DropConfig;
+    metadata?: string;
     registered_uses: number;
     required_gas: string;
     next_key_id: number;
@@ -19,15 +22,13 @@ export type JsonToken = {
     royalty: Record<string, number> | null;
 }
 
-interface DropType {
-    FunctionCall: FCData;
-    NonFungibleToken: JsonNFTData;
-    FungibleToken: FTData;
-}
-
 export type JsonNFTData = {
     sender_id: string;
     contract_id: string;
+}
+
+export type SimpleData = {
+    lazy_register?: boolean
 }
 
 export type FTData = {
@@ -39,14 +40,14 @@ export type FTData = {
 
 export type FCData = {
     methods: (MethodData | null)[]
-    config: FCConfig | null;
+    config?: FCConfig;
 }
 
 export type FCConfig = {
-    account_id_field: string | null;
-    drop_id_field: string | null;
-    key_id_field: string | null;
-    attached_gas: string | null;
+    account_id_field?: string;
+    drop_id_field?: string;
+    key_id_field?: string;
+    attached_gas?: string
 }
 
 export type MethodData = {
@@ -76,14 +77,25 @@ export type KeyInfo = {
     key_id: number;
 }
 
+export type TimeConfig = {
+    start?: number;
+    end?: number;
+    throttle?: number;
+    interval?: number;
+}
+
+export type UsageConfig = {
+    permissions?: string;
+    refund_deposit?: boolean;
+    auto_delete_drop?: boolean;
+    auto_withdraw?: boolean;
+}
+
 export type DropConfig = {
-    uses_per_key: number | null;
-    start_timestamp: number | null;
-    throttle_timestamp: number | null;
-    on_claim_refund_deposit: boolean | null;
-    claim_permission: string | null;
-    drop_root: string | null;
-    delete_on_empty: boolean | null;
+    uses_per_key?: number;
+    time?: TimeConfig;
+    usage?: UsageConfig;
+    root_account_id?: string;
 }
 
 export type TokenMetadata = {
