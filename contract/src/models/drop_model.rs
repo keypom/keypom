@@ -65,7 +65,7 @@ pub struct Drop {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct DropConfig {
-    // How many uses can each key have. If None, default to 1.
+    /// How many uses can each key have before it's deleted. If None, default to 1.
     pub uses_per_key: Option<u64>,
 
     // Any time based configurations
@@ -74,7 +74,10 @@ pub struct DropConfig {
     // Any usage specific configurations
     pub usage: Option<UsageConfig>,
 
-    // Root account that all sub-accounts will default to. If None, default to the global drop root.
+    /// Override the global root account that sub-accounts will have (near or testnet). This allows
+    /// users to create specific drops that can create sub-accounts of a predefined root.
+    /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
+    /// be `ACCOUNT.fayyr.near`
     pub root_account_id: Option<AccountId>,
 }
 
