@@ -1,4 +1,5 @@
 use near_sdk::GasWeight;
+use std::cmp;
 
 use crate::*;
 
@@ -143,9 +144,36 @@ impl Keypom {
                 total_allowance_left += key_info.allowance;
             }
 
+            // Keep track of the actual number of uses to refund
+            let mut num_uses_to_refund = total_num_uses_refunded;
+
+            // If the drop type is simple and has lazy registration, we need to figure out how many uses will be refunded
+            if let DropType::simple(data) = &drop.drop_type {
+                if data.lazy_register.unwrap_or(false) {
+                    let num_registered = drop.registered_uses;
+
+                    num_uses_to_refund = cmp::min(total_num_uses_refunded, num_registered);
+                    let num_uses_not_refunded = total_num_uses_refunded - num_uses_to_refund;
+                    drop.registered_uses = num_registered - num_uses_to_refund;
+
+                    near_sdk::log!(
+                        "Uses to refund {} Uses not to refund {} New registered uses: {}",
+                        num_uses_to_refund, num_uses_not_refunded, num_registered - num_uses_to_refund
+                    );
+                }
+            }
+
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
+                // If there are any excess uses, refund them since the drop is being deleted
+                if let DropType::simple(data) = &drop.drop_type {
+                    if data.lazy_register.unwrap_or(false) {
+                        num_uses_to_refund += drop.registered_uses;
+                        near_sdk::log!("Refunding {} excess uses", drop.registered_uses);
+                    }
+                }
+
                 self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
@@ -175,7 +203,7 @@ impl Keypom {
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_uses_refunded - total_num_none_fcs) as u128;
+                drop.deposit_per_use * (num_uses_to_refund - total_num_none_fcs) as u128;
             let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
             total_refund_amount = total_storage_freed
@@ -191,6 +219,7 @@ impl Keypom {
                 allowance left: {}
                 access key storage {}
                 total deposits: {}
+                num uses refunded: {}
                 total fc deposits: {}
                 total ft costs: {}
                 total num uses left: {}
@@ -201,6 +230,7 @@ impl Keypom {
                 yocto_to_near(total_allowance_left),
                 yocto_to_near(total_access_key_storage),
                 yocto_to_near(total_deposits),
+                num_uses_to_refund,
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
                 total_num_uses_refunded,
@@ -273,9 +303,37 @@ impl Keypom {
                 total_allowance_left += key_info.allowance;
             }
 
+            // Keep track of the actual number of uses to refund
+            let mut num_uses_to_refund = total_num_uses_refunded;
+
+            // If the drop type is simple and has lazy registration, we need to figure out how many uses will be refunded
+            if let DropType::simple(data) = &drop.drop_type {
+                if data.lazy_register.unwrap_or(false) {
+                    let num_registered = drop.registered_uses;
+
+                    num_uses_to_refund = cmp::min(total_num_uses_refunded, num_registered);
+                    let num_uses_not_refunded = total_num_uses_refunded - num_uses_to_refund;
+                    drop.registered_uses = num_registered - num_uses_to_refund;
+
+                    near_sdk::log!(
+                        "Uses to refund {} Uses not to refund {} New registered uses: {}",
+                        num_uses_to_refund, num_uses_not_refunded, num_registered - num_uses_to_refund
+                    );
+                }
+            }
+
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
+
+                // If there are any excess uses, refund them since the drop is being deleted
+                if let DropType::simple(data) = &drop.drop_type {
+                    if data.lazy_register.unwrap_or(false) {
+                        num_uses_to_refund += drop.registered_uses;
+                        near_sdk::log!("Refunding {} excess uses", drop.registered_uses);
+                    }
+                }
+
                 self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
@@ -305,7 +363,7 @@ impl Keypom {
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_uses_refunded - total_num_none_fcs) as u128;
+                drop.deposit_per_use * (num_uses_to_refund - total_num_none_fcs) as u128;
             let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
             total_refund_amount = total_storage_freed
@@ -321,6 +379,7 @@ impl Keypom {
                 allowance left: {}
                 access key storage {}
                 total deposits: {}
+                num uses refunded: {}
                 total fc deposits: {}
                 total ft costs: {}
                 total num uses left: {}
@@ -331,6 +390,7 @@ impl Keypom {
                 yocto_to_near(total_allowance_left),
                 yocto_to_near(total_access_key_storage),
                 yocto_to_near(total_deposits),
+                num_uses_to_refund,
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
                 total_num_uses_refunded,
