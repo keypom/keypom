@@ -696,7 +696,7 @@ passwords_per_key: Some(vec![
 The passwords for Key B and Key C will be passed in as such:
 
 ```rust
-passwords_per_key: Some(vec![
+passwords_per_use: Some(vec![
     None, // Key A
 
     // Key B
