@@ -56,7 +56,6 @@
 
 # About
 
-<table>
 <tr>
 <td>
 
