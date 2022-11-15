@@ -1,14 +1,4 @@
-use near_sdk::collections::Vector;
-
 use crate::*;
-
-/// Keep track of nft data. This is stored on the contract
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct NFTData {
-    pub sender_id: AccountId,
-    pub contract_id: AccountId,
-    pub token_ids: Vector<String>,
-}
 
 #[near_bindgen]
 impl Keypom {
@@ -21,7 +11,7 @@ impl Keypom {
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
-        if let DropType::NonFungibleToken(mut nft_data) = drop.drop_type {
+        if let DropType::nft(mut nft_data) = drop.drop_type {
             let mut token_ids = nft_data.token_ids;
 
             require!(
@@ -43,7 +33,7 @@ impl Keypom {
             near_sdk::log!("drop.registered_uses {}", drop.registered_uses);
 
             // Add the nft data back with the updated set
-            drop.drop_type = DropType::NonFungibleToken(nft_data);
+            drop.drop_type = DropType::nft(nft_data);
 
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
@@ -88,7 +78,7 @@ impl Keypom {
             let mut drop = self.drop_for_id.get(&drop_id.0).unwrap();
             drop.registered_uses += token_ids.len() as u64;
 
-            if let DropType::NonFungibleToken(nft_data) = &mut drop.drop_type {
+            if let DropType::nft(nft_data) = &mut drop.drop_type {
                 // Loop through and add token IDs back into the vector
                 for token in &token_ids {
                     nft_data.token_ids.push(token);

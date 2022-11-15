@@ -12,6 +12,38 @@ export const CONTRACT_METADATA = {
   "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
 }
 
+export async function getDropSupplyForOwner(
+  keypom: NearAccount,
+  ownerId: string
+): Promise<number> {
+  const dropSupplyForOwner: number = await keypom.view('get_drop_supply_for_owner', {account_id: ownerId});
+  return dropSupplyForOwner;
+}
+
+export async function getKeySupplyForDrop(
+  keypom: NearAccount,
+  dropId: string
+): Promise<number> {
+  const getKeySupplyForDrop: number = await keypom.view('get_key_supply_for_drop', {drop_id: dropId});
+  return getKeySupplyForDrop;
+}
+
+export async function getKeyInformation(
+  keypom: NearAccount,
+  publicKey: string
+): Promise<JsonKeyInfo> {
+  const keyInformation: JsonKeyInfo = await keypom.view('get_key_information', {key: publicKey});
+  return keyInformation;
+}
+
+export async function getDropInformation(
+  keypom: NearAccount,
+  dropId: string
+): Promise<JsonDrop> {
+  const dropInfo: JsonDrop = await keypom.view('get_drop_information', {drop_id: dropId});
+  return dropInfo;
+}
+
 export async function generateKeyPairs(
   numKeys: number,
 ): Promise<{ keys: KeyPair[]; publicKeys: string[] }> {

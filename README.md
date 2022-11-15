@@ -56,7 +56,6 @@
 
 # About
 
-<table>
 <tr>
 <td>
 
@@ -130,7 +129,8 @@ A drop can be one of four different types:
 3. Fungible Token drop.
 4. Function Call drop.
 
-## Shared Drop Customization
+
+# Shared Drop Customization
 
 While each *type* of drop has its own set of customizable features, there are some that are shared by **all drops**
 These are outlined below.
@@ -157,54 +157,72 @@ Within the config, there are a suite of features that can be customized as well:
 /// How many uses can each key have before it's deleted. If None, default to 1.
 pub uses_per_key: Option<u64>,
 
-/// Minimum block timestamp before keys can be used. If None, keys can be used immediately
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub start_timestamp: Option<u64>,
-
-/// Block timestamp that keys must be before. If None, keys can be used indefinitely
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub end_timestamp: Option<u64>,
-
-/// How often can a key be used. This specifies the time between each use.
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub throttle_timestamp: Option<u64>,
-
-/// Interval of time after the `start_timestamp` that must pass before a key can be used.
-/// If multiple intervals pass, the key can be used multiple times. This has nothing to do
-/// With the throttle timestamp. It only pertains to the start timestamp and the current 
-/// timestamp. The last_used timestamp is not taken into account.
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub claim_interval: Option<u64>,
-
-/// If claim is called, refund the `deposit_per_use` to the owner's account directly. If None,
-/// default to false.
-pub on_claim_refund_deposit: Option<bool>,
-
-/// What permissions does the key have? Can it call both `claim` and `create_account_and_claim`
-/// or just one of the two?
-/// This defaults to the key being able to call both methods.
-pub claim_permission: Option<ClaimPermissions>,
-
 /// Override the global root account that sub-accounts will have (near or testnet). This allows
 /// users to create specific drops that can create sub-accounts of a predefined root.
 /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
 /// be `ACCOUNT.fayyr.near`
-pub drop_root: Option<AccountId>,
+pub root_account_id: Option<AccountId>,
 
-/// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
-/// Must be overwritten
-pub delete_on_empty: Option<bool>,
+// Any time based configurations
+pub time: Option<TimeConfig>,
 
-/// When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
-pub auto_withdraw: Option<bool>,
+// Any usage specific configurations
+pub usage: Option<UsageConfig>,
+```
+
+## Time Based Customizations
+
+Keypom allows users to customize time-based configurations as outlined below.
+
+```rust
+pub struct TimeConfig {
+    /// Minimum block timestamp before keys can be used. If None, keys can be used immediately
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub start: Option<u64>,
+
+    /// Block timestamp that keys must be before. If None, keys can be used indefinitely
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub end: Option<u64>,
+
+    /// Time interval between each key use. If None, there is no delay between key uses.
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub throttle: Option<u64>,
+
+    /// Interval of time after the `start_timestamp` that must pass before a key can be used.
+    /// If multiple intervals pass, the key can be used multiple times. This has nothing to do
+    /// With the throttle timestamp. It only pertains to the start timestamp and the current
+    /// timestamp. The last_used timestamp is not taken into account.
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub interval: Option<u64>,
+}
+```
+
+## Usage Based Customizations
+
+In addition to time-based configurations, the funder can customize behaviors pertaining to
+key usages.
+
+```rust
+pub struct UsageConfig {
+    /// Can the access key only call the claim method_name? Default to both method_name callable
+    pub permissions: Option<ClaimPermissions>,
+    /// If claim is called, refund the deposit to the owner's balance. If None, default to false.
+    pub refund_deposit: Option<bool>,
+    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
+    /// Must be overwritten
+    pub auto_delete_drop: Option<bool>,
+    /// When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
+    pub auto_withdraw: Option<bool>,
+}
 ```
 
 ## Simple Drops
 
 The most basic type of drop is the simple kind. Any keys that are part of a simple drop can
 only be used for 1 thing: **transferring $NEAR**. Once the key is claimed, the claiming account
-will receive the $NEAR specified in the `deposit_per_use`. Simple drops are a great way to send $NEAR to claiming accounts while not storing a lot
-of information on the contract. Below are a couple use cases.
+will receive the $NEAR specified in the `deposit_per_use`. Simple drops are a great way to send 
+$NEAR to claiming accounts while not storing a lot of information on the contract. Below are a 
+couple use cases.
 
 ### Backend Servers
 
@@ -217,10 +235,10 @@ receive 10 $NEAR.
 ### Recurring Payments
 
 Recurring payments are quite a common situation. If you need to send someone 10 $NEAR once a
-month for 6 months, you could create a simple drop that has a `claim_interval` of 1 month with
-a `start_timestamp` of next week. Everytime the key is used, 10 $NEAR is sent to the account. If
-the contractor missed a month's payment, they can claim the key late but can never use the key more
-than what is intended.
+month for 6 months, you could create a simple drop that has a usage config with an `interval` of 1 month.
+In addition, you can set the time based config to have a `start` of  next week. Everytime the key is used, 
+10 $NEAR is sent to the account. If the contractor missed a month's payment, they can claim the key late but 
+can never use the key more than what is intended.
 
 <p align="center">
   <img src="assets/flowcharts/recurring_payments.png" style="width: 65%; height: 65%" alt="Logo">
@@ -230,10 +248,21 @@ than what is intended.
 ### Quick Onboarding
 
 If you need to quickly onboard users onto NEAR, you could create a simple drop with a
-small amount of $NEAR (enough to create a wallet) and set the claim permission to be
-`CreateAccountAndClaim`. This means that the key can only be used to create accounts.
+small amount of $NEAR (enough to create a wallet) and set the usage's permissions to be
+`create_account_and_claim`. This means that the key can only be used to create accounts.
 You can then add keys as you wish to the drop and give them out to users so they can create
 accounts and be onboarded onto NEAR.
+
+### Lazy Registering Keys
+
+A unique use-case for simple drops is the ability to lazy register key uses. This allows the funder to batch
+create many keys at a time while only paying for basic fees such as the storage used and the key's allowance.
+The funder would **not** need to pay for the `deposit_per_use` of each key up front. They can instead register individual
+key uses as they are needed.
+
+With this scenario, if an organization wanted to onboard users with a linkdrop valued at 10 $NEAR, they could create 1000 keys
+without needing to pay 1000 * 10 = 10,000 $NEAR up-front. They could then register keys on an as-needed basis. If they need to
+register 25 keys at a time, they can do this by simply calling the `register_uses` function.
 
 ## Non-Fungible Token Drops
 
@@ -249,9 +278,9 @@ introduces some customization and uniqueness to the use-cases.
 ### How does it work?
 
 Every drop has a field known as `registered_uses`. This tells the contract how many uses the
-drop has across all its keys. For simple drops, this field doesn't matter since all the uses
-are paid for up-front when the drop is created or when keys are added. With NFT drops, however,
-there is a 2 step process:
+drop has across all its keys. For basic simple drops that are *not* lazy registering keys, this field 
+doesn't matter since all the uses are paid for up-front when the drop is created or when keys are added. 
+With NFT drops, however, there is a 2 step process:
 - Firstly, the drop is created and all the $NEAR required is pre-paid for. This is the same as
 simple drops, however, the `registered_uses` are set to 0.
 - Once the drop is created, the owner must send the contract the NFTs in order for keys to be
@@ -299,9 +328,9 @@ and everytime a key is used, the `registered_uses` will decrement and the "total
 ### How does it work?
 
 As mentioned in the NFT section, every drop has a field known as `registered_uses`. This tells the contract
-how many uses the drop has across all its keys. For simple drops, this field doesn't matter since all the uses
-are paid for up-front when the drop is created or when keys are added. With FT drops, however,
-there is a 2 step process:
+how many uses the drop has across all its keys. For basic simple drops that are *not* lazy registering keys, this field 
+doesn't matter since all the uses are paid for up-front when the drop is created or when keys are added.
+With FT drops, however, there is a 2 step process:
 - Firstly, the drop is created and all the $NEAR required is pre-paid for. This is the same as
 simple drops, however, the `registered_uses` are set to 0.
 - Once the drop is created, the owner must send the contract the FTs in order for keys to be
@@ -337,7 +366,7 @@ more use-cases and possibilities. Let's look at some use cases to see how fungib
 #### Recurring Payments
 
 Recurring payments are quite a common situation. Let's say you need to send someone $50 USDC every week. You
-could create a key with 5 uses that has a claim_interval` of 1 week. You would then pre-load maybe the
+could create a key with 5 uses that has a time config `interval` of 1 week. You would then pre-load maybe the
 first week's deposit of $50 USDC and register 1 use or you could send $500 USDC for the first 10 weeks. At that
 point, you would simply hand over the key to the user and they can claim once a week.
 
@@ -358,10 +387,10 @@ list. You can also give away QR codes at events that contain a new fungible toke
 simply create a FT drop and pre-load it with the FT of your choice. In addition, you can give it 0.02 $NEAR for
 new wallets that are created.
 
-You can pair this with setting the `on_claim_refund_deposit` flag to true which would make it so that if anyone claims
+You can pair this with setting the usage config's `refund_deposit` flag to true which would make it so that if anyone claims
 the fungible tokens and they *already have a wallet*, it will automatically refund you the 0.02 $NEAR. That money should
 only be used for the creation of new wallets. Since your focus is on the fungible tokens, you don't want to **force users**
-to create a new wallet if they have one already by specifying the claim permission to be `CreateAccountAndClaim` but instead,
+to create a new wallet if they have one already by specifying the usage permissions to be `create_account_and_claim` but instead,
 you want to be refunded in case they do.
 
 ## Function Call Drops
@@ -441,7 +470,7 @@ It's important to note that the Gas available is split evenly between *all* the 
 you might run into issues with not having enough Gas. You're responsible for ensuring that this doesn't happen.
 
 The vector of `MethodData` is *optional* for each key use. If a key use has `null` rather than `Some(Vector<MethodData>)`,
-it will decrement the uses and work as normal such that the `throttle_timestamp, `start_timestamp` etc. are enforced. The only
+it will decrement the uses and work as normal such that the `timestamp, `start` etc. are enforced. The only
 difference is that after the key uses are decremented and these checks are performed, the execution **finishes early**. The null
 case does **not** create an account or send *any* funds. It doesn't invoke any function calls and simply *returns once the
 checks are done*. This makes the null case act as a "burner" where you disregard any logic. This has many uses which will
@@ -697,7 +726,7 @@ passwords_per_key: Some(vec![
 The passwords for Key B and Key C will be passed in as such:
 
 ```rust
-passwords_per_key: Some(vec![
+passwords_per_use: Some(vec![
     None, // Key A
 
     // Key B

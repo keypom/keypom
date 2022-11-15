@@ -33,7 +33,8 @@ impl Keypom {
         let account_to_transfer = if drop_data
             .config
             .clone()
-            .and_then(|c| c.on_claim_refund_deposit)
+            .and_then(|c| c.usage)
+            .and_then(|u| u.refund_deposit)
             .unwrap_or(false)
             == true
         {
@@ -105,7 +106,7 @@ impl Keypom {
         let root_account = drop_data
             .config
             .clone()
-            .and_then(|c| c.drop_root)
+            .and_then(|c| c.root_account_id)
             .unwrap_or(self.root_account.clone());
 
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
@@ -596,10 +597,10 @@ impl Keypom {
         // Default the should continue variable to true. If the next FC method_name is None, we set it to false
         let mut should_continue = true;
         match &mut drop.drop_type {
-            DropType::NonFungibleToken(data) => {
+            DropType::nft(data) => {
                 token_id = data.token_ids.pop();
             }
-            DropType::FunctionCall(data) => {
+            DropType::fc(data) => {
                 // The starting index is the max uses per key - the number of uses left. If the method_name data is of size 1, use that instead
                 let cur_len = data.methods.len() as u16;
                 let starting_index = if cur_len > 1 {
@@ -661,7 +662,8 @@ impl Keypom {
             if drop
                 .config
                 .clone()
-                .and_then(|c| c.delete_on_empty)
+                .and_then(|c| c.usage)
+                .and_then(|u| u.auto_delete_drop)
                 .unwrap_or(false)
             {
                 near_sdk::log!("Drop is empty and delete_on_empty is set to true. Deleting drop");
@@ -705,7 +707,8 @@ impl Keypom {
             let auto_withdraw = drop
                 .config
                 .clone()
-                .and_then(|c| c.auto_withdraw)
+                .and_then(|c| c.usage)
+                .and_then(|u| u.auto_withdraw)
                 .unwrap_or(false);
 
             // Get the number of drops still left for the owner

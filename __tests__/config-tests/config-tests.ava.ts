@@ -1,7 +1,7 @@
 import anyTest, { TestFn } from "ava";
-import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
-import { assertBalanceChange, CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
-import { JsonKeyInfo } from "../utils/types";
+import { NEAR, NearAccount, Worker } from "near-workspaces";
+import { assertBalanceChange, CONTRACT_METADATA, generateKeyPairs, getDropSupplyForOwner, getKeyInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { DropConfig, JsonKeyInfo } from "../utils/types";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -70,8 +70,10 @@ test('Testing Delete On Empty Config', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let config = {
-        delete_on_empty: true,
+    let config: DropConfig = {
+        usage: {
+            auto_delete_drop: true
+        }
     }
 
     // Creating the drop that should be deleted
@@ -109,13 +111,14 @@ test('Testing Delete On Empty Config', async t => {
     console.log('aliBal: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("2").toString());
 
-    const dropSupplyForOwner = await keypom.view('get_drop_supply_for_owner', {account_id: owner.accountId});
+    
+    const dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
     console.log('dropSupplyForOwner: ', dropSupplyForOwner)
     t.is(dropSupplyForOwner, 1);
 
-    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "1"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    const keySupplyForDrop = await getKeySupplyForDrop(keypom, "1")
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 });
 
 test('Testing Start Timestamp', async t => {
@@ -124,8 +127,10 @@ test('Testing Start Timestamp', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+    let config: DropConfig = {
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+        }
     }
 
     await owner.call(keypom, 'create_drop', {
@@ -154,17 +159,17 @@ test('Testing Start Timestamp', async t => {
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 
     // Wait 30 seconds and call the claim method again
     await new Promise(r => setTimeout(r, 30000));
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 
     aliBal = await ali.availableBalance();
     console.log('aliBal After: ', aliBal.toString())
@@ -177,9 +182,11 @@ test('Testing Throttle Timestamp', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 2,
-        throttle_timestamp: ONE_SECOND_NS * 30,
+        time: {
+            throttle: ONE_SECOND_NS * 30,
+        }
     }
 
     await owner.call(keypom, 'create_drop', {
@@ -209,11 +216,12 @@ test('Testing Throttle Timestamp', async t => {
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("1").toString());
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
 
-    let keyInformation: JsonKeyInfo = await keypom.view('get_key_information', {key: publicKeys[0]});
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
+
+    let keyInformation: JsonKeyInfo = await getKeyInformation(keypom, publicKeys[0]);
     console.log('keyInformation: ', keyInformation)
     t.is(keyInformation.remaining_uses, 1);
 
@@ -221,9 +229,9 @@ test('Testing Throttle Timestamp', async t => {
     await new Promise(r => setTimeout(r, 30000));
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 
     aliBal = await ali.availableBalance();
     console.log('aliBal After: ', aliBal.toString())
@@ -236,8 +244,10 @@ test('Testing On Claim Refund Deposit', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let config = {
-        on_claim_refund_deposit: true,
+    let config: DropConfig = {
+        usage: {
+            refund_deposit: true,
+        }
     }
 
     // Creating the drop that should be deleted
@@ -272,13 +282,13 @@ test('Testing On Claim Refund Deposit', async t => {
     console.log('userBal: ', userBal)
     t.assert(NEAR.parse("1").gte(NEAR.from(userBal)))
 
-    const dropSupplyForOwner = await keypom.view('get_drop_supply_for_owner', {account_id: owner.accountId});
+    const dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
     console.log('dropSupplyForOwner: ', dropSupplyForOwner)
     t.is(dropSupplyForOwner, 1);
 
-    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    const keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 });
 
 test('Testing Custom Drop Root', async t => {
@@ -287,8 +297,8 @@ test('Testing Custom Drop Root', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let config = {
-        drop_root: customRoot.accountId,
+    let config: DropConfig = {
+        root_account_id: customRoot.accountId,
     }
 
     // Creating the drop that points to the custom root
@@ -340,13 +350,15 @@ test('Testing Auto Withdraw', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(4);
-    let config1 = {
+    let config1: DropConfig = {
         uses_per_key: 1,
     }
-    let config2 = {
+    let config2: DropConfig = {
         uses_per_key: 1,
-        auto_withdraw: true,
-        delete_on_empty: true
+        usage: {
+            auto_withdraw: true,
+            auto_delete_drop: true
+        }
     }
 
     await owner.call(keypom, 'create_drop', {
@@ -382,12 +394,9 @@ test('Testing Auto Withdraw', async t => {
     // Delete the first drop
     await owner.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
 
-    let viewFunctions = await queryAllViewFunctions({
-        contract: keypom, 
-        account_id: owner.accountId
-    });
-    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
-    t.is(viewFunctions.dropSupplyForOwner, 0);
+    let dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
+    console.log('dropSupplyForOwner: ', dropSupplyForOwner)
+    t.is(dropSupplyForOwner, 0);
 
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[2]], 
@@ -421,11 +430,9 @@ test('Testing Auto Withdraw', async t => {
     console.log('userBal: ', userBal)
     t.is(userBal, "0");
 
-    viewFunctions = await queryAllViewFunctions({
-        contract: keypom, 
-        account_id: owner.accountId
-    });
-    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
+    dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
+    console.log('dropSupplyForOwner: ', dropSupplyForOwner)
+    t.is(dropSupplyForOwner, 0);
 });
 
 test('Testing Custom Drop ID', async t => {
@@ -516,7 +523,7 @@ test('Testing Valid Config', async t => {
     const { keypom, owner, ali } = t.context.accounts;
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 0,
     }
     try {
@@ -527,8 +534,10 @@ test('Testing Valid Config', async t => {
         },{gas: LARGE_GAS});
     } catch(e) {}
 
-    let config1 = {
-        start_timestamp: 500,
+    let config1: DropConfig = {
+        time: {
+            start: 500,
+        }
     }
     try {
         await owner.call(keypom, 'create_drop', {
@@ -538,8 +547,10 @@ test('Testing Valid Config', async t => {
         },{gas: LARGE_GAS});
     } catch(e) {}
 
-    let config2 = {
-        end_timestamp: 0,
+    let config2: DropConfig = {
+        time: {
+            end: 0,
+        }
     }
     try {
         await owner.call(keypom, 'create_drop', {
@@ -549,10 +560,13 @@ test('Testing Valid Config', async t => {
         },{gas: LARGE_GAS});
     } catch(e) {}
 
-    let config3 = {
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
-        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+    let config3: DropConfig = {
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+        }
     }
+
     try {
         await owner.call(keypom, 'create_drop', {
             public_keys: [], 
@@ -575,8 +589,10 @@ test('Testing End Timestamp', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let config = {
-        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+    let config: DropConfig = {
+        time: {
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+        }
     }
 
     await owner.call(keypom, 'create_drop', {
@@ -585,9 +601,9 @@ test('Testing End Timestamp', async t => {
         config,
     },{gas: LARGE_GAS});
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 2);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 2);
 
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
@@ -605,9 +621,9 @@ test('Testing End Timestamp', async t => {
     // THIS SHOULD PASS
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 
     // Wait 15 seconds
     await new Promise(r => setTimeout(r, 15000));
@@ -617,9 +633,9 @@ test('Testing End Timestamp', async t => {
         await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     } catch(e) {}
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 });
 
 test('Testing End Timestamp Key Drainage', async t => {
@@ -629,8 +645,10 @@ test('Testing End Timestamp Key Drainage', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
-        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+    let config: DropConfig = {
+        time: {
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+        }
     }
 
     await owner.call(keypom, 'create_drop', {
@@ -639,9 +657,9 @@ test('Testing End Timestamp Key Drainage', async t => {
         config,
     },{gas: LARGE_GAS});
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 
     // Wait 5 seconds
     await new Promise(r => setTimeout(r, 5000));
@@ -663,9 +681,9 @@ test('Testing End Timestamp Key Drainage', async t => {
         } catch(e) {}
     }
 
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 });
 
 test('Testing Claim Interval', async t => {
@@ -674,10 +692,12 @@ test('Testing Claim Interval', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 5,
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
-        claim_interval: ONE_SECOND_NS * 10,
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+            interval: ONE_SECOND_NS * 10,
+        }
     }
 
     await owner.call(keypom, 'create_drop', {
@@ -714,9 +734,9 @@ test('Testing Claim Interval', async t => {
         await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     }
 
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: "0"});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 
     aliBal = await ali.availableBalance();
     console.log('aliBal After: ', aliBal.toString())
@@ -729,11 +749,13 @@ test('Testing All Time Based Configs Together', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 5,
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
-        claim_interval: ONE_SECOND_NS * 10,
-        throttle_timestamp: ONE_SECOND_NS * 30
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+            interval: ONE_SECOND_NS * 10,
+            throttle: ONE_SECOND_NS * 30
+        }
     }
 
     await owner.call(keypom, 'create_drop', {

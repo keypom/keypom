@@ -97,54 +97,72 @@ Within the config, there are a suite of features that can be customized as well:
 /// How many uses can each key have before it's deleted. If None, default to 1.
 pub uses_per_key: Option<u64>,
 
-/// Minimum block timestamp before keys can be used. If None, keys can be used immediately
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub start_timestamp: Option<u64>,
-
-/// Block timestamp that keys must be before. If None, keys can be used indefinitely
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub end_timestamp: Option<u64>,
-
-/// How often can a key be used. This specifies the time between each use.
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub throttle_timestamp: Option<u64>,
-
-/// Interval of time after the `start_timestamp` that must pass before a key can be used.
-/// If multiple intervals pass, the key can be used multiple times. This has nothing to do
-/// With the throttle timestamp. It only pertains to the start timestamp and the current
-/// timestamp. The last_used timestamp is not taken into account.
-/// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-pub claim_interval: Option<u64>,
-
-/// If claim is called, refund the `deposit_per_use` to the owner's account directly. If None,
-/// default to false.
-pub on_claim_refund_deposit: Option<bool>,
-
-/// What permissions does the key have? Can it call both `claim` and `create_account_and_claim`
-/// or just one of the two?
-/// This defaults to the key being able to call both methods.
-pub claim_permission: Option<ClaimPermissions>,
-
 /// Override the global root account that sub-accounts will have (near or testnet). This allows
 /// users to create specific drops that can create sub-accounts of a predefined root.
 /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
 /// be `ACCOUNT.fayyr.near`
-pub drop_root: Option<AccountId>,
+pub root_account_id: Option<AccountId>,
 
-/// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
-/// Must be overwritten
-pub delete_on_empty: Option<bool>,
+// Any time based configurations
+pub time: Option<TimeConfig>,
 
-/// When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
-pub auto_withdraw: Option<bool>,
+// Any usage specific configurations
+pub usage: Option<UsageConfig>,
+```
+
+## Time Based Customizations
+
+Keypom allows users to customize time-based configurations as outlined below.
+
+```rust
+pub struct TimeConfig {
+    /// Minimum block timestamp before keys can be used. If None, keys can be used immediately
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub start: Option<u64>,
+
+    /// Block timestamp that keys must be before. If None, keys can be used indefinitely
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub end: Option<u64>,
+
+    /// Time interval between each key use. If None, there is no delay between key uses.
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub throttle: Option<u64>,
+
+    /// Interval of time after the `start_timestamp` that must pass before a key can be used.
+    /// If multiple intervals pass, the key can be used multiple times. This has nothing to do
+    /// With the throttle timestamp. It only pertains to the start timestamp and the current
+    /// timestamp. The last_used timestamp is not taken into account.
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub interval: Option<u64>,
+}
+```
+
+## Usage Based Customizations
+
+In addition to time-based configurations, the funder can customize behaviors pertaining to
+key usages.
+
+```rust
+pub struct UsageConfig {
+    /// Can the access key only call the claim method_name? Default to both method_name callable
+    pub permissions: Option<ClaimPermissions>,
+    /// If claim is called, refund the deposit to the owner's balance. If None, default to false.
+    pub refund_deposit: Option<bool>,
+    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
+    /// Must be overwritten
+    pub auto_delete_drop: Option<bool>,
+    /// When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
+    pub auto_withdraw: Option<bool>,
+}
 ```
 
 # Simple Drops
 
 The most basic type of drop is the simple kind. Any keys that are part of a simple drop can
 only be used for 1 thing: **transferring $NEAR**. Once the key is claimed, the claiming account
-will receive the $NEAR specified in the `deposit_per_use`. Simple drops are a great way to send $NEAR to claiming accounts while not storing a lot
-of information on the contract. Below are a couple use cases.
+will receive the $NEAR specified in the `deposit_per_use`. Simple drops are a great way to send 
+$NEAR to claiming accounts while not storing a lot of information on the contract. Below are a 
+couple use cases.
 
 #### Backend Servers
 
@@ -157,19 +175,31 @@ receive 10 $NEAR.
 #### Recurring Payments
 
 Recurring payments are quite a common situation. If you need to send someone 10 $NEAR once a
-month for 6 months, you could create a simple drop that has a `claim_interval` of 1 month with
-a `start_timestamp` of next week. Everytime the key is used, 10 $NEAR is sent to the account. If
-the contractor missed a month's payment, they can claim the key late but can never use the key more
-than what is intended.
+month for 6 months, you could create a simple drop that has a usage config with an `interval` of 1 month.
+In addition, you can set the time based config to have a `start` of  next week. Everytime the key is used, 
+10 $NEAR is sent to the account. If the contractor missed a month's payment, they can claim the key late but 
+can never use the key more than what is intended.
 
 
 #### Quick Onboarding
 
 If you need to quickly onboard users onto NEAR, you could create a simple drop with a
-small amount of $NEAR (enough to create a wallet) and set the claim permission to be
-`CreateAccountAndClaim`. This means that the key can only be used to create accounts.
+small amount of $NEAR (enough to create a wallet) and set the usage's permissions to be
+`create_account_and_claim`. This means that the key can only be used to create accounts.
 You can then add keys as you wish to the drop and give them out to users so they can create
 accounts and be onboarded onto NEAR.
+
+#### Lazy Registering Keys
+
+A unique use-case for simple drops is the ability to lazy register key uses. This allows the funder to batch
+create many keys at a time while only paying for basic fees such as the storage used and the key's allowance.
+The funder would **not** need to pay for the `deposit_per_use` of each key up front. They can instead register individual
+key uses as they are needed.
+
+With this scenario, if an organization wanted to onboard users with a linkdrop valued at 10 $NEAR, they could create 1000 keys
+without needing to pay 1000 * 10 = 10,000 $NEAR up-front. They could then register keys on an as-needed basis. If they need to
+register 25 keys at a time, they can do this by simply calling the `register_uses` function.
+
 
 # Non-Fungible Token Drops
 
@@ -185,9 +215,9 @@ introduces some customization and uniqueness to the use-cases.
 ## How does it work?
 
 Every drop has a field known as `registered_uses`. This tells the contract how many uses the
-drop has across all its keys. For simple drops, this field doesn't matter since all the uses
-are paid for up-front when the drop is created or when keys are added. With NFT drops, however,
-there is a 2 step process:
+drop has across all its keys. For basic simple drops that are *not* lazy registering keys, this field 
+doesn't matter since all the uses are paid for up-front when the drop is created or when keys are added. 
+With NFT drops, however, there is a 2 step process:
 - Firstly, the drop is created and all the $NEAR required is pre-paid for. This is the same as
 simple drops, however, the `registered_uses` are set to 0.
 - Once the drop is created, the owner must send the contract the NFTs in order for keys to be
@@ -235,9 +265,9 @@ and everytime a key is used, the `registered_uses` will decrement and the "total
 ## How does it work?
 
 As mentioned in the NFT section, every drop has a field known as `registered_uses`. This tells the contract
-how many uses the drop has across all its keys. For simple drops, this field doesn't matter since all the uses
-are paid for up-front when the drop is created or when keys are added. With FT drops, however,
-there is a 2 step process:
+how many uses the drop has across all its keys. For basic simple drops that are *not* lazy registering keys, this field 
+doesn't matter since all the uses are paid for up-front when the drop is created or when keys are added.
+With FT drops, however, there is a 2 step process:
 - Firstly, the drop is created and all the $NEAR required is pre-paid for. This is the same as
 simple drops, however, the `registered_uses` are set to 0.
 - Once the drop is created, the owner must send the contract the FTs in order for keys to be
@@ -252,7 +282,7 @@ more use-cases and possibilities. Let's look at some use cases to see how fungib
 #### Recurring Payments
 
 Recurring payments are quite a common situation. Let's say you need to send someone $50 USDC every week. You
-could create a key with 5 uses that has a claim_interval` of 1 week. You would then pre-load maybe the
+could create a key with 5 uses that has a time config `interval` of 1 week. You would then pre-load maybe the
 first week's deposit of $50 USDC and register 1 use or you could send $500 USDC for the first 10 weeks. At that
 point, you would simply hand over the key to the user and they can claim once a week.
 
@@ -273,10 +303,10 @@ list. You can also give away QR codes at events that contain a new fungible toke
 simply create a FT drop and pre-load it with the FT of your choice. In addition, you can give it 0.02 $NEAR for
 new wallets that are created.
 
-You can pair this with setting the `on_claim_refund_deposit` flag to true which would make it so that if anyone claims
+You can pair this with setting the usage config's `refund_deposit` flag to true which would make it so that if anyone claims
 the fungible tokens and they *already have a wallet*, it will automatically refund you the 0.02 $NEAR. That money should
 only be used for the creation of new wallets. Since your focus is on the fungible tokens, you don't want to **force users**
-to create a new wallet if they have one already by specifying the claim permission to be `CreateAccountAndClaim` but instead,
+to create a new wallet if they have one already by specifying the usage permissions to be `create_account_and_claim` but instead,
 you want to be refunded in case they do.
 
 ## FT Config
@@ -377,7 +407,7 @@ It's important to note that the Gas available is split evenly between *all* the 
 you might run into issues with not having enough Gas. You're responsible for ensuring that this doesn't happen.
 
 The vector of `MethodData` is *optional* for each key use. If a key use has `null` rather than `Some(Vector<MethodData>)`,
-it will decrement the uses and work as normal such that the `throttle_timestamp, `start_timestamp` etc. are enforced. The only
+it will decrement the uses and work as normal such that the `timestamp, `start` etc. are enforced. The only
 difference is that after the key uses are decremented and these checks are performed, the execution **finishes early**. The null
 case does **not** create an account or send *any* funds. It doesn't invoke any function calls and simply *returns once the
 checks are done*. This makes the null case act as a "burner" where you disregard any logic. This has many uses which will
@@ -523,20 +553,20 @@ to get in as they only need to show the bouncer the QR code. Once the bouncer sc
 the 3 uses left. If they don't, they're not let in. At that point, a use is decremented from the key and the next time they visit the
 ticket page (when they have internet), they would be able to claim the final use and be onboarded / receive a POAP.
 
-# Password Protected Keys
+## Password Protected Keys
 
 Password protecting key uses is an extremely powerful feature that can unlock many use-cases. Keypom has baked flexibility and customization
 into the contract such that almost all use-cases involving password protection can be accomplished. Whenever a key is added to a drop, it can
 have a unique password for each individual use, or it can one password for all uses in general.
 
-## How Does It Work?
+### How Does It Work?
 
 The Keypom implementation has been carefully designed so that users can't look at the NEAR Explorer to view what was passed into the contract
 either when the drop was created or when a key was used to try and copy those passwords. We also want passwords to be unique across keys so that
 if you know the password for 1 key, it doesn't work on a different key. In order to accomplish this, we use the concept of hashing.
 
-Imagine you have a drop with 2 keys and you want to password protect each key. Rather than forcing the drop funder to input a unique password for
-each key and having them remember each one, we can have them input a single **base password** and derive unique passwords from it that are paired
+Imagine you have a drop with 2 keys and you want to password protect each key. Rather than forcing the drop funder to input a unique password for 
+each key and having them remember each one, we can have them input a single **base password** and derive unique passwords from it that are paired 
 with the key's public key.
 
 This is the most scalable option as it allows the drop funder to only need to remember 1 password and they can derive all the other ones using the
@@ -547,18 +577,18 @@ into the contract:
 
 `hash("mypassword1" + key1_public_key)`
 
-The funder would need to give the user this hash somehow (such as embedding it into the link or having an app that can derive it). It's important to note
-that the funder should probably **NOT** give them the base password otherwise the user could derive the passwords for all other keys (assuming those keys have
+The funder would need to give the user this hash somehow (such as embedding it into the link or having an app that can derive it). It's important to note 
+that the funder should probably **NOT** give them the base password otherwise the user could derive the passwords for all other keys (assuming those keys have 
 the same base password).
 
 ### What is Stored On-Chain?
 
 How does Keypom verify that the user passed in the correct password? If the funder were to simply pass in `hash("mypassword1" + key1_public_key)` into the
-contract as an argument when the key is created, users could just look at the NEAR Explorer and copy that value.
+contract as an argument when the key is created, users could just look at the NEAR Explorer and copy that value. 
 
-Instead, the funder needs to pass in a double hash when the key is created: `hash(hash("mypassword1" + key1_public_key))`.
+Instead, the funder needs to pass in a double hash when the key is created: `hash(hash("mypassword1" + key1_public_key))`. 
 
-This is the value that is stored on-chain and when the user tries to claim the key, they would pass in just the single hash: `hash("mypassword1" + key1_public_key)`.
+This is the value that is stored on-chain and when the user tries to claim the key, they would pass in just the single hash: `hash("mypassword1" + key1_public_key)`.  
 The contract would then compute `hash(hash("mypassword1" + key1_public_key))` and compare it to the value stored on-chain. If they match, the key is claimed.
 
 Using this method, the base password is not exposed to the user, nobody can look on-chain or at the NEAR explorer and derive the password, and the password is unique
@@ -573,7 +603,7 @@ would hash this and compare it to the value stored on-chain.
 The difference is that each individual key use can have a different value stored on-chain such that the user can be forced to input a different hash each time.
 This `SOMETHING` that is hashed can be similar to the global password per key example but this time, the desired key use is added: `hash("mypassword1" + key1_public_key + use_number)`
 
-In order to pass in the passwords per use, a new data structure is introduced so you only need to pass in passwords for the uses that have them. This is known as the
+In order to pass in the passwords per use, a new data structure is introduced so you only need to pass in passwords for the uses that have them. This is known as the 
 `JsonPasswordForUse` and is as follows:
 
 ```rust
@@ -588,14 +618,14 @@ pub struct JsonPasswordForUse {
 
 ## Adding Your First Password
 
-Whenever keys are added to Keypom, if there's passwords involved, they must be passed in using the following format.
+Whenever keys are added to Keypom, if there's passwords involved, they must be passed in using the following format. 
 
 ```rust
 passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
 passwords_per_key: Option<Vec<Option<String>>>,
 ```
 
-Each key that is being added either has a password, or doesn't. This is through the `Vec<Option<>`. This vector **MUST** be the same length as the number of keys created.This doesn't
+Each key that is being added either has a password, or doesn't. This is through the `Vec<Option<>`. This vector **MUST** be the same length as the number of keys created.This doesn't 
 mean that every key needs a password, but the Vector must be the same length as the keys.
 
 As an example, if you wanted to add 3 keys to a drop and wanted only the first and last key to have a password_per_key, you would pass in:
@@ -606,7 +636,7 @@ passwords_per_key: Some(vec![Some(hash(hash(STUFF))), None, Some(hash(hash(STUFF
 ## Complex Example
 
 To help solidify the concept of password protected keys, let's go through a complex example. Imagine Alice created a drop with a `uses_per_key` of 3.
-She wants to create 4 keys:
+She wants to create 4 keys: 
 - Key A: No password protection.
 - Key B: Password for uses 1 and 2.
 - Key C: Password for use 1 only.
@@ -623,13 +653,13 @@ passwords_per_key: Some(vec![
     // Key D
     Some(
         hash(hash("key_d_base_password" + key_d_public_key))
-    ),
+    ), 
 ]),
 ```
 The passwords for Key B and Key C will be passed in as such:
 
 ```rust
-passwords_per_key: Some(vec![
+passwords_per_use: Some(vec![
     None, // Key A
 
     // Key B
@@ -669,7 +699,7 @@ if it matches what is stored on-chain (which it does).
 If anyone tried to look at what Charlie passes in through the explorer, it wouldn't work since his hash contains the public key for key D and as such it is only
 valid for Key D.
 
-Similarly, if Charlie tried to look at the explorer when Alice created the keys and attempted to pass in `hash(hash("key_d_base_password" + key_d_public_key))`,
+Similarly, if Charlie tried to look at the explorer when Alice created the keys and attempted to pass in `hash(hash("key_d_base_password" + key_d_public_key))`, 
 the contract would attempt to hash this and it would NOT match up with what's in the storage.
 
 ### Key B
@@ -692,9 +722,9 @@ Key C is similar to Key B except that it only has 1 password for the first use.
 
 Password protecting key uses is a true game changer for a lot of use-cases spanning from ticketing to simple marketing and engagement.
 
-### Ticketing and POAPs
+#### Ticketing and POAPs
 
-Imagine you had an event and wanted to give out exclusive POAPs to people that came. You didn't want to force users to:
+Imagine you had an event and wanted to give out exclusive POAPs to people that came. You didn't want to force users to: 
 - Have a NEAR wallet
 - Have wifi at the door.
 - Burn NFTs or tokens to get into the event.
@@ -702,11 +732,11 @@ Imagine you had an event and wanted to give out exclusive POAPs to people that c
 The important thing to note is that by using password protected key uses, you can **GUARANTEE** that anyone that received a POAP had to
 **PHYSICALLY** show up to the event. This is because the POAP would be guarded by a password.
 
-You could create a ticketing event using Keypom as outlined in the [Ticketing](#nft-ticketing) section and have a key with 2 uses. The first use
+You could create a ticketing event using Keypom as outlined in the [Ticketing](#nft-ticketing) section and have a key with 2 uses. The first use 
 would be password protected and the second use is not. The first use will get you through the door and into the event and the second
 contains the exclusive POAP and can onboard you. This means that anyone with the ticket, or key, can only receive the POAP if they know the password.
 
-You can have a scanner app that would scan people's tickets (tickets are just the private key). In this scanner app, the *base password* is stored and
+You can have a scanner app that would scan people's tickets (tickets are just the private key). In this scanner app, the *base password* is stored and 
 whenever the ticket is scanned, the public key is taken and the following hash is created:
 
 `hash(base password + public key)`
@@ -718,7 +748,7 @@ you actually show up to the event and are scanned.
 Once you're scanned, you can refresh your ticket page and the use the second key claim which is not password protected. This use contains the
 exclusive POAP and you can onboard onto NEAR.
 
-### Marketing and Engagement
+#### Marketing and Engagement
 
 Let's say that you're at an event and want people to show up to your talks and learn about your project. You can have a scanner app similar to the
 one mentioned in the ticketing scenario that derives the password for any use on any key.
@@ -726,14 +756,14 @@ one mentioned in the ticketing scenario that derives the password for any use on
 At the beginning of the event, you can give out a bunch of keys that have progressively increasing rewards gated by a password. At the end, the last
 key use contains a special reward that is only unlocked if the user has claimed all the previous key uses.
 
-In order for these uses to be unlocked, People must show up to your talks and get scanned. The scanner will derive the necessary password and unlock
+In order for these uses to be unlocked, People must show up to your talks and get scanned. The scanner will derive the necessary password and unlock 
 the rewards. Users will only get the exclusive reward if they come to ALL your talks.
 
 This idea can be further expanded outside the physical realm to boost engagement on your websites as an example:
 
 You want users to interact with new features of your site or join your mailing list.
 
-You can have links where uses are ONLY unlocked if the user interacts with special parts of your site such as buying a new NFT or joining your mailing list
+You can have links where uses are ONLY unlocked if the user interacts with special parts of your site such as buying a new NFT or joining your mailing list 
 or clicking an easter egg button on your site etc.
 */
 
@@ -835,15 +865,14 @@ const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
 ];
 
 mod internals;
-mod json_types;
+mod models;
 mod stage1;
 mod stage2;
 mod stage3;
 mod views;
 
 use internals::*;
-use json_types::*;
-use stage1::*;
+use models::*;
 use stage2::*;
 
 /// Contract metadata structure

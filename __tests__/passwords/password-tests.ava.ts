@@ -2,6 +2,7 @@ import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { oneGtNear, totalSupply } from "../ft-drops/utils/ft-utils";
 import { assertBalanceChange, CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { DropConfig, FTData } from "../utils/types";
 import { generateGlobalPasswords, generateLocalPasswords, hash } from "./utils/pwUtils";
 
 const test = anyTest as TestFn<{
@@ -63,7 +64,7 @@ test('Multi-use keys with local passwords', async t => {
     
     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 3,
     }
 
@@ -134,7 +135,7 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     
     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
     let {keys, publicKeys} = await generateKeyPairs(4);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 2,
     }
     let basePasswordLocal = 'mypassword1';
@@ -275,7 +276,7 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
 test('Add keys after drop is created with passwords', async t => {
     const { keypom, nftSeries, owner, ali, bob } = t.context.accounts;
     let {keys, publicKeys} = await generateKeyPairs(5);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 2,
     }
     let basePasswordLocal = 'mypassword1';
@@ -418,9 +419,6 @@ test('Add keys after drop is created with passwords', async t => {
     t.is(aliBal.toString(), NEAR.parse("2").toString());
 });
 
-test('Delete keys and check storage', async t => {
-});
-
 test('50 FT Keys Fails in Step 2 Check Storage', async t => {
     const { keypom, owner, ali, minter, root } = t.context.accounts;
     const ftContract = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
@@ -429,7 +427,7 @@ test('50 FT Keys Fails in Step 2 Check Storage', async t => {
 
     let numKeys = 50;
 
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: owner.accountId,
         balance_per_use: oneGtNear.toString()
@@ -452,7 +450,7 @@ test('50 FT Keys Fails in Step 2 Check Storage', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: publicKeys1, 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         passwords_per_use: passwords
     },{gas: LARGE_GAS});
 
@@ -479,7 +477,7 @@ test('50 FT Keys Fails in Step 2 Check Storage', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: publicKeys2, 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         passwords_per_use: passwords
     },{gas: LARGE_GAS});
 
@@ -498,7 +496,7 @@ test('Create 50 key drop and delete after', async t => {
 
     let numKeys = 50;
 
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: owner.accountId,
         balance_per_use: oneGtNear.toString()
@@ -519,7 +517,7 @@ test('Create 50 key drop and delete after', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: publicKeys1, 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         passwords_per_use: passwords
     },{gas: LARGE_GAS});
 

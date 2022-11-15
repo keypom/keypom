@@ -232,7 +232,7 @@ test('Force Injecting Fields Attack', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [keyPairs.publicKeys[0]], 
         deposit_per_use: NEAR.parse('20 mN').toString(),
-        fc_data: getNEARConFCData(nftSeries),
+        fc: getNEARConFCData(nftSeries),
         config: dropConfig,
     },{gas: LARGE_GAS});
 
@@ -240,7 +240,7 @@ test('Force Injecting Fields Attack', async t => {
     await ali.call(keypom, 'create_drop', {
         public_keys: [keyPairs.publicKeys[1]], 
         deposit_per_use: NEAR.parse('20 mN').toString(),
-        fc_data: {
+        fc: {
             methods: [
                 null,
                 null,
@@ -264,7 +264,7 @@ test('Force Injecting Fields Attack', async t => {
     await ali.call(keypom, 'create_drop', {
         public_keys: [keyPairs.publicKeys[2]], 
         deposit_per_use: NEAR.parse('20 mN').toString(),
-        fc_data: {
+        fc: {
             methods: [
                 null,
                 null,
@@ -286,7 +286,7 @@ test('Force Injecting Fields Attack', async t => {
     await ali.call(keypom, 'create_drop', {
         public_keys: [keyPairs.publicKeys[3]], 
         deposit_per_use: NEAR.parse('20 mN').toString(),
-        fc_data: {
+        fc: {
             methods: [
                 null,
                 null,
@@ -310,7 +310,7 @@ test('Force Injecting Fields Attack', async t => {
     await ali.call(keypom, 'create_drop', {
         public_keys: [keyPairs.publicKeys[4]], 
         deposit_per_use: NEAR.parse('20 mN').toString(),
-        fc_data: {
+        fc: {
             methods: [
                 null,
                 null,
