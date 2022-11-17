@@ -67,6 +67,8 @@ export type JsonKeyInfo = {
     allowance: number,
     // Nonce for the current key.
     key_id: number,
+    // Which use is the key currently on?
+    cur_key_use: number
 }
 
 export type KeyInfo = {

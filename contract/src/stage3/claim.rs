@@ -551,7 +551,7 @@ impl Keypom {
             .clone()
             .and_then(|c| c.uses_per_key)
             .unwrap_or(1)
-            - key_info.remaining_uses);
+            - key_info.remaining_uses + 1);
 
         if self.assert_key_password(
             password,
