@@ -180,7 +180,7 @@ impl Keypom {
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
                     require!(
-                        pw.key_use < num_uses_per_key,
+                        pw.key_use <= num_uses_per_key,
                         "claim out of range for password"
                     );
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
@@ -667,7 +667,7 @@ impl Keypom {
                 // Loop through each password and add it to the lookup map
                 for pw in pws {
                     require!(
-                        pw.key_use < num_uses_per_key,
+                        pw.key_use <= num_uses_per_key,
                         "claim out of range for password"
                     );
                     pw_map.insert(&pw.key_use, &hex::decode(pw.pw.clone()).unwrap());
