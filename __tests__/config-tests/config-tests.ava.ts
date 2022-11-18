@@ -867,7 +867,7 @@ test('Testing Claim Interval', async t => {
     },{gas: LARGE_GAS});
 
     //key supply in this drop should now be one
-    let numKeysDrop1 = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
+    let numKeysDrop1 = await getKeySupplyForDrop(keypom, "0");
     console.log('getKeySupplyForDrop: ', numKeysDrop1)
     t.is(numKeysDrop1, 1);
 
