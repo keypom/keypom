@@ -1,4 +1,5 @@
 use near_sdk::GasWeight;
+use std::cmp;
 
 use crate::*;
 
@@ -14,16 +15,16 @@ impl Keypom {
     */
     pub fn delete_keys(
         &mut self,
-        drop_id: DropId,
+        drop_id: DropIdJson,
         public_keys: Option<Vec<PublicKey>>,
         limit: Option<u8>,
-        delete_on_empty: Option<bool>
+        delete_on_empty: Option<bool>,
     ) {
         // Measure initial storage before doing any operations
         let initial_storage = env::storage_usage();
 
         // get the drop object
-        let mut drop = self.drop_for_id.remove(&drop_id).expect("No drop found");
+        let mut drop = self.drop_for_id.remove(&drop_id.0).expect("No drop found");
         let owner_id = drop.owner_id.clone();
         let drop_type = &drop.drop_type;
         require!(
@@ -31,7 +32,7 @@ impl Keypom {
             "only drop funder can delete keys"
         );
 
-        // Get the max claims per key. Default to 1 if not specified in the drop config.
+        // Get the max uses per key. Default to 1 if not specified in the drop config.
         let uses_per_key = drop
             .config
             .clone()
@@ -43,13 +44,13 @@ impl Keypom {
 
         // ensure that there are no FTs or NFTs left to be refunded
         match drop_type {
-            DropType::NonFungibleToken(_) => {
+            DropType::nft(_) => {
                 require!(
                     drop.registered_uses == 0,
                     "NFTs must be refunded before keys are deleted"
                 );
             }
-            DropType::FungibleToken(data) => {
+            DropType::ft(data) => {
                 require!(
                     drop.registered_uses == 0,
                     "FTs must be refunded before keys are deleted"
@@ -66,8 +67,8 @@ impl Keypom {
         let keys_to_delete;
         let mut total_allowance_left = 0;
 
-        // Get the total number of claims and none FCs across all keys being deleted
-        let mut total_num_claims_refunded = 0;
+        // Get the total number of uses and none FCs across all keys being deleted
+        let mut total_num_uses_refunded = 0;
         let mut total_num_none_fcs = 0;
         let mut total_fc_deposits = 0;
         // If the user passed in public keys, loop through and remove them from the drop
@@ -92,15 +93,15 @@ impl Keypom {
                     k.clear();
                 }
 
-                total_num_claims_refunded += key_info.remaining_uses;
+                total_num_uses_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
-                // Claims and get the deposits left along with the total number of None FCs
-                if let DropType::FunctionCall(data) = &drop.drop_type {
+                // Uses and get the deposits left along with the total number of None FCs
+                if let DropType::fc(data) = &drop.drop_type {
                     let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
-                    // For all the claims. In this case, we need to tally all the deposits for each claim.
+                    // For all the uses. In this case, we need to tally all the deposits for each claim.
                     if uses_per_key > 1 && num_fcs == 1 {
                         let attached_deposit = data
                             .methods
@@ -143,13 +144,40 @@ impl Keypom {
                 total_allowance_left += key_info.allowance;
             }
 
+            // Keep track of the actual number of uses to refund
+            let mut num_uses_to_refund = total_num_uses_refunded;
+
+            // If the drop type is simple and has lazy registration, we need to figure out how many uses will be refunded
+            if let DropType::simple(data) = &drop.drop_type {
+                if data.lazy_register.unwrap_or(false) {
+                    let num_registered = drop.registered_uses;
+
+                    num_uses_to_refund = cmp::min(total_num_uses_refunded, num_registered);
+                    let num_uses_not_refunded = total_num_uses_refunded - num_uses_to_refund;
+                    drop.registered_uses = num_registered - num_uses_to_refund;
+
+                    near_sdk::log!(
+                        "Uses to refund {} Uses not to refund {} New registered uses: {}",
+                        num_uses_to_refund, num_uses_not_refunded, num_registered - num_uses_to_refund
+                    );
+                }
+            }
+
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
-                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
+                // If there are any excess uses, refund them since the drop is being deleted
+                if let DropType::simple(data) = &drop.drop_type {
+                    if data.lazy_register.unwrap_or(false) {
+                        num_uses_to_refund += drop.registered_uses;
+                        near_sdk::log!("Refunding {} excess uses", drop.registered_uses);
+                    }
+                }
+
+                self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(&drop_id.0, &drop);
             }
 
             // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -167,16 +195,16 @@ impl Keypom {
                 - TOTAL Storage freed
                 - Total access key allowance for EACH key
                 - Access key storage for EACH key
-                - Balance for each key * (number of claims - claims with None for FC Data)
+                - Balance for each key * (number of uses - uses with None for FC Data)
 
                 Optional:
                 - total FC deposits
-                - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+                - FT storage registration cost for each key * uses (calculated in resolve storage calculation function)
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_claims_refunded - total_num_none_fcs) as u128;
-            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_refunded as u128;
+                drop.deposit_per_use * (num_uses_to_refund - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
             total_refund_amount = total_storage_freed
                 + total_allowance_left
@@ -191,9 +219,10 @@ impl Keypom {
                 allowance left: {}
                 access key storage {}
                 total deposits: {}
+                num uses refunded: {}
                 total fc deposits: {}
                 total ft costs: {}
-                total num claims left: {}
+                total num uses left: {}
                 total num none FCs {}
                 len: {}",
                 yocto_to_near(total_refund_amount),
@@ -201,9 +230,10 @@ impl Keypom {
                 yocto_to_near(total_allowance_left),
                 yocto_to_near(total_access_key_storage),
                 yocto_to_near(total_deposits),
+                num_uses_to_refund,
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
-                total_num_claims_refunded,
+                total_num_uses_refunded,
                 total_num_none_fcs,
                 len
             );
@@ -223,15 +253,15 @@ impl Keypom {
                 if let Some(mut k) = key_info.pw_per_use {
                     k.clear();
                 }
-                total_num_claims_refunded += key_info.remaining_uses;
+                total_num_uses_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
-                // Claims and get the deposits left along with the total number of None FCs
-                if let DropType::FunctionCall(data) = &drop.drop_type {
+                // Uses and get the deposits left along with the total number of None FCs
+                if let DropType::fc(data) = &drop.drop_type {
                     let num_fcs = data.methods.len() as u64;
 
                     // If there's one FC specified and more than 1 claim per key, that FC is to be used
-                    // For all the claims. In this case, we need to tally all the deposits for each claim.
+                    // For all the uses. In this case, we need to tally all the deposits for each claim.
                     if uses_per_key > 1 && num_fcs == 1 {
                         let attached_deposit = data
                             .methods
@@ -273,13 +303,41 @@ impl Keypom {
                 total_allowance_left += key_info.allowance;
             }
 
+            // Keep track of the actual number of uses to refund
+            let mut num_uses_to_refund = total_num_uses_refunded;
+
+            // If the drop type is simple and has lazy registration, we need to figure out how many uses will be refunded
+            if let DropType::simple(data) = &drop.drop_type {
+                if data.lazy_register.unwrap_or(false) {
+                    let num_registered = drop.registered_uses;
+
+                    num_uses_to_refund = cmp::min(total_num_uses_refunded, num_registered);
+                    let num_uses_not_refunded = total_num_uses_refunded - num_uses_to_refund;
+                    drop.registered_uses = num_registered - num_uses_to_refund;
+
+                    near_sdk::log!(
+                        "Uses to refund {} Uses not to refund {} New registered uses: {}",
+                        num_uses_to_refund, num_uses_not_refunded, num_registered - num_uses_to_refund
+                    );
+                }
+            }
+
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
             if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
-                self.internal_remove_drop_for_funder(&owner_id, &drop_id);
+
+                // If there are any excess uses, refund them since the drop is being deleted
+                if let DropType::simple(data) = &drop.drop_type {
+                    if data.lazy_register.unwrap_or(false) {
+                        num_uses_to_refund += drop.registered_uses;
+                        near_sdk::log!("Refunding {} excess uses", drop.registered_uses);
+                    }
+                }
+
+                self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
                 near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(&drop_id.0, &drop);
             }
 
             // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
@@ -297,16 +355,16 @@ impl Keypom {
                 - TOTAL Storage freed
                 - Total access key allowance for EACH key
                 - Access key storage for EACH key
-                - Balance for each key * (number of claims - claims with None for FC Data)
+                - Balance for each key * (number of uses - uses with None for FC Data)
 
                 Optional:
                 - total FC deposits
-                - FT storage registration cost for each key * claims (calculated in resolve storage calculation function)
+                - FT storage registration cost for each key * uses (calculated in resolve storage calculation function)
             */
             let total_access_key_storage = ACCESS_KEY_STORAGE * len;
             let total_deposits =
-                drop.deposit_per_use * (total_num_claims_refunded - total_num_none_fcs) as u128;
-            let total_ft_costs = ft_optional_costs_per_claim * total_num_claims_refunded as u128;
+                drop.deposit_per_use * (num_uses_to_refund - total_num_none_fcs) as u128;
+            let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
             total_refund_amount = total_storage_freed
                 + total_allowance_left
@@ -321,9 +379,10 @@ impl Keypom {
                 allowance left: {}
                 access key storage {}
                 total deposits: {}
+                num uses refunded: {}
                 total fc deposits: {}
                 total ft costs: {}
-                total num claims left: {}
+                total num uses left: {}
                 total num none FCs {}
                 len: {}",
                 yocto_to_near(total_refund_amount),
@@ -331,24 +390,16 @@ impl Keypom {
                 yocto_to_near(total_allowance_left),
                 yocto_to_near(total_access_key_storage),
                 yocto_to_near(total_deposits),
+                num_uses_to_refund,
                 yocto_to_near(total_fc_deposits),
                 yocto_to_near(total_ft_costs),
-                total_num_claims_refunded,
+                total_num_uses_refunded,
                 total_num_none_fcs,
                 len
             );
         }
 
-        // Refund the user
-        let mut cur_balance = self.user_balances.get(&owner_id).unwrap_or(0);
-        near_sdk::log!(
-            "Refunding user {} old balance: {}. Total allowance left: {}",
-            yocto_to_near(total_refund_amount),
-            yocto_to_near(cur_balance),
-            yocto_to_near(total_allowance_left)
-        );
-        cur_balance += total_refund_amount;
-        self.user_balances.insert(&owner_id, &cur_balance);
+        self.internal_modify_user_balance(&owner_id, total_refund_amount, false);
 
         // Loop through and delete keys
         for key in &keys_to_delete {
@@ -365,32 +416,32 @@ impl Keypom {
         Refund NFTs or FTs for a drop. User can optionally pass in a number of assets to
         refund. If not, it will try to refund all assets.
     */
-    pub fn refund_assets(&mut self, drop_id: DropId, assets_to_refund: Option<u64>) {
+    pub fn refund_assets(&mut self, drop_id: DropIdJson, assets_to_refund: Option<u64>) {
         // get the drop object
-        let mut drop = self.drop_for_id.get(&drop_id).expect("No drop found");
+        let mut drop = self.drop_for_id.get(&drop_id.0).expect("No drop found");
         let owner_id = drop.owner_id.clone();
         require!(
             owner_id == env::predecessor_account_id(),
             "only drop funder can delete keys"
         );
 
-        // Get the number of claims registered for the drop.
-        let claims_registered = drop.registered_uses;
-        require!(claims_registered > 0, "no claims left to unregister");
+        // Get the number of uses registered for the drop.
+        let uses_registered = drop.registered_uses;
+        require!(uses_registered > 0, "no uses left to unregister");
 
-        // Get the claims to refund. If not specified, this is the number of claims currently registered.
-        let num_to_refund = assets_to_refund.unwrap_or(claims_registered);
+        // Get the uses to refund. If not specified, this is the number of uses currently registered.
+        let num_to_refund = assets_to_refund.unwrap_or(uses_registered);
         require!(
-            num_to_refund <= claims_registered,
+            num_to_refund <= uses_registered,
             "can only refund less than or equal to the amount of keys registered"
         );
 
         // Decrement the drop's keys registered temporarily. If the transfer is unsuccessful, revert in callback.
         drop.registered_uses -= num_to_refund;
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_for_id.insert(&drop_id.0, &drop);
 
         match &mut drop.drop_type {
-            DropType::NonFungibleToken(data) => {
+            DropType::nft(data) => {
                 /*
                     NFTs need to be batched together. Loop through and transfer all NFTs.
                     Keys registered will be decremented and the token IDs will be removed
@@ -416,7 +467,7 @@ impl Keypom {
                     );
                 }
 
-                self.drop_for_id.insert(&drop_id, &drop);
+                self.drop_for_id.insert(&drop_id.0, &drop);
 
                 // Create the second batch promise to execute after the nft_batch_index batch is finished executing.
                 // It will execute on the current account ID (this contract)
@@ -429,7 +480,7 @@ impl Keypom {
                 env::promise_batch_action_function_call_weight(
                     batch_ft_resolve_promise_id,
                     "nft_resolve_refund",
-                    json!({ "drop_id": U128(drop_id), "token_ids": token_ids })
+                    json!({ "drop_id": drop_id, "token_ids": token_ids })
                         .to_string()
                         .as_bytes(),
                     NO_DEPOSIT,
@@ -437,7 +488,7 @@ impl Keypom {
                     GasWeight(10),
                 );
             }
-            DropType::FungibleToken(data) => {
+            DropType::ft(data) => {
                 // All FTs can be refunded at once. Funder responsible for registering themselves
                 ext_ft_contract::ext(data.contract_id.clone())
                     // Call ft transfer with 1 yoctoNEAR. 1/2 unspent GAS will be added on top
@@ -451,7 +502,7 @@ impl Keypom {
                     .then(
                         // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
                         Self::ext(env::current_account_id())
-                            .ft_resolve_refund(drop_id, num_to_refund),
+                            .ft_resolve_refund(drop_id.0, num_to_refund),
                     )
                     .as_return();
             }

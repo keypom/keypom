@@ -1,7 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
-import { JsonKeyInfo, JsonToken } from "../utils/types";
+import { DropConfig, JsonKeyInfo, JsonNFTData, JsonToken } from "../utils/types";
 import { keypom_args, mintNFTs, nftMetadata, nftSeriesMetadata, sendNFTs } from "./utils/nft-utils";
 
 const test = anyTest as TestFn<{
@@ -72,11 +72,11 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(6);
-    let nft_data = {
+    let nft: JsonNFTData = {
         sender_id: minter.accountId,
         contract_id: nftSeries.accountId
     }
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 2,
     }
 
@@ -84,7 +84,7 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: publicKeys.slice(0, 5), 
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        nft,
         config
     },{gas: LARGE_GAS});
 
@@ -99,7 +99,7 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -141,14 +141,14 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
     t.is(viewFunctions.dropInformation?.registered_uses, 0);
     t.is(viewFunctions.keysForDrop?.length, 0);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0})
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"})
     let ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal !== "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -168,12 +168,12 @@ test('OverRegister NFTs and add multi use key later', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let nft_data = {
+    let nft: JsonNFTData = {
         sender_id: minter.accountId,
         contract_id: nftSeries.accountId
     }
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 10,
     }
 
@@ -181,7 +181,7 @@ test('OverRegister NFTs and add multi use key later', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        nft,
         config
     },{gas: LARGE_GAS});
 
@@ -196,7 +196,7 @@ test('OverRegister NFTs and add multi use key later', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -240,14 +240,14 @@ test('OverRegister NFTs and add multi use key later', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
     t.is(viewFunctions.dropInformation?.registered_uses, 0);
     t.is(viewFunctions.keysForDrop?.length, 0);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0})
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"})
     let ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal !== "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -265,7 +265,7 @@ test('Not enough funder balance stage 2', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let nft_data = {
+    let nft: JsonNFTData = {
         sender_id: minter.accountId,
         contract_id: nftSeries.accountId
     }
@@ -274,7 +274,7 @@ test('Not enough funder balance stage 2', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        nft,
     },{gas: LARGE_GAS});
 
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -283,7 +283,7 @@ test('Not enough funder balance stage 2', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation B4: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop B4: ', viewFunctions.keysForDrop)
@@ -299,7 +299,7 @@ test('Not enough funder balance stage 2', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -315,7 +315,7 @@ test('Deleting Keys and Drop', async t => {
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(6);
-    let nft_data = {
+    let nft: JsonNFTData = {
         sender_id: minter.accountId,
         contract_id: nftSeries.accountId
     }
@@ -326,7 +326,7 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        nft,
     },{gas: LARGE_GAS});
     let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating key: ', ownerBal)
@@ -347,14 +347,14 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'withdraw_from_balance', {});
 
     // Remove the key and ensure the owner balance goes up by the same net cost
-    await owner.call(keypom, 'delete_keys', {drop_id: 0, delete_on_empty: false});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0", delete_on_empty: false});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('new ownerBal after del: ', ownerBal)
     t.is(NEAR.from(ownerBal).toString(), netCostAddingOneKey.toString());
 
     // Delete the drop and ensure the owner balance goes up by the net cost
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('new ownerBal after del drop: ', ownerBal)
     t.is(NEAR.from(ownerBal).toString(), netCostCreatingDrop.toString());
@@ -375,7 +375,7 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]],
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        nft,
     },{gas: LARGE_GAS});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating key: ', ownerBal)
@@ -389,12 +389,12 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let nft_data = {
+    let nft: JsonNFTData = {
         sender_id: minter.accountId,
         contract_id: nftSeries.accountId
     }
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 10,
     }
 
@@ -403,7 +403,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        nft_data,
+        nft,
         config
     },{gas: LARGE_GAS});
     let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
@@ -440,7 +440,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
@@ -448,14 +448,14 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     t.is(viewFunctions.keysForDrop?.length, 1);
 
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'refund_assets', {drop_id: 0}, {gas: LARGE_GAS});
+    await owner.call(keypom, 'refund_assets', {drop_id: "0"}, {gas: LARGE_GAS});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.is(ownerBal, "0");
 
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
@@ -469,7 +469,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     t.is(tokenInfos.length, 5);
 
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal > "0");
     await owner.call(keypom, 'withdraw_from_balance', {});

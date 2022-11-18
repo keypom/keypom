@@ -1,6 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, generateKeyPairs, getDropInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { DropConfig, SimpleData } from "../utils/types";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -47,7 +48,7 @@ test('Create empty drop check views', async t => {
     //store the results of all view functions into results
     let result = await queryAllViewFunctions({
         contract: keypom, 
-        drop_id: 0, 
+        drop_id: "0", 
         account_id: ali.accountId
     });
 
@@ -58,7 +59,11 @@ test('Create empty drop check views', async t => {
     t.is(jsonDrop.drop_id, '0');
     t.is(jsonDrop.owner_id, ali.accountId);
     t.is(jsonDrop.deposit_per_use, NEAR.parse('5 mN').toString());
-    t.is(jsonDrop.drop_type.toString(), 'Simple');
+
+    t.assert(jsonDrop.simple != undefined);
+    t.assert(jsonDrop.nft == undefined);
+    t.assert(jsonDrop.ft == undefined);
+    t.assert(jsonDrop.fc == undefined);
     t.is(jsonDrop.config, null);
     t.is(jsonDrop.metadata, null);
     t.is(jsonDrop.registered_uses, 0);
@@ -71,41 +76,205 @@ test('Create empty drop check views', async t => {
     t.deepEqual(result.dropSupplyForOwner, 1);
 });
 
-//
-test('Create drop with 1000 keys', async t => {
-    const { keypom, ali } = t.context.accounts;
-    //one use per key
-    const dropConfig = {
-        uses_per_key: 1,
-    }
+test('Testing Registered Uses Functionalities', async t => {
+    const { keypom, ali, bob } = t.context.accounts;
 
-    //generate 1 key pair, add 2NEAR to Ali's balance, Ali creates a drop with no keys and 5mN deposit per use and 1use per key
-    //Ali then adds the key to his drop
-    let {keys, publicKeys} = await generateKeyPairs(1);
-    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString(), config: dropConfig});
-    await ali.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[0]]});
-
-    //get Ali's keypom wallet balance, withdraw from said balance and check again
-    let foo = await keypom.view('get_user_balance', {account_id: ali.accountId});
-    console.log('foo: ', foo)
-    await ali.call(keypom, 'withdraw_from_balance', {});
-    foo = await keypom.view('get_user_balance', {account_id: ali.accountId});
-    console.log('foo: ', foo)
+    await ali.updateAccount({
+        amount: NEAR.parse('10000 N').toString()
+    })
     
-    //set key to be used for CAAC
+    const simple: SimpleData = {
+        lazy_register: true
+    }
+    let {keys, publicKeys} = await generateKeyPairs(100);
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), simple}, {gas: WALLET_GAS});
+    let dropInfo = await getDropInformation(keypom,  "0");
+    t.is(dropInfo.registered_uses, 0);
+
+    // Reset the balance of bob to make sure they don't receive $$
+    await bob.updateAccount({
+        amount: "0"
+    })
+
+    // THIS SHOULD FAIL SINCE NO KEYS ARE REGISTERED
     await keypom.setKey(keys[0]);
     await keypom.updateAccessKey(
-        keys[0],  // public key
+        publicKeys[0],  // public key
         {
             nonce: 0,
             permission: 'FullAccess'
         }
-        )
+    )
+
+    // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
+
+    let bobBal = await bob.availableBalance();
+    console.log('aliBal Before: ', bobBal.toString())
+    t.is(bobBal.toString(), NEAR.parse("0").toString());
+
+    await ali.call(keypom, 'withdraw_from_balance', {});
+    await ali.call(keypom, 'register_uses', {drop_id: "0", num_uses: 2}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse("150")});
+    let aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.is(aliBal, NEAR.parse("148").toString());
+    await ali.call(keypom, 'withdraw_from_balance', {});
+
+    dropInfo = await getDropInformation(keypom,  "0");
+    t.is(dropInfo.registered_uses, 2);
+
+    // THIS SHOULD NOW PASS
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
+    bobBal = await bob.availableBalance();
+    console.log('Bob Bal Before: ', bobBal.toString())
+    t.is(bobBal.toString(), NEAR.parse("1").toString());
+    await ali.call(keypom, 'withdraw_from_balance', {});
+
+    dropInfo = await getDropInformation(keypom,  "0");
+    t.is(dropInfo.registered_uses, 1);
+
+    try {
+        await ali.call(keypom, 'unregister_uses', {drop_id: "0", num_uses: 100}, {gas: LARGE_GAS});
+    } catch {}
+
+    dropInfo = await getDropInformation(keypom,  "0");
+    t.is(dropInfo.registered_uses, 1);
+
+    aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.is(aliBal, "0");
+
+    await ali.call(keypom, 'unregister_uses', {drop_id: "0", num_uses: 1}, {gas: LARGE_GAS});
+
+    dropInfo = await getDropInformation(keypom,  "0");
+    t.is(dropInfo.registered_uses, 0);
+
+    aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.is(aliBal, NEAR.parse("1").toString());
+});
+
+
+test('Refunding Partially Registered Simple Drop', async t => {
+    const { keypom, ali, bob } = t.context.accounts;
+    
+    const simple: SimpleData = {
+        lazy_register: true
+    }
+    let {keys, publicKeys} = await generateKeyPairs(100);
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), simple}, {gas: WALLET_GAS});
+    let aliBal: string = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    let diff = NEAR.parse('10').sub(NEAR.from(aliBal));
+    console.log('diff: ', diff.toString())
+    await ali.call(keypom, 'withdraw_from_balance', {});
+
+    await ali.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
+    aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.assert(NEAR.from(aliBal).lte(diff));
+});
+
+test('Batch Creating Keys and Deleting All of Them With Partial Registration', async t => {
+    const { keypom, ali, bob } = t.context.accounts;
+    
+    const simple: SimpleData = {
+        lazy_register: true
+    }
+
+    // Set ali's balance to 1000 so we can check if the claim works properly
+    // Add 10k $NEAR to owner's account
+    await ali.updateAccount({
+        amount: NEAR.parse('10000 N').toString()
+    })
+
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
+    
+    let {keys, publicKeys: pks1} = await generateKeyPairs(100);
+    await ali.call(keypom, 'create_drop', {public_keys: pks1, deposit_per_use: NEAR.parse('1').toString(), simple}, {gas: LARGE_GAS});
+    let {publicKeys: pks2} = await generateKeyPairs(100);
+    await ali.call(keypom, 'add_keys', {drop_id: "0", public_keys: pks2}, {gas: LARGE_GAS});
+    let {publicKeys: pks3} = await generateKeyPairs(100);
+    await ali.call(keypom, 'add_keys', {drop_id: "0", public_keys: pks3}, {gas: LARGE_GAS});
+    
+    let aliBal: string = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    let diff = NEAR.parse('100').sub(NEAR.from(aliBal));
+    console.log('diff: ', diff.toString())
+    await ali.call(keypom, 'withdraw_from_balance', {});
+
+    await ali.call(keypom, 'register_uses', {drop_id: "0", num_uses: 150}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse("150")});
+    aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    t.is(aliBal, "0");
+
+    await ali.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
+    aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.assert(NEAR.from(aliBal).gte(NEAR.parse("100")));
+
+    await ali.call(keypom, 'withdraw_from_balance', {});
+    await ali.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
+    aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.assert(NEAR.from(aliBal).gte(NEAR.parse("50")) && NEAR.from(aliBal).lte(NEAR.parse("70")));
+
+    await ali.call(keypom, 'withdraw_from_balance', {});
+    await ali.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
+    aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.assert(NEAR.from(aliBal).lte(NEAR.parse("20")));
+});
+
+test('Refunding Over Registered Simple Drop', async t => {
+    const { keypom, ali, bob } = t.context.accounts;
+    
+    const simple: SimpleData = {
+        lazy_register: true
+    }
+        await ali.updateAccount({
+        amount: NEAR.parse('10000 N').toString()
+    })
+
+    let {keys, publicKeys} = await generateKeyPairs(5);
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
         
-    //create account and claim to foo.test.near and then check Ali's balance?
-    //let {keys: keys2, publicKeys: publicKeys2} = await generateKeyPairs(1);
-    await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.test.near`, new_public_key : publicKeys[0]}, {gas: WALLET_GAS});
-    foo = await keypom.view('get_user_balance', {account_id: ali.accountId});
-    console.log('foo: ', foo)
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), simple}, {gas: WALLET_GAS});
+    await ali.call(keypom, 'register_uses', {drop_id: "0", num_uses: 150}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse("150")});
+
+    let dropInfo = await getDropInformation(keypom,  "0");
+    t.is(dropInfo.registered_uses, 150);
+
+    await ali.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
+    let aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.is(aliBal, NEAR.parse("160").toString());
+});
+
+test('Refunding Critically Registered Simple Drop', async t => {
+    const { keypom, ali, bob } = t.context.accounts;
+    
+    const simple: SimpleData = {
+        lazy_register: true
+    }
+        await ali.updateAccount({
+        amount: NEAR.parse('10000 N').toString()
+    })
+
+    let {keys, publicKeys} = await generateKeyPairs(5);
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+        
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), simple}, {gas: WALLET_GAS});
+    await ali.call(keypom, 'register_uses', {drop_id: "0", num_uses: 5}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse("5")});
+
+    let dropInfo = await getDropInformation(keypom,  "0");
+    t.is(dropInfo.registered_uses, 5);
+
+    await ali.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
+    let aliBal = await keypom.view('get_user_balance', {account_id: ali.accountId});
+    console.log('aliBal: ', aliBal);
+    t.is(aliBal, NEAR.parse("15").toString());
 });

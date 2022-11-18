@@ -1,16 +1,6 @@
 use crate::*;
 use near_sdk::GasWeight;
 
-/// Keep track fungible token data for an access key. This is stored on the contract
-#[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct FTData {
-    pub contract_id: AccountId,
-    pub sender_id: AccountId,
-    pub balance_per_use: U128,
-    pub ft_storage: U128,
-}
-
 // Returned from the storage balance bounds cross contract call on the FT contract
 #[derive(Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -26,12 +16,12 @@ impl Keypom {
         &mut self,
         sender_id: AccountId,
         amount: U128,
-        msg: U128,
+        msg: DropIdJson,
     ) -> PromiseOrValue<U128> {
         let contract_id = env::predecessor_account_id();
 
         let mut drop = self.drop_for_id.get(&msg.0).expect("No drop found for ID");
-        if let DropType::FungibleToken(ft_data) = &drop.drop_type {
+        if let DropType::ft(ft_data) = &drop.drop_type {
             require!(
                 amount.0 % ft_data.balance_per_use.0 == 0,
                 "amount must be a multiple of the drop balance"
@@ -41,10 +31,10 @@ impl Keypom {
                 "FT data must match what was sent"
             );
 
-            // Get the number of claims to register with the amount that is sent.
-            let claims_to_register = (amount.0 / ft_data.balance_per_use.0) as u64;
-            drop.registered_uses += claims_to_register;
-            near_sdk::log!("New claims registered {}", claims_to_register);
+            // Get the number of uses to register with the amount that is sent.
+            let uses_to_register = (amount.0 / ft_data.balance_per_use.0) as u64;
+            drop.registered_uses += uses_to_register;
+            near_sdk::log!("New uses registered {}", uses_to_register);
 
             // Insert the drop with the updated data
             self.drop_for_id.insert(&msg.0, &drop);
@@ -131,7 +121,7 @@ impl Keypom {
             return true;
         }
 
-        // Transfer failed so we need to increment the claims registered and return false
+        // Transfer failed so we need to increment the uses registered and return false
         let mut drop = self.drop_for_id.get(&drop_id).expect("no drop for ID");
         drop.registered_uses += num_to_refund;
         self.drop_for_id.insert(&drop_id, &drop);
@@ -175,14 +165,10 @@ impl Keypom {
 
             if user_balance > 0 {
                 // Refund the funder any excess $NEAR
-                near_sdk::log!(
-                    "User balance positive. Adding back into contract."
-                );
+                near_sdk::log!("User balance positive. Adding back into contract.");
                 self.user_balances.insert(&owner_id, &user_balance);
             } else {
-                near_sdk::log!(
-                    "User balance zero. Removing from contract."
-                );
+                near_sdk::log!("User balance zero. Removing from contract.");
                 self.user_balances.remove(&owner_id);
             }
 
@@ -206,7 +192,7 @@ impl Keypom {
             let mut drop = self.drop_for_id.get(&drop_id).unwrap();
             let owner_id = drop.owner_id.clone();
 
-            // Get the max claims per key. Default to 1 if not specified in the drop config.
+            // Get the max uses per key. Default to 1 if not specified in the drop config.
             let uses_per_key = drop
                 .config
                 .clone()
@@ -228,7 +214,7 @@ impl Keypom {
 
                 // Refund the funder any excess $NEAR
                 near_sdk::log!(
-                    "Not enough balance to cover FT storage for each key and their claims. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}",
+                    "Not enough balance to cover FT storage for each key and their uses. Adding back req deposit of {} and subtracting near attached of {}. User balance is now {}",
                     yocto_to_near(required_deposit),
                     yocto_to_near(near_attached),
                     yocto_to_near(user_balance)
@@ -236,14 +222,10 @@ impl Keypom {
 
                 if user_balance > 0 {
                     // Refund the funder any excess $NEAR
-                    near_sdk::log!(
-                        "User balance positive. Adding back into contract."
-                    );
+                    near_sdk::log!("User balance positive. Adding back into contract.");
                     self.user_balances.insert(&owner_id, &user_balance);
                 } else {
-                    near_sdk::log!(
-                        "User balance zero. Removing from contract."
-                    );
+                    near_sdk::log!("User balance zero. Removing from contract.");
                     self.user_balances.remove(&owner_id);
                 }
 
@@ -253,7 +235,7 @@ impl Keypom {
                         "Refunding user for attached deposit of: {}",
                         yocto_to_near(near_attached)
                     );
-                    
+
                     Promise::new(owner_id).transfer(near_attached);
                 }
 
@@ -261,9 +243,9 @@ impl Keypom {
             }
 
             // Update the FT data to include the storage and insert the drop back with the updated FT data
-            if let DropType::FungibleToken(mut ft_data) = drop.drop_type {
+            if let DropType::ft(mut ft_data) = drop.drop_type {
                 ft_data.ft_storage = min;
-                drop.drop_type = DropType::FungibleToken(ft_data.clone());
+                drop.drop_type = DropType::ft(ft_data.clone());
 
                 self.drop_for_id.insert(&drop_id, &drop);
 
@@ -281,24 +263,24 @@ impl Keypom {
 
                 // Decide what methods the access keys can call
                 let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-                if let Some(perms) = drop.config.clone().and_then(|c| c.claim_permission) {
+                if let Some(perms) = drop.config.clone().and_then(|c| c.usage).and_then(|u| u.permissions) {
                     match perms {
                         // If we have a config, use the config to determine what methods the access keys can call
-                        ClaimPermissions::Claim => {
+                        ClaimPermissions::claim => {
                             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                         }
-                        ClaimPermissions::CreateAccountAndClaim => {
+                        ClaimPermissions::create_account_and_claim => {
                             access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
                         }
                     }
                 }
 
-                // Get the number of claims per key
-                let num_claims_per_key = drop.config.and_then(|c| c.uses_per_key).unwrap_or(1);
+                // Get the number of uses per key
+                let num_uses_per_key = drop.config.and_then(|c| c.uses_per_key).unwrap_or(1);
                 // Calculate the base allowance to attach
                 let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
-                // The actual allowance is the base * number of claims per key since each claim can potentially use the max pessimistic GAS.
-                let actual_allowance = calculated_base_allowance * num_claims_per_key as u128;
+                // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
+                let actual_allowance = calculated_base_allowance * num_uses_per_key as u128;
 
                 // Loop through each public key and create the access keys
                 for pk in public_keys.clone() {
@@ -339,14 +321,10 @@ impl Keypom {
 
             if user_balance > 0 {
                 // Refund the funder any excess $NEAR
-                near_sdk::log!(
-                    "User balance positive. Adding back into contract."
-                );
+                near_sdk::log!("User balance positive. Adding back into contract.");
                 self.user_balances.insert(&owner_id, &user_balance);
             } else {
-                near_sdk::log!(
-                    "User balance zero. Removing from contract."
-                );
+                near_sdk::log!("User balance zero. Removing from contract.");
                 self.user_balances.remove(&owner_id);
             }
 
@@ -356,7 +334,7 @@ impl Keypom {
                     "Refunding user for attached deposit of: {}",
                     yocto_to_near(near_attached)
                 );
-                
+
                 Promise::new(env::predecessor_account_id()).transfer(near_attached);
             }
 

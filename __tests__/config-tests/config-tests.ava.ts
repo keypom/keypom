@@ -1,8 +1,7 @@
 import anyTest, { TestFn } from "ava";
-import { WalletAccount } from "near-api-js";
-import { Account, NEAR, NearAccount, Worker } from "near-workspaces";
-import { assertBalanceChange, CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
-import { JsonKeyInfo } from "../utils/types";
+import { NEAR, NearAccount, Worker } from "near-workspaces";
+import { assertBalanceChange, CONTRACT_METADATA, generateKeyPairs, getDropSupplyForOwner, getKeyInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { DropConfig, JsonKeyInfo } from "../utils/types";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -75,8 +74,10 @@ test('Testing Delete On Empty Config', async t => {
 
     //generate 2 key pairs, and then create a new config specifying that the drop is deleted when empty
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let config = {
-        delete_on_empty: true,
+    let config: DropConfig = {
+        usage: {
+            auto_delete_drop: true
+        }
     }
 
     // Creating the drop that should be deleted when empty
@@ -119,17 +120,17 @@ test('Testing Delete On Empty Config', async t => {
     let aliBal = await ali.availableBalance();
     console.log('aliBal: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("2").toString());
-
+    
     //gets number of drops for given account owner, this should now be one as the first drop (drop_id = 0) should have been deleted as it was empty
-    const dropSupplyForOwner = await keypom.view('get_drop_supply_for_owner', {account_id: owner.accountId});
+    const dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
     console.log('dropSupplyForOwner: ', dropSupplyForOwner)
     t.is(dropSupplyForOwner, 1);
-
+    
     //drop_id 1 should still exist despite using all its keys as the delete_on_empty defaults to false and
     //drop_id 1 (second drop created) was not given explicit delete_on_empty
-    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 1});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    const keySupplyForDrop = await getKeySupplyForDrop(keypom, "1")
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 });
 
 test('Testing Start Timestamp', async t => {
@@ -141,8 +142,10 @@ test('Testing Start Timestamp', async t => {
     //generate key pair and get starting timestamp
     //set the starting timestamp to be 30s from now, so that you can only claim after 30s
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+    let config: DropConfig = {
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+        }
     }
 
     //create drop with custom starting timestamp
@@ -176,18 +179,18 @@ test('Testing Start Timestamp', async t => {
     t.is(aliBal.toString(), NEAR.parse("0").toString());
     
     //verify that there is still only one key since the claim attempt above failed
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 
     // Wait 30 seconds and call the claim method again
     await new Promise(r => setTimeout(r, 30000));
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     
     //now that the key has been used, the total key supply should now be 0
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 
     //ensure that, now that the claim has gone through, that ali's NEAR wallet balance is now 1NEAR
     aliBal = await ali.availableBalance();
@@ -203,9 +206,11 @@ test('Testing Throttle Timestamp', async t => {
 
     //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 2,
-        throttle_timestamp: ONE_SECOND_NS * 30,
+        time: {
+            throttle: ONE_SECOND_NS * 30,
+        }
     }
 
     //create a drop with the created config
@@ -240,12 +245,12 @@ test('Testing Throttle Timestamp', async t => {
     t.is(aliBal.toString(), NEAR.parse("1").toString());
 
     //should still have 1 key as the single key that was added to the drop has two uses
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
-
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
+    
     //since the key was used once, it should still have one more use on it
-    let keyInformation: JsonKeyInfo = await keypom.view('get_key_information', {key: publicKeys[0]});
+    let keyInformation: JsonKeyInfo = await getKeyInformation(keypom, publicKeys[0]);
     console.log('keyInformation: ', keyInformation)
     t.is(keyInformation.remaining_uses, 1);
 
@@ -254,9 +259,9 @@ test('Testing Throttle Timestamp', async t => {
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
     //now that all key uses were used up, the key should be deleted
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 
     //ali's balance, now that he's claimed twice, should be 2NEAR
     aliBal = await ali.availableBalance();
@@ -273,8 +278,10 @@ test('Testing On Claim Refund Deposit', async t => {
 
     //generate 2 keypairs and a config with on claim refund deposit = true
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let config = {
-        on_claim_refund_deposit: true,
+    let config: DropConfig = {
+        usage: {
+            refund_deposit: true,
+        }
     }
 
     // Creating the drop that should be deleted, this should cause owner's keypom wallet balance to be 9NEAR as they had to front the cost of 1 key at 1NEAR
@@ -317,16 +324,16 @@ test('Testing On Claim Refund Deposit', async t => {
     let userBal: string = await keypom.view('get_user_balance', {account_id: owner.accountId});
     console.log('userBal: ', userBal)
     t.assert(NEAR.parse("1").gte(NEAR.from(userBal)))
-
+    
     //key was used but drop does not delete as it was not set to true in the config
-    const dropSupplyForOwner = await keypom.view('get_drop_supply_for_owner', {account_id: owner.accountId});
+    const dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
     console.log('dropSupplyForOwner: ', dropSupplyForOwner)
     t.is(dropSupplyForOwner, 1);
-
+    
     //the drop should no longer have any keys however, as claim was called
-    const getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    const keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 });
 
 test('Testing Custom Drop Root', async t => {
@@ -339,7 +346,7 @@ test('Testing Custom Drop Root', async t => {
     let {keys: keysNoConfig, publicKeys: publicKeysNoConfig} = await generateKeyPairs(1);
     let {keys: keysConfig, publicKeys: publicKeysConfig} = await generateKeyPairs(2);
     //create config that customizes root id
-    let config  = {
+    let config: DropConfig  = {
     root_account_id: customRoot.accountId,
     }
     //customRoot.accountId = customRoot.test.near
@@ -443,14 +450,16 @@ test('Testing Auto Withdraw', async t => {
     //generate 4 keypairs
     let {keys, publicKeys} = await generateKeyPairs(4);
     //first config with 1 use/key
-    let config1 = {
+    let config1: DropConfig = {
         uses_per_key: 1,
     }
     //second config with auto_withdraw on, 1 use per key, and drop delete on empty enabled
-    let config2 = {
+    let config2: DropConfig = {
         uses_per_key: 1,
-        auto_withdraw: true,
-        delete_on_empty: true
+        usage: {
+            auto_withdraw: true,
+            auto_delete_drop: true
+        }
     }
     //create drop with publickeys[0] and first config with no auto-withdraw and delete-on-empty
     await owner.call(keypom, 'create_drop', {
@@ -490,15 +499,12 @@ test('Testing Auto Withdraw', async t => {
     t.assert(userBal > "0");
     
     // Delete the first drop manually, second drop was auto-deleted
-    await owner.call(keypom, 'delete_keys', {drop_id: 0}, {gas: LARGE_GAS});
-
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"}, {gas: LARGE_GAS});
+    
     //get number of active drops for owner, should be 0 after first drop manual delete and second drop auto delete
-    let viewFunctions = await queryAllViewFunctions({
-        contract: keypom, 
-        account_id: owner.accountId
-    });
-    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
-    t.is(viewFunctions.dropSupplyForOwner, 0);
+    let dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
+    console.log('dropSupplyForOwner: ', dropSupplyForOwner)
+    t.is(dropSupplyForOwner, 0);
 
     //create another drop using config2; auto-delete on, 1NEAR deposited per use
     await owner.call(keypom, 'create_drop', {
@@ -542,12 +548,9 @@ test('Testing Auto Withdraw', async t => {
     t.is(userBal, "0");
 
     //get number of drops for owner remaining, assert that it is 0
-    viewFunctions = await queryAllViewFunctions({
-        contract: keypom, 
-        account_id: owner.accountId
-    });
-    console.log('viewFunctions.dropSupplyForOwner: ', viewFunctions.dropSupplyForOwner)
-    t.is(viewFunctions.dropSupplyForOwner, 0);
+    dropSupplyForOwner = await getDropSupplyForOwner(keypom, owner.accountId);
+    console.log('dropSupplyForOwner: ', dropSupplyForOwner)
+    t.is(dropSupplyForOwner, 0);
 });
 
 test('Testing Custom Drop ID', async t => {
@@ -652,7 +655,7 @@ test('Testing Valid Config', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
 
     //zero uses per key cannot be used.
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 0,
     }
     try {
@@ -664,8 +667,10 @@ test('Testing Valid Config', async t => {
     } catch(e) {}
 
     //both the start_timestamp and end timestamps are greater than the current block
-    let config1 = {
-        start_timestamp: 500,
+    let config1: DropConfig = {
+        time: {
+            start: 500,
+        }
     }
     try {
         await owner.call(keypom, 'create_drop', {
@@ -676,8 +681,10 @@ test('Testing Valid Config', async t => {
     } catch(e) {}
 
     //end timestamp 0 not possible
-    let config2 = {
-        end_timestamp: 0,
+    let config2: DropConfig = {
+        time: {
+            end: 0,
+        }
     }
     try {
         await owner.call(keypom, 'create_drop', {
@@ -688,10 +695,13 @@ test('Testing Valid Config', async t => {
     } catch(e) {}
 
     //end timestamp occurs before start, invalid
-    let config3 = {
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
-        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+    let config3: DropConfig = {
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+        }
     }
+
     try {
         await owner.call(keypom, 'create_drop', {
             public_keys: [], 
@@ -717,8 +727,10 @@ test('Testing End Timestamp', async t => {
 
     //generate 2 keypairs and make a config where timestamp is 10s from now
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let config = {
-        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+    let config: DropConfig = {
+        time: {
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+        }
     }
 
     //use config to create drop
@@ -729,9 +741,9 @@ test('Testing End Timestamp', async t => {
     },{gas: LARGE_GAS});
 
     //should have 2 keys in this specific drop
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 2);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 2);
 
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
@@ -751,9 +763,9 @@ test('Testing End Timestamp', async t => {
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
     //should now only have 1 key in the key supply for this drop
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 
     // Wait 15 seconds
     await new Promise(r => setTimeout(r, 15000));
@@ -762,12 +774,13 @@ test('Testing End Timestamp', async t => {
     try {
         await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     } catch(e) {}
+    
     //claim above failed, key supply stays at 1
     //note since claim failed for INTERNAL reasons, the key is NOT deleted.
     //all internal checks are performed before the key is deleted and the XCC is initiated
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 });
 
 test('Testing End Timestamp Key Drainage', async t => {
@@ -779,8 +792,10 @@ test('Testing End Timestamp Key Drainage', async t => {
 
     //generate 1 keypair, create config with end timestamp 5s from now
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
-        end_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+    let config: DropConfig = {
+        time: {
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+        }
     }
 
     //create drop with created config
@@ -791,9 +806,9 @@ test('Testing End Timestamp Key Drainage', async t => {
     },{gas: LARGE_GAS});
 
     //key supply in this drop should now be one
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 
     // Wait 5 seconds for start timestamp to pass
     await new Promise(r => setTimeout(r, 5000));
@@ -819,14 +834,14 @@ test('Testing End Timestamp Key Drainage', async t => {
     }
 
     //since the key was never claimed, there is one key left for the drop, the same one originally initialized
-    getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 1);
+    keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 1);
 
     //check if ali's balance has risen, it should not since the claims all failed
     let alib2 = await ali.availableBalance();
     t.assert(assertBalanceChange(alib1, alib2, new NEAR(0), 0.01), "balance didn't increment properly with 1% precision");
-
+    
 });
 
 test('Testing Claim Interval', async t => {
@@ -836,10 +851,12 @@ test('Testing Claim Interval', async t => {
 
     //create 1 keypair, config with 5uses/key, a start timestamp of 5s from now, and a 10s claim interval
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 5,
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
-        claim_interval: ONE_SECOND_NS * 10,
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+            interval: ONE_SECOND_NS * 10,
+        }
     }
 
     //create drop
@@ -889,9 +906,9 @@ test('Testing Claim Interval', async t => {
     }
 
     //all claims should have gone through, expect key to be deleted
-    let getKeySupplyForDrop = await keypom.view('get_key_supply_for_drop', {drop_id: 0});
-    console.log('getKeySupplyForDrop: ', getKeySupplyForDrop)
-    t.is(getKeySupplyForDrop, 0);
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 0);
 
     //aliBal should now be 5 after claiming 5 times at 1NEAR per key use
     aliBal = await ali.availableBalance();
@@ -907,11 +924,13 @@ test('Testing All Time Based Configs Together', async t => {
 
     //generate 1 key pair and a config with 5uses per key, a start timestamp of 30s from now, a claim interval of 10s and throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(1);
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 5,
-        start_timestamp: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
-        claim_interval: ONE_SECOND_NS * 10,
-        throttle_timestamp: ONE_SECOND_NS * 30
+        time: {
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+            interval: ONE_SECOND_NS * 10,
+            throttle: ONE_SECOND_NS * 30
+        }
     }
 
     //create drop using above defined keys and config

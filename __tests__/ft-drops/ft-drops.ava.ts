@@ -2,6 +2,7 @@ import anyTest, { TestFn } from "ava";
 import { BN } from "bn.js";
 import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
 import { assertBalanceChange, CONTRACT_METADATA, DEFAULT_GAS, GAS_PRICE, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { DropConfig, FTData } from "../utils/types";
 import { ftRegistrationFee, oneGtNear, sendFTs, totalSupply } from "./utils/ft-utils";
 
 const test = anyTest as TestFn<{
@@ -79,12 +80,12 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(6);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
     }
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 2,
     }
 
@@ -92,7 +93,7 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: publicKeys.slice(0, 5), 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         config
     },{gas: LARGE_GAS});
 
@@ -104,7 +105,7 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -120,7 +121,7 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -160,14 +161,14 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
     t.is(viewFunctions.dropInformation?.registered_uses, 0);
     t.is(viewFunctions.keysForDrop?.length, 0);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0})
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"})
     let ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal !== "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -188,13 +189,13 @@ test('OverRegister FTs and add multi use key later', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
     }
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 10,
     }
 
@@ -202,7 +203,7 @@ test('OverRegister FTs and add multi use key later', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         config
     },{gas: LARGE_GAS});
 
@@ -215,7 +216,7 @@ test('OverRegister FTs and add multi use key later', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
@@ -261,14 +262,14 @@ test('OverRegister FTs and add multi use key later', async t => {
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
     t.is(viewFunctions.dropInformation?.registered_uses, 0);
     t.is(viewFunctions.keysForDrop?.length, 0);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0})
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"})
     let ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal !== "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -286,7 +287,7 @@ test('Deleting Keys and Drop', async t => {
     const keypomInitialBalance = await (await keypom.balance()).available;
 
     let {keys, publicKeys} = await generateKeyPairs(6);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
@@ -298,7 +299,7 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data
+        ft
     },{gas: LARGE_GAS});
     let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating key: ', ownerBal)
@@ -319,14 +320,14 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'withdraw_from_balance', {});
 
     // Remove the key and ensure the owner balance goes up by the same net cost
-    await owner.call(keypom, 'delete_keys', {drop_id: 0, delete_on_empty: false});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0", delete_on_empty: false});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('new ownerBal after del: ', ownerBal)
     t.is(NEAR.from(ownerBal).toString(), netCostAddingOneKey.toString());
 
     // Delete the drop and ensure the owner balance goes up by the net cost
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('new ownerBal after del drop: ', ownerBal)
     t.is(NEAR.from(ownerBal).toString(), netCostCreatingDrop.toString());
@@ -347,7 +348,7 @@ test('Deleting Keys and Drop', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]],
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data
+        ft
     },{gas: LARGE_GAS});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating key: ', ownerBal)
@@ -363,13 +364,13 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     console.log('keypomInitialBalance: ', keypomInitialBalance)
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
     }
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 10,
     }
 
@@ -378,7 +379,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         config
     },{gas: LARGE_GAS});
     let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
@@ -415,7 +416,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     let viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
@@ -423,14 +424,14 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     t.is(viewFunctions.keysForDrop?.length, 1);
 
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'refund_assets', {drop_id: 0})
+    await owner.call(keypom, 'refund_assets', {drop_id: "0"})
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.is(ownerBal, "0");
 
     viewFunctions = await queryAllViewFunctions({
         contract: keypom, 
         account_id: owner.accountId,
-        drop_id: 0
+        drop_id: "0"
     });
     console.log('viewFunctions.dropInformation: FINAL ', viewFunctions.dropInformation)
     console.log('viewFunctions.keysForDrop: FINAL ', viewFunctions.keysForDrop)
@@ -446,7 +447,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     t.is(minterBal, (oneGtNear * BigInt(995)).toString());
 
     await owner.call(keypom, 'withdraw_from_balance', {});
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal > "0");
     await owner.call(keypom, 'withdraw_from_balance', {});
@@ -462,13 +463,13 @@ test('Paying with Attached Deposit. FT Contract Does Not Exist', async t => {
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: "foobar.test.near",
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
     }
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 10,
     }
 
@@ -476,7 +477,7 @@ test('Paying with Attached Deposit. FT Contract Does Not Exist', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         config
     },{gas: LARGE_GAS, attachedDeposit: NEAR.parse("15").toString()});
 
@@ -497,13 +498,13 @@ test('Paying with Attached Deposit. Not enough deposit to cover callback registr
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
     }
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 10,
     }
 
@@ -514,7 +515,7 @@ test('Paying with Attached Deposit. Not enough deposit to cover callback registr
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         config
     },{gas: LARGE_GAS, attachedDeposit: NEAR.parse("10.202").toString()});
     // Wait 5 seconds
@@ -542,13 +543,13 @@ test('Paying with User Balance. FT Contract Does Not Exist', async t => {
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: "foobar.test.near",
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
     }
 
-    let config = {
+    let config: DropConfig = {
         uses_per_key: 10,
     }
 
@@ -559,7 +560,7 @@ test('Paying with User Balance. FT Contract Does Not Exist', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data,
+        ft,
         config
     },{gas: LARGE_GAS});
 
@@ -580,7 +581,7 @@ test('Automatically Register Keypom Contract', async t => {
     const keypomInitialBalance = t.context.keypomInitialBalance;
 
     let {keys, publicKeys} = await generateKeyPairs(2);
-    let ft_data = {
+    let ft: FTData = {
         contract_id: ftContract.accountId,
         sender_id: minter.accountId,
         balance_per_use: oneGtNear.toString()
@@ -592,7 +593,7 @@ test('Automatically Register Keypom Contract', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[0]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data
+        ft
     },{gas: LARGE_GAS});
     let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating drop with key: ', ownerBal)
@@ -605,7 +606,7 @@ test('Automatically Register Keypom Contract', async t => {
     await owner.call(keypom, 'create_drop', {
         public_keys: [publicKeys[1]], 
         deposit_per_use: NEAR.parse("1").toString(),
-        ft_data
+        ft
     },{gas: LARGE_GAS});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     console.log('ownerBal after creating second drop with key: ', ownerBal)
@@ -618,8 +619,8 @@ test('Automatically Register Keypom Contract', async t => {
     console.log('storageBal: ', storageBal)
     t.not(storageBal, null);
 
-    await owner.call(keypom, 'delete_keys', {drop_id: 0});
-    await owner.call(keypom, 'delete_keys', {drop_id: 1});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"});
+    await owner.call(keypom, 'delete_keys', {drop_id: "1"});
     ownerBal = await keypom.view('get_user_balance', {account_id: owner});
     t.assert(ownerBal > "0");
     await owner.call(keypom, 'withdraw_from_balance', {});

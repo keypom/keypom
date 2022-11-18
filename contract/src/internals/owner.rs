@@ -6,7 +6,12 @@ impl Keypom {
     #[payable]
     pub fn register_ft_contract(&mut self, account_id: AccountId) {
         self.assert_owner();
-        self.internal_register_ft_contract(&account_id, env::attached_deposit(), &env::predecessor_account_id(), false);
+        self.internal_register_ft_contract(
+            &account_id,
+            env::attached_deposit(),
+            &env::predecessor_account_id(),
+            false,
+        );
         self.registered_ft_contracts.insert(&account_id);
     }
 

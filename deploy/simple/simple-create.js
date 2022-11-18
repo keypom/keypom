@@ -44,7 +44,6 @@ async function start() {
 	}
 
 	try {
-		DROP_CONFIG.end_timestamp = (Date.now() * 1e6) + 1e9 * 120;
 		await fundingAccount.functionCall(
 			KEYPOM_CONTRACT, 
 			'create_drop', 

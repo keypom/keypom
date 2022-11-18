@@ -58,7 +58,7 @@ impl Keypom {
                     remaining_uses: key_info.remaining_uses,
                     last_used: key_info.last_used,
                     allowance: key_info.allowance,
-                    key_id: key_info.key_id
+                    key_id: key_info.key_id,
                 });
             }
 
@@ -79,7 +79,7 @@ impl Keypom {
     /// Returns the JsonDrop corresponding to a drop ID. If a key is specified, it will return the drop info for that key.
     pub fn get_drop_information(
         &self,
-        drop_id: Option<DropId>,
+        drop_id: Option<DropIdJson>,
         key: Option<PublicKey>,
     ) -> JsonDrop {
         // If the user doesn't specify a drop ID or a key, panic.
@@ -88,7 +88,7 @@ impl Keypom {
         }
 
         // Set the drop ID to be what was passed in. If they didn't pass in a drop ID, get it
-        let mut drop_id = drop_id.unwrap_or(0);
+        let mut drop_id: u128 = drop_id.unwrap_or(DEFAULT_DROP_ID_JSON).0;
 
         // If the user specifies a key, use that to get the drop ID.
         if let Some(key) = key {
@@ -100,34 +100,47 @@ impl Keypom {
             .get(&drop_id)
             .expect("no drop found for drop ID");
 
-        let drop_type: JsonDropType = match drop.drop_type {
-            DropType::FunctionCall(data) => JsonDropType::FunctionCall(data),
-            DropType::NonFungibleToken(data) => JsonDropType::NonFungibleToken(JsonNFTData {
-                contract_id: data.contract_id,
-                sender_id: data.sender_id,
-            }),
-            DropType::FungibleToken(data) => JsonDropType::FungibleToken(data),
-            _simple => JsonDropType::Simple,
-        };
-
-        JsonDrop {
+        let mut json_drop = JsonDrop {
             drop_id: U128(drop_id),
             owner_id: drop.owner_id,
             deposit_per_use: U128(drop.deposit_per_use),
-            drop_type,
+            simple: None,
+            ft: None,
+            fc: None,
+            nft: None,
             config: drop.config,
             registered_uses: drop.registered_uses,
             required_gas: drop.required_gas,
             metadata: drop.metadata.get(),
             next_key_id: drop.next_key_id,
-        }
+        };
+
+        match drop.drop_type {
+            DropType::fc(data) => {
+                json_drop.fc = Some(data)
+            }
+            DropType::nft(data) => {
+                json_drop.nft = Some(JsonNFTData {
+                    contract_id: data.contract_id,
+                    sender_id: data.sender_id,
+                })
+            }
+            DropType::ft(data) => {
+                json_drop.ft = Some(data)
+            }
+            DropType::simple(data) => {
+                json_drop.simple = Some(data)
+            }
+        };
+
+        json_drop
     }
 
     /// Returns the total supply of active keys for a given drop
-    pub fn get_key_supply_for_drop(&self, drop_id: DropId) -> u64 {
+    pub fn get_key_supply_for_drop(&self, drop_id: DropIdJson) -> u64 {
         // Get the drop object and return the length
         self.drop_for_id
-            .get(&drop_id)
+            .get(&drop_id.0)
             .expect("no drop found")
             .pks
             .len()
@@ -136,7 +149,7 @@ impl Keypom {
     /// Paginate through keys in a specific drop
     pub fn get_keys_for_drop(
         &self,
-        drop_id: DropId,
+        drop_id: DropIdJson,
         from_index: Option<U128>,
         limit: Option<u64>,
     ) -> Vec<JsonKeyInfo> {
@@ -145,7 +158,7 @@ impl Keypom {
 
         //iterate through each key using an iterator
         self.drop_for_id
-            .get(&drop_id)
+            .get(&drop_id.0)
             .expect("No drop for given ID")
             .pks
             .keys()
@@ -194,7 +207,7 @@ impl Keypom {
                 // Take the first "limit" elements in the vector. If we didn't specify a limit, use 50
                 .take(limit.unwrap_or(50) as usize)
                 // Convert each ID into a JsonDrop
-                .map(|id| self.get_drop_information(Some(id), None))
+                .map(|id| self.get_drop_information(Some(U128(id)), None))
                 // Collect all JsonDrops into a vector and return it
                 .collect()
         } else {
@@ -203,9 +216,9 @@ impl Keypom {
     }
 
     /// Return the total supply of token IDs for a given drop
-    pub fn get_nft_supply_for_drop(&self, drop_id: DropId) -> u64 {
-        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
+    pub fn get_nft_supply_for_drop(&self, drop_id: DropIdJson) -> u64 {
+        let drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
+        if let DropType::nft(nft_data) = drop.drop_type {
             return nft_data.token_ids.len();
         } else {
             return 0;
@@ -215,12 +228,12 @@ impl Keypom {
     /// Paginate through token IDs in a drop
     pub fn get_nft_token_ids_for_drop(
         &self,
-        drop_id: DropId,
+        drop_id: DropIdJson,
         from_index: Option<U128>,
         limit: Option<u64>,
     ) -> Vec<String> {
-        let drop = self.drop_for_id.get(&drop_id).expect("no drop found");
-        if let DropType::NonFungibleToken(nft_data) = drop.drop_type {
+        let drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
+        if let DropType::nft(nft_data) = drop.drop_type {
             let token_ids = nft_data.token_ids;
 
             // Where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
