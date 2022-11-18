@@ -52,6 +52,13 @@ impl Keypom {
                 .expect("no drop found for drop ID");
 
             if let Some(key_info) = drop.pks.get(&key) {
+                let cur_use = drop
+                    .config
+                    .clone()
+                    .and_then(|c| c.uses_per_key)
+                    .unwrap_or(1)
+                    - key_info.remaining_uses + 1;
+
                 return Some(JsonKeyInfo {
                     drop_id: U128(drop_id),
                     pk: key.clone(),
@@ -59,6 +66,7 @@ impl Keypom {
                     last_used: key_info.last_used,
                     allowance: key_info.allowance,
                     key_id: key_info.key_id,
+                    cur_key_use: cur_use
                 });
             }
 

@@ -125,7 +125,7 @@ test('Withdrawing fees earned', async t => {
     //set drop fees and then give ali the balance necessary to create the drop
     await keypom.call(keypom, 'set_fees', {drop_fee: NEAR.parse("1").toString(), key_fee: NEAR.parse('5 mN').toString()});
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()})
+    await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()})
     
     //verify that set drop fee succeeded, balance - drop fee = 2-1 = 1
     result = await keypom.view('get_fees_collected', {});
@@ -164,7 +164,7 @@ test('Custom fees earned', async t => {
     //set drop fee to 5N and key fee to 0N. Add 10N to Ali's balance and create drop using Ali's account
     await keypom.call(keypom, 'set_fees_per_user', {account_id: ali, drop_fee: NEAR.parse("5").toString(), key_fee: "0"});
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()})
+    await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()})
     
     //make sure set_fees_per_user configured correctly and actually decremented 5N
     result = await keypom.view('get_fees_collected', {});

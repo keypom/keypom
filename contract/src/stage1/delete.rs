@@ -427,7 +427,10 @@ impl Keypom {
 
         // Get the number of uses registered for the drop.
         let uses_registered = drop.registered_uses;
-        require!(uses_registered > 0, "no uses left to unregister");
+        if uses_registered == 0 {
+            near_sdk::log!("No uses registered. Nothing to refund");
+            return;
+        }
 
         // Get the uses to refund. If not specified, this is the number of uses currently registered.
         let num_to_refund = assets_to_refund.unwrap_or(uses_registered);

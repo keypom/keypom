@@ -563,7 +563,6 @@ test('Testing Custom Drop ID', async t => {
     //this will fail, custom drop ID's < a billion WILL FAIL. This is to prevent interference with general incrementing nonce drop IDs.
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
             deposit_per_use: NEAR.parse("1").toString(),
             drop_id: "1"
         },{gas: LARGE_GAS});
@@ -582,7 +581,7 @@ test('Testing Custom Drop ID', async t => {
 
     ////create a normal drop, no custom dropID. this means the dropID will be 0
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
+         
         deposit_per_use: NEAR.parse("1").toString()
     },{gas: LARGE_GAS});
 
@@ -598,7 +597,7 @@ test('Testing Custom Drop ID', async t => {
 
     //this should succeed as dropID > a billion
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
+         
         deposit_per_use: NEAR.parse("1").toString(),
         drop_id: "2000000000"
     },{gas: LARGE_GAS});
@@ -615,7 +614,7 @@ test('Testing Custom Drop ID', async t => {
 
     //adding another non-custom-dropID drop should go through
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
+         
         deposit_per_use: NEAR.parse("1").toString()
     },{gas: LARGE_GAS});
 
@@ -632,7 +631,7 @@ test('Testing Custom Drop ID', async t => {
     //adding a duplicate dropID should not work
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             drop_id: "2000000000"
         },{gas: LARGE_GAS});
@@ -660,7 +659,7 @@ test('Testing Valid Config', async t => {
     }
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config,
         },{gas: LARGE_GAS});
@@ -674,7 +673,7 @@ test('Testing Valid Config', async t => {
     }
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config: config1,
         },{gas: LARGE_GAS});
@@ -688,7 +687,7 @@ test('Testing Valid Config', async t => {
     }
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config: config2,
         },{gas: LARGE_GAS});
@@ -704,7 +703,7 @@ test('Testing Valid Config', async t => {
 
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config: config3,
         },{gas: LARGE_GAS});

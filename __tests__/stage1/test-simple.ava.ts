@@ -43,7 +43,8 @@ test('Create empty drop check views', async t => {
     //add 2NEAR to ali's keypom balance
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
     //create a drop with Ali, doesn't front any cost. 
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
+    await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()});
+
     
     //store the results of all view functions into results
     let result = await queryAllViewFunctions({

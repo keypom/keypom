@@ -32,7 +32,6 @@ export async function createDistro(
 
         // Creating the empty drop
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
             deposit_per_use: depositPerUse,
             fc: getNEARConFCData(nftSeries),
             config: null

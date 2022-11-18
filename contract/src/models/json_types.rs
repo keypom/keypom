@@ -75,6 +75,9 @@ pub struct JsonKeyInfo {
     pub drop_id: DropIdJson,
     pub pk: PublicKey,
 
+    // Which use is the current key on?
+    pub cur_key_use: u64,
+
     // How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: u64,
 
