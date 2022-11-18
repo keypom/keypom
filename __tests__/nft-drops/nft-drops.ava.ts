@@ -179,7 +179,6 @@ test('OverRegister NFTs and add multi use key later', async t => {
 
     // Creating the NFT drop with 5 keys
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
         nft,
         config
@@ -324,7 +323,6 @@ test('Deleting Keys and Drop', async t => {
     // How much does it cost to create a drop?
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
         nft,
     },{gas: LARGE_GAS});

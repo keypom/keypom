@@ -443,7 +443,6 @@ test('Testing Custom Drop ID', async t => {
     // Creating the drop that points to the custom root
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
             deposit_per_use: NEAR.parse("1").toString(),
             drop_id: "1"
         },{gas: LARGE_GAS});
@@ -459,7 +458,7 @@ test('Testing Custom Drop ID', async t => {
     t.is(viewFunctions.dropSupplyForOwner, 0);
 
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
+         
         deposit_per_use: NEAR.parse("1").toString()
     },{gas: LARGE_GAS});
 
@@ -473,7 +472,7 @@ test('Testing Custom Drop ID', async t => {
     t.is(viewFunctions.dropSupplyForOwner, 1);
 
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
+         
         deposit_per_use: NEAR.parse("1").toString(),
         drop_id: "2000000000"
     },{gas: LARGE_GAS});
@@ -488,7 +487,7 @@ test('Testing Custom Drop ID', async t => {
     t.is(viewFunctions.dropSupplyForOwner, 2);
 
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
+         
         deposit_per_use: NEAR.parse("1").toString()
     },{gas: LARGE_GAS});
 
@@ -503,7 +502,7 @@ test('Testing Custom Drop ID', async t => {
 
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             drop_id: "2000000000"
         },{gas: LARGE_GAS});
@@ -528,7 +527,7 @@ test('Testing Valid Config', async t => {
     }
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config,
         },{gas: LARGE_GAS});
@@ -541,7 +540,7 @@ test('Testing Valid Config', async t => {
     }
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config: config1,
         },{gas: LARGE_GAS});
@@ -554,7 +553,7 @@ test('Testing Valid Config', async t => {
     }
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config: config2,
         },{gas: LARGE_GAS});
@@ -569,7 +568,7 @@ test('Testing Valid Config', async t => {
 
     try {
         await owner.call(keypom, 'create_drop', {
-            public_keys: [], 
+             
             deposit_per_use: NEAR.parse("1").toString(),
             config: config3,
         },{gas: LARGE_GAS});

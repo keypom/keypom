@@ -41,7 +41,7 @@ test('Create empty drop check views', async t => {
     const { keypom, ali } = t.context.accounts;
     
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
+    await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()});
     
     let result = await queryAllViewFunctions({
         contract: keypom, 

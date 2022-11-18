@@ -108,7 +108,7 @@ test('Withdrawing fees earned', async t => {
     t.is(result, '0');
     await keypom.call(keypom, 'set_fees', {drop_fee: NEAR.parse("1").toString(), key_fee: NEAR.parse('5 mN').toString()});
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()})
+    await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()})
     
     result = await keypom.view('get_fees_collected', {});
     t.is(result, NEAR.parse("1").toString());
@@ -139,7 +139,7 @@ test('Custom fees earned', async t => {
         
     await keypom.call(keypom, 'set_fees_per_user', {account_id: ali, drop_fee: NEAR.parse("5").toString(), key_fee: "0"});
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()})
+    await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()})
     
     result = await keypom.view('get_fees_collected', {});
     t.is(result, NEAR.parse("5").toString());

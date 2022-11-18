@@ -18,7 +18,7 @@ impl Keypom {
     pub fn create_drop(
         &mut self,
         // Public keys to add when creating the drop (can be empty)
-        public_keys: Vec<PublicKey>,
+        public_keys: Option<Vec<PublicKey>>,
         // How much $NEAR should be transferred everytime a key is used? Can be 0.
         deposit_per_use: U128,
 
@@ -77,7 +77,8 @@ impl Keypom {
 
         // Funder is the predecessor
         let owner_id = env::predecessor_account_id();
-        let len = public_keys.len() as u128;
+        let keys_to_iter = public_keys.unwrap_or_default();
+        let len = keys_to_iter.len() as u128;
         // Get the number of uses per key to dictate what key usage data we should put in the map
         let num_uses_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
@@ -156,7 +157,7 @@ impl Keypom {
         );
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = 0;
-        for pk in &public_keys {
+        for pk in &keys_to_iter {
             let pw_per_key = passwords_per_key
                 .clone()
                 .and_then(|f| f[next_key_id as usize].clone())
@@ -505,7 +506,7 @@ impl Keypom {
             }
 
             // Remove the drop
-            self.internal_remove_drop(&actual_drop_id, public_keys);
+            self.internal_remove_drop(&actual_drop_id, keys_to_iter);
             // Return early
             return None;
         }
@@ -530,7 +531,7 @@ impl Keypom {
             let promise = env::promise_batch_create(&current_account_id);
 
             // Loop through each public key and create the access keys
-            for pk in public_keys.clone() {
+            for pk in keys_to_iter.clone() {
                 // Must assert in the loop so no access keys are made?
                 env::promise_batch_action_add_key_with_function_call(
                     promise,
@@ -567,7 +568,7 @@ impl Keypom {
                         // Resolve the promise with the min GAS. All unspent GAS will be added to this call.
                         .with_attached_deposit(near_attached)
                         .with_static_gas(MIN_GAS_FOR_RESOLVE_STORAGE_CHECK)
-                        .resolve_storage_check(public_keys, actual_drop_id, required_deposit),
+                        .resolve_storage_check(keys_to_iter, actual_drop_id, required_deposit),
                 );
         }
 
@@ -582,7 +583,7 @@ impl Keypom {
     pub fn add_keys(
         &mut self,
         // Public keys to add when creating the drop (can be empty)
-        public_keys: Vec<PublicKey>,
+        public_keys: Option<Vec<PublicKey>>,
         // Overload the specific drop ID
         drop_id: DropIdJson,
 
@@ -602,7 +603,8 @@ impl Keypom {
             "only funder can add to drops"
         );
 
-        let len = public_keys.len() as u128;
+        let keys_to_iter = public_keys.unwrap_or_default();
+        let len = keys_to_iter.len() as u128;
         /*
             Add data to storage
         */
@@ -642,7 +644,7 @@ impl Keypom {
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = drop.next_key_id;
         let mut idx = 0;
-        for pk in &public_keys {
+        for pk in &keys_to_iter {
             let pw_per_key = passwords_per_key
                 .clone()
                 .and_then(|f| f[idx as usize].clone())
@@ -894,7 +896,7 @@ impl Keypom {
             }
 
             // Remove the drop
-            self.internal_remove_drop(&drop_id.0, public_keys);
+            self.internal_remove_drop(&drop_id.0, keys_to_iter);
             // Return early
             return None;
         }
@@ -916,7 +918,7 @@ impl Keypom {
         let promise = env::promise_batch_create(&current_account_id);
 
         // Loop through each public key and create the access keys
-        for pk in public_keys.clone() {
+        for pk in keys_to_iter.clone() {
             // Must assert in the loop so no access keys are made?
             env::promise_batch_action_add_key_with_function_call(
                 promise,
