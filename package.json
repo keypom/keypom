@@ -10,7 +10,7 @@
 		"simple": "node deploy/simple/simple-create",
 		"ft": "node deploy/ft/ft-create",
 		"nft": "node deploy/nft/nft-create",
-		"fc": "node deploy/function-call/fc-create",
+		"poaps": "node deploy/poaps/fc-create",
 		"test": "yarn test:internals && yarn test:stage1 && yarn test:ticketing && yarn test:poaps && yarn test:configs && yarn test:nft-drops && yarn test:ft-drops && yarn test:passwords",
 		"test:internals": "ava __tests__/internals/test-internals.ava.ts",
 		"test:stage1": "yarn test:stage1:simple",
@@ -21,12 +21,13 @@
 		"test:nft-drops": "ava __tests__/nft-drops/nft-drops.ava.ts",
 		"test:ft-drops": "ava __tests__/ft-drops/ft-drops.ava.ts",
 		"test:profiling": "ava __tests__/profiling/profiling.ava.ts",
-		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts"
+		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts",
+		"test:sales": "ava __tests__/pub-sales/pub-sales.ava.ts"
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
 		"gh-pages": "^4.0.0",
-		"keypom-js": "^0.0.2"
+		"keypom-js": "^0.0.8"
 	},
 	"devDependencies": {
 		"@types/bn.js": "^5.1.0",

@@ -583,8 +583,8 @@ impl Keypom {
     #[payable]
     pub fn add_keys(
         &mut self,
-        // Public keys to add when creating the drop (can be empty)
-        public_keys: Option<Vec<PublicKey>>,
+        // Public keys to add
+        public_keys: Vec<PublicKey>,
         // Overload the specific drop ID
         drop_id: DropIdJson,
 
@@ -599,13 +599,22 @@ impl Keypom {
         let config = &drop.config;
         let funder = &drop.owner_id;
 
-        require!(
-            funder == &env::predecessor_account_id(),
-            "only funder can add to drops"
-        );
+        let len = public_keys.len() as u128;
 
-        let keys_to_iter = public_keys.unwrap_or_default();
-        let len = keys_to_iter.len() as u128;
+        let mut revenue_generated = 0;
+        // If there is a public sale and the predecessor isn't the funder, perform checks and return revenue
+        if let Some(sale) = config.as_ref().and_then(|c| c.pub_sale.as_ref()) {
+            if funder != &env::predecessor_account_id() {
+                revenue_generated = assert_pub_sale_requirements(sale, drop.next_key_id, len as u64);
+            }
+        } else {
+            // If there is no public sale, ensure the predecessor is the funder
+            require!(
+                funder == &env::predecessor_account_id(),
+                "only funder can add to drops"
+            );
+        }
+
         /*
             Add data to storage
         */
@@ -645,7 +654,7 @@ impl Keypom {
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = drop.next_key_id;
         let mut idx = 0;
-        for pk in &keys_to_iter {
+        for pk in &public_keys {
             let pw_per_key = passwords_per_key
                 .clone()
                 .and_then(|f| f[idx as usize].clone())
@@ -746,12 +755,12 @@ impl Keypom {
         // Add the drop back in for the drop ID
         self.drop_for_id.insert(&drop_id.0, &drop);
 
-        // Get the current balance of the funder.
-        let mut current_user_balance = self.user_balances.get(&funder).unwrap_or(0);
+        // Get the current balance of the user adding keys.
+        let mut current_user_balance = self.user_balances.get(&env::predecessor_account_id()).unwrap_or(0);
         let near_attached = env::attached_deposit();
         // Add the attached deposit to their balance
         current_user_balance += near_attached;
-        self.user_balances.insert(&funder, &current_user_balance);
+        self.user_balances.insert(&env::predecessor_account_id(), &current_user_balance);
 
         // Get the required attached_deposit for all the FCs
         let mut deposit_required_for_fc_deposits = 0;
@@ -811,6 +820,7 @@ impl Keypom {
             - Total access key allowance for EACH key
             - Access key storage for EACH key
             - Balance for each key * (number of uses - uses with None for FC Data)
+            - Revenue from purchasing keys (if there is some)
 
             Optional:
             - FC attached_deposit for each key * num Some(data) uses
@@ -835,7 +845,8 @@ impl Keypom {
             + total_access_key_storage
             + total_deposits
             + total_ft_costs
-            + total_deposits_for_fc;
+            + total_deposits_for_fc
+            + revenue_generated;
 
         near_sdk::log!(
             "Current balance: {}, 
@@ -848,6 +859,7 @@ impl Keypom {
             deposits less none FCs: {} total deposits: {} lazy registration: {},
             deposits for FCs: {} total deposits for FCs: {},
             FT Costs per claim {} total FT Costs: {},
+            Revenue generated: {},
             uses per key: {}
             None FCs: {},
             length: {}",
@@ -868,6 +880,7 @@ impl Keypom {
             yocto_to_near(total_deposits_for_fc),
             yocto_to_near(ft_optional_costs_per_claim),
             yocto_to_near(total_ft_costs),
+            yocto_to_near(revenue_generated),
             num_uses_per_key,
             num_none_fcs,
             len
@@ -886,9 +899,9 @@ impl Keypom {
 
             // If they have a balance, insert it back into the map otherwise remove it
             if current_user_balance > 0 {
-                self.user_balances.insert(&funder, &current_user_balance);
+                self.user_balances.insert(&env::predecessor_account_id(), &current_user_balance);
             } else {
-                self.user_balances.remove(&funder);
+                self.user_balances.remove(&env::predecessor_account_id());
             }
 
             // Refund the predecessor for their attached deposit if it's greater than 0
@@ -897,7 +910,7 @@ impl Keypom {
             }
 
             // Remove the drop
-            self.internal_remove_drop(&drop_id.0, keys_to_iter);
+            self.internal_remove_drop(&drop_id.0, public_keys);
             // Return early
             return None;
         }
@@ -907,19 +920,29 @@ impl Keypom {
         );
         // Decrement the user's balance by the required attached_deposit and insert back into the map
         current_user_balance -= required_deposit;
-        self.user_balances.insert(&funder, &current_user_balance);
+        self.user_balances.insert(&env::predecessor_account_id(), &current_user_balance);
         near_sdk::log!("New user balance {}", yocto_to_near(current_user_balance));
 
         // Increment our fees earned
         self.fees_collected += fees.1 * len;
         near_sdk::log!("Fees collected {}", yocto_to_near(fees.1 * len));
 
+        // Send any revenue generated to the drop funder:
+        if revenue_generated > 0 {
+            if config.as_ref().and_then(|c| c.pub_sale.as_ref().and_then(|p| p.auto_withdraw_funds)).unwrap_or(false) {
+                near_sdk::log!("Auto sending {} revenues generated: {}", funder, yocto_to_near(revenue_generated));
+                Promise::new(funder.clone()).transfer(revenue_generated);
+            } else {
+                self.internal_modify_user_balance(funder, revenue_generated, false);
+            }
+        }
+
         // Create a new promise batch to create all the access keys
         let current_account_id = env::current_account_id();
         let promise = env::promise_batch_create(&current_account_id);
 
         // Loop through each public key and create the access keys
-        for pk in keys_to_iter.clone() {
+        for pk in public_keys.clone() {
             // Must assert in the loop so no access keys are made?
             env::promise_batch_action_add_key_with_function_call(
                 promise,

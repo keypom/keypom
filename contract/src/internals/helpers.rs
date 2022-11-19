@@ -56,33 +56,43 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
         });
 
         if let Some(sale) = &config.pub_sale {
-            // Create the token ID vector
-            let mut allowlist = LookupSet::new(StorageKey::PubSaleAllowlist {
-                //we get a new unique prefix for the collection
-                account_id_hash: hash_account_id(&format!("allowlist-{}{}", drop_id, funder)),
-            });
-
-            let mut blocklist = LookupSet::new(StorageKey::PubSaleBlocklist {
-                //we get a new unique prefix for the collection
-                account_id_hash: hash_account_id(&format!("blocklist-{}{}", drop_id, funder)),
-            });
-
+            let mut actual_allowlist = None;
+            let mut actual_blocklist = None;
+            
             // Loop through and add all the accounts to the allow list
-            for allow in sale.allowlist.as_ref().unwrap_or(&vec![]) {
-                allowlist.insert(allow);
+            if let Some(list) = &sale.allowlist {
+                let mut allowlist = LookupSet::new(StorageKey::PubSaleAllowlist {
+                    //we get a new unique prefix for the collection
+                    account_id_hash: hash_account_id(&format!("allowlist-{}{}", drop_id, funder)),
+                });
+                for account in list {
+                    allowlist.insert(account);
+                }
+
+                actual_allowlist = Some(allowlist);
             }
 
-            // Loop through and add all the accounts to the block list
-            for block in sale.blocklist.as_ref().unwrap_or(&vec![]) {
-                blocklist.insert(block);
+            // Loop through and add all the accounts to the allow list
+            if let Some(list) = &sale.blocklist {
+                let mut blocklist = LookupSet::new(StorageKey::PubSaleBlocklist {
+                    //we get a new unique prefix for the collection
+                    account_id_hash: hash_account_id(&format!("blocklist-{}{}", drop_id, funder)),
+                });
+                for account in list {
+                    blocklist.insert(account);
+                }
+
+                actual_blocklist = Some(blocklist);
             }
 
             let pub_sale = PublicSaleConfig {
                 max_num_keys: sale.max_num_keys,
-                price_per_key: sale.price_per_key,
-                allowlist: Some(allowlist),
-                blocklist: Some(blocklist),
-                auto_withdraw_funds: sale.auto_withdraw_funds
+                price_per_key: sale.price_per_key.map(|p| p.0),
+                allowlist: actual_allowlist,
+                blocklist: actual_blocklist,
+                auto_withdraw_funds: sale.auto_withdraw_funds,
+                start: sale.start,
+                end: sale.end,
             };
 
             actual_config.as_mut().unwrap().pub_sale = Some(pub_sale);
@@ -126,6 +136,44 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
     }
 
     actual_config
+}
+
+/// Check if the timestamps and allowlists are fulfilled. Return the price per key if it is
+pub(crate) fn assert_pub_sale_requirements(pub_sale: &PublicSaleConfig, cur_num_keys: u64, num_keys_to_add: u64) -> u128 {
+    // Assert that the current time is between the start and end time
+    let cur_time = env::block_timestamp();
+    let desired_start = pub_sale.start.unwrap_or(0);
+    let desired_end = pub_sale.end.unwrap_or(u64::MAX);
+    assert!(
+        cur_time >= desired_start && cur_time <= desired_end,
+        "Public Sale Has Ended"
+    );
+
+    // Assert that the current number of keys is less than the max number of keys
+    let max_num_keys = pub_sale.max_num_keys.unwrap_or(u64::MAX);
+    assert!(
+        cur_num_keys + num_keys_to_add <= max_num_keys,
+        "Cannot add more keys than the max number of keys"
+    );
+
+    // Assert that the current account is in the allow list
+    if let Some(list) = &pub_sale.allowlist {
+        assert!(
+            list.contains(&env::predecessor_account_id()),
+            "Only members in the allowlist can add keys"
+        );
+    }
+
+    // Assert that the current account is not in the block list
+    if let Some(list) = &pub_sale.blocklist {
+        assert!(
+            !list.contains(&env::predecessor_account_id()),
+            "Only members not in the blocklist can add keys"
+        );
+    }
+
+    // Return the price per key
+    return pub_sale.price_per_key.unwrap_or(0) * num_keys_to_add as u128;
 }
 
 impl Keypom {

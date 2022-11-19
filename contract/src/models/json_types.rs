@@ -102,6 +102,14 @@ pub struct JsonPublicSaleConfig {
     /// Should the revenue generated be sent to the funder's account balance or
     /// automatically withdrawn and sent to their NEAR wallet?
     pub auto_withdraw_funds: Option<bool>,
+
+    /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub start: Option<u64>,
+
+    /// Block timestamp dictating the end of the public sale. If None, keys can be added indefinitely
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub end: Option<u64>,
 }
 
 

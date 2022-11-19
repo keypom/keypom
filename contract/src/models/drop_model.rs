@@ -115,7 +115,7 @@ pub struct PublicSaleConfig {
  
     /// Amount of $NEAR that the user needs to attach (if they are not the funder) on top of costs. This amount will be
     /// Automatically sent to the funder's balance. If None, the keys are free to the public.
-    pub price_per_key: Option<U128>,
+    pub price_per_key: Option<u128>,
  
     /// Which accounts are allowed to add keys?
     pub allowlist: Option<LookupSet<AccountId>>,
@@ -126,6 +126,14 @@ pub struct PublicSaleConfig {
     /// Should the revenue generated be sent to the funder's account balance or
     /// automatically withdrawn and sent to their NEAR wallet?
     pub auto_withdraw_funds: Option<bool>,
+
+    /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub start: Option<u64>,
+
+    /// Block timestamp dictating the end of the public sale. If None, keys can be added indefinitely
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub end: Option<u64>,
  }
 
 /// Keep track of different configuration options for each key in a drop
