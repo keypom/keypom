@@ -33,7 +33,7 @@ pub struct JsonDrop {
     pub fc: Option<FCData>,
 
     /// The drop as a whole can have a config that works regardless of the specific drop type.
-    pub config: Option<DropConfig>,
+    pub config: Option<JsonDropConfig>,
 
     /// Metadata for the drop in the form of stringified JSON. The format is completely up to the
     /// user and there are no standards for format.
@@ -50,6 +50,28 @@ pub struct JsonDrop {
     pub next_key_id: u64,
 }
 
+/// Keep track of different configuration options for each key in a drop
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct JsonDropConfig {
+    /// How many uses can each key have before it's deleted. If None, default to 1.
+    pub uses_per_key: Option<u64>,
+
+    // Any time based configurations
+    pub time: Option<TimeConfig>,
+    
+    // Any usage specific configurations
+    pub usage: Option<UsageConfig>,
+
+    pub pub_sale: Option<JsonPublicSaleConfig>,
+
+    /// Override the global root account that sub-accounts will have (near or testnet). This allows
+    /// users to create specific drops that can create sub-accounts of a predefined root.
+    /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
+    /// be `ACCOUNT.fayyr.near`
+    pub root_account_id: Option<AccountId>,
+}
+
 /// NFT Data that is serializable
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -57,6 +79,31 @@ pub struct JsonNFTData {
     pub sender_id: AccountId,
     pub contract_id: AccountId,
 }
+
+/// Public Sale Data that is serializable
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct JsonPublicSaleConfig {
+    /// Maximum number of keys that can be added to this drop. If None, there is no max.
+    pub max_num_keys: Option<u64>,
+ 
+    /// Amount of $NEAR that the user needs to attach (if they are not the funder) on top of costs. This amount will be
+    /// Automatically sent to the funder's balance. If None, the keys are free to the public.
+    pub price_per_key: Option<U128>,
+ 
+    #[serde(skip_serializing)]
+    /// Which accounts are allowed to add keys?
+    pub allowlist: Option<Vec<AccountId>>,
+ 
+    #[serde(skip_serializing)]
+    /// Which accounts are NOT allowed to add keys?
+    pub blocklist: Option<Vec<AccountId>>,
+
+    /// Should the revenue generated be sent to the funder's account balance or
+    /// automatically withdrawn and sent to their NEAR wallet?
+    pub auto_withdraw_funds: Option<bool>,
+}
+
 
 /// FT Data to be passed in by the user
 #[derive(PanicOnDefault, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]

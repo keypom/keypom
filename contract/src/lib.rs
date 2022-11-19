@@ -894,6 +894,8 @@ enum StorageKey {
     PasswordsPerUse { account_id_hash: CryptoHash },
     DropMetadata { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
+    PubSaleAllowlist { account_id_hash: CryptoHash },
+    PubSaleBlocklist { account_id_hash: CryptoHash },
     FeesPerUser,
     UserBalances,
     ProhibitedMethods,

@@ -32,8 +32,8 @@ impl Keypom {
         // Should we refund send back the $NEAR since an account isn't being created and just send the assets to the claiming account?
         let account_to_transfer = if drop_data
             .config
-            .clone()
-            .and_then(|c| c.usage)
+            .as_ref()
+            .and_then(|c| c.usage.as_ref())
             .and_then(|u| u.refund_deposit)
             .unwrap_or(false)
             == true
@@ -103,14 +103,15 @@ impl Keypom {
 
         let drop_data = drop_data_option.unwrap();
         let storage_freed = storage_freed_option.unwrap();
+        let global_root = self.root_account.clone();
         let root_account = drop_data
             .config
-            .clone()
-            .and_then(|c| c.root_account_id)
-            .unwrap_or(self.root_account.clone());
+            .as_ref()
+            .and_then(|c| c.root_account_id.as_ref())
+            .unwrap_or(&global_root);
 
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
-        let promise = ext_linkdrop::ext(root_account)
+        let promise = ext_linkdrop::ext(root_account.clone())
             // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
             .with_attached_deposit(drop_data.deposit_per_use)
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
@@ -548,7 +549,7 @@ impl Keypom {
         // If a password was passed in, check it against the key's password
         let cur_use = &(drop
             .config
-            .clone()
+            .as_ref()
             .and_then(|c| c.uses_per_key)
             .unwrap_or(1)
             - key_info.remaining_uses + 1);
@@ -606,7 +607,7 @@ impl Keypom {
                 let starting_index = if cur_len > 1 {
                     (drop
                         .config
-                        .clone()
+                        .as_ref()
                         .and_then(|c| c.uses_per_key)
                         .unwrap_or(1)
                         - key_info.remaining_uses) as usize
@@ -661,8 +662,8 @@ impl Keypom {
             // There are no keys left. We should only remove the drop if the drop's config is set to delete on empty
             if drop
                 .config
-                .clone()
-                .and_then(|c| c.usage)
+                .as_ref()
+                .and_then(|c| c.usage.as_ref())
                 .and_then(|u| u.auto_delete_drop)
                 .unwrap_or(false)
             {
@@ -706,8 +707,8 @@ impl Keypom {
             // Check if auto_withdrawing to the funder's entire balance
             let auto_withdraw = drop
                 .config
-                .clone()
-                .and_then(|c| c.usage)
+                .as_ref()
+                .and_then(|c| c.usage.as_ref())
                 .and_then(|u| u.auto_withdraw)
                 .unwrap_or(false);
 

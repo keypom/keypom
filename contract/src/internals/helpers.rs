@@ -43,8 +43,51 @@ pub(crate) fn check_promise_result() -> bool {
 }
 
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
-pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
-    if let Some(config) = drop_config {
+pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, drop_id: &DropId, funder: &AccountId) -> Option<DropConfig> {
+    let mut actual_config = None;
+
+    if let Some(config) = drop_config.clone() {
+        actual_config = Some(DropConfig {
+            uses_per_key: config.uses_per_key,
+            time: None,
+            usage: config.usage,
+            pub_sale: None,
+            root_account_id: config.root_account_id
+        });
+
+        if let Some(sale) = &config.pub_sale {
+            // Create the token ID vector
+            let mut allowlist = LookupSet::new(StorageKey::PubSaleAllowlist {
+                //we get a new unique prefix for the collection
+                account_id_hash: hash_account_id(&format!("allowlist-{}{}", drop_id, funder)),
+            });
+
+            let mut blocklist = LookupSet::new(StorageKey::PubSaleBlocklist {
+                //we get a new unique prefix for the collection
+                account_id_hash: hash_account_id(&format!("blocklist-{}{}", drop_id, funder)),
+            });
+
+            // Loop through and add all the accounts to the allow list
+            for allow in sale.allowlist.as_ref().unwrap_or(&vec![]) {
+                allowlist.insert(allow);
+            }
+
+            // Loop through and add all the accounts to the block list
+            for block in sale.blocklist.as_ref().unwrap_or(&vec![]) {
+                blocklist.insert(block);
+            }
+
+            let pub_sale = PublicSaleConfig {
+                max_num_keys: sale.max_num_keys,
+                price_per_key: sale.price_per_key,
+                allowlist: Some(allowlist),
+                blocklist: Some(blocklist),
+                auto_withdraw_funds: sale.auto_withdraw_funds
+            };
+
+            actual_config.as_mut().unwrap().pub_sale = Some(pub_sale);
+        }
+
         near_sdk::log!("Current Block Timestamp: {}", env::block_timestamp());
 
         // Assert that if uses per key is passed in, it cannot equal 0
@@ -53,7 +96,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
             "Cannot have 0 uses per key for a drop config"
         );
 
-        if let Some(time_data) = &config.time {
+        if let Some(time_data) = config.time {
             // Assert that if the claim_interval is some, the start_timestamp is also some
             assert!(
                 (time_data.interval.is_some() && time_data.start.is_none()) == false,
@@ -77,8 +120,12 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
                     "The start timestamp must be less than the end timestamp"
                 );
             }
+
+            actual_config.as_mut().unwrap().time = Some(time_data);
         }
     }
+
+    actual_config
 }
 
 impl Keypom {
@@ -203,7 +250,7 @@ impl Keypom {
         key_info: &mut KeyInfo,
         signer_pk: &PublicKey,
     ) -> bool {
-        if let Some(time_data) = drop.config.clone().and_then(|c| c.time) {
+        if let Some(time_data) = drop.config.as_ref().and_then(|c| c.time.as_ref()) {
             // Ensure enough time has passed if a start timestamp was specified in the config.
             let current_timestamp = env::block_timestamp();
 
@@ -273,7 +320,7 @@ impl Keypom {
                 let total_num_uses = (env::block_timestamp() - start_timestamp) / interval;
                 let uses_per_key = drop
                     .config
-                    .clone()
+                    .as_ref()
                     .and_then(|c| c.uses_per_key)
                     .unwrap_or(0);
                 let uses_left = total_num_uses + key_info.remaining_uses - uses_per_key;

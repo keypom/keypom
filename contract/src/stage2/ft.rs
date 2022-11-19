@@ -195,7 +195,7 @@ impl Keypom {
             // Get the max uses per key. Default to 1 if not specified in the drop config.
             let uses_per_key = drop
                 .config
-                .clone()
+                .as_ref()
                 .and_then(|c| c.uses_per_key)
                 .unwrap_or(1);
 
@@ -263,7 +263,7 @@ impl Keypom {
 
                 // Decide what methods the access keys can call
                 let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-                if let Some(perms) = drop.config.clone().and_then(|c| c.usage).and_then(|u| u.permissions) {
+                if let Some(perms) = drop.config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()) {
                     match perms {
                         // If we have a config, use the config to determine what methods the access keys can call
                         ClaimPermissions::claim => {

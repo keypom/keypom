@@ -25,7 +25,7 @@ impl Keypom {
         // Overload the specific drop ID
         drop_id: Option<DropIdJson>,
         // Configure behaviors for the drop
-        config: Option<DropConfig>,
+        config: Option<JsonDropConfig>,
         // Give the drop some metadata (simple string)
         metadata: Option<DropMetadata>,
 
@@ -72,11 +72,12 @@ impl Keypom {
             );
         }
 
-        // Ensure the user has specified a valid drop config
-        assert_valid_drop_config(&config);
-
         // Funder is the predecessor
         let owner_id = env::predecessor_account_id();
+
+        // Ensure the user has specified a valid drop config
+        let actual_config = assert_valid_drop_config(&config, &actual_drop_id, &owner_id);
+
         let keys_to_iter = public_keys.unwrap_or_default();
         let len = keys_to_iter.len() as u128;
         // Get the number of uses per key to dictate what key usage data we should put in the map
@@ -226,7 +227,7 @@ impl Keypom {
                     lazy_register: None
                 }
             ),
-            config: config.clone(),
+            config: actual_config,
             registered_uses: num_uses_per_key * len as u64,
             required_gas: gas_to_attach,
             metadata: LazyOption::new(
@@ -612,7 +613,7 @@ impl Keypom {
         let initial_storage = env::storage_usage();
 
         // Get the number of uses per key
-        let num_uses_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
+        let num_uses_per_key = config.as_ref().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // get the existing key set and add new PKs
         let mut exiting_key_map = drop.pks;
@@ -707,7 +708,7 @@ impl Keypom {
 
         // Decide what methods the access keys can call
         let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if let Some(perms) = config.clone().and_then(|c| c.usage).and_then(|u| u.permissions) {
+        if let Some(perms) = config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()) {
             match perms {
                 // If we have a config, use the config to determine what methods the access keys can call
                 ClaimPermissions::claim => {
