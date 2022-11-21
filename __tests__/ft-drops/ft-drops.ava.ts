@@ -1,3 +1,4 @@
+//TEST COMMENT
 import anyTest, { TestFn } from "ava";
 import { BN } from "bn.js";
 import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
