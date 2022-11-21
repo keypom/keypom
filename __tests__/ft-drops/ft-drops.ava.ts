@@ -176,7 +176,6 @@ test('OverRegister FTs and add multi use key later', async t => {
 
     // Creating the FT drop with no keys and 1 $NEAR per use
     await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
         deposit_per_use: NEAR.parse("1").toString(),
         ft,
         config
@@ -284,8 +283,7 @@ test('Deleting Keys and Drop', async t => {
     console.log("adding to balance");
     // How much does it cost to create a drop?
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("100").toString()});
-    await owner.call(keypom, 'create_drop', {
-        public_keys: [], 
+    await owner.call(keypom, 'create_drop', {   
         deposit_per_use: NEAR.parse("1").toString(),
         ft
     },{gas: LARGE_GAS});

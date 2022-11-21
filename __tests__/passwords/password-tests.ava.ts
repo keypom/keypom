@@ -70,7 +70,7 @@ test('Multi-use keys with local passwords', async t => {
 
     let basePassword = 'mypassword1';
     let keysWithPws: { [key: string]: number[] } = {};
-    keysWithPws[publicKeys[0]] = [0, 1, 2];
+    keysWithPws[publicKeys[0]] = [1, 2, 3];
 
     let passwords = generateLocalPasswords(publicKeys, keysWithPws, basePassword);
     console.log('passwords: ', passwords)
@@ -103,26 +103,26 @@ test('Multi-use keys with local passwords', async t => {
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
     // THIS SHOULD FAIL BECAUSE THE DOUBLE HASH IS PASSED IN
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePassword + publicKeys[0] + '0'), true)}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePassword + publicKeys[0] + '1'), true)}, {gas: WALLET_GAS});
 
     let aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
 
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePassword + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePassword + publicKeys[0] + '1')}, {gas: WALLET_GAS});
 
     // THIS SHOULD FAIL
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePassword + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePassword + publicKeys[0] + '1')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("1").toString());
 
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePassword + publicKeys[0] + '1')}, {gas: WALLET_GAS});
-    // THIS SHOULD PASS
     await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePassword + publicKeys[0] + '2')}, {gas: WALLET_GAS});
+    // THIS SHOULD PASS
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePassword + publicKeys[0] + '3')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
@@ -142,8 +142,8 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     let basePasswordGlobal = 'mypassword2';
 
     let keysWithPws: { [key: string]: number[] } = {};
-    keysWithPws[publicKeys[0]] = [0, 1];
-    keysWithPws[publicKeys[1]] = [0];
+    keysWithPws[publicKeys[0]] = [1, 2];
+    keysWithPws[publicKeys[1]] = [1];
 
     let localPasswords = generateLocalPasswords(publicKeys, keysWithPws, basePasswordLocal);
     console.log('localPasswords: ', localPasswords)
@@ -180,22 +180,22 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL BECAUSE THE DOUBLE HASH IS PASSED IN
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[0] + '0'), true)}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[0] + '1'), true)}, {gas: WALLET_GAS});
 
     let aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("1").toString());
 
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '2')}, {gas: WALLET_GAS});
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("2").toString());
@@ -220,16 +220,16 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL BECAUSE THE DOUBLE HASH IS PASSED IN
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[1] + '0'), true)}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[1] + '1'), true)}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
 
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[1] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[1] + '1')}, {gas: WALLET_GAS});
     // THIS SHOULD PASS SINCE THERE'S NO PASSWORD ON THE SECOND CLAIM
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
@@ -254,7 +254,7 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL BECAUSE IT'S A GLOBAL PW NOT LOCAL
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordGlobal + publicKeys[2] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordGlobal + publicKeys[2] + '1')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
@@ -283,8 +283,8 @@ test('Add keys after drop is created with passwords', async t => {
     let basePasswordGlobal = 'mypassword2';
 
     let keysWithPws: { [key: string]: number[] } = {};
-    keysWithPws[publicKeys[0]] = [0, 1];
-    keysWithPws[publicKeys[1]] = [0];
+    keysWithPws[publicKeys[0]] = [1, 2];
+    keysWithPws[publicKeys[1]] = [1];
 
     let localPasswords = generateLocalPasswords(publicKeys.slice(0, 4), keysWithPws, basePasswordLocal);
     console.log('localPasswords: ', localPasswords)
@@ -326,22 +326,22 @@ test('Add keys after drop is created with passwords', async t => {
     // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL BECAUSE THE DOUBLE HASH IS PASSED IN
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[0] + '0'), true)}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[0] + '1'), true)}, {gas: WALLET_GAS});
 
     let aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("1").toString());
 
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '2')}, {gas: WALLET_GAS});
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("2").toString());
@@ -366,16 +366,16 @@ test('Add keys after drop is created with passwords', async t => {
     // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL BECAUSE THE DOUBLE HASH IS PASSED IN
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[1] + '0'), true)}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(hash(basePasswordLocal + publicKeys[1] + '1'), true)}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("0").toString());
 
     // THIS SHOULD PASS
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[1] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[1] + '1')}, {gas: WALLET_GAS});
     // THIS SHOULD PASS SINCE THERE'S NO PASSWORD ON THE SECOND CLAIM
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordLocal + publicKeys[0] + '1')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
@@ -400,7 +400,7 @@ test('Add keys after drop is created with passwords', async t => {
     // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     // THIS SHOULD FAIL BECAUSE IT'S A GLOBAL PW NOT LOCAL
-    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordGlobal + publicKeys[2] + '0')}, {gas: WALLET_GAS});
+    await keypom.call(keypom, 'claim', {account_id: ali.accountId, password: hash(basePasswordGlobal + publicKeys[2] + '1')}, {gas: WALLET_GAS});
 
     aliBal = await ali.availableBalance();
     console.log('aliBal Before: ', aliBal.toString())
@@ -437,7 +437,7 @@ test('50 FT Keys Fails in Step 2 Check Storage', async t => {
     let {keys: keys1, publicKeys: publicKeys1} = await generateKeyPairs(numKeys);
     let keysWithPws: { [key: string]: number[] } = {};
     for (var i = 0; i < publicKeys1.length; i++) {
-        keysWithPws[publicKeys1[i]] = [0];
+        keysWithPws[publicKeys1[i]] = [1];
     }
     let passwords = generateLocalPasswords(publicKeys1, keysWithPws, basePassword);
 
@@ -464,7 +464,7 @@ test('50 FT Keys Fails in Step 2 Check Storage', async t => {
     let {keys: keys2, publicKeys: publicKeys2} = await generateKeyPairs(numKeys);
     keysWithPws = {};
     for (var i = 0; i < publicKeys1.length; i++) {
-        keysWithPws[publicKeys2[i]] = [0];
+        keysWithPws[publicKeys2[i]] = [1];
     }
     passwords = generateLocalPasswords(publicKeys2, keysWithPws, basePassword);
 
@@ -506,7 +506,7 @@ test('Create 50 key drop and delete after', async t => {
     let {keys: keys1, publicKeys: publicKeys1} = await generateKeyPairs(numKeys);
     let keysWithPws: { [key: string]: number[] } = {};
     for (var i = 0; i < publicKeys1.length; i++) {
-        keysWithPws[publicKeys1[i]] = [0];
+        keysWithPws[publicKeys1[i]] = [1];
     }
     let passwords = generateLocalPasswords(publicKeys1, keysWithPws, basePassword);
     

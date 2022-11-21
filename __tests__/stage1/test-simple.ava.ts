@@ -37,18 +37,23 @@ test.afterEach(async t => {
     });
 });
 
+//testing drop empty initialization and that default values perform as expected
 test('Create empty drop check views', async t => {
     const { keypom, ali } = t.context.accounts;
-    
+    //add 2NEAR to ali's keypom balance
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    await ali.call(keypom, 'create_drop', {public_keys: [], deposit_per_use: NEAR.parse('5 mN').toString()});
+    //create a drop with Ali, doesn't front any cost. 
+    await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()});
+
     
+    //store the results of all view functions into results
     let result = await queryAllViewFunctions({
         contract: keypom, 
         drop_id: "0", 
         account_id: ali.accountId
     });
 
+    //pretty much all values should be 0
     t.is(result.keyTotalSupply, 0);
     t.deepEqual(result.keys, []);
     let jsonDrop = result.dropInformation!;

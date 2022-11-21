@@ -611,7 +611,6 @@ pub struct JsonPasswordForUse {
     /// What is the password for this use (such as `hash("mypassword1" + key1_public_key + use_number)`)
     pub pw: String,
     /// Which use does this pertain to
-    /// This is *zero indexed*. The first use starts at 0.
     pub key_use: u64
 }
 ````
@@ -665,20 +664,20 @@ passwords_per_use: Some(vec![
     // Key B
     vec![
         {
-            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "0")),
-            key_use: 0
-        },
-        {
             pw: hash(hash("keys_bc_base_password" + key_b_public_key + "1")),
             key_use: 1
+        },
+        {
+            pw: hash(hash("keys_bc_base_password" + key_b_public_key + "2")),
+            key_use: 2
         }
     ]
 
     // Key C
     vec![
         {
-            pw: hash(hash("keys_bc_base_password" + key_c_public_key + "0")),
-            key_use: 0
+            pw: hash(hash("keys_bc_base_password" + key_c_public_key + "1")),
+            key_use: 1
         }
     ]
 
@@ -703,14 +702,14 @@ Similarly, if Charlie tried to look at the explorer when Alice created the keys 
 the contract would attempt to hash this and it would NOT match up with what's in the storage.
 
 ### Key B
-Alice gives Eve Key B and she would need a password for claim 1 and 2. For the first claim, she needs to pass in: `hash("keys_bc_base_password" + key_b_public_key + "0")`.
+Alice gives Eve Key B and she would need a password for claim 1 and 2. For the first claim, she needs to pass in: `hash("keys_bc_base_password" + key_b_public_key + "1")`.
 The contract would then check and see if the hashed version of this matches up with what's stored on-chain for that use.
 
-The second time Eve uses the key, she needs to pass in hash("keys_bc_base_password" + key_b_public_key + "1") and the same check is done.
+The second time Eve uses the key, she needs to pass in hash("keys_bc_base_password" + key_b_public_key + "2") and the same check is done.
 
-If Eve tries to pass in `hash("keys_bc_base_password" + key_b_public_key + "0")` for the second key use, the contract would hash it and check:
+If Eve tries to pass in `hash("keys_bc_base_password" + key_b_public_key + "1")` for the second key use, the contract would hash it and check:
 
-hash(hash("keys_bc_base_password" + key_b_public_key + "0")) == hash(hash("keys_bc_base_password" + key_b_public_key + "1"))
+hash(hash("keys_bc_base_password" + key_b_public_key + "1")) == hash(hash("keys_bc_base_password" + key_b_public_key + "2"))
 
 Which is incorrect and the key would not be claimed.
 

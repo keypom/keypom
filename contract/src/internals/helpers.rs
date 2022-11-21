@@ -135,10 +135,9 @@ impl Keypom {
     ) -> bool {
         let hashed = sha256(&pw.and_then(|f| hex::decode(f).ok()).unwrap_or(vec![]));
 
-        near_sdk::log!("hashed password: {:?}", hashed);
-
         // If there is a global password per key, check that first
         if let Some(pw) = &key_info.pw_per_key {
+            near_sdk::log!("hashed password: {:?}", hashed);
             near_sdk::log!("global password: {:?}", pw);
             if pw != &hashed {
                 let used_gas = env::used_gas();
@@ -164,7 +163,7 @@ impl Keypom {
         // If there is ALSO a password per use, check that as well.
         if let Some(pw) = &key_info.pw_per_use {
             let actual_pass = pw.get(cur_use).unwrap_or(hashed.clone());
-
+            near_sdk::log!("hashed password: {:?}", hashed);
             near_sdk::log!(
                 "actualPass password: {:?} cur use: {}",
                 actual_pass,

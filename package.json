@@ -30,7 +30,7 @@
 	},
 	"devDependencies": {
 		"@types/bn.js": "^5.1.0",
-		"ava": "^4.2.0",
+		"ava": "^5.0.1",
 		"near-api-js": "^0.44.2",
 		"near-workspaces": "3.2.2",
 		"ts-node": "^10.8.0",
