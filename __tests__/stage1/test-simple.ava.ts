@@ -99,7 +99,6 @@ test('Testing Registered Uses Functionalities', async t => {
         amount: "0"
     })
 
-    // THIS SHOULD FAIL SINCE NO KEYS ARE REGISTERED
     await keypom.setKey(keys[0]);
     await keypom.updateAccessKey(
         publicKeys[0],  // public key
@@ -108,8 +107,8 @@ test('Testing Registered Uses Functionalities', async t => {
             permission: 'FullAccess'
         }
     )
-
-    // THIS SHOULD FAIL BECAUSE NO PASSWORD PASSED IN
+        
+    // THIS SHOULD FAIL SINCE NO KEYS ARE REGISTERED
     await keypom.call(keypom, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
 
     let bobBal = await bob.availableBalance();
