@@ -59,6 +59,7 @@ async function createAccountAndClaim(privKey, newAccountId) {
 		);
 	} catch(e) {
 		console.log('error claiming linkdrop: ', e);
+		return false;
 	}
 
 	// Generate the auto import link for the new account
