@@ -6,8 +6,10 @@ const { initiateNearConnection, getFtCosts, estimateRequiredDeposit, ATTACHED_GA
 const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT, FT_DATA, FT_CONTRACT_ID } = require("./configurations");
 const { KeyPair, keyStores, connect } = require("near-api-js");
 const { BN } = require("bn.js");
+const { generateSeedPhrase } = require("near-seed-phrase");
+const { createHash } = require("crypto");
 
-async function createAccountAndClaim(privKey, newAccountId) {
+async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 	const keypomContractId = "v1.keypom.testnet";
 	const network = "testnet";
 
@@ -42,9 +44,12 @@ async function createAccountAndClaim(privKey, newAccountId) {
 	// Set the key that the keypom account object will use to sign the claim transaction
 	await keyStore.setKey(network, keypomContractId, KeyPair.fromString(privKey));
 	
-	// Generate a new keypair for the new account that will be created.
-	let newKeyPair = await KeyPair.fromRandom('ed25519');
-	let newAccountPubKey = newKeyPair.publicKey.toString();
+	// Generate a new keypair based on entropy of a hash of the pin code and the new account ID
+	let entropy = createHash('sha256').update(Buffer.from(newAccountId.toString() + pinCode.toString())).digest('hex');
+	let { seedPhrase, secretKey, publicKey } = await generateSeedPhrase(entropy);
+	let newAccountPubKey = publicKey;
+	
+	console.log('secretKey: ', secretKey);
 
 	// Create the account and claim the linkdrop.
 	try {
@@ -63,9 +68,9 @@ async function createAccountAndClaim(privKey, newAccountId) {
 	}
 
 	// Generate the auto import link for the new account
-	const walletAutoImportLink = `https://wallet.testnet.near.org/auto-import-secret-key#${newAccountId}/${newKeyPair.toString()}`;
+	const walletAutoImportLink = `https://wallet.testnet.near.org/auto-import-secret-key#${newAccountId}/${secretKey}`;
 	console.log('walletAutoImportLink: ', walletAutoImportLink)
 	return walletAutoImportLink;
 }
 
-createAccountAndClaim("5pod8zEoE75cDCR57dUTLPD2XqicV1fr2G3oMvTsAA4zh2w32faYUMwftCrgwEDjK2B3CNeLE5Ef2TkXwz7irHT5", "asdkajsdlaksjdlasdjkdlasdadfoo.testnet");
+createAccountAndClaim("4rXoRsdk5kR1qjRyW5p957JnHbNRuKDkcgQMTxU9wyZEuUaj5VFpUgNdEnHiV4eQYBfq5kyPLHEr9ZcYFmBVPGeM", "asdkajsdlaksjdlasdjkdlasdadfo.testnet", "0123");
