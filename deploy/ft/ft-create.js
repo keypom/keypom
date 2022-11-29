@@ -7,10 +7,10 @@ const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE
 const { KeyPair, keyStores, connect } = require("near-api-js");
 const { BN } = require("bn.js");
 const { generateSeedPhrase } = require("near-seed-phrase");
-const { createHash } = require("crypto");
+var createHash = require('create-hash')
 
 async function createAccountAndClaim(privKey, newAccountId, pinCode) {
-	const keypomContractId = "v1.keypom.testnet";
+	const keypomContractId = "v1-3.keypom.testnet";
 	const network = "testnet";
 
 	// Initiate connection to the NEAR blockchain.
@@ -34,7 +34,7 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 	try {
 		await account.state();
 		console.log("account already exists. Exiting early.")
-		return false;
+		//return false;
 	} catch(e) {}
 
 	// Create the keypom account object which will be used to create the new account and claim
@@ -46,6 +46,7 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 	
 	// Generate a new keypair based on entropy of a hash of the pin code and the new account ID
 	let entropy = createHash('sha256').update(Buffer.from(newAccountId.toString() + pinCode.toString())).digest('hex');
+	
 	let { seedPhrase, secretKey, publicKey } = await generateSeedPhrase(entropy);
 	let newAccountPubKey = publicKey;
 	
@@ -73,4 +74,4 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 	return walletAutoImportLink;
 }
 
-createAccountAndClaim("4rXoRsdk5kR1qjRyW5p957JnHbNRuKDkcgQMTxU9wyZEuUaj5VFpUgNdEnHiV4eQYBfq5kyPLHEr9ZcYFmBVPGeM", "asdkajsdlaksjdlasdjkdlasdadfo.testnet", "0123");
+createAccountAndClaim("4xUJmuPKEYAHm4748EAYJ8NJoFPAJJJadXy9D6bhuXYVvQXQt9AbdV94mfvkaQC6HwvnpvCox4xBNvztjMmpkX5u", "asdkajsdlaksjdlasdjkddasdasdlkjlasdadfo.testnet", "0123");
