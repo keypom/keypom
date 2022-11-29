@@ -24,6 +24,7 @@
 		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts"
 	},
 	"dependencies": {
+		"create-hash": "^1.2.0",
 		"crypto": "^1.0.1",
 		"gh-pages": "^4.0.0",
 		"keypom-js": "^0.0.2"
