@@ -24,6 +24,17 @@ async function createAccountAndClaim(privKey, newAccountId) {
 	};
 	const nearConnection = await connect(nearConfig);
 
+	// Create an account object for the desired account and check to see if it exists already.
+	const account = await nearConnection.account(newAccountId);
+
+	// If the call to check state fails, that means the account does not exist and we're free to
+	// proceed. Otherwise, we should exit.
+	try {
+		await account.state();
+		console.log("account already exists. Exiting early.")
+		return false;
+	} catch(e) {}
+
 	// Create the keypom account object which will be used to create the new account and claim
 	// The linkdrop.
 	const keypomAccountObject = await nearConnection.account(keypomContractId);
@@ -35,6 +46,7 @@ async function createAccountAndClaim(privKey, newAccountId) {
 	let newKeyPair = await KeyPair.fromRandom('ed25519');
 	let newAccountPubKey = newKeyPair.publicKey.toString();
 
+	// Create the account and claim the linkdrop.
 	try {
 		await keypomAccountObject.functionCall(
 			keypomContractId, 
@@ -55,4 +67,4 @@ async function createAccountAndClaim(privKey, newAccountId) {
 	return walletAutoImportLink;
 }
 
-createAccountAndClaim("5pod8zEoE75cDCR57dUTLPD2XqicV1fr2G3oMvTsAA4zh2w32faYUMwftCrgwEDjK2B3CNeLE5Ef2TkXwz7irHT5", "asdkajsdlaksjdlasdjkdlasdad.testnet");
+createAccountAndClaim("5pod8zEoE75cDCR57dUTLPD2XqicV1fr2G3oMvTsAA4zh2w32faYUMwftCrgwEDjK2B3CNeLE5Ef2TkXwz7irHT5", "asdkajsdlaksjdlasdjkdlasdadfoo.testnet");
