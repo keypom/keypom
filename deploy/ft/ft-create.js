@@ -10,8 +10,8 @@ const { generateSeedPhrase } = require("near-seed-phrase");
 var createHash = require('create-hash')
 
 async function createAccountAndClaim(privKey, newAccountId, pinCode) {
-	const keypomContractId = "v1-3.keypom.testnet";
 	const network = "testnet";
+	const keypomContractId = network == "testnet" ? "v1-3.keypom.testnet" : "v1-3.keypom.near";
 
 	// Initiate connection to the NEAR blockchain.
 	let keyStore = new keyStores.InMemoryKeyStore();
@@ -34,7 +34,7 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 	try {
 		await account.state();
 		console.log("account already exists. Exiting early.")
-		//return false;
+		return false;
 	} catch(e) {}
 
 	// Create the keypom account object which will be used to create the new account and claim
@@ -69,9 +69,9 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 	}
 
 	// Generate the auto import link for the new account
-	const walletAutoImportLink = `https://wallet.testnet.near.org/auto-import-secret-key#${newAccountId}/${secretKey}`;
+	const walletAutoImportLink = network == "testnet" ? `https://wallet.testnet.near.org/auto-import-secret-key#${newAccountId}/${secretKey}` : `https://wallet.near.org/auto-import-secret-key#${newAccountId}/${secretKey}`;
 	console.log('walletAutoImportLink: ', walletAutoImportLink)
 	return walletAutoImportLink;
 }
 
-createAccountAndClaim("4xUJmuPKEYAHm4748EAYJ8NJoFPAJJJadXy9D6bhuXYVvQXQt9AbdV94mfvkaQC6HwvnpvCox4xBNvztjMmpkX5u", "asdkajsdlaksjdlasdjkddasdasdlkjlasdadfo.testnet", "0123");
+createAccountAndClaim("4xUJmuPKEYAHm4748EAYJ8NJoFPAJJJadXy9D6bhuXYVvQXQt9AbdV94mfvkaQC6HwvnpvCox4xBNvztjMmpkX5u", "asdkajsdlaksjdlasdjkddasdasdlkjlasdadfoasd.testnet", "0123");
