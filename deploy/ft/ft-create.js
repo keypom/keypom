@@ -25,9 +25,11 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 		explorerUrl: `https://explorer.${network}.near.org`,
 	};
 	const nearConnection = await connect(nearConfig);
+	console.log('nearConnection: ', nearConnection)
 
 	// Create an account object for the desired account and check to see if it exists already.
 	const account = await nearConnection.account(newAccountId);
+	console.log('account: ', account)
 
 	// If the call to check state fails, that means the account does not exist and we're free to
 	// proceed. Otherwise, we should exit.
@@ -35,17 +37,20 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 		await account.state();
 		console.log("account already exists. Exiting early.")
 		return false;
-	} catch(e) {}
-
+	} catch(e) {console.log('e: ', e)}
+	
 	// Create the keypom account object which will be used to create the new account and claim
 	// The linkdrop.
 	const keypomAccountObject = await nearConnection.account(keypomContractId);
+	console.log('keypomAccountObject: ', keypomAccountObject)
 
 	// Set the key that the keypom account object will use to sign the claim transaction
 	await keyStore.setKey(network, keypomContractId, KeyPair.fromString(privKey));
+	console.log('keyStore: ', keyStore)
 	
 	// Generate a new keypair based on entropy of a hash of the pin code and the new account ID
 	let entropy = createHash('sha256').update(Buffer.from(newAccountId.toString() + pinCode.toString())).digest('hex');
+	console.log('entropy: ', entropy)
 	
 	let { seedPhrase, secretKey, publicKey } = await generateSeedPhrase(entropy);
 	let newAccountPubKey = publicKey;
@@ -69,7 +74,7 @@ async function createAccountAndClaim(privKey, newAccountId, pinCode) {
 	}
 
 	// Generate the auto import link for the new account
-	const walletAutoImportLink = network == "testnet" ? `https://wallet.testnet.near.org/auto-import-secret-key#${newAccountId}/${secretKey}` : `https://wallet.near.org/auto-import-secret-key#${newAccountId}/${secretKey}`;
+	const walletAutoImportLink = `https://wallet.${network}.near.org/auto-import-secret-key#${newAccountId}/${secretKey}`
 	console.log('walletAutoImportLink: ', walletAutoImportLink)
 	return walletAutoImportLink;
 }
