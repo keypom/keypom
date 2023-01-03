@@ -3,7 +3,7 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: AccountId, password: Option<String>) {
+    pub fn claim(&mut self, account_id: String, password: Option<String>) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
         let (
             drop_data_option,
@@ -14,7 +14,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(password);
+        ) = self.process_claim(password, account_id.clone(), None);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -40,7 +40,7 @@ impl Keypom {
         {
             drop_data.owner_id.clone()
         } else {
-            account_id.clone()
+            AccountId::new_unchecked(account_id.clone())
         };
 
         let mut promise = None;
@@ -56,7 +56,7 @@ impl Keypom {
             drop_id.unwrap(),
             cur_key_id,
             remaining_uses,
-            account_id,
+            AccountId::new_unchecked(account_id),
             storage_freed,
             token_id,
             auto_withdraw,
@@ -76,8 +76,8 @@ impl Keypom {
     /// Create new account and and claim tokens to it.
     pub fn create_account_and_claim(
         &mut self,
-        new_account_id: AccountId,
-        new_public_key: PublicKey,
+        new_account_id: String,
+        new_public_key: String,
         password: Option<String>,
     ) {
         let (
@@ -89,7 +89,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(password);
+        ) = self.process_claim(password, new_account_id.clone(), Some(new_public_key.clone()));
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -115,7 +115,7 @@ impl Keypom {
             .with_attached_deposit(drop_data.deposit_per_use)
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
             .with_unused_gas_weight(0)
-            .create_account(new_account_id.clone(), new_public_key);
+            .create_account( AccountId::new_unchecked(new_account_id.clone()), new_public_key.parse().unwrap());
 
         // Execute the callback depending on the drop type. We'll pass in the promise to resolve
         self.internal_execute(
@@ -123,7 +123,7 @@ impl Keypom {
             drop_id.unwrap(),
             cur_key_id,
             remaining_uses,
-            new_account_id,
+            AccountId::new_unchecked(new_account_id),
             storage_freed,
             token_id,
             auto_withdraw,
@@ -469,6 +469,8 @@ impl Keypom {
     fn process_claim(
         &mut self,
         password: Option<String>,
+        account_id: String,
+        pub_key: Option<String>
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -524,6 +526,11 @@ impl Keypom {
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
         let cur_key_id = key_info.key_id;
         let remaining_uses = key_info.remaining_uses;
+
+        // Ensure the account ID and public key are valid types.
+        if !self.assert_valid_args(account_id, pub_key, drop_id, &mut drop, &mut key_info, &signer_pk) {
+            return (None, None, None, None, false, 0, 0, false);
+        };
 
         // Ensure the key has enough allowance
         if key_info.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas {

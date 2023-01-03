@@ -137,13 +137,6 @@ test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
 
     for(let i = 0; i < 5; i++) {
         await keypom.setKey(keys[i]);
-        await keypom.updateAccessKey(
-            keys[i],  // public key
-            {
-                nonce: 0,
-                permission: 'FullAccess'
-            }
-        )
 
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[5]}, {gas: WALLET_GAS});
         await keypom.call(keypom, 'claim', {account_id: `${i}.test.near`}, {gas: WALLET_GAS});
@@ -233,13 +226,7 @@ test('OverRegister FTs and add multi use key later', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
     await owner.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[0]]}, {gas: LARGE_GAS});
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        keys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     for(let i = 0; i < 5; i++) {
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[1]}, {gas: WALLET_GAS});
         await keypom.call(keypom, 'claim', {account_id: `${i}.test.near`}, {gas: WALLET_GAS});
@@ -390,13 +377,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     await sendFTs(minter, (oneGtNear * BigInt(10)).toString(), keypom, ftContract, "0");
 
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        keys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     // Use the key 5 out of 10 times
     for(let i = 0; i < 5; i++) {
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[1]}, {gas: WALLET_GAS});

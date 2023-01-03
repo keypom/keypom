@@ -103,14 +103,6 @@ test('Testing Delete On Empty Config', async t => {
     for(var i = 0; i < 2; i++) {
         //set access key to be used for following transactions
         await keypom.setKey(keys[i]);
-        //give full access to the key above; used to circumvent allowance bug in sandbox (should be fixed now so this can be deleted)
-        await keypom.updateAccessKey(
-            publicKeys[i],  // public key
-            {
-                nonce: 0,
-                permission: 'FullAccess'
-            }
-        )
         //claim wallet gas to ali's account. wallet gas is 1NEAR, looping through twice should give him 2NEAR
         await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
         //after this, the access key should be deleted as it has been used. This means adding the new one is fresh. 
@@ -162,7 +154,7 @@ test('Testing Start Timestamp', async t => {
 
     //set access key to be used for following transactions
     await keypom.setKey(keys[0]);
-    //give full access to the key above; used to circumvent allowance bug in sandbox (should be fixed now so this can be deleted)
+    //give full access to the key above since failing a transaction would lead to not enough allowance on a regular function call access key
     await keypom.updateAccessKey(
         publicKeys[0],  // public key
         {
@@ -227,14 +219,6 @@ test('Testing Throttle Timestamp', async t => {
 
     //set first key as the key to be used to sign txns
     await keypom.setKey(keys[0]);
-    //give this key a full access key
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
     // TWO CONSECUTIVE CLAIMS SHOULD FAIL BECAUSE THE THROTTLE TIMESTAMP HASN'T BEEN REACHED
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
@@ -296,15 +280,6 @@ test('Testing On Claim Refund Deposit', async t => {
     
     //set key to be used to sign txns
     await keypom.setKey(keys[0]);
-    //give that key full access
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-        )
-    
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
         amount: "0"
@@ -375,13 +350,6 @@ test('Testing Custom Drop Root', async t => {
     
     //non-config key set as the key being used
     await keypom.setKey(keysNoConfig[0]);
-    await keypom.updateAccessKey(
-        publicKeysNoConfig[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
     // SHOULD NOT WORK as you are using a nonConfig key & drop to deposit to a new account with a custom root
     await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.${customRoot.accountId}`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
     let doesExist = await newAccountCorrect.exists();
@@ -389,14 +357,7 @@ test('Testing Custom Drop Root', async t => {
     t.is(doesExist, false);
 
     //set config key as the key being used
-        await keypom.setKey(keysConfig[0]);
-    await keypom.updateAccessKey(
-        publicKeysConfig[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+    await keypom.setKey(keysConfig[0]);
     //drain owner balance 
     await owner.call(keypom, 'withdraw_from_balance', {});
     let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner.accountId});
@@ -421,13 +382,6 @@ test('Testing Custom Drop Root', async t => {
 
     //set second config key to be used as first one would have been deleted
     await keypom.setKey(keysConfig[1]);
-    await keypom.updateAccessKey(
-        publicKeysConfig[1],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
 
     //this second custom root create account and claim should go through as the config key is being used
     await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.${customRoot.accountId}`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
@@ -479,13 +433,6 @@ test('Testing Auto Withdraw', async t => {
     // Loop through 2 times and claim the keys [0, 1]
     for (let i = 0; i < 2; i++) {
         await keypom.setKey(keys[i]);
-        await keypom.updateAccessKey(
-            publicKeys[i],  // public key
-            {
-                nonce: 0,
-                permission: 'FullAccess'
-            }
-        )
         //1st run --> 1/1key uses used on keys[0], key should be deleted but drop still exists
         //2nd run --> 1/1 key uses used on keys[1], key AND drop should be deleted as per config2
         await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
@@ -525,13 +472,6 @@ test('Testing Auto Withdraw', async t => {
 
     //set keys[2] as the key being used
     await keypom.setKey(keys[2]);
-    await keypom.updateAccessKey(
-        publicKeys[2],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
 
     //claim to Ali's account
     //once they key is used (and is the only and last key on this drop) and delted, the remaining balance in owner's Keypom wallet is refunded back to their NEAR wallet. 
@@ -751,13 +691,6 @@ test('Testing End Timestamp', async t => {
 
     //set keys[0] to be used
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
     // THIS SHOULD PASS as its before the end timestamp
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
@@ -820,9 +753,6 @@ test('Testing End Timestamp Key Drainage', async t => {
 
     //use key[0]
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-    )
 
     // Loop 50 times and try to claim
     for (let i = 0; i < 50; i++) {
@@ -877,13 +807,6 @@ test('Testing Claim Interval', async t => {
 
     //use keys[0]
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
     // THIS SHOULD FAIL BECAUSE THE INTERVAL HASN'T BEEN REACHED
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
@@ -946,13 +869,6 @@ test('Testing All Time Based Configs Together', async t => {
 
     //set keys[0] to be claimed
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
     // THIS SHOULD FAIL BECAUSE THE INTERVAL HASN'T BEEN REACHED
     await keypom.call(keypom, 'claim', {account_id: ali.accountId}, {gas: WALLET_GAS});
 
