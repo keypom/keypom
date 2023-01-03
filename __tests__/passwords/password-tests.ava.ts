@@ -86,13 +86,6 @@ test('Multi-use keys with local passwords', async t => {
     },{gas: LARGE_GAS});
 
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
 
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
@@ -165,13 +158,7 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     *   LOCAL KEY #1
     */
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
         amount: "0"
@@ -205,13 +192,7 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     *   LOCAL KEY #2 
     */
     await keypom.setKey(keys[1]);
-    await keypom.updateAccessKey(
-        publicKeys[1],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
         amount: "0"
@@ -239,13 +220,7 @@ test('2 keys have local (first with all use pw second with only 1 use pw), 1 has
     *   GLOBAL KEY #1 
     */
     await keypom.setKey(keys[2]);
-    await keypom.updateAccessKey(
-        publicKeys[2],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
         amount: "0"
@@ -311,13 +286,7 @@ test('Add keys after drop is created with passwords', async t => {
     *   LOCAL KEY #1
     */
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        publicKeys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
         amount: "0"
@@ -351,13 +320,7 @@ test('Add keys after drop is created with passwords', async t => {
     *   LOCAL KEY #2 
     */
     await keypom.setKey(keys[1]);
-    await keypom.updateAccessKey(
-        publicKeys[1],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
         amount: "0"
@@ -385,13 +348,7 @@ test('Add keys after drop is created with passwords', async t => {
     *   GLOBAL KEY #1 
     */
     await keypom.setKey(keys[2]);
-    await keypom.updateAccessKey(
-        publicKeys[2],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
         amount: "0"
