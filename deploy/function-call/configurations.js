@@ -15,8 +15,8 @@ const NFT_CONTRACT_ID = "nft.keypom.testnet";
 const FC_DATA = {
     methods: [
 		[{
-			receiver_id: "dev-1664052531433-97566156431683",
-			method_name: "nft_mint",
+			receiverId: "dev-1664052531433-97566156431683",
+			methodName: "nft_mint",
 			args: JSON.stringify({
 				"foo": "bar",
 				"keypom_args": {
@@ -24,9 +24,9 @@ const FC_DATA = {
 					"drop_id_field" : "mint_id"
 				}
 			}),
-			attached_deposit: parseNearAmount("1"),
-			account_id_field: "receiver_id",
-			drop_id_field: "mint_id"
+			attachedDeposit: parseNearAmount("1"),
+			accountIdField: "receiver_id",
+			dropIdField: "mint_id"
 		}]
 	]
 }
