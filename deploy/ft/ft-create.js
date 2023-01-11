@@ -16,8 +16,7 @@ async function start() {
 
 	//get amount to transfer and see if owner has enough balance to fund drop
 	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey))
-	let amountToTransfer_String = amountToTransfer.toString();
-	console.log('amountToTransfer: ', amountToTransfer_String);	
+	console.log('amountToTransfer: ', amountToTransfer.toString());	
 	if (await FT_CONTRACT_ID.ft_balance_of({ account_id: FUNDING_ACCOUNT_ID }) < amountToTransfer){
 		throw new Error('funder does not have enough FT for this drop');
 	}
@@ -60,8 +59,6 @@ async function start() {
 	} catch(e) {
 		console.log('error creating drop: ', e);
 	}
-
-
 
 	try {
 		await fundingAccount.functionCall(
