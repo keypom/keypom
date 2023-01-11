@@ -17,7 +17,7 @@ async function start() {
 		near,
 		depositPerUse: DEPOSIT_PER_USE,
 		numKeys: NUM_KEYS,
-		usesPerKey: DROP_CONFIG.uses_per_key,
+		usesPerKey: DROP_CONFIG.usesPerKey,
 		attachedGas: ATTACHED_GAS_FROM_WALLET,
 })
 

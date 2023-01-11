@@ -19,9 +19,9 @@ const NFT_METADATA = {
 
 const NFT_DATA = {
     // NFT Contract Id that the tokens will come from
-    contract_id: NFT_CONTRACT_ID,
+    contractId: NFT_CONTRACT_ID,
     // Who will be sending the NFTs to the Keypom contract
-    sender_id: FUNDING_ACCOUNT_ID,
+    senderId: FUNDING_ACCOUNT_ID,
     //list of tokenIDs
     tokenIds: []
 }

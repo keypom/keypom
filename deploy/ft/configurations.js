@@ -13,11 +13,11 @@ const FT_CONTRACT_ID = "ft.keypom.testnet";
 
 const FT_DATA = {
     // Contract ID of the fungible token
-    contract_id: FT_CONTRACT_ID,
+    contractId: FT_CONTRACT_ID,
     // Who will be sending the FTs to the Keypom contract
-    sender_id: FUNDING_ACCOUNT_ID,
+    senderId: FUNDING_ACCOUNT_ID,
     // How many FTs should be sent to the claimed account everytime a key is used
-    balance_per_use: parseNearAmount("1"),
+    balancePerUse: parseNearAmount("1"),
 }
 
 const DROP_CONFIG = {

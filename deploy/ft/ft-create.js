@@ -1,3 +1,4 @@
+//FT-MINT DOES NOT EXIST AS PART OF THE FT STANDARD, THUS WE CAN ONLY ASSUME THAT THE FUNDER OWNS THE FT
 const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/format");
 const path = require("path");
 const homedir = require("os").homedir();
@@ -12,6 +13,14 @@ async function start() {
 	console.log("Initiating NEAR connection");
 	let near = await initiateNearConnection(NETWORK_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
+
+	//get amount to transfer and see if owner has enough balance to fund drop
+	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey))
+	let amountToTransfer_String = amountToTransfer.toString();
+	console.log('amountToTransfer: ', amountToTransfer_String);	
+	if (await FT_CONTRACT_ID.ft_balance_of({ account_id: FUNDING_ACCOUNT_ID }) < amountToTransfer){
+		throw new Error('funder does not have enough FT for this drop');
+	}
 
 	let requiredDeposit = await estimateRequiredDeposit(
 		near,
@@ -34,18 +43,6 @@ async function start() {
 		keyPairs.push(keyPair);   
 		pubKeys.push(keyPair.publicKey.toString());   
 	}
-	// //no more add to balance, use attached deposit
-	// try {
-	// 	await fundingAccount.functionCall(
-	// 		KEYPOM_CONTRACT, 
-	// 		'add_to_balance', 
-	// 		{},
-	// 		"300000000000000", 
-	// 		requiredDeposit.toString()
-	// 	);
-	// } catch(e) {
-	// 	console.log('error adding to balance: ', e);
-	// }
 
 	try {
 		await fundingAccount.functionCall(
@@ -64,6 +61,8 @@ async function start() {
 		console.log('error creating drop: ', e);
 	}
 
+
+
 	try {
 		await fundingAccount.functionCall(
 			FT_CONTRACT_ID, 
@@ -73,20 +72,6 @@ async function start() {
 			},
 			"300000000000000",
 			parseNearAmount("0.1")
-		);
-
-		let amountToTransfer = new BN(FT_DATA.balance_per_use).mul(new BN(NUM_KEYS * DROP_CONFIG.uses_per_key)).toString();
-		console.log('amountToTransfer: ', amountToTransfer.toString());
-
-		await fundingAccount.functionCall(
-			FT_CONTRACT_ID, 
-			'ft_mint', 
-			{
-				account_id: FUNDING_ACCOUNT_ID,
-				// The max amount of tokens an account can receive PER `ft_transfer` call is 10
-				amount: amountToTransfer.toString()
-			},
-			"300000000000000"
 		);
 
 		let dropId = await getRecentDropId(fundingAccount, FUNDING_ACCOUNT_ID, KEYPOM_CONTRACT);
