@@ -35,18 +35,6 @@ async function start() {
 	try {
 		await fundingAccount.functionCall(
 			KEYPOM_CONTRACT, 
-			'add_to_balance', 
-			{},
-			"300000000000000", 
-			requiredDeposit.toString()
-		);
-	} catch(e) {
-		console.log('error adding to balance: ', e);
-	}
-
-	try {
-		await fundingAccount.functionCall(
-			KEYPOM_CONTRACT, 
 			'create_drop', 
 			{
 				public_keys: pubKeys,
@@ -93,7 +81,7 @@ async function start() {
 			);
 		}
 	} catch(e) {
-		console.log('error sending FTs', e);
+		console.log('error sending NFTs', e);
 	}
 	
 	let curPks = {};

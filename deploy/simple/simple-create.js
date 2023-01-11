@@ -12,6 +12,7 @@ async function start() {
 	let near = await initiateNearConnection(NETWORK_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
+	//get required deposit
 	let requiredDeposit = await estimateRequiredDeposit(
 		near,
 		DEPOSIT_PER_USE,
@@ -31,18 +32,21 @@ async function start() {
 		pubKeys.push(keyPair.publicKey.toString());   
 	}
 
-	try {
-		await fundingAccount.functionCall(
-			KEYPOM_CONTRACT, 
-			'add_to_balance', 
-			{},
-			"300000000000000", 
-			requiredDeposit.toString()
-		);
-	} catch(e) {
-		console.log('error adding to balance: ', e);
-	}
+	//using benjiman.testnet to add requiredDeposit to keypom balance
+	//switch to attached deposit, no more add to balance
+	// try {
+	// 	await fundingAccount.functionCall(
+	// 		KEYPOM_CONTRACT, 
+	// 		'add_to_balance', 
+	// 		{},
+	// 		"300000000000000", 
+	// 		requiredDeposit.toString()
+	// 	);
+	// } catch(e) {
+	// 	console.log('error adding to balance: ', e);
+	// }
 
+	//create drop with pub keys, deposit_per_use, a default drop_config and metadata
 	try {
 		await fundingAccount.functionCall(
 			KEYPOM_CONTRACT, 
@@ -59,12 +63,14 @@ async function start() {
 		console.log('error creating drop: ', e);
 	}
 	
+	//manually create linkdrops links with each key in the drop and index with pk
 	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
 		curPks[keyPairs[i].publicKey.toString()] = `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`;
 		console.log(`https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`);
 	}
 
+	//write file of all pk's and their respective linkdrops
 	console.log('curPks: ', curPks)
 	await writeFile(path.resolve(__dirname, `pks.json`), JSON.stringify(curPks));
 }

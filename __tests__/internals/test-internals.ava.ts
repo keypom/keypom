@@ -127,7 +127,7 @@ test('Withdrawing fees earned', async t => {
     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
     await ali.call(keypom, 'create_drop', {deposit_per_use: NEAR.parse('5 mN').toString()})
     
-    //verify that set drop fee succeeded, balance - drop fee = 2-1 = 1
+    //verify that set drop fee succeeded, one drop created and thus 1 $NEAR should have been collected in fees
     result = await keypom.view('get_fees_collected', {});
     t.is(result, NEAR.parse("1").toString());
     

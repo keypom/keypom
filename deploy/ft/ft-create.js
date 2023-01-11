@@ -34,18 +34,18 @@ async function start() {
 		keyPairs.push(keyPair);   
 		pubKeys.push(keyPair.publicKey.toString());   
 	}
-
-	try {
-		await fundingAccount.functionCall(
-			KEYPOM_CONTRACT, 
-			'add_to_balance', 
-			{},
-			"300000000000000", 
-			requiredDeposit.toString()
-		);
-	} catch(e) {
-		console.log('error adding to balance: ', e);
-	}
+	// //no more add to balance, use attached deposit
+	// try {
+	// 	await fundingAccount.functionCall(
+	// 		KEYPOM_CONTRACT, 
+	// 		'add_to_balance', 
+	// 		{},
+	// 		"300000000000000", 
+	// 		requiredDeposit.toString()
+	// 	);
+	// } catch(e) {
+	// 	console.log('error adding to balance: ', e);
+	// }
 
 	try {
 		await fundingAccount.functionCall(
