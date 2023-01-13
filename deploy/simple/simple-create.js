@@ -3,7 +3,7 @@ const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
 const { initiateNearConnection, getFtCosts, estimateRequiredDeposit, ATTACHED_GAS_FROM_WALLET } = require("../utils/general");
-const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT } = require("./configurations");
+const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE_NEAR, DROP_CONFIG, KEYPOM_CONTRACT } = require("./configurations");
 const { KeyPair } = require("near-api-js");
 
 async function start() {
@@ -13,13 +13,13 @@ async function start() {
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
 	//get required deposit
-	let requiredDeposit = await estimateRequiredDeposit(
-		near,
-		DEPOSIT_PER_USE,
-		NUM_KEYS,
-		DROP_CONFIG.uses_per_key,
-		ATTACHED_GAS_FROM_WALLET,
-	)
+	// let requiredDeposit = await estimateRequiredDeposit(
+	// 	near,
+	// 	DEPOSIT_PER_USE_NEAR,
+	// 	NUM_KEYS,
+	// 	DROP_CONFIG.uses_per_key,
+	// 	ATTACHED_GAS_FROM_WALLET,
+	// )
 	
 	// Keep track of an array of the keyPairs we create
 	let keyPairs = [];
@@ -53,7 +53,7 @@ async function start() {
 			'create_drop', 
 			{
 				public_keys: pubKeys,
-				deposit_per_use: DEPOSIT_PER_USE,
+				deposit_per_use: DEPOSIT_PER_USE_NEAR,
 				config: DROP_CONFIG,
 				metadata: JSON.stringify(DROP_METADATA)
 			}, 
@@ -66,8 +66,9 @@ async function start() {
 	//manually create linkdrops links with each key in the drop and index with pk
 	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
-		curPks[keyPairs[i].publicKey.toString()] = `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`;
-		console.log(`https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`);
+		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`;
+		curPks[keyPairs[i].publicKey.toString()] = linkdropUrl;
+		console.log(linkdropUrl);
 	}
 
 	//write file of all pk's and their respective linkdrops

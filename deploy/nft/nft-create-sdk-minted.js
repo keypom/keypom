@@ -1,17 +1,19 @@
-//in this script, we check if the funder owns the NFTs they are adding to the contract. If they don't, throw an error
-const { FUNDING_ACCOUNT_ID, FUNDER_INFO, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT, NFT_DATA, NFT_CONTRACT_ID, NFT_METADATA} = require("./configurations");
+// In this script, we check if the funder owns the NFTs they are adding to the contract. If they don't, throw an error
+const { FUNDING_ACCOUNT_ID, FUNDER_INFO, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE_NEAR, DROP_CONFIG, KEYPOM_CONTRACT, NFT_DATA, NFT_CONTRACT_ID, NFT_METADATA} = require("./configurations");
+
+// NOTE: This script MUST be run on testnet and WILL NOT WORK ON MAINNET
+// This is beause the chosen NFT contract for this tutorial lives on testnet.
 
 const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
 const { initKeypom, createDrop, getDrops } = require("keypom-js");
 
-//funder is account to sign txns, defaults to benjiman.testnet
-//numKeys default is 10, deposit defalt is 10, default drop config 1 use per key and delete on empty, metadata empty, funderBalance false
+// Funder is account to sign txns, can be changed in ./configurations.js
 async function createNFTDropMinted(){
-    //USER'S RESPONSIBILITY TO CHANGE DEFAULT CONSTS IN CONFIGURATIONS.JS
+    // USER'S RESPONSIBILITY TO CHANGE DEFAULT CONSTS IN CONFIGURATIONS.JS
 
-    //mint 1 NFT for the funder from the NFT contract outlined in the NFT_DATA
+    // Mint 1 NFT for the funder from the NFT contract outlined in the NFT_DATA
     NFT_DATA.tokenIds[0] = `keypom-${dropId}-1-${FUNDING_ACCOUNT_ID}-${Date.now()}`;
 	await fundingAccount.functionCall(
 		NFT_CONTRACT_ID, 
@@ -25,12 +27,11 @@ async function createNFTDropMinted(){
 		parseNearAmount("0.1")
 	);
 
-    //init keypom, this takes care of the new NEAR connection
+    // Init keypom, this takes care of the new NEAR connection
     console.log("Initiating NEAR connection");
-    //funder should be an object, with accountID and secretkey
     initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
 
-    //create drop, this generates the keys based on the number of keys passed in and uses funder's keypom balance if funderBalance is true (otherwise will sign a txn with an attached deposit)
+    // Create drop, this generates the keys based on the number of keys passed in and uses funder's keypom balance if funderBalance is true (otherwise will sign a txn with an attached deposit)
     const {keys} = createDrop({
         numKeys: NUM_KEYS,
         depositPerUseNEAR: DEPOSIT_PER_USE_NEAR,
@@ -41,12 +42,13 @@ async function createNFTDropMinted(){
     pubKeys = keys.publicKeys
 
     var dropInfo = {};
-    //creating list of pk's and linkdrops; copied from orignal simple-create.js
+    // Creating list of pk's and linkdrops; copied from orignal simple-create.js
     for(var i = 0; i < keys.keyPairs.length; i++) {
-		dropInfo[pubKeys[i]] = `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}`;
-		console.log(`https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}`);
+		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}`;
+	    dropInfo[publicKeys[i]] = linkdropUrl;
+		console.log(linkdropUrl);
 	}
-	//write file of all pk's and their respective linkdrops
+	// Write file of all pk's and their respective linkdrops
 	console.log('curPks: ', curPks)
 	await writeFile(path.resolve(__dirname, `linkdrops.json`), JSON.stringify(curPks));
 }

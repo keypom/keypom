@@ -1,10 +1,10 @@
-//FT-MINT DOES NOT EXIST AS PART OF THE FT STANDARD, THUS WE CAN ONLY ASSUME THAT THE FUNDER OWNS THE FT
+// There is no standard way of sending the funder FTs unless we expose a private key in script. For this reason, the script will only work if the funder has enough FTs.
 const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/format");
 const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
 const { initiateNearConnection, getFtCosts, estimateRequiredDeposit, ATTACHED_GAS_FROM_WALLET, getRecentDropId } = require("../utils/general");
-const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT, FT_DATA, FT_CONTRACT_ID } = require("./configurations");
+const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE_NEAR, DROP_CONFIG, KEYPOM_CONTRACT, FT_DATA, FT_CONTRACT_ID } = require("./configurations");
 const { KeyPair } = require("near-api-js");
 const { BN } = require("bn.js");
 
@@ -15,15 +15,15 @@ async function start() {
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
 	//get amount to transfer and see if owner has enough balance to fund drop
-	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey))
-	console.log('amountToTransfer: ', amountToTransfer.toString());	
-	if (await FT_CONTRACT_ID.ft_balance_of({ account_id: FUNDING_ACCOUNT_ID }) < amountToTransfer){
-		throw new Error('funder does not have enough FT for this drop');
+	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()
+	console.log('amountToTransfer: ', amountToTransfer);	
+	if (await FT_CONTRACT_ID.ft_balance_of({ account_id: FUNDING_ACCOUNT_ID }).toString() < amountToTransfer){
+		throw new Error('funder does not have enough Fungible Tokens for this drop. Top up and try again.');
 	}
 
 	let requiredDeposit = await estimateRequiredDeposit(
 		near,
-		DEPOSIT_PER_USE,
+		DEPOSIT_PER_USE_NEAR,
 		NUM_KEYS,
 		DROP_CONFIG.uses_per_key,
 		ATTACHED_GAS_FROM_WALLET,
@@ -49,7 +49,7 @@ async function start() {
 			'create_drop', 
 			{
 				public_keys: pubKeys,
-				deposit_per_use: DEPOSIT_PER_USE,
+				deposit_per_use: DEPOSIT_PER_USE_NEAR,
 				config: DROP_CONFIG,
 				metadata: JSON.stringify(DROP_METADATA),
 				ft_data: FT_DATA
@@ -79,7 +79,7 @@ async function start() {
 			'ft_transfer_call', 
 			{
 				receiver_id: KEYPOM_CONTRACT,
-				amount: amountToTransfer.toString(),
+				amount: amountToTransfer,
 				msg: dropId.toString()
 			},
 			"300000000000000",
@@ -91,8 +91,9 @@ async function start() {
 	
 	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
-		curPks[keyPairs[i].publicKey.toString()] = `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`;
-		console.log(`https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`);
+		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`;
+		curPks[keyPairs[i].publicKey.toString()] = linkdropUrl;
+		console.log(linkdropUrl);
 	}
 
 	console.log('curPks: ', curPks)

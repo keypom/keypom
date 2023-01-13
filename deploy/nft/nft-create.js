@@ -2,8 +2,12 @@ const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/for
 const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
+
+// NOTE: This script MUST be run on testnet and WILL NOT WORK ON MAINNET
+// This is beause the chosen NFT contract for this tutorial lives on testnet.
+
 const { initiateNearConnection, getFtCosts, estimateRequiredDeposit, ATTACHED_GAS_FROM_WALLET, getRecentDropId } = require("../utils/general");
-const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT, NFT_DATA, NFT_CONTRACT_ID, NFT_METADATA } = require("./configurations");
+const { FUNDING_ACCOUNT_ID, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE_NEAR, DROP_CONFIG, KEYPOM_CONTRACT, NFT_DATA, NFT_CONTRACT_ID, NFT_METADATA } = require("./configurations");
 const { KeyPair } = require("near-api-js");
 const { BN } = require("bn.js");
 
@@ -15,7 +19,7 @@ async function start() {
 
 	let requiredDeposit = await estimateRequiredDeposit({
 		near,
-		depositPerUse: DEPOSIT_PER_USE,
+		depositPerUse: DEPOSIT_PER_USE_NEAR,
 		numKeys: NUM_KEYS,
 		usesPerKey: DROP_CONFIG.usesPerKey,
 		attachedGas: ATTACHED_GAS_FROM_WALLET,
@@ -38,7 +42,7 @@ async function start() {
 			'create_drop', 
 			{
 				public_keys: pubKeys,
-				deposit_per_use: DEPOSIT_PER_USE,
+				deposit_per_use: DEPOSIT_PER_USE_NEAR,
 				config: DROP_CONFIG,
 				metadata: JSON.stringify(DROP_METADATA),
 				nft_data: NFT_DATA
@@ -86,8 +90,9 @@ async function start() {
 	
 	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
-		curPks[keyPairs[i].publicKey.toString()] = `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`;
-		console.log(`https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`);
+		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keyPairs[i].secretKey}`;
+		curPks[keyPairs[i].publicKey.toString()] = linkdropUrl;
+		console.log(linkdropUrl);
 	}
 
 	console.log('curPks: ', curPks)

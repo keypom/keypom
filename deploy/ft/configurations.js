@@ -1,13 +1,13 @@
 const { parseNearAmount } = require("near-api-js/lib/utils/format");
 
-const KEYPOM_CONTRACT = "v1.keypom.testnet"
-const FUNDING_ACCOUNT_ID = "benji_demo.testnet"
+const KEYPOM_CONTRACT = "v1-3.keypom.testnet"
+const FUNDING_ACCOUNT_ID = "minqi.testnet"
 const FUNDER_INFO = {
     accountId: FUNDING_ACCOUNT_ID,
-    secretKey: "ed25519:5yARProkcALbxaSQ66aYZMSBPWL9uPBmkoQGjV3oi2ddQDMh1teMAbz7jqNV9oVyMy7kZNREjYvWPqjcA6LW9Jb1"
+    secretKey: "ed25519:5rnGds9BqnrtLaavHVN8qbZbHxEuhDrnBuai6Wp3Duntu5JmAUSTxRKF93qzPuate8AS5k9MDJNbCvQPHh8o2dqZ"
 }
 const NETWORK_ID = "testnet";
-const DEPOSIT_PER_USE = parseNearAmount("1");
+const DEPOSIT_PER_USE_NEAR = 1;
 const NUM_KEYS = 1;
 const FT_CONTRACT_ID = "ft.keypom.testnet";
 
@@ -67,7 +67,7 @@ module.exports = {
     FUNDING_ACCOUNT_ID,
     FUNDER_INFO,
     NETWORK_ID,
-    DEPOSIT_PER_USE,
+    DEPOSIT_PER_USE_NEAR,
     NUM_KEYS,
     DROP_CONFIG,
     DROP_METADATA,

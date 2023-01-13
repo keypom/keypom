@@ -1,47 +1,45 @@
-//in this script, we check if the funder owns the NFTs they are adding to the contract. If they don't, throw an error
-const { FUNDING_ACCOUNT_ID, FUNDER_INFO, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE, DROP_CONFIG, KEYPOM_CONTRACT, NFT_DATA, NFT_CONTRACT_ID, NFT_METADATA} = require("./configurations");
+// In this script, we check if the funder owns the NFTs they are adding to the contract. If they don't, throw an error
+const { FUNDING_ACCOUNT_ID, FUNDER_INFO, NETWORK_ID, NUM_KEYS, DROP_METADATA, DEPOSIT_PER_USE_NEAR, DROP_CONFIG, KEYPOM_CONTRACT, NFT_DATA, NFT_CONTRACT_ID, NFT_METADATA} = require("./configurations");
 
 const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
 const { initKeypom, createDrop, getDrops } = require("keypom-js");
 
-//funder is account to sign txns, defaults to benjiman.testnet
-//numKeys default is 10, deposit defalt is 10, default drop config 1 use per key and delete on empty, metadata empty, funderBalance false
+// Funder is account to sign txns, can be changed in ./configurations.js
 async function createNFTDropOwned({funderBalance = false}){
-    //USER'S RESPONSIBILITY TO CHANGE DEFAULT CONSTS IN CONFIGURATIONS.JS
+    // USER'S RESPONSIBILITY TO CHANGE DEFAULT CONSTS IN CONFIGURATIONS.JS
 
-    //init keypom, this takes care of the new NEAR connection
+    // Initialize keypom, this takes care of the new NEAR connection
     console.log("Initiating NEAR connection");
     initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
 
-	//get amount to transfer and see if owner has enough balance to fund drop
-	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey))
-	let amountToTransfer_String = amountToTransfer.toString();
-	console.log('amountToTransfer: ', amountToTransfer_String);	
-	if (await FT_CONTRACT_ID.ft_balance_of({ account_id: FUNDING_ACCOUNT_ID }) < amountToTransfer){
-		throw new Error('funder does not have enough FT for this drop');
+	// Get amount to transfer and see if owner has enough balance to fund drop
+	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()
+	console.log('amountToTransfer: ', amountToTransfer);	
+	if (await FT_CONTRACT_ID.ft_balance_of({ account_id: FUNDING_ACCOUNT_ID }).toString() < amountToTransfer){
+		throw new Error('funder does not have enough Fungible Tokens for this drop. Top up and try again.');
 	}
 
-    //create drop, this generates the keys based on the number of keys passed in and uses funder's keypom balance if funderBalance is true (otherwise will sign a txn with an attached deposit)
+    // Creates the FT drop based on data from config file. Keys are automatically generated within the function based on `NUM_KEYS`. Since there is no entropy, all keys are completely random.
     const {keys} = createDrop({
         account: FUNDING_ACCOUNT_ID,
         numKeys: NUM_KEYS,
-        depositPerUseNEAR: DEPOSIT_PER_USE,
+        depositPerUseNEAR: DEPOSIT_PER_USE_NEAR,
         metadata: DROP_METADATA,
         config: DROP_CONFIG,
         ftData: FT_DATA,
-        hasBalance: funderBalance
     });
     pubKeys = keys.publicKeys
 
     var dropInfo = {};
-    //creating list of pk's and linkdrops; copied from orignal simple-create.js
+    // Creating list of pk's and linkdrops; copied from orignal simple-create.js
     for(var i = 0; i < keys.keyPairs.length; i++) {
-		dropInfo[pubKeys[i]] = `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}`;
-		console.log(`https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}`);
+        let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}`;
+	    dropInfo[publicKeys[i]] = linkdropUrl;
+		console.log(linkdropUrl);
 	}
-	//write file of all pk's and their respective linkdrops
+	// Write file of all pk's and their respective linkdrops
 	console.log('curPks: ', curPks)
 	await writeFile(path.resolve(__dirname, `linkdrops.json`), JSON.stringify(curPks));
 }
