@@ -11,29 +11,27 @@ async function createSimpleDrop(){
 
     // Init keypom, this takes care of the new NEAR connection
     console.log("Initiating NEAR connection");
-    initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
+    await initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
 
     // Create drop, this generates the keys based on the number of keys passed in and uses funder's keypom balance if funderBalance is true (otherwise will sign a txn with an attached deposit)
-    const {keys} = createDrop({
-        account: FUNDING_ACCOUNT_ID,
+    const {keys} = await createDrop({
         numKeys: NUM_KEYS,
         depositPerUseNEAR: DEPOSIT_PER_USE_NEAR,
         metadata: DROP_METADATA,
         config: DROP_CONFIG,
     });
-    console.log(typeof keys);
     pubKeys = keys.publicKeys
 
     var dropInfo = {};
     // Creating list of pk's and linkdrops; copied from orignal simple-create.js
     for(var i = 0; i < keys.keyPairs.length; i++) {
-		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}`;
-	    dropInfo[publicKeys[i]] = linkdropUrl;
+		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}`;
+	    dropInfo[pubKeys[i]] = linkdropUrl;
 		console.log(linkdropUrl);
 	}
 	// Write file of all pk's and their respective linkdrops
-	console.log('curPks: ', curPks)
-	await writeFile(path.resolve(__dirname, `linkdrops.json`), JSON.stringify(curPks));
+	console.log('curPks: ', pubKeys)
+	await writeFile(path.resolve(__dirname, `linkdrops.json`), JSON.stringify(dropInfo));
 }
 
 createSimpleDrop();

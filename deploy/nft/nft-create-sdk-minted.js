@@ -8,13 +8,22 @@ const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
 const { initKeypom, createDrop, getDrops } = require("keypom-js");
+const { parseNearAmount, formatNearAmount } = require("near-api-js/lib/utils/format");
 
 // Funder is account to sign txns, can be changed in ./configurations.js
 async function createNFTDropMinted(){
     // USER'S RESPONSIBILITY TO CHANGE DEFAULT CONSTS IN CONFIGURATIONS.JS
 
+
+    // Init keypom, this takes care of the new NEAR connection
+    console.log("Initiating NEAR connection");
+    initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
+
+    const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
+
     // Mint 1 NFT for the funder from the NFT contract outlined in the NFT_DATA
-    NFT_DATA.tokenIds[0] = `keypom-${dropId}-1-${FUNDING_ACCOUNT_ID}-${Date.now()}`;
+    // NFT_DATA.tokenIds[0] = `keypom-${dropId}-1-${FUNDING_ACCOUNT_ID}-${Date.now()}`;
+    NFT_DATA.tokenIds[0] = `keypom-1-${FUNDING_ACCOUNT_ID}-${Date.now()}`;
 	await fundingAccount.functionCall(
 		NFT_CONTRACT_ID, 
 		'nft_mint', 
@@ -26,10 +35,6 @@ async function createNFTDropMinted(){
 		"300000000000000",
 		parseNearAmount("0.1")
 	);
-
-    // Init keypom, this takes care of the new NEAR connection
-    console.log("Initiating NEAR connection");
-    initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
 
     // Create drop, this generates the keys based on the number of keys passed in and uses funder's keypom balance if funderBalance is true (otherwise will sign a txn with an attached deposit)
     const {keys} = createDrop({

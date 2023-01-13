@@ -4,7 +4,7 @@ const KEYPOM_CONTRACT = "v1-3.keypom.testnet"
 const FUNDING_ACCOUNT_ID = "minqi.testnet"
 const FUNDER_INFO = {
     accountId: FUNDING_ACCOUNT_ID,
-    secretKey: "ed25519:5rnGds9BqnrtLaavHVN8qbZbHxEuhDrnBuai6Wp3Duntu5JmAUSTxRKF93qzPuate8AS5k9MDJNbCvQPHh8o2dqZ"
+    secretKey: "ed25519:3hsCWpjczaPoNejnC2A1McGvnJQipAJUDmo6tEZ6XH6qwxfxTLkpQ8hMNG3jxg1zXEe5Ke2qoqUq76jJpeNKxaMa"
 }
 const NETWORK_ID = "testnet";
 const DEPOSIT_PER_USE_NEAR = '1';
