@@ -17,8 +17,7 @@ async function createFCDrop({funderBalance = false}){
     initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
 
     //Create drop, this generates the keys based on the number of keys passed in and uses funder's keypom balance if funderBalance is true (otherwise will sign a txn with an attached deposit)
-    const {keys} = createDrop({
-        account: FUNDING_ACCOUNT_ID,
+    const {keys} = await createDrop({
         numKeys: NUM_KEYS,
         depositPerUseNEAR: DEPOSIT_PER_USE_NEAR,
         metadata: DROP_METADATA,

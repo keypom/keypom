@@ -8,26 +8,48 @@ const path = require("path");
 const homedir = require("os").homedir();
 const { writeFile, mkdir, readFile } = require('fs/promises');
 const { initKeypom, createDrop, getDrops } = require("keypom-js");
+const { initiateNearConnection } = require("../utils/general");
+
 
 // Funder is account to sign txns, can be changed in ./configurations.js
-async function createNFTDropOwned({funderBalance = false}){
+async function createNFTDropOwned(){
     // USER'S RESPONSIBILITY TO CHANGE DEFAULT CONSTS IN CONFIGURATIONS.JS
 
     // Init keypom, this takes care of the new NEAR connection
     console.log("Initiating NEAR connection");
-    initKeypom({network: NETWORK_ID, funder: FUNDER_INFO});
+    let near = await initiateNearConnection(NETWORK_ID);
+    console.log("connection successful");
+    await initKeypom({near: near, funder: FUNDER_INFO});
+    console.log("keypom init successful")
+
+    const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
+    console.log("4")
+
+    //get array of token_ids owned by funder
+    let funderOwnedNFTs = await fundingAccount.viewFunction(
+        NFT_CONTRACT_ID, 
+        'nft_tokens_for_owner', 
+        {
+            account_id: FUNDING_ACCOUNT_ID,
+        },
+    );
+    let funderOwnedTokenIds = [];
+    for(i = 0; i<funderOwnedNFTs.length; i++){
+        funderOwnedTokenIds.push(funderOwnedNFTs[i].token_id)
+    }
+    
+
 
     // See if funder actually owns the NFTs in NFT_DATA_OWNED
     for(var i = 0; i < NFT_DATA.tokenIds.length; i++){
-        if ((Json.parse(await NFT_CONTRACT_ID.nft_token(NFT_DATA.tokenIds[i])).ownerId) != FUNDING_ACCOUNT_ID){
-            throw new Error('funder does not own this Non Fungible Token');
+        if (!funderOwnedTokenIds.includes(NFT_DATA.tokenIds[i])){
+            throw new Error(`funder does not own Non Fungible Token with ID: ${NFT_DATA.tokenIds[i]}`);
         }
     }
 
 
     // Creates the FT drop based on data from config file. Keys are automatically generated within the function based on `NUM_KEYS`. Since there is no entropy, all keys are completely random.
-    const {keys} = createDrop({
-        account: FUNDING_ACCOUNT_ID,
+    const {keys} = await createDrop({
         numKeys: NUM_KEYS,
         depositPerUseNEAR: DEPOSIT_PER_USE_NEAR,
         metadata: DROP_METADATA,
@@ -39,13 +61,13 @@ async function createNFTDropOwned({funderBalance = false}){
     var dropInfo = {};
     // Creating list of pk's and linkdrops; copied from orignal simple-create.js
     for(var i = 0; i < keys.keyPairs.length; i++) {
-		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKey[i]}`;
-	    dropInfo[publicKeys[i]] = linkdropUrl;
+		let linkdropUrl = NETWORK_ID == "testnet" ? `https://testnet.mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}` : `https://mynearwallet.com/linkdrop/${KEYPOM_CONTRACT}/${keys.secretKeys[i]}`;
+	    dropInfo[pubKeys[i]] = linkdropUrl;
 		console.log(linkdropUrl);
 	}
 	// Write file of all pk's and their respective linkdrops
-	console.log('curPks: ', curPks)
-	await writeFile(path.resolve(__dirname, `linkdrops.json`), JSON.stringify(curPks));
+	console.log('curPks: ', pubKeys)
+	await writeFile(path.resolve(__dirname, `linkdrops.json`), JSON.stringify(dropInfo));
 }
 
 createNFTDropOwned();

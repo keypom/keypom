@@ -47,6 +47,9 @@ async function createNFTDropMinted(){
         nftData: NFT_DATA
     });
     pubKeys = keys.publicKeys
+    
+    console.log(keys)
+
 
     var dropInfo = {};
     // Creating list of pk's and linkdrops; copied from orignal simple-create.js

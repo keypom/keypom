@@ -25,7 +25,7 @@ const NFT_DATA = {
     // Who will be sending the NFTs to the Keypom contract
     senderId: FUNDING_ACCOUNT_ID,
     // List of tokenIDs
-    tokenIds: []
+    tokenIds: ["1.0.0", "1.0.1"]
 }
 //USED TO HAVE 2 OBJS
 // const NFT_DATA_OWNED = {
@@ -40,7 +40,7 @@ const NFT_DATA = {
 
 const DROP_CONFIG = {
     // How many claims can each key have.
-    usesPerKey: 3,
+    usesPerKey: 1,
 
     usage: {
         /// Can the access key only call the claim method_name? Default to both method_name callable

@@ -23,7 +23,8 @@ const FT_DATA = {
     // Who will be sending the FTs to the Keypom contract
     senderId: FUNDING_ACCOUNT_ID,
     // How many FTs should be sent to the claimed account everytime a key is used
-    balancePerUse: "1",
+    balancePerUse: parseNearAmount("1"),
+    // balancePerUse: "1",
 }
 
 const DROP_CONFIG = {
