@@ -36,7 +36,7 @@ async function start() {
 		pubKeys.push(keyPair.publicKey.toString());   
 	}
 
-	//create FC drop with pubkkeys from above and fc data
+	// Create FC drop with pubkkeys from above and fc data
 	try {
 		await fundingAccount.functionCall(
 			LINKDROP_PROXY_CONTRACT_ID, 

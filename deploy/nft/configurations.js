@@ -15,7 +15,7 @@ const NFT_CONTRACT_ID = 'nft.examples.testnet';
 
 const NFT_METADATA = {
     title: "My Keypom NFT",
-    description: "Keypom is lit fam",
+    description: "Keypom is lit fam :D",
     media: "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif",
 }
 
@@ -25,7 +25,8 @@ const NFT_DATA = {
     // Who will be sending the NFTs to the Keypom contract
     senderId: FUNDING_ACCOUNT_ID,
     // List of tokenIDs
-    tokenIds: ["1.0.2", "1.0.3"]
+    // tokenIds: ["1.0.6", "1.0.7"]
+    tokenIds: ["1abc"]
 }
 //USED TO HAVE 2 OBJS
 // const NFT_DATA_OWNED = {

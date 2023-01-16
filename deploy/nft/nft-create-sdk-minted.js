@@ -25,7 +25,6 @@ async function createNFTDropMinted(){
 
     // Mint 1 NFT for the funder from the NFT contract outlined in the NFT_DATA
     // NFT_DATA.tokenIds[0] = `keypom-${dropId}-1-${FUNDING_ACCOUNT_ID}-${Date.now()}`;
-    NFT_DATA.tokenIds[0] = `keypom-1-${FUNDING_ACCOUNT_ID}-${Date.now()}`;
 	await fundingAccount.functionCall(
 		NFT_CONTRACT_ID, 
 		'nft_mint', 

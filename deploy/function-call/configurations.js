@@ -4,14 +4,15 @@ const KEYPOM_CONTRACT = "v1-3.keypom.testnet"
 const FUNDING_ACCOUNT_ID = "minqi.testnet"
 const FUNDER_INFO = {
     accountId: FUNDING_ACCOUNT_ID,
-    secretKey: "ed25519:5rnGds9BqnrtLaavHVN8qbZbHxEuhDrnBuai6Wp3Duntu5JmAUSTxRKF93qzPuate8AS5k9MDJNbCvQPHh8o2dqZ"
+    secretKey: "ed25519:3hsCWpjczaPoNejnC2A1McGvnJQipAJUDmo6tEZ6XH6qwxfxTLkpQ8hMNG3jxg1zXEe5Ke2qoqUq76jJpeNKxaMa"
 }
+
 // NOTE: This script MUST be run on testnet and WILL NOT WORK ON MAINNET
 // This is beause the chosen NFT contract for this tutorial lives on testnet.
 
 const NETWORK_ID = "testnet";
 const DEPOSIT_PER_USE_NEAR = 1;
-const NUM_KEYS = 420;
+const NUM_KEYS = 5;
 const NFT_CONTRACT_ID = 'nft.examples.testnet';
 
 const NFT_METADATA = {
@@ -26,7 +27,7 @@ const NFT_DATA = {
     // Who will be sending the NFTs to the Keypom contract
     senderId: FUNDING_ACCOUNT_ID,
     // List of tokenIDs
-    tokenIds: []
+    tokenIds: ["1a"]
 }
 
 
@@ -36,16 +37,12 @@ const FC_DATA = {
 			receiverId: NFT_CONTRACT_ID,
 			methodName: "nft_mint",
 			args: JSON.stringify({
-                // MATCH THIS WITH DOCS EXAMPLE
-                //could be my own docs? or github readme?
-				"keypom_args": {
-					"account_id_field": "receiver_id",
-					"drop_id_field" : "mint_id"
-				}
+                token_id: "1a",
+                receiver_id: FUNDING_ACCOUNT_ID,
+                metadata: NFT_METADATA
 			}),
 			attachedDeposit: parseNearAmount("1"),
-			accountIdField: "receiver_id",
-			dropIdField: "mint_id"
+			accountIdField: FUNDING_ACCOUNT_ID
 		}]
 	]
 }

@@ -13,7 +13,7 @@ const NUM_KEYS = 1;
 //change this to match the keypom-sdk types
 const DROP_CONFIG = {
     // How many claims can each key have.
-    usesPerKey: 1,
+    usesPerKey: 3,
 
     time:{
             /// Minimum block timestamp before keys can be used. If None, keys can be used immediately
