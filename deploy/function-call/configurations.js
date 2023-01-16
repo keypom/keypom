@@ -37,6 +37,7 @@ const FC_DATA = {
 			methodName: "nft_mint",
 			args: JSON.stringify({
                 // MATCH THIS WITH DOCS EXAMPLE
+                //could be my own docs? or github readme?
 				"keypom_args": {
 					"account_id_field": "receiver_id",
 					"drop_id_field" : "mint_id"

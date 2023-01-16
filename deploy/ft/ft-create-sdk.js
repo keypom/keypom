@@ -24,18 +24,9 @@ async function createFTDrop(){
     const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
 	// Get amount to transfer and see if owner has enough balance to fund drop
-	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()
+	let amountToTransfer = new BN(FT_DATA.amount).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()
 	console.log('amountToTransfer: ', amountToTransfer);
     
-    // await fundingAccount.functionCall(
-    //     FT_CONTRACT_ID, 
-    //     'ft_mint', 
-    //     {
-    //         account_id: FUNDING_ACCOUNT_ID,
-    //         amount: amountToTransfer
-    //     },
-    //     "300000000000000"
-    // );
     let funderFungibleTokenBal = await fundingAccount.viewFunction(
 		FT_CONTRACT_ID, 
 		'ft_balance_of', 
@@ -44,14 +35,10 @@ async function createFTDrop(){
 		}
 	);
 
-
-
-
 	if (new BN(funderFungibleTokenBal).lte(new BN(amountToTransfer))){
 		throw new Error('funder does not have enough Fungible Tokens for this drop. Top up and try again.');
 	}
 
-    console.log("i made it past error check")
     // Creates the FT drop based on data from config file. Keys are automatically generated within the function based on `NUM_KEYS`. Since there is no entropy, all keys are completely random.
     const {keys} = await createDrop({
         numKeys: NUM_KEYS,
