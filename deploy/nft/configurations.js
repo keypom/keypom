@@ -25,7 +25,7 @@ const NFT_DATA = {
     // Who will be sending the NFTs to the Keypom contract
     senderId: FUNDING_ACCOUNT_ID,
     // List of tokenIDs
-    tokenIds: ["1.0.0", "1.0.1"]
+    tokenIds: ["1.0.2", "1.0.3"]
 }
 //USED TO HAVE 2 OBJS
 // const NFT_DATA_OWNED = {

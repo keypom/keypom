@@ -18,14 +18,11 @@ async function createNFTDropOwned(){
     // Init keypom, this takes care of the new NEAR connection
     console.log("Initiating NEAR connection");
     let near = await initiateNearConnection(NETWORK_ID);
-    console.log("connection successful");
     await initKeypom({near: near, funder: FUNDER_INFO});
-    console.log("keypom init successful")
 
     const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
-    console.log("4")
 
-    //get array of token_ids owned by funder
+    // Get array of token_ids owned by funder
     let funderOwnedNFTs = await fundingAccount.viewFunction(
         NFT_CONTRACT_ID, 
         'nft_tokens_for_owner', 
