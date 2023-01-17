@@ -12,7 +12,7 @@ const FUNDER_INFO = {
 
 const NETWORK_ID = "testnet";
 const DEPOSIT_PER_USE_NEAR = 1;
-const NUM_KEYS = 5;
+const NUM_KEYS = 1;
 const NFT_CONTRACT_ID = 'nft.examples.testnet';
 
 const NFT_METADATA = {
@@ -37,7 +37,7 @@ const FC_DATA = {
 			receiverId: NFT_CONTRACT_ID,
 			methodName: "nft_mint",
 			args: JSON.stringify({
-                token_id: "1a",
+                token_id: "one-eh",
                 receiver_id: FUNDING_ACCOUNT_ID,
                 metadata: NFT_METADATA
 			}),

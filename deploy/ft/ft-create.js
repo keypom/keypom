@@ -15,22 +15,26 @@ async function start() {
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
 	//get amount to transfer and see if owner has enough balance to fund drop
-	let amountToTransfer = new BN(FT_DATA.balancePerUse).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()
-	console.log('amountToTransfer: ', amountToTransfer);	
-	if (await FT_CONTRACT_ID.ft_balance_of({ account_id: FUNDING_ACCOUNT_ID }).toString() < amountToTransfer){
+	let amountToTransfer = new BN(FT_DATA.amount).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()
+	console.log('amountToTransfer: ', amountToTransfer);
+	console.log(FT_DATA.amount);
+	console.log(NUM_KEYS)
+	console.log(DROP_CONFIG.usesPerKey)
+
+
+	let funderFungibleTokenBal = await fundingAccount.viewFunction(
+		FT_CONTRACT_ID, 
+		'ft_balance_of',
+		{
+			account_id: FUNDING_ACCOUNT_ID
+		}
+	);
+	console.log("FOASFAPSKFASOFAS", funderFungibleTokenBal);
+	console.log(amountToTransfer)
+
+	if (new BN(funderFungibleTokenBal).lte(new BN(amountToTransfer))){
 		throw new Error('funder does not have enough Fungible Tokens for this drop. Top up and try again.');
 	}
-
-	let requiredDeposit = await estimateRequiredDeposit(
-		near,
-		DEPOSIT_PER_USE_NEAR,
-		NUM_KEYS,
-		DROP_CONFIG.uses_per_key,
-		ATTACHED_GAS_FROM_WALLET,
-		parseNearAmount("0.1"),
-		null,
-		FT_DATA
-	)
 	
 	// Keep track of an array of the keyPairs we create
 	let keyPairs = [];
@@ -42,6 +46,7 @@ async function start() {
 		keyPairs.push(keyPair);   
 		pubKeys.push(keyPair.publicKey.toString());   
 	}
+	console.log(pubKeys)
 
 	try {
 		await fundingAccount.functionCall(
@@ -49,16 +54,47 @@ async function start() {
 			'create_drop', 
 			{
 				public_keys: pubKeys,
-				deposit_per_use: DEPOSIT_PER_USE_NEAR,
-				config: DROP_CONFIG,
+				deposit_per_use: parseNearAmount(DEPOSIT_PER_USE_NEAR.toString()),
+				config: {
+					uses_per_key: DROP_CONFIG.usesPerKey,
+					time: {
+						start: DROP_CONFIG.time.start,
+						end: DROP_CONFIG.time.end,
+						throttle: DROP_CONFIG.time.throttle,
+						interval: DROP_CONFIG.time.interval
+					},
+					usage: {
+						permissions: DROP_CONFIG.usage.permissions,
+						refund_deposit: DROP_CONFIG.usage.refundDeposit,
+						auto_delete_drop:DROP_CONFIG.usage.autoDeleteDrop,
+						auto_withdraw: DROP_CONFIG.usage.autoWithdraw
+					
+					},
+					root_account_id: DROP_CONFIG.dropRoot
+					
+				},
 				metadata: JSON.stringify(DROP_METADATA),
-				ft_data: FT_DATA
+				ft: {
+					contract_id: FT_DATA.contractId,
+					sender_id: FT_DATA.senderId,
+					balance_per_use: parseNearAmount(FT_DATA.amount.toString())
+				}
 			}, 
-			"300000000000000"
+			"300000000000000",
+			parseNearAmount("10")
 		);
 	} catch(e) {
 		console.log('error creating drop: ', e);
 	}
+
+	console.log("checking to see if drop creation was successful, Keypom smart contract will panic if drop does not exist");
+	await fundingAccount.functionCall(
+		KEYPOM_CONTRACT, 
+		'get_drop_information', 
+		{
+			key: pubKeys[0],
+		}
+	);
 
 	try {
 		await fundingAccount.functionCall(
@@ -79,7 +115,8 @@ async function start() {
 			'ft_transfer_call', 
 			{
 				receiver_id: KEYPOM_CONTRACT,
-				amount: amountToTransfer,
+				// amount: (FT_DATA.amount*NUM_KEYS * DROP_CONFIG.usesPerKey).toString(),
+				amount: parseNearAmount((FT_DATA.amount*NUM_KEYS * DROP_CONFIG.usesPerKey).toString()),				
 				msg: dropId.toString()
 			},
 			"300000000000000",

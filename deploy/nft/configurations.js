@@ -10,7 +10,7 @@ const FUNDER_INFO = {
 // This is beause the chosen NFT contract for this tutorial lives on testnet.
 const NETWORK_ID = "testnet";
 const DEPOSIT_PER_USE_NEAR = 1;
-const NUM_KEYS = 2;
+const NUM_KEYS = 1;
 const NFT_CONTRACT_ID = 'nft.examples.testnet';
 
 const NFT_METADATA = {
@@ -26,7 +26,7 @@ const NFT_DATA = {
     senderId: FUNDING_ACCOUNT_ID,
     // List of tokenIDs
     // tokenIds: ["1.0.6", "1.0.7"]
-    tokenIds: ["1abc"]
+    tokenIds: ["a white cat", "a brown cat"]
 }
 //USED TO HAVE 2 OBJS
 // const NFT_DATA_OWNED = {
@@ -41,7 +41,7 @@ const NFT_DATA = {
 
 const DROP_CONFIG = {
     // How many claims can each key have.
-    usesPerKey: 1,
+    usesPerKey: 2,
 
     usage: {
         /// Can the access key only call the claim method_name? Default to both method_name callable

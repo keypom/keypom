@@ -23,13 +23,12 @@ const FT_DATA = {
     // Who will be sending the FTs to the Keypom contract
     senderId: FUNDING_ACCOUNT_ID,
     // How many FTs should be sent to the claimed account everytime a key is used
-    amount: "1",
-    // balancePerUse: "1",
+    amount: 1,
 }
 
 const DROP_CONFIG = {
     // How many claims can each key have.
-    usesPerKey: 5,
+    usesPerKey: 2,
 
     usage: {
         /// Can the access key only call the claim method_name? Default to both method_name callable
@@ -65,7 +64,7 @@ const DROP_CONFIG = {
     },
 
     // Root account that all sub-accounts will default to. If None, default to the global drop root.
-    drop_root: null,
+    dropRoot: null,
 }
 
 const DROP_METADATA = "";

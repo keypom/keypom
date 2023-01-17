@@ -39,20 +39,55 @@ async function start() {
 	// Create FC drop with pubkkeys from above and fc data
 	try {
 		await fundingAccount.functionCall(
-			LINKDROP_PROXY_CONTRACT_ID, 
+			KEYPOM_CONTRACT, 
 			'create_drop', 
 			{
 				public_keys: pubKeys,
-				deposit_per_use: DEPOSIT_PER_USE_NEAR,
-				fc_data: FC_DATA,
-				config: DROP_CONFIG,
+				deposit_per_use: parseNearAmount(DEPOSIT_PER_USE_NEAR.toString()),
+				fc: {
+					methods: [[{
+						receiver_id: FC_DATA.methods[0][0].receiverId,
+						method_name: FC_DATA.methods[0][0].methodName,
+						args: FC_DATA.methods[0][0].args,
+						attached_deposit: FC_DATA.methods[0][0].attachedDeposit,
+						account_id_field: FC_DATA.methods[0][0].accountIdField
+					}]]
+				},
+				config: {
+					uses_per_key: DROP_CONFIG.usesPerKey,
+					time: {
+						start: DROP_CONFIG.time.start,
+						end: DROP_CONFIG.time.end,
+						throttle: DROP_CONFIG.time.throttle,
+						interval: DROP_CONFIG.time.interval
+					},
+					usage: {
+						permissions: DROP_CONFIG.usage.permissions,
+						refund_deposit: DROP_CONFIG.usage.refundDeposit,
+						auto_delete_drop:DROP_CONFIG.usage.autoDeleteDrop,
+						auto_withdraw: DROP_CONFIG.usage.autoWithdraw
+					
+					},
+					root_account_id: DROP_CONFIG.dropRoot
+				},
 				metadata: JSON.stringify(DROP_METADATA)
 			}, 
-			"300000000000000"
+			"300000000000000",
+			parseNearAmount("2")
 		);
 	} catch(e) {
 		console.log('error creating drop: ', e);
 	}
+
+	console.log("checking to see if drop creation was successful, Keypom smart contract will panic if drop does not exist");
+	await fundingAccount.functionCall(
+		KEYPOM_CONTRACT, 
+		'get_drop_information', 
+		{
+			key: pubKeys[0],
+		}
+	);
+	
 
 	let curPks = {};
 	for(var i = 0; i < keyPairs.length; i++) {
