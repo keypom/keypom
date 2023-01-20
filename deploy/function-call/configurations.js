@@ -42,7 +42,6 @@ const FC_DATA = {
                 metadata: NFT_METADATA
 			}),
 			attachedDeposit: parseNearAmount("1"),
-			accountIdField: FUNDING_ACCOUNT_ID
 		}]
 	]
 }

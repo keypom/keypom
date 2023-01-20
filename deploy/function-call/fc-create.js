@@ -17,14 +17,6 @@ async function start() {
 	let near = await initiateNearConnection(NETWORK_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
-	let requiredDeposit = await estimateRequiredDeposit({
-		near,
-		depositPerUse: DEPOSIT_PER_USE_NEAR,
-		numKeys: NUM_KEYS,
-		usesPerKey: DROP_CONFIG.usesPerKey,
-		attachedGas: ATTACHED_GAS_FROM_WALLET,
-})
-
 	// Keep track of an array of the keyPairs we create
 	let keyPairs = [];
 	// Keep track of the public keys to pass into the contract
@@ -49,8 +41,7 @@ async function start() {
 						receiver_id: FC_DATA.methods[0][0].receiverId,
 						method_name: FC_DATA.methods[0][0].methodName,
 						args: FC_DATA.methods[0][0].args,
-						attached_deposit: FC_DATA.methods[0][0].attachedDeposit,
-						account_id_field: FC_DATA.methods[0][0].accountIdField
+						attached_deposit: FC_DATA.methods[0][0].attachedDeposit
 					}]]
 				},
 				config: {

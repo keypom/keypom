@@ -19,9 +19,9 @@ async function createFTDrop(){
     // Initialize keypom, this takes care of the new NEAR connection
     console.log("Initiating NEAR connection");
     let near = await initiateNearConnection(NETWORK_ID);
-    await initKeypom({near: near, funder: FUNDER_INFO});
-
     const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
+    
+    await initKeypom({near: near, funder: FUNDER_INFO});
 
 	// Get amount to transfer and see if owner has enough balance to fund drop
 	let amountToTransfer = new BN(FT_DATA.amount).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()

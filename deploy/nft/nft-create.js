@@ -17,13 +17,6 @@ async function start() {
 	let near = await initiateNearConnection(NETWORK_ID);
 	const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
-	let requiredDeposit = await estimateRequiredDeposit({
-		near,
-		depositPerUse: DEPOSIT_PER_USE_NEAR,
-		numKeys: NUM_KEYS,
-		usesPerKey: DROP_CONFIG.usesPerKey,
-		attachedGas: ATTACHED_GAS_FROM_WALLET,
-})
 	
 	// Keep track of an array of the keyPairs we create
 	let keyPairs = [];

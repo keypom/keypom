@@ -17,9 +17,6 @@ async function start() {
 	//get amount to transfer and see if owner has enough balance to fund drop
 	let amountToTransfer = new BN(FT_DATA.amount).mul(new BN(NUM_KEYS * DROP_CONFIG.usesPerKey)).toString()
 	console.log('amountToTransfer: ', amountToTransfer);
-	console.log(FT_DATA.amount);
-	console.log(NUM_KEYS)
-	console.log(DROP_CONFIG.usesPerKey)
 
 
 	let funderFungibleTokenBal = await fundingAccount.viewFunction(
@@ -29,8 +26,6 @@ async function start() {
 			account_id: FUNDING_ACCOUNT_ID
 		}
 	);
-	console.log("FOASFAPSKFASOFAS", funderFungibleTokenBal);
-	console.log(amountToTransfer)
 
 	if (new BN(funderFungibleTokenBal).lte(new BN(amountToTransfer))){
 		throw new Error('funder does not have enough Fungible Tokens for this drop. Top up and try again.');

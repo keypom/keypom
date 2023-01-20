@@ -19,9 +19,10 @@ async function createNFTDropMinted(){
     // Init keypom, this takes care of the new NEAR connection
     console.log("Initiating NEAR connection");
     let near = await initiateNearConnection(NETWORK_ID);
+    const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
+    
     await initKeypom({near: near, funder: FUNDER_INFO});
 
-    const fundingAccount = await near.account(FUNDING_ACCOUNT_ID);
 
     // Mint 1 NFT for the funder from the NFT contract outlined in the NFT_DATA
     // NFT_DATA.tokenIds[0] = `keypom-${dropId}-1-${FUNDING_ACCOUNT_ID}-${Date.now()}`;
