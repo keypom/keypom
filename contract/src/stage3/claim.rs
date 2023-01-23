@@ -363,7 +363,7 @@ impl Keypom {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        owner_id: AccountId,
+        funder_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was freed when the key was claimed
@@ -443,15 +443,15 @@ impl Keypom {
         if auto_withdraw {
             near_sdk::log!(
                 "Auto withdraw. Refunding funder: {:?} balance For amount: {:?}",
-                owner_id,
+                funder_id,
                 yocto_to_near(amount_to_refund)
             );
 
             // Send the funds to the funder
-            Promise::new(owner_id).transfer(amount_to_refund);
+            Promise::new(funder_id.clone()).transfer(amount_to_refund);
         } else {
             // Get the funder's balance and increment it by the amount to refund
-            self.internal_modify_user_balance(&owner_id, amount_to_refund, false);
+            self.internal_modify_user_balance(&funder_id, amount_to_refund, false);
         }
 
         self.internal_fc_execute(
@@ -459,6 +459,7 @@ impl Keypom {
             fc_data.config,
             cur_key_id,
             account_id,
+            funder_id,
             drop_id,
         );
         claim_succeeded
