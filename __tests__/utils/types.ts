@@ -90,7 +90,7 @@ export type UsageConfig = {
     refund_deposit?: boolean;
     auto_delete_drop?: boolean;
     auto_withdraw?: boolean;
-    account_creation_keypom_args?: {
+    account_creation_fields?: {
         account_id_field?: String,
         drop_id_field?: String,
         key_id_field?: String,

@@ -919,7 +919,7 @@ test('Testing Account Creation Keypom Args With Custom Drop Root', async t => {
     let config: DropConfig  = {
         root_account_id: customKeypomRoot.accountId,
         usage: {
-            account_creation_keypom_args: {
+            account_creation_fields: {
                 funder_id_field: "funder_id"
             }
         }

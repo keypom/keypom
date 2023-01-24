@@ -116,7 +116,7 @@ impl Keypom {
         );
 
         // If Keypom args are provided in the config, attach them to the create account payload.
-        if let Some(keypom_args) = drop_data.config.clone().and_then(|c| c.usage).and_then(|u| u.account_creation_keypom_args) {
+        if let Some(keypom_args) = drop_data.config.clone().and_then(|c| c.usage).and_then(|u| u.account_creation_fields) {
             final_args = insert_keypom_args_to_ca_payload(final_args, keypom_args, new_account_id.clone(), drop_id.unwrap().to_string(), cur_key_id.to_string(), drop_data.owner_id.to_string());
         }
 

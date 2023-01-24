@@ -119,7 +119,7 @@ pub struct UsageConfig {
     /// When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
     pub auto_withdraw: Option<bool>,
     /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
-    pub account_creation_keypom_args: Option<KeypomArgs>,
+    pub account_creation_fields: Option<KeypomArgs>,
 }
 
 /// Keep track of different configuration options for each key in a drop
