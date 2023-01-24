@@ -336,3 +336,55 @@ test('Attempt to Panic During Claim or CAAC', async t => {
 
     t.assert(NEAR.from(keypomBalanceAfter.available.toString()).gte(NEAR.from(keypomBalanceBefore.available.toString())));
 });
+
+test('Not enough attached deposit during add_keys', async t => {
+    const { keypom, ali, bob } = t.context.accounts;
+
+    await ali.updateAccount({
+        amount: NEAR.parse('10000 N').toString()
+    })
+
+    let {keys, publicKeys} = await generateKeyPairs(5);
+
+    await ali.call(keypom, 'create_drop', {public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('100').toString()}, {gas: WALLET_GAS, attachedDeposit: NEAR.parse("101").toString()});
+
+
+    await ali.call(keypom, 'withdraw_from_balance', {});
+
+    let keypomBalanceBefore = await keypom.balance();
+    console.log('keypom available INITIAL: ', keypomBalanceBefore.available.toString())
+    console.log('keypom staked INITIAL: ', keypomBalanceBefore.staked.toString())
+    console.log('keypom stateStaked INITIAL: ', keypomBalanceBefore.stateStaked.toString())
+    console.log('keypom total INITIAL: ', keypomBalanceBefore.total.toString())
+
+    let aliBalBefore = await ali.balance();
+    console.log('aliBalBefore available: ', aliBalBefore.available.toString())
+    console.log('aliBalBefore staked: ', aliBalBefore.staked.toString())
+    console.log('aliBalBefore stateStaked: ', aliBalBefore.stateStaked.toString())
+    console.log('aliBalBefore total: ', aliBalBefore.total.toString())
+
+    // Should fail due to not enough attached deposit
+    try {
+        await ali.call(keypom, 'add_keys', {drop_id: "0", public_keys: [publicKeys[1]]}, {gas: WALLET_GAS, attachedDeposit: NEAR.parse("50").toString()});
+    } catch(e) {}
+
+    let keypomBalanceAfter = await keypom.balance();
+    console.log('keypomBalanceAfter available: ', keypomBalanceAfter.available.toString())
+    console.log('keypomBalanceAfter staked: ', keypomBalanceAfter.staked.toString())
+    console.log('keypomBalanceAfter stateStaked: ', keypomBalanceAfter.stateStaked.toString())
+    console.log('keypomBalanceAfter total: ', keypomBalanceAfter.total.toString())
+
+    let aliBalAfter = await ali.balance();
+    console.log('aliBalAfter available: ', aliBalAfter.available.toString())
+    console.log('aliBalAfter staked: ', aliBalAfter.staked.toString())
+    console.log('aliBalAfter stateStaked: ', aliBalAfter.stateStaked.toString())
+    console.log('aliBalAfter total: ', aliBalAfter.total.toString())
+
+    let aliContractBal = await keypom.view('get_user_balance', {account_id: ali});
+    console.log('aliContractBal: ', aliContractBal)
+
+    t.assert(aliContractBal === "0");
+    t.assert(NEAR.from(aliBalBefore.available).sub(NEAR.from(aliBalAfter.available)).lte(NEAR.parse("0.01")));
+    t.assert(NEAR.from(keypomBalanceBefore.available).sub(NEAR.from(keypomBalanceAfter.available)).lte(NEAR.parse("0.01")));
+    t.is(keypomBalanceBefore.stateStaked.toString(),keypomBalanceAfter.stateStaked.toString());
+});
