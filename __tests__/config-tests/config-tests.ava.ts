@@ -906,3 +906,59 @@ test('Testing All Time Based Configs Together', async t => {
     console.log('aliBal After: ', aliBal.toString())
     t.is(aliBal.toString(), NEAR.parse("5").toString());
 });
+
+test('Testing Account Creation Keypom Args With Custom Drop Root', async t => {
+    const { keypom, owner, ali } = t.context.accounts;
+    const customKeypomRoot = await keypom.createSubAccount('custom', {initialBalance: NEAR.parse("10").toString()});
+    // initialize the custom root with the account factory and add keypom account as the approved creator and the drop funder as the approved funder.
+    await customKeypomRoot.deploy(`./__tests__/ext-wasm/account_factory.wasm`);
+    await customKeypomRoot.call(customKeypomRoot, 'new', {});
+    await customKeypomRoot.call(customKeypomRoot, 'add_approved_creator', {account_id: keypom.accountId});
+    await customKeypomRoot.call(customKeypomRoot, 'add_approved_funder', {account_id: owner.accountId});
+
+    let config: DropConfig  = {
+        root_account_id: customKeypomRoot.accountId,
+        usage: {
+            account_creation_fields: {
+                funder_id_field: "funder_id"
+            }
+        }
+    }
+
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    // First create the invalid drop that has the wrong funder_id_field
+    await ali.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config
+    },{gas: LARGE_GAS, attachedDeposit: NEAR.parse("2").toString()});
+
+    await keypom.setKey(keys[0]);
+
+    //foo.customKeypomRoot.test.near
+    let newAccount = await keypom.getAccount(`foo.${customKeypomRoot.accountId}`);
+
+    // Set the key to be used to claim the drop
+    // SHOULD NOT WORK since the funder that is auto passed in is incorrect.
+    await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.${customKeypomRoot.accountId}`, new_public_key : publicKeys[0]}, {gas: WALLET_GAS});
+
+    let doesExist = await newAccount.exists();
+    console.log('doesExist: ', doesExist)
+    t.is(doesExist, false);
+
+    // Now create the correct drop (using the correct funder)
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [publicKeys[0]], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config
+    },{gas: LARGE_GAS, attachedDeposit: NEAR.parse("2").toString()});
+    
+    // Set the key to be used to claim the drop
+    await keypom.setKey(keys[0]);
+    // SHOULD NOT WORK since the funder that is auto passed in is incorrect.
+    await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `foo.${customKeypomRoot.accountId}`, new_public_key : publicKeys[0]}, {gas: WALLET_GAS});
+
+    doesExist = await newAccount.exists();
+    console.log('doesExist: ', doesExist)
+    t.is(doesExist, true);
+});
