@@ -1,4 +1,7 @@
+use std::str::FromStr;
+
 use near_sdk::env::sha256;
+use std::convert::{TryFrom};
 
 use crate::*;
 
@@ -566,5 +569,44 @@ impl Keypom {
                 );
             }
         };
+    }
+
+    /// Check whether or not a given string is a valid account ID or public key. Soft panic if it isn't.
+    pub(crate) fn assert_valid_args(
+        &mut self, 
+        account_id: String,
+        pub_key: Option<String>,
+        drop_id: DropId,
+        drop: &mut Drop,
+        key_info: &mut KeyInfo,
+        signer_pk: &PublicKey
+    ) -> bool {
+        let account_id_valid = AccountId::try_from(account_id).is_ok();
+        let mut pub_key_valid = true;
+
+        if let Some(key) = pub_key {
+            pub_key_valid = PublicKey::from_str(key.as_str()).is_ok();
+        }
+
+        if !account_id_valid || !pub_key_valid {
+            let used_gas = env::used_gas();
+
+            let amount_to_decrement =
+                (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            near_sdk::log!(
+                "Invalid Account Id Passed In. Decrementing allowance by {} Used GAS: {}",
+                amount_to_decrement,
+                used_gas.0
+            );
+
+            key_info.allowance -= amount_to_decrement;
+            near_sdk::log!("Allowance is now {}", key_info.allowance);
+            drop.pks.insert(&signer_pk, &key_info);
+            self.drop_for_id.insert(&drop_id, &drop);
+
+            return false
+        }
+
+        true
     }
 }

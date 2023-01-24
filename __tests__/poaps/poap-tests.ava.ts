@@ -89,13 +89,6 @@ test('Fully Claim all Pagoda POAPs', async t => {
 
         for(let i = 0; i < keys.length; i++) {
             await keypom.setKey(keys[i]);
-            await keypom.updateAccessKey(
-                keys[i],  // public key
-                {
-                    nonce: 0,
-                    permission: 'FullAccess'
-                }
-            )
 
             await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${nonce}-${i}.test.near`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
         }

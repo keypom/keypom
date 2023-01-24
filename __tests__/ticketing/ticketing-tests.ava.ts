@@ -86,13 +86,6 @@ test('Fully Claim all ticketing keys', async t => {
 
         for(let i = 0; i < keys.length; i++) {
             await keypom.setKey(keys[i]);
-            await keypom.updateAccessKey(
-                keys[i],  // public key
-                {
-                    nonce: 0,
-                    permission: 'FullAccess'
-                }
-            )
 
             await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
             await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
@@ -161,13 +154,6 @@ test('Claim 1 with invalid expected uses', async t => {
 
         for(let i = 0; i < keys.length; i++) {
             await keypom.setKey(keys[i]);
-            await keypom.updateAccessKey(
-                keys[i],  // public key
-                {
-                    nonce: 0,
-                    permission: 'FullAccess'
-                }
-            )
 
             await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });
             await keypom.call(keypom, 'claim', { account_id: bob, expected_uses: 3 }, { gas: WALLET_GAS });

@@ -123,13 +123,6 @@ test('Claim Multi NFT Drop And Ensure Keypom Balance Increases', async t => {
     //update the first 5 keys to have FAKs, claim 2 each
     for(let i = 0; i < 5; i++) {
         await keypom.setKey(keys[i]);
-        await keypom.updateAccessKey(
-            keys[i],  // public key
-            {
-                nonce: 0,
-                permission: 'FullAccess'
-            }
-        )
 
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[5]}, {gas: WALLET_GAS});
         await keypom.call(keypom, 'claim', {account_id: `${i}.test.near`}, {gas: WALLET_GAS});
@@ -235,14 +228,6 @@ test('OverRegister NFTs and add multi use key later', async t => {
     await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
     await owner.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[0]]}, {gas: LARGE_GAS});
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        keys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
-    //call claim on all 10 NFTs, using publicKeys[0] (10 uses per key)
     for(let i = 0; i < 5; i++) {
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[1]}, {gas: WALLET_GAS});
         await keypom.call(keypom, 'claim', {account_id: `${i}.test.near`}, {gas: WALLET_GAS});
@@ -464,13 +449,7 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     await sendNFTs(minter, ["1:1", "1:2", "1:3", "1:4", "1:5", "1:6", "1:7", "1:8", "1:9", "1:10"], keypom, nftSeries, "0");
 
     await keypom.setKey(keys[0]);
-    await keypom.updateAccessKey(
-        keys[0],  // public key
-        {
-            nonce: 0,
-            permission: 'FullAccess'
-        }
-    )
+    
     // Use the key 5 out of 10 times
     for(let i = 0; i < 5; i++) {
         await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${i}.test.near`, new_public_key : publicKeys[1]}, {gas: WALLET_GAS});
