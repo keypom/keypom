@@ -109,13 +109,29 @@ impl Keypom {
             .and_then(|c| c.root_account_id)
             .unwrap_or(self.root_account.clone());
 
+        
+        // Define the args as strigified JSON
+        let mut final_args = format!(
+            "{{\"new_account_id\":\"{}\",\"new_public_key\":\"{}\"}}", new_account_id.clone(), new_public_key.clone()
+        );
+
+        // If Keypom args are provided in the config, attach them to the create account payload.
+        if let Some(keypom_args) = drop_data.config.clone().and_then(|c| c.usage).and_then(|u| u.account_creation_keypom_args) {
+            final_args = insert_keypom_args_to_ca_payload(final_args, keypom_args, new_account_id.clone(), drop_id.unwrap().to_string(), cur_key_id.to_string(), drop_data.owner_id.to_string());
+        }
+
+        near_sdk::log!("Final payload to create_account: {}", final_args);
+        
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
-        let promise = ext_linkdrop::ext(root_account)
-            // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
-            .with_attached_deposit(drop_data.deposit_per_use)
-            .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
-            .with_unused_gas_weight(0)
-            .create_account( AccountId::new_unchecked(new_account_id.clone()), new_public_key.parse().unwrap());
+        let promise = Promise::new(root_account).function_call_weight(
+            "create_account".to_string(),
+            final_args.as_bytes().to_vec(),
+                // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
+                drop_data.deposit_per_use,
+                GAS_FOR_CREATE_ACCOUNT,
+                near_sdk::GasWeight(0),
+            );
+
 
         // Execute the callback depending on the drop type. We'll pass in the promise to resolve
         self.internal_execute(

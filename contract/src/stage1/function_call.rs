@@ -3,7 +3,7 @@ use near_sdk::GasWeight;
 use crate::*;
 
 /// Keypom Args struct to be sent to external contracts
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, BorshDeserialize, BorshSerialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct KeypomArgs {
     pub account_id_field: Option<String>,

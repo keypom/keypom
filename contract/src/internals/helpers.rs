@@ -3,7 +3,7 @@ use std::str::FromStr;
 use near_sdk::env::sha256;
 use std::convert::{TryFrom};
 
-use crate::*;
+use crate::{*, stage1::KeypomArgs};
 
 const GAS_PER_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas
 const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
@@ -82,6 +82,55 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
             }
         }
     }
+}
+
+/// Helper function to convert yoctoNEAR to $NEAR with 7 decimals of precision.
+pub(crate) fn insert_keypom_args_to_ca_payload(mut payload: String, keypom_args: KeypomArgs, new_account_id: String, drop_id: String, key_id: String, funder_id: String) -> String {
+    payload.insert_str(
+        payload.len() - 1,
+        &format!(
+            ",\"keypom_args\":{}",
+            near_sdk::serde_json::to_string(&keypom_args).unwrap()
+        ),
+    );
+
+    near_sdk::log!("payload with keypom args{}", payload);
+
+    // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
+    if let Some(field) = keypom_args.account_id_field.as_ref() {
+        payload.insert_str(
+            payload.len() - 1,
+            &format!(",\"{}\":\"{}\"", field, new_account_id),
+        );
+    }
+
+    // Add drop_id
+    if let Some(field) = keypom_args.drop_id_field.as_ref() {
+        payload.insert_str(
+            payload.len() - 1,
+            &format!(",\"{}\":\"{}\"", field, drop_id),
+        );
+    }
+
+    // Add the key_id
+    if let Some(field) = keypom_args.key_id_field.as_ref() {
+        payload.insert_str(
+            payload.len() - 1,
+            &format!(",\"{}\":\"{}\"", field, key_id),
+        );
+    }
+
+    // Add the funder_id
+    if let Some(field) = keypom_args.funder_id_field.as_ref() {
+        payload.insert_str(
+            payload.len() - 1,
+            &format!(",\"{}\":\"{}\"", field, funder_id),
+        );
+    }
+
+    near_sdk::log!("payload after all insertions{}", payload);
+
+    payload
 }
 
 impl Keypom {
