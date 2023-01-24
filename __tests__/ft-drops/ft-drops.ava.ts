@@ -13,6 +13,62 @@ const test = anyTest as TestFn<{
     keypomInitialStateStaked: NEAR;
 }>;
 
+test.beforeEach(async (t) => {
+    // Comment this if you want to see console logs
+    //console.log = function() {}
+
+    // Init the worker and start a Sandbox server
+    const worker = await Worker.init();
+
+    // Prepare sandbox for tests, create accounts, deploy contracts, etc.
+    const root = worker.rootAccount;
+
+    // Deploy all 3 contracts
+    const keypom = await root.devDeploy(`./out/keypom.wasm`);
+    await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
+    const ftContract = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+
+    // Init the 3 contracts
+    await root.call(root, 'new', {});
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
+    await ftContract.call(ftContract, 'new_default_meta', { owner_id: ftContract, total_supply: totalSupply.toString() });
+    
+    // Test users
+    const ali = await root.createSubAccount('ali');
+    const owner = await root.createSubAccount('owner');
+    const minter = await root.createSubAccount('minter');
+
+    // Add 10k $NEAR to owner's account
+    await owner.updateAccount({
+        amount: NEAR.parse('10000 N').toString()
+    })
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: "0"});
+
+    // Mint the FTs
+    await ftContract.call(ftContract, 'storage_deposit', { account_id: minter.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
+    await ftContract.call(ftContract, 'ft_transfer', { receiver_id: minter.accountId, amount: (oneGtNear * BigInt(1000)).toString() }, { attachedDeposit: "1" });
+
+    let keypomBalance = await keypom.balance();
+    console.log('keypom available INITIAL: ', keypomBalance.available.toString())
+    console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
+    console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
+    console.log('keypom total INITIAL: ', keypomBalance.total.toString())
+
+    // Save state for test runs
+    t.context.worker = worker;
+    t.context.accounts = { root, keypom, owner, ali, minter, ftContract };
+    t.context.keypomInitialBalance = keypomBalance.available;
+    t.context.keypomInitialStateStaked = keypomBalance.stateStaked;
+});
+
+// If the environment is reused, use test.after to replace test.afterEach
+test.afterEach(async t => {
+    await t.context.worker.tearDown().catch(error => {
+        console.log('Failed to tear down the worker:', error);
+    });
+});
+
+
 test('Claim Multi FT Drop And Ensure Keypom Balance Increases', async t => {
     const { keypom, owner, ali, ftContract, minter } = t.context.accounts;
     //register keypom on ft contract
