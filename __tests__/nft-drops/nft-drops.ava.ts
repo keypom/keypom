@@ -515,3 +515,91 @@ test('Refunding Assets and Deleting Multi Use Keys and Drops', async t => {
     console.log('keypom available FINAL: ', keypomBalance.available.toString())
     t.assert(keypomBalance.available > keypomInitialBalance);
 });
+
+test('Anyone can send NFTs since sender is optional', async t => {
+    //get Keypom initial balance
+    const { keypom, owner, ali, nftSeries, minter } = t.context.accounts;
+    const keypomInitialBalance = t.context.keypomInitialBalance;
+
+    //add 10 $NEAR to owner's balance
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    //generate 2 keypairs, make JsonNFTData with genuine minter and nftSeries
+    let {keys, publicKeys} = await generateKeyPairs(2);
+    let nft: JsonNFTData = {
+        contract_id: nftSeries.accountId
+    }
+
+    //10 uses per key
+    let config: DropConfig = {
+        uses_per_key: 10,
+    }
+
+    // Creating the NFT drop with NO keys
+    await owner.call(keypom, 'create_drop', {
+        deposit_per_use: NEAR.parse("1").toString(),
+        nft,
+        config
+    },{gas: LARGE_GAS});
+
+    // Get roughly the min for storing those token IDs
+    await owner.call(keypom, 'withdraw_from_balance', {});
+
+    // Mint an NFT
+    await mintNFTs(minter, nftSeries, '0', 9);
+    //send the NFT to the contract (this should throw since the owner doesn't have enough balance)
+    await sendNFTs(minter, ["1:1"], keypom, nftSeries, "0");
+
+    //NO keys, 10 registered uses as there are 10 NFTs associated with DropID 0
+    let viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+        drop_id: "0"
+    });
+    console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
+    console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
+    t.is(viewFunctions.keysForDrop?.length, 0);
+    t.is(viewFunctions.dropInformation?.registered_uses, 0);
+
+    //make sure Keypom owns no NFTs and it successfully threw an error
+    let tokenInfos: JsonToken[] = await nftSeries.view('nft_tokens_for_owner', { account_id: keypom.accountId });
+    console.log('tokenInfos: ', tokenInfos)
+    t.is(tokenInfos.length, 0);
+
+    //add 20 $NEAR to owner's balance, then add a key to the drop
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
+
+    //send the NFT to the contract (this should not throw anymore since $NEAR was added)
+    await sendNFTs(minter, ["1:1"], keypom, nftSeries, "0");
+
+    //NO keys, 10 registered uses as there are 10 NFTs associated with DropID 0
+    viewFunctions = await queryAllViewFunctions({
+        contract: keypom, 
+        account_id: owner.accountId,
+        drop_id: "0"
+    });
+    console.log('viewFunctions.dropInformation: ', viewFunctions.dropInformation)
+    console.log('viewFunctions.keysForDrop: ', viewFunctions.keysForDrop)
+    t.is(viewFunctions.keysForDrop?.length, 0);
+    t.is(viewFunctions.dropInformation?.registered_uses, 1);
+
+    //make sure Keypom owns 1 NFT
+    tokenInfos = await nftSeries.view('nft_tokens_for_owner', { account_id: keypom.accountId });
+    console.log('tokenInfos: ', tokenInfos)
+    t.is(tokenInfos.length, 1);
+    
+    //delete keys and clear balance
+    await owner.call(keypom, 'refund_assets', {drop_id: "0"}, {gas: LARGE_GAS});
+    await owner.call(keypom, 'delete_keys', {drop_id: "0"})
+    let ownerBal = await keypom.view('get_user_balance', {account_id: owner});
+    t.assert(ownerBal !== "0");
+    await owner.call(keypom, 'withdraw_from_balance', {});
+    ownerBal = await keypom.view('get_user_balance', {account_id: owner});
+    t.assert(ownerBal === "0");
+
+    //make sure Keypom has not lost $NEAR through this process.
+    let keypomBalance = await keypom.balance();
+    console.log('keypom available FINAL: ', keypomBalance.available.toString())
+    t.assert(keypomBalance.available > keypomInitialBalance);
+});

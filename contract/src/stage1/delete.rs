@@ -463,7 +463,7 @@ impl Keypom {
                     env::promise_batch_action_function_call_weight(
                         nft_batch_index,
                         "nft_transfer",
-                        json!({ "receiver_id": data.sender_id, "token_id": token_id, "memo": "Refund" }).to_string().as_bytes(),
+                        json!({ "receiver_id": data.sender_id.clone().unwrap_or(owner_id.clone()), "token_id": token_id, "memo": "Refund" }).to_string().as_bytes(),
                         1,
                         MIN_GAS_FOR_SIMPLE_NFT_TRANSFER,
                         GasWeight(1)
@@ -497,7 +497,7 @@ impl Keypom {
                     // Call ft transfer with 1 yoctoNEAR. 1/2 unspent GAS will be added on top
                     .with_attached_deposit(1)
                     .ft_transfer(
-                        data.sender_id.clone(),
+                        data.sender_id.clone().unwrap_or(owner_id),
                         U128(data.balance_per_use.0 * num_to_refund as u128),
                         None,
                     )
