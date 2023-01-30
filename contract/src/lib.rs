@@ -107,7 +107,7 @@ pub root_account_id: Option<AccountId>,
 pub time: Option<TimeConfig>,
 
 /// Public sale config options
-pub pub_sale: Option<PublicSaleConfig>,
+pub sale: Option<PublicSaleConfig>,
 
 /// Any usage specific configurations
 pub usage: Option<UsageConfig>,

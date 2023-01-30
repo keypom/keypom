@@ -63,7 +63,7 @@ pub struct JsonDropConfig {
     // Any usage specific configurations
     pub usage: Option<UsageConfig>,
 
-    pub pub_sale: Option<JsonPublicSaleConfig>,
+    pub sale: Option<JsonPublicSaleConfig>,
 
     /// Override the global root account that sub-accounts will have (near or testnet). This allows
     /// users to create specific drops that can create sub-accounts of a predefined root.

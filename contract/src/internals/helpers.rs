@@ -51,11 +51,11 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
             uses_per_key: config.uses_per_key,
             time: None,
             usage: config.usage,
-            pub_sale: None,
+            sale: None,
             root_account_id: config.root_account_id
         });
 
-        if let Some(sale) = &config.pub_sale {
+        if let Some(sale) = &config.sale {
             let mut actual_allowlist = None;
             let mut actual_blocklist = None;
             
@@ -85,7 +85,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
                 actual_blocklist = Some(blocklist);
             }
 
-            let pub_sale = PublicSaleConfig {
+            let sale = PublicSaleConfig {
                 max_num_keys: sale.max_num_keys,
                 price_per_key: sale.price_per_key.map(|p| p.0),
                 allowlist: actual_allowlist,
@@ -95,7 +95,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
                 end: sale.end,
             };
 
-            actual_config.as_mut().unwrap().pub_sale = Some(pub_sale);
+            actual_config.as_mut().unwrap().sale = Some(sale);
         }
 
         near_sdk::log!("Current Block Timestamp: {}", env::block_timestamp());
@@ -139,25 +139,25 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
 }
 
 /// Check if the timestamps and allowlists are fulfilled. Return the price per key if it is
-pub(crate) fn assert_pub_sale_requirements(pub_sale: &PublicSaleConfig, cur_num_keys: u64, num_keys_to_add: u64) -> u128 {
+pub(crate) fn assert_sale_requirements(sale: &PublicSaleConfig, cur_num_keys: u64, num_keys_to_add: u64) -> u128 {
     // Assert that the current time is between the start and end time
     let cur_time = env::block_timestamp();
-    let desired_start = pub_sale.start.unwrap_or(0);
-    let desired_end = pub_sale.end.unwrap_or(u64::MAX);
+    let desired_start = sale.start.unwrap_or(0);
+    let desired_end = sale.end.unwrap_or(u64::MAX);
     assert!(
         cur_time >= desired_start && cur_time <= desired_end,
         "Public Sale Has Ended"
     );
 
     // Assert that the current number of keys is less than the max number of keys
-    let max_num_keys = pub_sale.max_num_keys.unwrap_or(u64::MAX);
+    let max_num_keys = sale.max_num_keys.unwrap_or(u64::MAX);
     assert!(
         cur_num_keys + num_keys_to_add <= max_num_keys,
         "Cannot add more keys than the max number of keys"
     );
 
     // Assert that the current account is in the allow list
-    if let Some(list) = &pub_sale.allowlist {
+    if let Some(list) = &sale.allowlist {
         assert!(
             list.contains(&env::predecessor_account_id()),
             "Only members in the allowlist can add keys"
@@ -165,7 +165,7 @@ pub(crate) fn assert_pub_sale_requirements(pub_sale: &PublicSaleConfig, cur_num_
     }
 
     // Assert that the current account is not in the block list
-    if let Some(list) = &pub_sale.blocklist {
+    if let Some(list) = &sale.blocklist {
         assert!(
             !list.contains(&env::predecessor_account_id()),
             "Only members not in the blocklist can add keys"
@@ -173,10 +173,21 @@ pub(crate) fn assert_pub_sale_requirements(pub_sale: &PublicSaleConfig, cur_num_
     }
 
     // Return the price per key
-    return pub_sale.price_per_key.unwrap_or(0) * num_keys_to_add as u128;
+    return sale.price_per_key.unwrap_or(0) * num_keys_to_add as u128;
 }
 
 impl Keypom {
+    /// Helper function to add any attached deposit to the user's balance
+    pub(crate) fn attached_deposit_to_user_balance(&mut self, owner_id: &AccountId) -> (u128, u128) {
+        // Get the current balance of the funder.
+        let mut current_user_balance = self.user_balances.get(owner_id).unwrap_or(0);
+        let near_attached = env::attached_deposit();
+        // Add the attached deposit to their balance
+        current_user_balance += near_attached;
+        self.user_balances.insert(owner_id, &current_user_balance);
+        (current_user_balance, near_attached)
+    }
+
     /// Internal function to modify the user's balance. Defaults to adding the amount but decrement can also be specified
     pub(crate) fn internal_modify_user_balance(&mut self, account_id: &AccountId, amount: u128, decrement: bool) {
         // Get the balance of the account (if the account isn't in the map we default to a balance of 0)

@@ -74,7 +74,7 @@ pub struct DropConfig {
     pub usage: Option<UsageConfig>,
 
     // Public sale config options
-    pub pub_sale: Option<PublicSaleConfig>,
+    pub sale: Option<PublicSaleConfig>,
 
     /// Override the global root account that sub-accounts will have (near or testnet). This allows
     /// users to create specific drops that can create sub-accounts of a predefined root.

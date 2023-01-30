@@ -120,7 +120,7 @@ export type DropConfig = {
     uses_per_key?: number;
     time?: TimeConfig;
     usage?: UsageConfig;
-    pub_sale?: JsonPublicSaleConfig;
+    sale?: JsonPublicSaleConfig;
     root_account_id?: string;
 }
 

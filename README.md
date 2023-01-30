@@ -168,7 +168,7 @@ pub root_account_id: Option<AccountId>,
 pub time: Option<TimeConfig>,
 
 /// Public sale config options
-pub pub_sale: Option<PublicSaleConfig>,
+pub sale: Option<PublicSaleConfig>,
 
 /// Any usage specific configurations
 pub usage: Option<UsageConfig>,
@@ -222,7 +222,7 @@ pub struct UsageConfig {
 
 ## Primary Market Public Sale for Keys
 
-The last type of customization available to the funder is the ability to create a public sale for the access keys in a drop.
+The last type of customization available to the funder is the ability to create a public sale for access keys in a drop.
 The funder can create a drop and let people add keys to it on an as-needed basis. The sale configurations are outlined below.
 
 ```rust
@@ -274,7 +274,13 @@ With a public sale, the organizer can set a price per key, an allowlist, a block
 the keys would be lazily purchased by people coming to the event. This not only reduces the up-front cost for the funder but it can also provide more accurate
 data on how many people are actually coming to the event.
 
-#### Example 2: NFT Collections
+#### Example 2: Selling Function Calls
+
+Access keys can be used for much more than just POAPs, onboarding or tickets. When using FC Drops, the keys can execute functions on external contracts. This feature can be used in conjunction with the public sale to create a marketplace for gated function calls. 
+
+Imagine a simple guest-book smart contract that only allowed people to sign the book if they had a valid Keypom access key. Whoever signed the guest-book had access to all VIP events at NEARCon. You could lock access to signing the guest-book behind a Keypom drop and setup a public sale.
+
+#### Example 3: NFT Collections
 
 A very common scenario is an artist launching a new NFT collection. The artist can setup a custom marketplace whereby the keys are lazily minted and sold to the public. 
 They can then create a custom website that takes a Keypom link and brings the user through a unique, creative experience before the NFT is minted and a wallet is optionally 

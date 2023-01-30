@@ -70,7 +70,7 @@ test('Pub Sale No Reqs', async t => {
     //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(1);
     let config: DropConfig = {
-        pub_sale: {}
+        sale: {}
     }
 
     //create a drop with the created config
@@ -109,7 +109,7 @@ test('Pub Sale No Reqs', async t => {
 
     let dropInfo = await getDropInformation(keypom, "0");
     console.log('dropInfo: ', dropInfo)
-    t.assert(dropInfo.config?.pub_sale != undefined);
+    t.assert(dropInfo.config?.sale != undefined);
 });
 
 test('Timed Sale', async t => {
@@ -121,7 +121,7 @@ test('Timed Sale', async t => {
     //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(2);
     let config: DropConfig = {
-        pub_sale: {
+        sale: {
             start: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
             end: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
         }
@@ -221,7 +221,7 @@ test('Allowlist & Blocklist / Both', async t => {
     //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(2);
     let config: DropConfig = {
-        pub_sale: {
+        sale: {
             allowlist: [ali.accountId],
             blocklist: [bob.accountId]
         }
@@ -287,7 +287,7 @@ test('Auto Withdrawing Funds', async t => {
     //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(2);
     let config: DropConfig = {
-        pub_sale: {
+        sale: {
             auto_withdraw_funds: true,
             // @ts-ignore
             price_per_key: parseNearAmount("1")
@@ -339,7 +339,7 @@ test('Max Number of Keys', async t => {
     //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(3);
     let config: DropConfig = {
-        pub_sale: {
+        sale: {
             // @ts-ignore
             price_per_key: parseNearAmount("1"),
             max_num_keys: 2
@@ -405,7 +405,7 @@ test('Claiming Keys Check Refund Goes to Funder', async t => {
     //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
     let {keys, publicKeys} = await generateKeyPairs(3);
     let config: DropConfig = {
-        pub_sale: {
+        sale: {
             // @ts-ignore
             price_per_key: parseNearAmount("5"),
         }
