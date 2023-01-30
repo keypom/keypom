@@ -3,7 +3,7 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: AccountId, password: Option<String>) {
+    pub fn claim(&mut self, account_id: String, password: Option<String>) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
         let (
             drop_data_option,
@@ -14,7 +14,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(password);
+        ) = self.process_claim(password, account_id.clone(), None);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -40,7 +40,7 @@ impl Keypom {
         {
             drop_data.owner_id.clone()
         } else {
-            account_id.clone()
+            AccountId::new_unchecked(account_id.clone())
         };
 
         let mut promise = None;
@@ -56,7 +56,7 @@ impl Keypom {
             drop_id.unwrap(),
             cur_key_id,
             remaining_uses,
-            account_id,
+            AccountId::new_unchecked(account_id),
             storage_freed,
             token_id,
             auto_withdraw,
@@ -76,8 +76,8 @@ impl Keypom {
     /// Create new account and and claim tokens to it.
     pub fn create_account_and_claim(
         &mut self,
-        new_account_id: AccountId,
-        new_public_key: PublicKey,
+        new_account_id: String,
+        new_public_key: String,
         password: Option<String>,
     ) {
         let (
@@ -89,7 +89,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(password);
+        ) = self.process_claim(password, new_account_id.clone(), Some(new_public_key.clone()));
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -110,13 +110,29 @@ impl Keypom {
             .and_then(|c| c.root_account_id.as_ref())
             .unwrap_or(&global_root);
 
+        
+        // Define the args as strigified JSON
+        let mut final_args = format!(
+            "{{\"new_account_id\":\"{}\",\"new_public_key\":\"{}\"}}", new_account_id.clone(), new_public_key.clone()
+        );
+
+        // If Keypom args are provided in the config, attach them to the create account payload.
+        if let Some(keypom_args) = drop_data.config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.account_creation_fields.as_ref()) {
+            final_args = insert_keypom_args_to_ca_payload(final_args, keypom_args.clone(), new_account_id.clone(), drop_id.unwrap().to_string(), cur_key_id.to_string(), drop_data.owner_id.to_string());
+        }
+
+        near_sdk::log!("Final payload to create_account: {}", final_args);
+        
         // CCC to the linkdrop contract to create the account with the desired balance as the linkdrop amount
-        let promise = ext_linkdrop::ext(root_account.clone())
-            // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
-            .with_attached_deposit(drop_data.deposit_per_use)
-            .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
-            .with_unused_gas_weight(0)
-            .create_account(new_account_id.clone(), new_public_key);
+        let promise = Promise::new(root_account.clone()).function_call_weight(
+            "create_account".to_string(),
+            final_args.as_bytes().to_vec(),
+                // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
+                drop_data.deposit_per_use,
+                GAS_FOR_CREATE_ACCOUNT,
+                near_sdk::GasWeight(0),
+            );
+
 
         // Execute the callback depending on the drop type. We'll pass in the promise to resolve
         self.internal_execute(
@@ -124,7 +140,7 @@ impl Keypom {
             drop_id.unwrap(),
             cur_key_id,
             remaining_uses,
-            new_account_id,
+            AccountId::new_unchecked(new_account_id),
             storage_freed,
             token_id,
             auto_withdraw,
@@ -364,7 +380,7 @@ impl Keypom {
         // Account ID that claimed the linkdrop
         account_id: AccountId,
         // Account ID that funded the linkdrop
-        owner_id: AccountId,
+        funder_id: AccountId,
         // Balance associated with the linkdrop
         balance: U128,
         // How much storage was freed when the key was claimed
@@ -444,15 +460,15 @@ impl Keypom {
         if auto_withdraw {
             near_sdk::log!(
                 "Auto withdraw. Refunding funder: {:?} balance For amount: {:?}",
-                owner_id,
+                funder_id,
                 yocto_to_near(amount_to_refund)
             );
 
             // Send the funds to the funder
-            Promise::new(owner_id).transfer(amount_to_refund);
+            Promise::new(funder_id.clone()).transfer(amount_to_refund);
         } else {
             // Get the funder's balance and increment it by the amount to refund
-            self.internal_modify_user_balance(&owner_id, amount_to_refund, false);
+            self.internal_modify_user_balance(&funder_id, amount_to_refund, false);
         }
 
         self.internal_fc_execute(
@@ -460,6 +476,7 @@ impl Keypom {
             fc_data.config,
             cur_key_id,
             account_id,
+            funder_id,
             drop_id,
         );
         claim_succeeded
@@ -470,6 +487,8 @@ impl Keypom {
     fn process_claim(
         &mut self,
         password: Option<String>,
+        account_id: String,
+        pub_key: Option<String>
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -525,6 +544,11 @@ impl Keypom {
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
         let cur_key_id = key_info.key_id;
         let remaining_uses = key_info.remaining_uses;
+
+        // Ensure the account ID and public key are valid types.
+        if !self.assert_valid_args(account_id, pub_key, drop_id, &mut drop, &mut key_info, &signer_pk) {
+            return (None, None, None, None, false, 0, 0, false);
+        };
 
         // Ensure the key has enough allowance
         if key_info.allowance < prepaid_gas.0 as u128 * self.yocto_per_gas {

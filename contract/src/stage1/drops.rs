@@ -881,31 +881,6 @@ impl Keypom {
         /*
             Ensure the attached attached_deposit can cover:
         */
-        if current_user_balance < required_deposit {
-            near_sdk::log!(
-                "Not enough user balance. Found {} expected: {}",
-                yocto_to_near(current_user_balance),
-                yocto_to_near(required_deposit)
-            );
-            current_user_balance -= near_attached;
-
-            // If they have a balance, insert it back into the map otherwise remove it
-            if current_user_balance > 0 {
-                self.user_balances.insert(&env::predecessor_account_id(), &current_user_balance);
-            } else {
-                self.user_balances.remove(&env::predecessor_account_id());
-            }
-
-            // Refund the predecessor for their attached deposit if it's greater than 0
-            if near_attached > 0 {
-                Promise::new(env::predecessor_account_id()).transfer(near_attached);
-            }
-
-            // Remove the drop
-            self.internal_remove_drop(&drop_id.0, public_keys);
-            // Return early
-            return None;
-        }
         require!(
             current_user_balance >= required_deposit,
             "Not enough attached_deposit"

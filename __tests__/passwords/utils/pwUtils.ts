@@ -26,6 +26,7 @@ export function generateGlobalPasswords(
     return passwords;
 }
 
+//generate 
 export function generateLocalPasswords(
     // All pubKeys
     pubKeys: string[],
@@ -39,11 +40,13 @@ export function generateLocalPasswords(
     for (var i = 0; i < pubKeys.length; i++) {
         // If the key has a password
         if (Object.keys(keysWithPws).includes(pubKeys[i])) {
+            //pw per use array init
             let passwordsPerUse: Array<{ pw: string; key_use: number }> = [];
             // Key has passwords per use so we should add all of them
             let keyUses = keysWithPws[pubKeys[i]];
             for (var j = 0; j < keyUses.length; j++) {
                 let jsonPw = {
+                    //ex. baseKey1use2
                     pw: hash(hash(basePassword + pubKeys[i] + keyUses[j].toString()), true),
                     key_use: keyUses[j]
                 }

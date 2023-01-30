@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{*, stage1::KeypomArgs};
 
 /// Drop Metadata should be a string which can be JSON or anything the users want.
 pub type DropMetadata = String;
@@ -149,6 +149,8 @@ pub struct UsageConfig {
     pub auto_delete_drop: Option<bool>,
     /// When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
     pub auto_withdraw: Option<bool>,
+    /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
+    pub account_creation_fields: Option<KeypomArgs>,
 }
 
 /// Keep track of different configuration options for each key in a drop

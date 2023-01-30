@@ -446,6 +446,9 @@ pub struct MethodData {
     /// Specifies what field the key ID should go in when calling the function.
     /// If Some(String), attach key ID to args. Else, don't attach.
     pub key_id_field: Option<String>,
+    // Specifies what field the funder id should go in when calling the function.
+    // If None, this isn't attached to the args
+    pub funder_id_field: Option<String>,
 }
 ```
 
@@ -951,7 +954,7 @@ pub struct ContractSourceMetadata {
 enum StorageKey {
     DropIdForPk,
     DropsForId,
-    DropIdsForFunder,
+    DropIdsForFunder,      
     DropIdsForFunderInner { account_id_hash: CryptoHash },
     PksForDrop { account_id_hash: CryptoHash },
     PasswordsPerUse { account_id_hash: CryptoHash },
