@@ -537,7 +537,7 @@ test('Update Sale Configs', async t => {
     console.log('ownerBal Before: ', ownerBal.toString())
     t.is(ownerBal.toString(), "0");
 
-    await owner.call(keypom, 'update_sale', {price_per_key: NEAR.parse("1").toString()}, {attachedDeposit: NEAR.parse("10").toString()});
+    await owner.call(keypom, 'update_sale', {drop_id: "0", price_per_key: NEAR.parse("1").toString()}, {attachedDeposit: NEAR.parse("10").toString()});
     await owner.call(keypom, 'withdraw_from_balance', {});
 
     // Should pass since anyone can add keys
