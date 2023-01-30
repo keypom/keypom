@@ -118,10 +118,10 @@ pub struct PublicSaleConfig {
     pub price_per_key: Option<u128>,
  
     /// Which accounts are allowed to add keys?
-    pub allowlist: Option<LookupSet<AccountId>>,
+    pub allowlist: Option<UnorderedSet<AccountId>>,
  
     /// Which accounts are NOT allowed to add keys?
-    pub blocklist: Option<LookupSet<AccountId>>,
+    pub blocklist: Option<UnorderedSet<AccountId>>,
 
     /// Should the revenue generated be sent to the funder's account balance or
     /// automatically withdrawn and sent to their NEAR wallet?

@@ -469,4 +469,93 @@ test('Claiming Keys Check Refund Goes to Funder', async t => {
     t.assert(NEAR.from("5").lte(NEAR.parse(userBal)));
 });
 
+test('Update Sale Configs', async t => {
+    //create account and add balance of 10NEAR to owner
+    const { keypom, owner, ali, bob, eve } = t.context.accounts;
+    console.log("adding to balance");
+    await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("10").toString()});
+
+    //generate 1 keypair and create drop config to have 2 uses/key and a throttle timestamp of 30s
+    let {keys, publicKeys} = await generateKeyPairs(2);
+    let config: DropConfig = {
+        sale: {
+            allowlist: [ali.accountId],
+        }
+    }
+
+    //create a drop with the created config
+    await owner.call(keypom, 'create_drop', {
+        public_keys: [], 
+        deposit_per_use: NEAR.parse("1").toString(),
+        config,
+    },{gas: LARGE_GAS});
+
+    // SHOULD FAIL since bob is in blocklist
+    let canBobAddKeys = await keypom.view('can_user_add_keys', {account_id: bob.accountId, drop_id: "0"});
+    t.is(canBobAddKeys, false);
+
+    // Should pass since bob has been added to allowlist
+    await owner.call(keypom, 'add_to_sale_allowlist', {drop_id: "0", account_ids: [bob.accountId]});
+    canBobAddKeys = await keypom.view('can_user_add_keys', {account_id: bob.accountId, drop_id: "0"});
+    t.is(canBobAddKeys, true);
+
+    // Should fail since bob was removed to allowlost
+    await owner.call(keypom, 'remove_from_sale_allowlist', {drop_id: "0", account_ids: [bob.accountId]});
+    canBobAddKeys = await keypom.view('can_user_add_keys', {account_id: bob.accountId, drop_id: "0"});
+    t.is(canBobAddKeys, false);
+
+    // Should pass since allowlist is now empty and anyone should be able to add keys
+    await owner.call(keypom, 'remove_from_sale_allowlist', {drop_id: "0", account_ids: [ali.accountId]});
+    canBobAddKeys = await keypom.view('can_user_add_keys', {account_id: bob.accountId, drop_id: "0"});
+    t.is(canBobAddKeys, true);
+
+    // Bob is added to blocklist so he should not be able to add keys
+    await owner.call(keypom, 'add_to_sale_blocklist', {drop_id: "0", account_ids: [bob.accountId]});
+    canBobAddKeys = await keypom.view('can_user_add_keys', {account_id: bob.accountId, drop_id: "0"});
+    t.is(canBobAddKeys, false);
+
+    // Bob was removed from the blocklist so he should be able to add keys
+    await owner.call(keypom, 'remove_from_sale_blocklist', {drop_id: "0", account_ids: [bob.accountId]});
+    canBobAddKeys = await keypom.view('can_user_add_keys', {account_id: bob.accountId, drop_id: "0"});
+    t.is(canBobAddKeys, true);
+
+    await owner.call(keypom, 'withdraw_from_balance', {});
+
+    // Should pass since anyone can add keys
+    await ali.call(keypom, 'add_keys', {
+        public_keys: [publicKeys[0]], 
+        drop_id: "0"
+    },{gas: LARGE_GAS, attachedDeposit: NEAR.parse("10").toString()});
+
+    //owner's Keypom wallet balance should be 0 since the sale was free
+    let userBal: string = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    console.log('userBal: ', userBal)
+    t.is(userBal, "0");
+
+    //owner should have 0 NEAR since the sale was free
+    let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    console.log('ownerBal Before: ', ownerBal.toString())
+    t.is(ownerBal.toString(), "0");
+
+    await owner.call(keypom, 'update_sale', {price_per_key: NEAR.parse("1").toString()}, {attachedDeposit: NEAR.parse("10").toString()});
+    await owner.call(keypom, 'withdraw_from_balance', {});
+
+    // Should pass since anyone can add keys
+    await ali.call(keypom, 'add_keys', {
+        public_keys: [publicKeys[1]], 
+        drop_id: "0"
+    },{gas: LARGE_GAS, attachedDeposit: NEAR.parse("10").toString()});
+
+    //owner should have 0 NEAR since the sale was free
+    ownerBal = await keypom.view('get_user_balance', {account_id: owner.accountId});
+    console.log('ownerBal Before: ', ownerBal.toString())
+    t.is(ownerBal.toString(), NEAR.parse("1").toString());
+
+    //should have 2 keys added
+    let keySupplyForDrop = await getKeySupplyForDrop(keypom, "0");
+    console.log('keySupplyForDrop: ', keySupplyForDrop)
+    t.is(keySupplyForDrop, 2);
+});
+
+
 

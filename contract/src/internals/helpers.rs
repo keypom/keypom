@@ -61,7 +61,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
             
             // Loop through and add all the accounts to the allow list
             if let Some(list) = &sale.allowlist {
-                let mut allowlist = LookupSet::new(StorageKey::PubSaleAllowlist {
+                let mut allowlist = UnorderedSet::new(StorageKey::PubSaleAllowlist {
                     //we get a new unique prefix for the collection
                     account_id_hash: hash_account_id(&format!("allowlist-{}{}", drop_id, funder)),
                 });
@@ -74,7 +74,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
 
             // Loop through and add all the accounts to the allow list
             if let Some(list) = &sale.blocklist {
-                let mut blocklist = LookupSet::new(StorageKey::PubSaleBlocklist {
+                let mut blocklist = UnorderedSet::new(StorageKey::PubSaleBlocklist {
                     //we get a new unique prefix for the collection
                     account_id_hash: hash_account_id(&format!("blocklist-{}{}", drop_id, funder)),
                 });
