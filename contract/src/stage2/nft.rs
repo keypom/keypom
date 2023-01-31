@@ -15,7 +15,7 @@ impl Keypom {
             let mut token_ids = nft_data.token_ids;
 
             require!(
-                nft_data.sender_id == sender_id && nft_data.contract_id == contract_id,
+                nft_data.sender_id.clone().unwrap_or(sender_id.clone()) == sender_id && nft_data.contract_id == contract_id,
                 "NFT data must match what was sent"
             );
 

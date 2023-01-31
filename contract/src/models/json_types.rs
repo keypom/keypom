@@ -76,7 +76,7 @@ pub struct JsonDropConfig {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonNFTData {
-    pub sender_id: AccountId,
+    pub sender_id: Option<AccountId>,
     pub contract_id: AccountId,
 }
 
@@ -118,7 +118,7 @@ pub struct JsonPublicSaleConfig {
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonFTData {
     pub contract_id: AccountId,
-    pub sender_id: AccountId,
+    pub sender_id: Option<AccountId>,
     pub balance_per_use: U128,
 }
 

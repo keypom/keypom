@@ -27,7 +27,7 @@ impl Keypom {
                 "amount must be a multiple of the drop balance"
             );
             require!(
-                ft_data.contract_id == contract_id && ft_data.sender_id == sender_id,
+                ft_data.contract_id == contract_id && ft_data.sender_id.clone().unwrap_or(sender_id.clone()) == sender_id,
                 "FT data must match what was sent"
             );
 

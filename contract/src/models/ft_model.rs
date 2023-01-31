@@ -5,7 +5,7 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 pub struct FTData {
     pub contract_id: AccountId,
-    pub sender_id: AccountId,
+    pub sender_id: Option<AccountId>,
     pub balance_per_use: U128,
     pub ft_storage: U128,
 }

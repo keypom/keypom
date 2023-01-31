@@ -217,6 +217,8 @@ pub struct UsageConfig {
     pub auto_delete_drop: Option<bool>,
     /// When this drop is deleted and it is the owner's *last* drop, automatically withdraw their balance.
     pub auto_withdraw: Option<bool>,
+    /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
+    pub account_creation_fields: Option<KeypomArgs>,
 }
 ```
 
@@ -368,14 +370,14 @@ you must specify the following pieces of information when the drop is created.
 
 ```rust
 pub struct NFTDataConfig {
-    /// Which account ID will be sending the NFTs to the contract
-    pub sender_id: AccountId,
+    /// Which account ID will be sending the NFTs to the contract. If this is not specified, anyone can send NFTs for the specific drop.
+    pub sender_id: Option<AccountId>,
     /// Which contract will the NFTs live on
     pub contract_id: AccountId,
 }
 ```
 
-By specifying this information, the drop is locked into only accepting NFTs from the sender and contract.
+By specifying this information, the drop is locked into only accepting NFTs from the specific contract and optionally from a specified sender account.
 
 ### Use Cases
 
@@ -416,14 +418,14 @@ you must specify the following pieces of information when the drop is created.
 pub struct FTDataConfig {
     /// The contract that the FTs live on.
     pub contract_id: AccountId,
-    /// The account ID that will be sending the FTs to the contract.
-    pub sender_id: AccountId,
+    /// The account ID that will be sending the FTs to the contract. If this is not specified, anyone can send FTs for the specific drop.
+    pub sender_id: Option<AccountId>,
     /// How many FTs should the contract send *each time* a key is used.
     pub balance_per_use: U128,
 }
 ```
 
-By specifying this information, the drop is locked into only accepting FTs coming from the sender and contract. While
+By specifying this information, the drop is locked into only accepting FTs from the specific contract and optionally from a specified sender account.
 you can send as many FTs as you'd like and can over-pay, you *must* send at **least** enough FTs in one call to cover
 1 use. As an example, if a drop is created such that 10 FTs will be sent when a key is used, you must send **at least 10**
 and cannot break it up into separate calls where you send 5 one time and 5 another.

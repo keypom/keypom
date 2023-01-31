@@ -23,7 +23,7 @@ export type JsonToken = {
 }
 
 export type JsonNFTData = {
-    sender_id: string;
+    sender_id?: string;
     contract_id: string;
 }
 
@@ -32,7 +32,7 @@ export type SimpleData = {
 }
 
 export type FTData = {
-    sender_id: string;
+    sender_id?: string;
     contract_id: string;
     balance_per_use: string;
 }
