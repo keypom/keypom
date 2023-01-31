@@ -23,13 +23,14 @@ impl Keypom {
         account_id: AccountId,
         funder_id: AccountId,
         drop_id: DropId,
+        fc_args: Option<Vec<Option<String>>>,
     ) {
         /*
             Function Calls
         */
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
-        for method in methods {
+        for (i, method) in methods.iter().enumerate() {
             let keypom_args = KeypomArgs {
                 account_id_field: method.account_id_field.clone(),
                 drop_id_field: method.drop_id_field.clone(),
@@ -39,7 +40,24 @@ impl Keypom {
 
             let mut final_args = method.args.clone();
 
-            if final_args.contains("\"keypom_args\"") {
+            // Check if user provided args is present and fc_args is some
+            if let (Some(rule), Some(user_args)) = (method.user_args_rule.as_ref(), fc_args.clone().and_then(|a| a[i].clone())) {
+                match rule {
+                    UserArgsRule::AllUser => {
+                        final_args = user_args;
+                    }
+                    UserArgsRule::FunderPreferred => {
+                        // Take the final args string and merge the user args into it and overwrite any duplicate keys
+                        final_args = merge_string(&user_args, &final_args);
+                    }
+                    UserArgsRule::UserPreferred => {
+                        // Take the final args string and merge the user args into it and overwrite any duplicate keys
+                        final_args = merge_string(&final_args, &user_args);
+                    }
+                }
+            }
+
+            if final_args.contains("keypom_args") {
                 near_sdk::log!(
                     "Keypom Args detected in client args. Returning and decrementing keys"
                 );

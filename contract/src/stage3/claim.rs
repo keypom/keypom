@@ -3,7 +3,7 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     /// Claim tokens for specific account that are attached to the public key this tx is signed with.
-    pub fn claim(&mut self, account_id: String, password: Option<String>) {
+    pub fn claim(&mut self, account_id: String, password: Option<String>, fc_args: Option<Vec<Option<String>>>) {
         // Delete the access key and remove / return drop data and optional token ID for nft drops. Also return the storage freed.
         let (
             drop_data_option,
@@ -60,7 +60,8 @@ impl Keypom {
             storage_freed,
             token_id,
             auto_withdraw,
-            promise,
+            fc_args,
+            promise
         );
 
         let used_gas = env::used_gas();
@@ -79,6 +80,7 @@ impl Keypom {
         new_account_id: String,
         new_public_key: String,
         password: Option<String>,
+        fc_args: Option<Vec<Option<String>>>,
     ) {
         let (
             drop_data_option,
@@ -144,7 +146,8 @@ impl Keypom {
             storage_freed,
             token_id,
             auto_withdraw,
-            Some(promise),
+            fc_args,
+            Some(promise)
         );
 
         let used_gas = env::used_gas();
@@ -395,6 +398,8 @@ impl Keypom {
         remaining_uses: u64,
         // How many uses the key had left before sit was decremented
         uses_per_key: u64,
+        // Any user-provided args
+        fc_args: Option<Vec<Option<String>>>,
         // Was this function invoked via an execute (no callback)
         execute: bool,
         // Is it an auto withdraw case
@@ -478,6 +483,7 @@ impl Keypom {
             account_id,
             funder_id,
             drop_id,
+            fc_args
         );
         claim_succeeded
     }
@@ -525,6 +531,8 @@ impl Keypom {
             env::current_account_id(),
             "predecessor != current"
         );
+
+        // TODO: check if methods.len() == user provided args if some provided.
 
         // Get the PK of the signer which should be the contract's function call access key
         let signer_pk = env::signer_account_pk();

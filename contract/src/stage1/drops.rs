@@ -752,7 +752,7 @@ impl Keypom {
         self.drop_for_id.insert(&drop_id.0, &drop);
 
         // Convert any attached deposit to a user balance and return the attached $NEAR and current balance
-        let (mut current_user_balance, near_attached) = self.attached_deposit_to_user_balance(&env::predecessor_account_id());
+        let (mut current_user_balance, _) = self.attached_deposit_to_user_balance(&env::predecessor_account_id());
 
         // Get the required attached_deposit for all the FCs
         let mut deposit_required_for_fc_deposits = 0;
