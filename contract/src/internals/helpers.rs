@@ -569,13 +569,13 @@ impl Keypom {
                     // Account ID that claimed the linkdrop
                     account_id,
                     // Account ID that funded the linkdrop
-                    drop_data.owner_id,
+                    drop_data.owner_id.clone(),
                     // Balance associated with the linkdrop
                     U128(drop_data.deposit_per_use),
                     // How much storage was freed when the key was claimed
                     storage_freed,
                     // Sender of the NFT
-                    data.sender_id,
+                    data.sender_id.unwrap_or(drop_data.owner_id),
                     // Contract where the NFT is stored
                     data.contract_id,
                     // Token ID for the NFT
