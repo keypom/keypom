@@ -103,10 +103,13 @@ pub uses_per_key: Option<u64>,
 /// be `ACCOUNT.fayyr.near`
 pub root_account_id: Option<AccountId>,
 
-// Any time based configurations
+// /Any time based configurations
 pub time: Option<TimeConfig>,
 
-// Any usage specific configurations
+/// Public sale config options
+pub sale: Option<PublicSaleConfig>,
+
+/// Any usage specific configurations
 pub usage: Option<UsageConfig>,
 ```
 
@@ -155,6 +158,66 @@ pub struct UsageConfig {
     pub auto_withdraw: Option<bool>,
 }
 ```
+
+## Primary Market Public Sale for Keys
+
+The last type of customization available to the funder is the ability to create a public sale for the access keys in a drop.
+The funder can create a drop and let people add keys to it on an as-needed basis. The sale configurations are outlined below.
+
+```rust
+pub struct PublicSaleConfig {
+    /// Maximum number of keys that can be added to this drop. If None, there is no max.
+    pub max_num_keys: Option<u64>,
+ 
+    /// Amount of $NEAR that the user needs to attach (if they are not the funder) on top of costs. This amount will be
+    /// Automatically sent to the funder's balance. If None, the keys are free to the public.
+    pub price_per_key: Option<u128>,
+ 
+    /// Which accounts are allowed to add keys?
+    pub allowlist: Option<LookupSet<AccountId>>,
+ 
+    /// Which accounts are NOT allowed to add keys?
+    pub blocklist: Option<LookupSet<AccountId>>,
+
+    /// Should the revenue generated be sent to the funder's account balance or
+    /// automatically withdrawn and sent to their NEAR wallet?
+    pub auto_withdraw_funds: Option<bool>,
+
+    /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub start: Option<u64>,
+
+    /// Block timestamp dictating the end of the public sale. If None, keys can be added indefinitely
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub end: Option<u64>,
+}
+```                
+
+### Use-Cases for Public Sales
+
+Giving the funder the ability to sell access keys to a drop introduces a ton of awesome use-cases and has a slew of benefits:
+- Everything is decentralized and on-chain. There is no need to trust a third party to hold the keys.
+- Keys are created on an as-needed basis. This *drastically reduces up-front costs* for the drop funder.
+- Since keys are created only when users want them, there is no chance that through distribution, the private key
+  gets compromised. The key is created *when the user purchases it*.
+- Everything *can* remain anonymous and private since people can purchase access keys with their crypto wallets.
+
+Having a public sale allows for an on-chain distribution mechanism for access keys. Let's look at two examples where this can be used.
+
+#### Example 1: Ticketing
+
+Imagine there is an event organizer that wants to host with a guest-list of 100,000 people. Without doing a public sale, the organizer would
+need to spend a lot of $NEAR up-front to create all 100 thousand access keys. At this point, they would need to find a way to distribute all the keys.
+
+With a public sale, the organizer can set a price per key, an allowlist, a blocklist, and even a start date for when the sale goes live. At this point,
+the keys would be lazily purchased by people coming to the event. This not only reduces the up-front cost for the funder but it can also provide more accurate
+data on how many people are actually coming to the event.
+
+#### Example 2: NFT Collections
+
+A very common scenario is an artist launching a new NFT collection. The artist can setup a custom marketplace whereby the keys are lazily minted and sold to the public. 
+They can then create a custom website that takes a Keypom link and brings the user through a unique, creative experience before the NFT is minted and a wallet is optionally 
+created. People that purchase the links can either use them to send the NFT to their existing wallet or create an entirely new wallet.
 
 # Simple Drops
 
@@ -897,6 +960,8 @@ enum StorageKey {
     PasswordsPerUse { account_id_hash: CryptoHash },
     DropMetadata { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
+    PubSaleAllowlist { account_id_hash: CryptoHash },
+    PubSaleBlocklist { account_id_hash: CryptoHash },
     FeesPerUser,
     UserBalances,
     ProhibitedMethods,

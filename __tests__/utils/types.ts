@@ -85,6 +85,30 @@ export type TimeConfig = {
     interval?: number;
 }
 
+export type JsonPublicSaleConfig = {
+    /// Maximum number of keys that can be added to this drop. If None, there is no max.
+    max_num_keys?: number;
+ 
+    /// Amount of $NEAR that the user needs to attach (if they are not the funder) on top of costs. This amount will be
+    /// Automatically sent to the funder's balance. If None, the keys are free to the public.
+    price_per_key?: string;
+
+    /// Should the revenue generated be sent to the funder's account balance or
+    /// automatically withdrawn and sent to their NEAR wallet?
+    auto_withdraw_funds?: boolean;
+
+    allowlist? : string[];
+    blocklist? : string[];
+
+    /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    start?: number;
+
+    /// Block timestamp dictating the end of the public sale. If None, keys can be added indefinitely
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    end?: number;
+}
+
 export type UsageConfig = {
     permissions?: string;
     refund_deposit?: boolean;
@@ -102,6 +126,7 @@ export type DropConfig = {
     uses_per_key?: number;
     time?: TimeConfig;
     usage?: UsageConfig;
+    sale?: JsonPublicSaleConfig;
     root_account_id?: string;
 }
 

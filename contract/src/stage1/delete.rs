@@ -35,7 +35,7 @@ impl Keypom {
         // Get the max uses per key. Default to 1 if not specified in the drop config.
         let uses_per_key = drop
             .config
-            .clone()
+            .as_ref()
             .and_then(|c| c.uses_per_key)
             .unwrap_or(1);
 
@@ -427,10 +427,7 @@ impl Keypom {
 
         // Get the number of uses registered for the drop.
         let uses_registered = drop.registered_uses;
-        if uses_registered == 0 {
-            near_sdk::log!("No uses registered. Nothing to refund");
-            return;
-        }
+        require!(uses_registered > 0, "no uses left to unregister");
 
         // Get the uses to refund. If not specified, this is the number of uses currently registered.
         let num_to_refund = assets_to_refund.unwrap_or(uses_registered);

@@ -54,7 +54,7 @@ impl Keypom {
             if let Some(key_info) = drop.pks.get(&key) {
                 let cur_use = drop
                     .config
-                    .clone()
+                    .as_ref()
                     .and_then(|c| c.uses_per_key)
                     .unwrap_or(1)
                     - key_info.remaining_uses + 1;
@@ -116,12 +116,32 @@ impl Keypom {
             ft: None,
             fc: None,
             nft: None,
-            config: drop.config,
+            config: None,
             registered_uses: drop.registered_uses,
             required_gas: drop.required_gas,
             metadata: drop.metadata.get(),
             next_key_id: drop.next_key_id,
         };
+
+        if let Some(config) = drop.config {
+            let json_config = JsonDropConfig {
+                uses_per_key: config.uses_per_key,
+                time: config.time,
+                usage: config.usage,
+                sale: config.sale.map(|sale| JsonPublicSaleConfig { 
+                    max_num_keys: sale.max_num_keys, 
+                    price_per_key: sale.price_per_key.map(|p| U128(p)), 
+                    allowlist: None,
+                    blocklist: None,
+                    auto_withdraw_funds: sale.auto_withdraw_funds,
+                    start: sale.start,
+                    end: sale.end,
+                }),
+                root_account_id: config.root_account_id
+            };
+
+            json_drop.config = Some(json_config);
+        }
 
         match drop.drop_type {
             DropType::fc(data) => {
@@ -258,6 +278,46 @@ impl Keypom {
                 .collect()
         } else {
             return vec![];
+        }
+    }
+
+    /// Check whether a user can add keys to a public sale or not
+    pub fn can_user_add_keys(
+        &self,
+        drop_id: DropIdJson,
+        account_id: AccountId
+    ) -> bool {
+        let drop = self.drop_for_id.get(&drop_id.0).expect("no drop found");
+        
+        if let Some(sale) = drop.config.and_then(|c| c.sale) {
+            // Assert that the current time is between the start and end time
+            let cur_time = env::block_timestamp();
+            let desired_start = sale.start.unwrap_or(0);
+            let desired_end = sale.end.unwrap_or(u64::MAX);
+            if cur_time < desired_start || cur_time > desired_end {
+                near_sdk::log!("Current time is not between start and end time");
+                return false;
+            }
+
+            // Assert that the current account is in the allow list
+            if let Some(list) = &sale.allowlist {
+                if !list.contains(&account_id) {
+                    near_sdk::log!("Account is not in the allow list");
+                    return false;
+                }
+            }
+
+            // Assert that the current account is not in the block list
+            if let Some(list) = &sale.blocklist {
+                if list.contains(&account_id) {
+                    near_sdk::log!("Account is in the block list");
+                    return false;
+                }
+            }   
+
+            return true;
+        } else {
+            return account_id == drop.owner_id;
         }
     }
 

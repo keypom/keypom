@@ -62,8 +62,7 @@ pub struct Drop {
 }
 
 /// Keep track of different configuration options for each key in a drop
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct DropConfig {
     /// How many uses can each key have before it's deleted. If None, default to 1.
     pub uses_per_key: Option<u64>,
@@ -73,6 +72,9 @@ pub struct DropConfig {
     
     // Any usage specific configurations
     pub usage: Option<UsageConfig>,
+
+    // Public sale config options
+    pub sale: Option<PublicSaleConfig>,
 
     /// Override the global root account that sub-accounts will have (near or testnet). This allows
     /// users to create specific drops that can create sub-accounts of a predefined root.
@@ -104,6 +106,35 @@ pub struct TimeConfig {
     /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
     pub interval: Option<u64>,
 }
+
+/// Keep track of different configuration options for each key in a drop
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct PublicSaleConfig {
+    /// Maximum number of keys that can be added to this drop. If None, there is no max.
+    pub max_num_keys: Option<u64>,
+ 
+    /// Amount of $NEAR that the user needs to attach (if they are not the funder) on top of costs. This amount will be
+    /// Automatically sent to the funder's balance. If None, the keys are free to the public.
+    pub price_per_key: Option<u128>,
+ 
+    /// Which accounts are allowed to add keys?
+    pub allowlist: Option<UnorderedSet<AccountId>>,
+ 
+    /// Which accounts are NOT allowed to add keys?
+    pub blocklist: Option<UnorderedSet<AccountId>>,
+
+    /// Should the revenue generated be sent to the funder's account balance or
+    /// automatically withdrawn and sent to their NEAR wallet?
+    pub auto_withdraw_funds: Option<bool>,
+
+    /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub start: Option<u64>,
+
+    /// Block timestamp dictating the end of the public sale. If None, keys can be added indefinitely
+    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
+    pub end: Option<u64>,
+ }
 
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]

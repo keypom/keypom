@@ -46,8 +46,61 @@ pub(crate) fn check_promise_result() -> bool {
 }
 
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
-pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
-    if let Some(config) = drop_config {
+pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, drop_id: &DropId, funder: &AccountId) -> Option<DropConfig> {
+    let mut actual_config = None;
+
+    if let Some(config) = drop_config.clone() {
+        actual_config = Some(DropConfig {
+            uses_per_key: config.uses_per_key,
+            time: None,
+            usage: config.usage,
+            sale: None,
+            root_account_id: config.root_account_id
+        });
+
+        if let Some(sale) = &config.sale {
+            let mut actual_allowlist = None;
+            let mut actual_blocklist = None;
+            
+            // Loop through and add all the accounts to the allow list
+            if let Some(list) = &sale.allowlist {
+                let mut allowlist = UnorderedSet::new(StorageKey::PubSaleAllowlist {
+                    //we get a new unique prefix for the collection
+                    account_id_hash: hash_account_id(&format!("allowlist-{}{}", drop_id, funder)),
+                });
+                for account in list {
+                    allowlist.insert(account);
+                }
+
+                actual_allowlist = Some(allowlist);
+            }
+
+            // Loop through and add all the accounts to the allow list
+            if let Some(list) = &sale.blocklist {
+                let mut blocklist = UnorderedSet::new(StorageKey::PubSaleBlocklist {
+                    //we get a new unique prefix for the collection
+                    account_id_hash: hash_account_id(&format!("blocklist-{}{}", drop_id, funder)),
+                });
+                for account in list {
+                    blocklist.insert(account);
+                }
+
+                actual_blocklist = Some(blocklist);
+            }
+
+            let sale = PublicSaleConfig {
+                max_num_keys: sale.max_num_keys,
+                price_per_key: sale.price_per_key.map(|p| p.0),
+                allowlist: actual_allowlist,
+                blocklist: actual_blocklist,
+                auto_withdraw_funds: sale.auto_withdraw_funds,
+                start: sale.start,
+                end: sale.end,
+            };
+
+            actual_config.as_mut().unwrap().sale = Some(sale);
+        }
+
         near_sdk::log!("Current Block Timestamp: {}", env::block_timestamp());
 
         // Assert that if uses per key is passed in, it cannot equal 0
@@ -56,7 +109,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
             "Cannot have 0 uses per key for a drop config"
         );
 
-        if let Some(time_data) = &config.time {
+        if let Some(time_data) = config.time {
             // Assert that if the claim_interval is some, the start_timestamp is also some
             assert!(
                 (time_data.interval.is_some() && time_data.start.is_none()) == false,
@@ -80,8 +133,50 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<DropConfig>) {
                     "The start timestamp must be less than the end timestamp"
                 );
             }
+
+            actual_config.as_mut().unwrap().time = Some(time_data);
         }
     }
+
+    actual_config
+}
+
+/// Check if the timestamps and allowlists are fulfilled. Return the price per key if it is
+pub(crate) fn assert_sale_requirements(sale: &PublicSaleConfig, cur_num_keys: u64, num_keys_to_add: u64) -> u128 {
+    // Assert that the current time is between the start and end time
+    let cur_time = env::block_timestamp();
+    let desired_start = sale.start.unwrap_or(0);
+    let desired_end = sale.end.unwrap_or(u64::MAX);
+    assert!(
+        cur_time >= desired_start && cur_time <= desired_end,
+        "Public Sale Has Ended"
+    );
+
+    // Assert that the current number of keys is less than the max number of keys
+    let max_num_keys = sale.max_num_keys.unwrap_or(u64::MAX);
+    assert!(
+        cur_num_keys + num_keys_to_add <= max_num_keys,
+        "Cannot add more keys than the max number of keys"
+    );
+
+    // Assert that the current account is in the allow list
+    if let Some(list) = &sale.allowlist {
+        assert!(
+            list.contains(&env::predecessor_account_id()),
+            "Only members in the allowlist can add keys"
+        );
+    }
+
+    // Assert that the current account is not in the block list
+    if let Some(list) = &sale.blocklist {
+        assert!(
+            !list.contains(&env::predecessor_account_id()),
+            "Only members not in the blocklist can add keys"
+        );
+    }
+
+    // Return the price per key
+    return sale.price_per_key.unwrap_or(0) * num_keys_to_add as u128;
 }
 
 /// Helper function to convert yoctoNEAR to $NEAR with 7 decimals of precision.
@@ -134,6 +229,17 @@ pub(crate) fn insert_keypom_args_to_ca_payload(mut payload: String, keypom_args:
 }
 
 impl Keypom {
+    /// Helper function to add any attached deposit to the user's balance
+    pub(crate) fn attached_deposit_to_user_balance(&mut self, owner_id: &AccountId) -> (u128, u128) {
+        // Get the current balance of the funder.
+        let mut current_user_balance = self.user_balances.get(owner_id).unwrap_or(0);
+        let near_attached = env::attached_deposit();
+        // Add the attached deposit to their balance
+        current_user_balance += near_attached;
+        self.user_balances.insert(owner_id, &current_user_balance);
+        (current_user_balance, near_attached)
+    }
+
     /// Internal function to modify the user's balance. Defaults to adding the amount but decrement can also be specified
     pub(crate) fn internal_modify_user_balance(&mut self, account_id: &AccountId, amount: u128, decrement: bool) {
         // Get the balance of the account (if the account isn't in the map we default to a balance of 0)
@@ -255,7 +361,7 @@ impl Keypom {
         key_info: &mut KeyInfo,
         signer_pk: &PublicKey,
     ) -> bool {
-        if let Some(time_data) = drop.config.clone().and_then(|c| c.time) {
+        if let Some(time_data) = drop.config.as_ref().and_then(|c| c.time.as_ref()) {
             // Ensure enough time has passed if a start timestamp was specified in the config.
             let current_timestamp = env::block_timestamp();
 
@@ -325,7 +431,7 @@ impl Keypom {
                 let total_num_uses = (env::block_timestamp() - start_timestamp) / interval;
                 let uses_per_key = drop
                     .config
-                    .clone()
+                    .as_ref()
                     .and_then(|c| c.uses_per_key)
                     .unwrap_or(0);
                 let uses_left = total_num_uses + key_info.remaining_uses - uses_per_key;
