@@ -39,6 +39,7 @@ impl Keypom {
             };
 
             let mut final_args = method.args.clone();
+            near_sdk::log!("Final Args Before Modifications: {}", final_args);
 
             // Check if user provided args is present and fc_args is some
             if let (Some(rule), Some(user_args)) = (method.user_args_rule.as_ref(), fc_args.clone().and_then(|a| a[i].clone())) {
