@@ -14,7 +14,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(password, account_id.clone(), None);
+        ) = self.process_claim(password, account_id.clone(), None, &fc_args);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -91,7 +91,7 @@ impl Keypom {
             cur_key_id,
             remaining_uses,
             auto_withdraw,
-        ) = self.process_claim(password, new_account_id.clone(), Some(new_public_key.clone()));
+        ) = self.process_claim(password, new_account_id.clone(), Some(new_public_key.clone()), &fc_args);
 
         if drop_data_option.is_none() {
             near_sdk::log!("Invalid claim. Returning.");
@@ -494,7 +494,8 @@ impl Keypom {
         &mut self,
         password: Option<String>,
         account_id: String,
-        pub_key: Option<String>
+        pub_key: Option<String>,
+        fc_args: &Option<Vec<Option<String>>>
     ) -> (
         // Drop containing all data
         Option<Drop>,
@@ -636,6 +637,20 @@ impl Keypom {
             DropType::fc(data) => {
                 // The starting index is the max uses per key - the number of uses left. If the method_name data is of size 1, use that instead
                 let cur_len = data.methods.len() as u16;
+                // Ensure that if the FC args are passed in, it's the same length as the number of methods being executed.
+                if fc_args.as_ref().map(|a| a.len()).unwrap_or(cur_len.into()) != cur_len as usize {
+                    used_gas = env::used_gas();
+                    let amount_to_decrement =
+                        (used_gas.0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+
+                    near_sdk::log!("Expected {} number of fc_args. Decrementing allowance by {}. Used GAS: {}", cur_len, amount_to_decrement, used_gas.0);
+                    key_info.allowance -= amount_to_decrement;
+                    near_sdk::log!("Allowance is now {}", key_info.allowance);
+                    drop.pks.insert(&signer_pk, &key_info);
+                    self.drop_for_id.insert(&drop_id, &drop);
+                    return (None, None, None, None, false, 0, 0, false);
+                }
+
                 let starting_index = if cur_len > 1 {
                     (drop
                         .config

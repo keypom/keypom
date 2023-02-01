@@ -38,7 +38,7 @@ export type FTData = {
 }
 
 export type FCData = {
-    methods: (MethodData | null)[]
+    methods: Array<(MethodData | null)[]>
     config?: FCConfig;
 }
 

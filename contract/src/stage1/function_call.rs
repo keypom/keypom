@@ -1,5 +1,7 @@
 use near_sdk::GasWeight;
 
+use serde_json::{Value, from_str, to_string};
+
 use crate::*;
 
 /// Keypom Args struct to be sent to external contracts
@@ -31,61 +33,58 @@ impl Keypom {
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
 
         for (i, method) in methods.iter().enumerate() {
-            let keypom_args = KeypomArgs {
-                account_id_field: method.account_id_field.clone(),
-                drop_id_field: method.drop_id_field.clone(),
-                key_id_field: method.key_id_field.clone(),
-                funder_id_field: method.funder_id_field.clone(),
-            };
-
             let mut final_args = method.args.clone();
-            near_sdk::log!("Final Args Before Modifications: {}", final_args);
-
-            // Check if user provided args is present and fc_args is some
-            if let (Some(rule), Some(user_args)) = (method.user_args_rule.as_ref(), fc_args.clone().and_then(|a| a[i].clone())) {
-                match rule {
-                    UserArgsRule::AllUser => {
-                        final_args = user_args;
-                    }
-                    UserArgsRule::FunderPreferred => {
-                        // Take the final args string and merge the user args into it and overwrite any duplicate keys
-                        final_args = merge_string(&user_args, &final_args);
-                    }
-                    UserArgsRule::UserPreferred => {
-                        // Take the final args string and merge the user args into it and overwrite any duplicate keys
-                        final_args = merge_string(&final_args, &user_args);
-                    }
-                }
+            if final_args.len() == 0 {
+                final_args = "{}".to_string();
             }
-
-            if final_args.contains("keypom_args") {
+            
+            let try_json: Result<Value, _> = from_str(&final_args);
+            if try_json.is_err() {
                 near_sdk::log!(
-                    "Keypom Args detected in client args. Returning and decrementing keys"
+                    "Cannot cast args to JSON. Returning and decrementing keys"
                 );
                 return;
             }
 
-            if final_args.len() == 0 {
-                final_args = format!(
-                    "{{\"keypom_args\":{}}}",
-                    near_sdk::serde_json::to_string(&keypom_args).unwrap()
-                );
-            } else {
-                final_args.insert_str(
-                    final_args.len() - 1,
-                    &format!(
-                        ",\"keypom_args\":{}",
-                        near_sdk::serde_json::to_string(&keypom_args).unwrap()
-                    ),
-                );
+            let mut final_args_json = try_json.unwrap();
+
+            // Check if user provided args is present and fc_args is some
+            if let (Some(rule), Some(user_args_str)) = (method.user_args_rule.as_ref(), fc_args.clone().and_then(|a| a[i].clone())) {
+                let try_user_json: Result<Value, _> = from_str(&user_args_str);
+                if try_user_json.is_ok() {
+                    let mut user_args_json = try_user_json.unwrap();
+                    
+                    match rule {
+                        UserArgsRule::AllUser => {
+                            final_args_json = user_args_json;
+                        }
+                        UserArgsRule::FunderPreferred => {
+                            // Take the final args string and merge the user args into it and overwrite any duplicate keys
+                            merge_json(&mut user_args_json, &final_args_json);
+                            final_args_json = user_args_json;
+                        }
+                        UserArgsRule::UserPreferred => {
+                            // Take the final args string and merge the user args into it and overwrite any duplicate keys
+                            merge_json(&mut final_args_json, &user_args_json);
+                        }
+                    }
+                } else {
+                    near_sdk::log!(
+                        "Cannot cast user provided args to JSON. Disregarding user args and continuing"
+                    );
+                }
             }
+
+            final_args_json["keypom_args"] = json!({
+                "account_id_field": method.account_id_field.clone(),
+                "drop_id_field": method.drop_id_field.clone(),
+                "key_id_field": method.key_id_field.clone(),
+                "funder_id_field": method.funder_id_field.clone(),
+            });
 
             // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
             if let Some(field) = method.account_id_field.as_ref() {
-                final_args.insert_str(
-                    final_args.len() - 1,
-                    &format!(",\"{}\":\"{}\"", field, account_id),
-                );
+                final_args_json[field] = json!(account_id);
                 near_sdk::log!(
                     "Adding claimed account ID to specified field: {:?}",
                     method.account_id_field,
@@ -94,31 +93,28 @@ impl Keypom {
 
             // Add drop_id
             if let Some(field) = method.drop_id_field.as_ref() {
-                final_args.insert_str(
-                    final_args.len() - 1,
-                    &format!(",\"{}\":\"{}\"", field, drop_id),
-                );
-                near_sdk::log!("Adding drop ID to args {:?}", drop_id,);
+                final_args_json[field] = json!(drop_id);
+                near_sdk::log!("Adding drop ID to args {:?}", drop_id);
             }
 
             // Add the key_id
             if let Some(field) = method.key_id_field.as_ref() {
-                final_args.insert_str(
-                    final_args.len() - 1,
-                    &format!(",\"{}\":\"{}\"", field, key_id),
-                );
+                final_args_json[field] = json!(key_id);
                 near_sdk::log!("Adding key ID to args {:?}", key_id);
             }
 
             // Add the funder_id
             if let Some(field) = method.funder_id_field.as_ref() {
-                final_args.insert_str(
-                    final_args.len() - 1,
-                    &format!(",\"{}\":\"{}\"", field, funder_id),
-                );
-                near_sdk::log!("Adding funder ID to args {:?}", key_id);
+                final_args_json[field] = json!(funder_id);
+                near_sdk::log!("Adding funder ID to args {:?}", funder_id);
             }
 
+            if to_string(&final_args_json).is_err() {
+                near_sdk::log!("Cannot cast final args to JSON. Returning and decrementing keys");
+                return;
+            }
+
+            final_args = to_string(&final_args_json).unwrap();
             near_sdk::log!("Final args {:?}", final_args);
 
             // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top

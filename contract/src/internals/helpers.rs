@@ -3,7 +3,7 @@ use std::str::FromStr;
 use near_sdk::env::sha256;
 use std::convert::{TryFrom};
 
-use serde_json::{Value, from_str, to_string};
+use serde_json::{Value};
 
 use crate::{*, stage1::KeypomArgs};
 
@@ -228,16 +228,6 @@ pub(crate) fn insert_keypom_args_to_ca_payload(mut payload: String, keypom_args:
     near_sdk::log!("payload after all insertions{}", payload);
 
     payload
-}
-
-/// b will overwrite a and `a` will be mutated
-pub(crate) fn merge_string(a: &String, b: &String) -> String {
-    let mut a: Value = from_str(a).unwrap();
-    let b: Value = from_str(b).unwrap();
-
-    merge_json(&mut a, &b);
-
-    to_string(&a).unwrap()
 }
 
 /// b will overwrite a and `a` will be mutated
