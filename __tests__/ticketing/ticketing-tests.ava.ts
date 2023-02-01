@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, displayFailureLog, generateKeyPairs, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { ticketDistroSmall } from "./utils/distro";
 import { createDistro, dropConfig, getNEARConFCData, nftMetadata, nftSeriesMetadata } from "./utils/nearconUtils";
 
@@ -89,7 +89,8 @@ test('Fully Claim all ticketing keys', async t => {
 
             await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
             await keypom.call(keypom, 'claim', { account_id: bob }, { gas: WALLET_GAS });
-            await keypom.call(keypom, 'create_account_and_claim', {new_account_id: `${nonce}-${i}.test.near`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
+            const foo = await keypom.callRaw(keypom, 'create_account_and_claim', {new_account_id: `${nonce}-${i}.test.near`, new_public_key : pks2[0]}, {gas: WALLET_GAS});
+            displayFailureLog(foo);
         }
         nonce += 1;
     }

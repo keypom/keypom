@@ -1,4 +1,4 @@
-import { BN, KeyPair, NEAR, NearAccount } from "near-workspaces";
+import { BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
 import { JsonDrop, JsonKeyInfo } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
@@ -10,6 +10,18 @@ export const DEFAULT_TERRA_IN_NEAR: string = "3000000000000000000000";
 export const CONTRACT_METADATA = {
   "version": "1.0.0",
   "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
+}
+
+export function displayFailureLog(
+  transaction: TransactionResult
+) {
+  // Loop through each receipts_outcome in the transaction's result field
+  transaction.result.receipts_outcome.forEach((receipt) => {
+    const status = (receipt.outcome.status as any);
+    if (status.Failure?.ActionError?.kind?.FunctionCallError) {
+      console.log('Failure: ', status.Failure?.ActionError?.kind?.FunctionCallError)
+    }
+  })
 }
 
 export async function getDropSupplyForOwner(

@@ -93,13 +93,13 @@ impl Keypom {
 
             // Add drop_id
             if let Some(field) = method.drop_id_field.as_ref() {
-                final_args_json[field] = json!(drop_id);
+                final_args_json[field] = json!(drop_id.to_string());
                 near_sdk::log!("Adding drop ID to args {:?}", drop_id);
             }
 
             // Add the key_id
             if let Some(field) = method.key_id_field.as_ref() {
-                final_args_json[field] = json!(key_id);
+                final_args_json[field] = json!(key_id.to_string());
                 near_sdk::log!("Adding key ID to args {:?}", key_id);
             }
 
