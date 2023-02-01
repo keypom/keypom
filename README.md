@@ -26,29 +26,77 @@
   - [Introduction](#introduction)
   - [Comparable Solutions](#comparable-solutions)
 - [Our Solution](#our-solution)
-  - [Drop Customization](#shared-drop-customization)
+- [Shared Drop Customization](#shared-drop-customization)
+  - [Time Based Customizations](#time-based-customizations)
+  - [Usage Based Customizations](#usage-based-customizations)
   - [Primary Market Public Sale for Keys](#primary-market-public-sale-for-keys)
+    - [Use-Cases for Public Sales](#use-cases-for-public-sales)
+      - [Example 1: Ticketing](#example-1-ticketing)
+      - [Example 2: NFT Collections](#example-2-nft-collections)
   - [Simple Drops](#simple-drops)
-  - [NFT Drops](#non-fungible-token-drops)
-  - [FT Drops](#fungible-token-drops)
+    - [Backend Servers](#backend-servers)
+    - [Recurring Payments](#recurring-payments)
+    - [Quick Onboarding](#quick-onboarding)
+    - [Lazy Registering Keys](#lazy-registering-keys)
+  - [Non-Fungible Token Drops](#non-fungible-token-drops)
+    - [How does it work?](#how-does-it-work)
+    - [NFT Config](#nft-config)
+    - [Use Cases](#use-cases)
+  - [Fungible Token Drops](#fungible-token-drops)
+    - [How does it work?](#how-does-it-work-1)
+    - [FT Config](#ft-config)
+    - [Use Cases](#use-cases-1)
+      - [Recurring Payments](#recurring-payments-1)
+      - [Backend Servers](#backend-servers-1)
+      - [Creating a Wallet with FTs](#creating-a-wallet-with-fts)
   - [Function Call Drops](#function-call-drops)
+    - [How does it work?](#how-does-it-work-2)
+      - [Function Call Config](#function-call-config)
+      - [Method Data](#method-data)
+      - [Key Uses](#key-uses)
+    - [Security](#security)
+      - [Keypom Arguments](#keypom-arguments)
+        - [Motivation](#motivation)
+    - [Use Cases](#use-cases-2)
+      - [Proof of Attendance Protocols](#proof-of-attendance-protocols)
+      - [Auto Registration into DAOs](#auto-registration-into-daos)
+      - [Multisig Contracts](#multisig-contracts)
+      - [NFT Ticketing](#nft-ticketing)
   - [Password Protected Keys](#password-protected-keys)
+    - [How Does It Work?](#how-does-it-work-3)
+    - [What is Stored On-Chain?](#what-is-stored-on-chain)
+  - [Passwords Per Key Use](#passwords-per-key-use)
+  - [Adding Your First Password](#adding-your-first-password)
+  - [Complex Example](#complex-example)
+    - [Key A](#key-a)
+    - [Key D](#key-d)
+    - [Key B](#key-b)
+  - [Use-Cases](#use-cases-3)
+      - [Ticketing and POAPs](#ticketing-and-poaps)
+      - [Marketing and Engagement](#marketing-and-engagement)
   - [dApp Free Trials for Users](#dapp-free-trials-for-users)
 - [Costs](#costs)
   - [Per Drop](#per-drop)
   - [Per Key](#per-key)
+    - [Key Costs for Simple Drop](#key-costs-for-simple-drop)
+    - [Additional Costs for NFT Drops](#additional-costs-for-nft-drops)
+    - [Additional Costs for FT Drops](#additional-costs-for-ft-drops)
+    - [Additional Costs for FC Drops](#additional-costs-for-fc-drops)
   - [Deleting Keys and Drops](#deleting-keys-and-drops)
-  - [Automatic Refunds](#automatic-refunds-when-keys-are-used)
-  - [Account Balances](#account-balances-for-smooth-ux)
+  - [Automatic Refunds When Keys are Used](#automatic-refunds-when-keys-are-used)
+  - [Account Balances for Smooth UX](#account-balances-for-smooth-ux)
+  - [Built With](#built-with)
 - [How Linkdrops Work](#how-linkdrops-work)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [Deploy Scripts](#deploy-scripts)  
+  - [Deploy Scripts](#deploy-scripts)
 - [Query Information From Keypom](#query-information-from-keypom)
   - [Key Specific](#key-specific)
-  - [Drop Specific](#drop-specific)    
-- [Running Tests](#running-the-keypom-tests)
+  - [Drop Specific](#drop-specific)
+    - [Utility](#utility)
+- [Running the Keypom Tests](#running-the-keypom-tests)
 - [Contributing](#contributing)
+- [License](#license)
 - [Acknowledgements](#acknowledgements)
 
 </details>
@@ -1022,6 +1070,38 @@ There are 4 deploy scripts that have been made available for you to use and easi
 - FT Drops
 - Function Call Drops
 
+Each drop type deploy script has a version using `NEAR-API-JS`, and a version using the `Keypom-JS SDK`.
+
+The file tree for these scripts is shown below. 
+
+```bash
+/deploy
+├── ft
+│   └── configurations.js
+│   └── ft-create-sdk.js
+│   └── ft-create.js
+│
+├── function-call
+│   └── configurations.js
+│   └── fc-create-sdk.js
+│   └── fc-create.js
+│
+├── nft
+│   └── configurations.js
+│   └── nft-create-sdk-minted.js
+│   └── nft-create-sdk-owned.js
+│   └── nft-create.js
+│
+├── simple
+│   └── configurations.js
+│   └── simple-create-sdk.js
+│   └── simple-create.js
+│
+├── utils
+```
+
+To use the Deploy Scripts, you should have a [NEAR account](https://docs.near.org/concepts/basics/account). It can be either `testnet` or `mainnet`.
+
 In order to use these scripts, open the `deploy/` directory and modify the `configurations.js` file for the drop you want to create. In this file, you can specify important information such as the number of keys you wish to create, the amount of $NEAR you want to send, how many uses per key etc.
 
 You must specify the account that you will fund the drops with under the `FUNDING_ACCOUNT_ID` variable. This account needs to have keys stored in your `~/.near-credentials` folder. To do this, simply run `near login` on your terminal and follow the prompts using the NEAR CLI.
@@ -1031,19 +1111,35 @@ root directory and run the deploy script.
 
 For simple drops:
 ```
+// Using NEAR-API-JS
 yarn simple
+
+// Using SDK
+yarn simple-sdk
 ```
 For FT drops:
 ```
+// Using NEAR-API-JS
 yarn ft
+
+// Using SDK
+yarn ft-sdk
 ```
 For NFT drops:
 ```
+// Using NEAR-API-JS
 yarn nft
+
+// Using SDK
+yarn nft-sdk
 ```
 For Function Call drops:
 ```
+// Using NEAR-API-JS
 yarn fc
+
+// Using SDK
+yarn fc-sdk
 ```
 
 # Query Information From Keypom
