@@ -32,6 +32,10 @@
   - [NFT Drops](#non-fungible-token-drops)
   - [FT Drops](#fungible-token-drops)
   - [Function Call Drops](#function-call-drops)
+    - [How It Works](#custom-id)
+    - [Security](#security-fc)
+    - [User-Provided Args](#function-call-drops)
+    - [Use Cases](#use-cases-fc)
   - [Password Protected Keys](#password-protected-keys)
   - [dApp Free Trials for Users](#dapp-free-trials-for-users)
 - [Costs](#costs)
@@ -472,7 +476,7 @@ contract to be executed (with some exceptions). In addition, there are a huge va
 defining the drop that come on top of the global options. The possibilities are almost endless. State of the art NFT ticketing,
 lazy minting NFTs, auto registration into DAOs, analytics for marketing at events and much more.
 
-### How does it work?
+### How does it work? {#custom-id}
 
 Unlike NFT and FT drops, the function calls must have everything paid for **upfront**. There is no two step process
 so the creation is similar to Simple drops. Once the drop is created and keys are added, you can immediately start using it.
@@ -509,7 +513,7 @@ pub struct MethodData {
     pub args: String,
     /// Amount of yoctoNEAR to attach along with the call
     pub attached_deposit: U128,
-    /// Specifies what field the claiming account should go in when calling the function
+    /// Specifies what field the claiming account ID should go in when calling the function
     /// If None, this isn't attached to the args
     pub account_id_field: Option<String>,
     /// Specifies what field the drop ID should go in when calling the function.
@@ -553,7 +557,7 @@ specify that the first use will result in a null case and the second use will re
 If you have multiple uses but want them all to do the same thing, you don't have to repeat the same data. Passing in only 1
 vector of `MethodData` will result in  **all the uses** inheriting that data.
 
-### Security
+### Security {#security-fc}
 
 Since all FC drops will be signed by the Keypom contract, there are a few restrictions in place to avoid malicious behaviors.
 To avoid users from stealing registered assets from other drops, the following methods cannot be called via FC Drops:
@@ -613,7 +617,7 @@ been sent by Keypom and what has been manually set by users, the problem is solv
 an assertion that the `keypom_args` had the `account_id_field` set to `Some(series)` meaning that the incoming `series` field was set by Keypom
 and not by a malicious user.
 
-### Use Cases
+### Use Cases {#use-cases-fc}
 
 Function call drops are the bread and butter of the Keypom contract. They are the most powerful and complex drops that can currently be created.
 With this complexity, there are an almost infinite number of use-cases that arise.
