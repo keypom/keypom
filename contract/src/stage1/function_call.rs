@@ -98,9 +98,7 @@ pub(crate) fn handle_fc_args(
                 }
             }
         } else {
-            near_sdk::log!(
-                "Cannot cast user provided args to JSON. Disregarding user args and continuing"
-            );
+            return Err("Cannot cast user provided args to JSON. Returning and decrementing keys".to_string());
         }
     }
 
