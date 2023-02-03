@@ -40,10 +40,15 @@ pub(crate) fn add_keypom_field(
         }
         
         // near_sdk::log!("Setting temp");
-        if let Some(v) = temp.get_mut(e).and_then(|v| v.as_object_mut()) {
-            temp = v
+        if temp.contains_key(e) {
+            if let Some(v) = temp.get_mut(e).unwrap().as_object_mut() {
+                temp = v; 
+            } else {
+                return false;
+            }
         } else {
-            return false
+            temp.insert(e.clone().to_string(), json!({})); 
+            temp = temp.get_mut(e).unwrap().as_object_mut().unwrap();
         }
         // near_sdk::log!("temp outer {:?}", temp);
     }    
