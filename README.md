@@ -32,6 +32,10 @@
   - [NFT Drops](#non-fungible-token-drops)
   - [FT Drops](#fungible-token-drops)
   - [Function Call Drops](#function-call-drops)
+    - [How It Works](#how-do-fc-drops-work)
+    - [Security](#security-for-fc-drops)
+    - [User-Provided Args](#user-provided-arguments)
+    - [Use Cases](#fc-drop-use-cases)
   - [Password Protected Keys](#password-protected-keys)
   - [dApp Free Trials for Users](#dapp-free-trials-for-users)
 - [Costs](#costs)
@@ -472,7 +476,7 @@ contract to be executed (with some exceptions). In addition, there are a huge va
 defining the drop that come on top of the global options. The possibilities are almost endless. State of the art NFT ticketing,
 lazy minting NFTs, auto registration into DAOs, analytics for marketing at events and much more.
 
-### How does it work?
+### How do FC Drops work?
 
 Unlike NFT and FT drops, the function calls must have everything paid for **upfront**. There is no two step process
 so the creation is similar to Simple drops. Once the drop is created and keys are added, you can immediately start using it.
@@ -509,26 +513,47 @@ pub struct MethodData {
     pub args: String,
     /// Amount of yoctoNEAR to attach along with the call
     pub attached_deposit: U128,
-    /// Specifies what field the claiming account should go in when calling the function
+    /// Specifies what field the claiming account ID should go in when calling the function
     /// If None, this isn't attached to the args
     pub account_id_field: Option<String>,
-    /// Specifies what field the drop ID should go in when calling the function.
+    /// Specifies what field the drop ID should go in when calling the function. To insert into nested objects, use periods to separate. For example, to insert into args.metadata.field, you would specify "metadata.field"
     /// If Some(String), attach drop ID to args. Else, don't attach.
     pub drop_id_field: Option<String>,
-    /// Specifies what field the key ID should go in when calling the function.
+    /// Specifies what field the key ID should go in when calling the function. To insert into nested objects, use periods to separate. For example, to insert into args.metadata.field, you would specify "metadata.field"
     /// If Some(String), attach key ID to args. Else, don't attach.
     pub key_id_field: Option<String>,
+    // Specifies what field the funder id should go in when calling the function. To insert into nested objects, use periods to separate. For example, to insert into args.metadata.field, you would specify "metadata.field"
+    // If Some(string), attach the funder ID to the args. Else, don't attach.
+    pub funder_id_field: Option<String>,
+    // What permissions does the user have when providing custom arguments to the function call?
+    // By default, the user cannot provide any custom arguments
+    pub user_args_rule: Option<UserArgsRule>,
 }
 ```
 
 The MethodData keeps track of the method being called, receiver, arguments, and attached deposit. In addition, there are
 some optional fields that can be used to extend the use cases. If you have a contract that requires some more context from
-Keypom such as the drop ID, key ID, or account ID that used the key, these can all be specified.
+Keypom such as the funder ID, drop ID, key ID, and account ID that used the key, these can all be specified.
 
 We've kept it generic such that you can specify the actual argument name that these will be passed in as. For example, if you
 had a contract that would lazy mint an NFT and it required the account to be passed in as `receiver_id`, you could specify
 an `account_id_field` set to `receiver_id` such that Keypom will automatically pass in the account ID that used the key under the
-field `receiver_id`.
+field `receiver_id`. Similarly, inserting fields into nested arguments is quite trivial. 
+
+Let's say you wanted to insert the account ID that claimed the drop into the `receiver_id` under metadata for the following args:
+    
+```json
+args: {
+    "token_id": "foobar",
+    "metadata": {
+        "receiver_id": INSERT_HERE
+    }
+}
+```
+
+You could specify the `account_id_field` as `metadata.receiver_id` and Keypom will automatically create the `receiver_id` field and insert it into `metadata`. This would work whether or not `metadata` was already present in the args.
+
+> **NOTE:** The location for inserting the arguments *cannot* collide with another entry. In the above example, `token_id.receiver_id` could *NOT* be specified since `token_id` is mapped to `foobar` already.
 
 This logic extends to the drop ID, and key Id as well.
 
@@ -553,7 +578,7 @@ specify that the first use will result in a null case and the second use will re
 If you have multiple uses but want them all to do the same thing, you don't have to repeat the same data. Passing in only 1
 vector of `MethodData` will result in  **all the uses** inheriting that data.
 
-### Security
+### Security for FC Drops
 
 Since all FC drops will be signed by the Keypom contract, there are a few restrictions in place to avoid malicious behaviors.
 To avoid users from stealing registered assets from other drops, the following methods cannot be called via FC Drops:
@@ -583,6 +608,7 @@ pub struct KeypomArgs {
     pub account_id_field: Option<String>,
     pub drop_id_field: Option<String>,
     pub key_id_field: Option<String>,
+    pub funder_id_field: Option<String>
 }
 ```
 
@@ -613,7 +639,131 @@ been sent by Keypom and what has been manually set by users, the problem is solv
 an assertion that the `keypom_args` had the `account_id_field` set to `Some(series)` meaning that the incoming `series` field was set by Keypom
 and not by a malicious user.
 
-### Use Cases
+### User Provided Arguments
+
+In the `MethodData`, there is an optional field that determines whether or not users can provide their own arguments when claiming a linkdrop and what that behaviour will look like. This is known as the `user_args_rule` and can be one of the following:
+
+```rs
+/// When a user provides arguments for FC drops in `claim` or `create_account_and_claim`, what behaviour is expected?
+/// For `AllUser`, any arguments provided by the user will completely overwrite any previous args provided by the drop creator.
+/// For `FunderPreferred`, any arguments provided by the user will be concatenated with the arguments provided by the drop creator. If there are any duplicate args, the drop funder's arguments will be used.
+/// For `UserPreferred`, any arguments provided by the user will be concatenated with the arguments provided by the drop creator, but if there are any duplicate keys, the user's arguments will overwrite the drop funder's.
+pub enum UserArgsRule {
+    AllUser,
+    FunderPreferred,
+    UserPreferred
+}
+```
+
+By default, if `user_args_rule` is `None` / not provided, any user provided arguments will be completely disregarded. It would act as if the user provided *no args* in the first place.
+
+These user arguments must be passed in via the `fc_args` field in `claim` and `create_account_and_claim`. This field is of type `Option<Vec<Option<String>>>` indicating that it's optional to provide the args and for each claim, a set of args can be provided. If, for a specific method, args shouldn't be passed in, the vector can have `None` as the value. The order of the args must match the order of the methods that will be executed.
+
+> **NOTE:** If a user provides `fc_args`, the length of the vector *MUST* match the number of methods being executed during the claim.
+
+#### All User
+
+If `user_args_rule` is set to `AllUser`, any arguments provided by the user will completely *overwrite* any previous args provided by the drop creator. If no args as passed in by the user, the drop creator's original args will be used.
+
+As an example, if the method data was:
+
+```js
+args: JSON.stringify({
+    "foo": "bar",
+    "baz": {
+        "foo": "bar
+    }
+})
+```
+
+And the user provided the following args:
+
+```js
+fc_args: JSON.stringify({
+    "new_field": "new_value"
+})
+```
+
+Keypom would completely overwrite the funder's previous args and use the user's `fc_args` instead.
+
+#### Funder Preferred
+
+If `user_args_rule` is set to `FunderPreferred`, any arguments provided by the user will be concatenated with the arguments provided by the drop creator. If there are any duplicate args, the drop funder's arguments will be prioritized / used.
+
+As an example, if the funder args were:
+
+```js
+args: JSON.stringify({
+    "funder_field": "funder_value",
+    "object": {
+        "funder_field": "funder_value"
+    }
+})
+```
+
+And the user provided the following args:
+
+```js
+fc_args: JSON.stringify({
+    "funder_field": "user_value",
+    "object": {
+        "funder_field": "user_value",
+        "user_field": "user_value"
+    }
+})
+```
+
+Keypom would take the user args and merge them together with the funder's but prioritize any fields that are funder specified. The resulting output would be:
+
+```js
+args: JSON.stringify({
+    "funder_field": "funder_value",
+    "object": {
+        "funder_field": "funder_value",
+        "user_field": "user_value"
+    }
+})
+```
+
+#### User Preferred
+
+If `user_args_rule` is set to `UserPreferred`, any arguments provided by the user will be concatenated with the arguments provided by the drop creator, but if there are any duplicate keys, the *user's arguments* will overwrite the drop funder's.
+
+As an example, if the funder args were:
+
+```js
+args: JSON.stringify({
+    "funder_field": "funder_value",
+    "object": {
+        "funder_field": "funder_value"
+    }
+})
+```
+
+And the user provided the following args:
+
+```js
+fc_args: JSON.stringify({
+    "object": {
+        "funder_field": "user_value",
+        "user_field": "user_value"
+    }
+})
+```
+
+Keypom would take the user args and merge them together with the funder's but prioritize any fields that are *user specified*. The resulting output would be:
+
+```js
+args: JSON.stringify({
+    "funder_field": "funder_value",
+    "object": {
+        "funder_field": "user_value",
+        "user_field": "user_value"
+    }
+})
+```
+
+### FC Drop Use Cases
 
 Function call drops are the bread and butter of the Keypom contract. They are the most powerful and complex drops that can currently be created.
 With this complexity, there are an almost infinite number of use-cases that arise.
