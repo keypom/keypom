@@ -14,6 +14,43 @@ pub struct KeypomArgs {
     pub funder_id_field: Option<String>,
 }
 
+pub(crate) fn add_keypom_field(
+    output_args: &mut Value,
+    field: &String,
+    value: String
+) -> bool {
+    let temp_option = output_args.as_object_mut();
+    if temp_option.is_none() {
+        return false
+    } 
+    
+    // Temp is a map now
+    let mut temp = temp_option.unwrap();
+    let split = field.split(".");
+    let last_el = split.clone().count() - 1;
+    
+    // near_sdk::log!("last_el: {}", last_el);
+    for (i, e) in split.enumerate() {
+        // near_sdk::log!("i: {}, e: {}", i, e);
+        
+        if i == last_el {
+            temp.insert(e.to_string(), json!(value));
+            // near_sdk::log!("final insert {:?}", temp);
+            break;
+        }
+        
+        // near_sdk::log!("Setting temp");
+        if let Some(v) = temp.get_mut(e).and_then(|v| v.as_object_mut()) {
+            temp = v
+        } else {
+            return false
+        }
+        // near_sdk::log!("temp outer {:?}", temp);
+    }    
+
+    true
+}
+
 pub(crate) fn handle_fc_args(
     output_args: &String, 
     user_args: &Option<Vec<Option<String>>>, 
@@ -71,7 +108,10 @@ pub(crate) fn handle_fc_args(
 
     // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
     if let Some(field) = account_id_field.as_ref() {
-        output_args_json[field] = json!(account_id);
+        if add_keypom_field(&mut output_args_json, field, account_id.to_string()) == false {
+            return Err("Cannot add account ID to specified field. Returning and decrementing keys".to_string());
+        };
+
         near_sdk::log!(
             "Adding claimed account ID: {:?} to specified field: {:?}",
             account_id,
@@ -81,19 +121,25 @@ pub(crate) fn handle_fc_args(
 
     // Add drop_id
     if let Some(field) = drop_id_field.as_ref() {
-        output_args_json[field] = json!(drop_id.to_string());
+        if add_keypom_field(&mut output_args_json, field, drop_id.to_string()) == false {
+            return Err("Cannot add drop ID to specified field. Returning and decrementing keys".to_string());
+        }
         near_sdk::log!("Adding drop ID: {:?} to specified field {:?}", drop_id, field);
     }
 
     // Add the key_id
     if let Some(field) = key_id_field.as_ref() {
-        output_args_json[field] = json!(key_id.to_string());
+        if add_keypom_field(&mut output_args_json, field, key_id.to_string()) == false {
+            return Err("Cannot add key ID to specified field. Returning and decrementing keys".to_string());
+        }
         near_sdk::log!("Adding key ID: {:?} to specified field {:?}", key_id, field);
     }
 
     // Add the funder_id
     if let Some(field) = funder_id_field.as_ref() {
-        output_args_json[field] = json!(funder_id);
+        if add_keypom_field(&mut output_args_json, field, funder_id.to_string()) == false {
+            return Err("Cannot add funder ID to specified field. Returning and decrementing keys".to_string());
+        }
         near_sdk::log!("Adding funder ID: {:?} to specified field {:?}", funder_id, field);
     }
 
