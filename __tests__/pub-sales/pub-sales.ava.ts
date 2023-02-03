@@ -122,8 +122,8 @@ test('Timed Sale', async t => {
     let {keys, publicKeys} = await generateKeyPairs(2);
     let config: DropConfig = {
         sale: {
-            start: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
-            end: (Date.now() * 1000000) + ONE_SECOND_NS * 30,
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 15,
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 35,
         }
     }
 
@@ -556,6 +556,3 @@ test('Update Sale Configs', async t => {
     console.log('keySupplyForDrop: ', keySupplyForDrop)
     t.is(keySupplyForDrop, 2);
 });
-
-
-

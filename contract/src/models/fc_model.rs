@@ -1,5 +1,17 @@
 use crate::*;
 
+#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+/// When a user provides arguments for FC drops in `claim` or `create_account_and_claim`, what behaviour is expected?
+/// For `AllUser`, any arguments provided by the user will completely overwrite any previous args provided by the drop creator.
+/// For `FunderPreferred`, any arguments provided by the user will be concatenated with the arguments provided by the drop creator. If there are any duplicate args, the drop funder's arguments will be used.
+/// For `UserPreferred`, any arguments provided by the user will be concatenated with the arguments provided by the drop creator, but if there are any duplicate keys, the user's arguments will overwrite the drop funder's.
+pub enum UserArgsRule {
+    AllUser,
+    FunderPreferred,
+    UserPreferred
+}
+
 /// Keep track of info for the method_name to be called
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -24,6 +36,9 @@ pub struct MethodData {
     // Specifies what field the funder id should go in when calling the function.
     // If None, this isn't attached to the args
     pub funder_id_field: Option<String>,
+    // What permissions does the user have when providing custom arguments to the function call?
+    // By default, the user cannot provide any custom arguments
+    pub user_args_rule: Option<UserArgsRule>,
 }
 
 /// Keep track of optional configurations for the FC data

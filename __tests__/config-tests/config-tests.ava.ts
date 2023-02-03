@@ -393,7 +393,7 @@ test('Testing Custom Drop Root', async t => {
     ownerBal = await keypom.view('get_user_balance', {account_id: owner.accountId});
     console.log('ownerBal: ', ownerBal)
     t.assert(NEAR.from(ownerBal).lte(NEAR.parse("1")));
-    });
+});
 
 test('Testing Auto Withdraw', async t => {
     //creating accounts, adding 100NEAR to owner's keypom wallet balance
@@ -658,6 +658,7 @@ test('Testing Valid Config', async t => {
     t.is(viewFunctions.dropSupplyForOwner, 0);
     t.is(viewFunctions.nextDropId, 0);
 });
+
 test('Testing End Timestamp', async t => {
     //add 10 NEAR to balance
     const { keypom, owner, ali } = t.context.accounts;
@@ -668,7 +669,7 @@ test('Testing End Timestamp', async t => {
     let {keys, publicKeys} = await generateKeyPairs(2);
     let config: DropConfig = {
         time: {
-            end: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 15,
         }
     }
 
@@ -726,7 +727,7 @@ test('Testing End Timestamp Key Drainage', async t => {
     let {keys, publicKeys} = await generateKeyPairs(1);
     let config: DropConfig = {
         time: {
-            end: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+            end: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
         }
     }
 
@@ -743,7 +744,7 @@ test('Testing End Timestamp Key Drainage', async t => {
     t.is(keySupplyForDrop, 1);
 
     // Wait 5 seconds for start timestamp to pass
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 10000));
 
     // Set ali's balance to 0 so we can check if the claim works properly
     await ali.updateAccount({
@@ -783,7 +784,7 @@ test('Testing Claim Interval', async t => {
     let config: DropConfig = {
         uses_per_key: 5,
         time: {
-            start: (Date.now() * 1000000) + ONE_SECOND_NS * 5,
+            start: (Date.now() * 1000000) + ONE_SECOND_NS * 10,
             interval: ONE_SECOND_NS * 10,
         }
     }
@@ -816,7 +817,7 @@ test('Testing Claim Interval', async t => {
     t.is(aliBal.toString(), NEAR.parse("0").toString());
 
     //wait 5 seconds to reach start timestamp [NOTE THIS WAS PASSING WITHOUT THIS I THINK...]
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 10000));
 
     // Wait 50 seconds
     //5 uses in the key and 10s/use means after 50s the keys can be claimed all at once

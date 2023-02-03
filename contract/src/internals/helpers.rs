@@ -3,6 +3,8 @@ use std::str::FromStr;
 use near_sdk::env::sha256;
 use std::convert::{TryFrom};
 
+use serde_json::{Value};
+
 use crate::{*, stage1::KeypomArgs};
 
 const GAS_PER_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas
@@ -226,6 +228,20 @@ pub(crate) fn insert_keypom_args_to_ca_payload(mut payload: String, keypom_args:
     near_sdk::log!("payload after all insertions{}", payload);
 
     payload
+}
+
+/// b will overwrite a and `a` will be mutated
+pub(crate) fn merge_json(a: &mut Value, b: &Value) {
+    match (a, b) {
+        (&mut Value::Object(ref mut a), &Value::Object(ref b)) => {
+            for (k, v) in b {
+                merge_json(a.entry(k.clone()).or_insert(Value::Null), v);
+            }
+        }
+        (a, b) => {
+            *a = b.clone();
+        }
+    }
 }
 
 impl Keypom {
@@ -618,6 +634,7 @@ impl Keypom {
         storage_freed: u128,
         token_id: Option<String>,
         auto_withdraw: bool,
+        fc_args: Option<Vec<Option<String>>>,
         promise: Option<Promise>,
     ) {
         macro_rules! resolve_promise_or_call {
@@ -666,6 +683,8 @@ impl Keypom {
                     remaining_uses,
                     // Maximum number of uses
                     drop_data.config.and_then(|c| c.uses_per_key).unwrap_or(1),
+                    // Any user provided args
+                    fc_args,
                     // Is it an auto withdraw case
                     auto_withdraw,
                 ));

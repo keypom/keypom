@@ -38,14 +38,11 @@ export type FTData = {
 }
 
 export type FCData = {
-    methods: (MethodData | null)[]
+    methods: Array<(MethodData | null)[]>
     config?: FCConfig;
 }
 
 export type FCConfig = {
-    account_id_field?: string;
-    drop_id_field?: string;
-    key_id_field?: string;
     attached_gas?: string
 }
 
@@ -54,6 +51,11 @@ export type MethodData = {
     method_name: string;
     args: string;
     attached_deposit: string;
+    account_id_field?: string;
+    drop_id_field?: string;
+    key_id_field?: string;
+    funder_id_field?: string;
+    user_args_rule?: string;
 }
 
 export type JsonKeyInfo = {
