@@ -21,6 +21,18 @@ impl Keypom {
         self.contract_metadata.replace(&contract_metadata);
     }
 
+    /// Add an account ID to the list of accounts that can receive refunds for unspent key allowance.
+    pub fn add_to_refund_allowlist(&mut self, account_id: AccountId) {
+        self.assert_owner();
+        self.refund_allowlist.insert(&account_id);
+    }
+    
+    /// Add an account ID to the list of accounts that can receive refunds for unspent key allowance.
+    pub fn remove_from_refund_allowlist(&mut self, account_id: AccountId) {
+        self.assert_owner();
+        self.refund_allowlist.remove(&account_id);
+    }
+
     /// Add a prohibited method to the list of methods that can't be called by a FC Drop
     pub fn add_prohibited_method(&mut self, method: String) {
         self.assert_owner();
@@ -55,6 +67,18 @@ impl Keypom {
     pub fn set_gas_price(&mut self, yocto_per_gas: u128) {
         self.assert_owner();
         self.yocto_per_gas = yocto_per_gas;
+    }
+
+    /// Set the contract to be frozen thus not allowing any drops to be created or keys added
+    pub fn freeze_contract(&mut self) {
+        self.assert_owner();
+        self.global_freeze = true
+    }
+    
+    /// Set the contract to be unfrozen thus resuming the ability for drops and keys to be created
+    pub fn unfreeze_contract(&mut self) {
+        self.assert_owner();
+        self.global_freeze = false;
     }
 
     /// Withdraw the fees collected to the passed in Account Id

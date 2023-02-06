@@ -55,6 +55,10 @@ test.beforeEach(async (t) => {
     const owner = await root.createSubAccount('owner');
     const bob = await root.createSubAccount('bob');
 
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: bob.accountId });
+
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, nftSeries, owner, ali, bob };

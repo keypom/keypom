@@ -52,6 +52,9 @@ test.beforeEach(async (t) => {
         amount: NEAR.parse('10000 N').toString()
     })
 
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, owner, ali, customRoot };

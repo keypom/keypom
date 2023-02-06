@@ -724,31 +724,26 @@ impl Keypom {
             }
         }
 
-        // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
-        let final_storage = env::storage_usage();
-        let total_storage_freed =
-            Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
-        near_sdk::log!(
-            "Total storage freed: {}. Initial storage: {}. Final storage: {}",
-            total_storage_freed,
-            initial_storage,
-            final_storage
-        );
         let mut should_auto_withdraw = false;
         if should_delete_key {
             // Amount to refund is the current allowance less the current execution's max GAS
-            let amount_to_refund = key_info.allowance
-                - drop.required_gas.0 as u128 * self.yocto_per_gas
-                + ACCESS_KEY_STORAGE;
+            let mut amount_to_refund = ACCESS_KEY_STORAGE;
+            // Only refund unspent allowance if the funder is in the allowlist
+            if self.refund_allowlist.contains(&drop.owner_id) {
+                amount_to_refund += key_info.allowance
+                - drop.required_gas.0 as u128 * self.yocto_per_gas;
+                near_sdk::log!(
+                    "Funder is on allowlist. Adding to refund amount.
+                    Allowance Currently: {}. 
+                    Drop required gas: {}",
+                    key_info.allowance,
+                    drop.required_gas.0 as u128 * self.yocto_per_gas,
+                );
+            }
+
             near_sdk::log!(
-                "Key being deleted. Will refund: {}.
-                Allowance Currently: {}. 
-                Drop required gas: {},
-                Access key storage: {}",
+                "Key being deleted. Will refund: {}",
                 amount_to_refund,
-                key_info.allowance,
-                drop.required_gas.0 as u128 * self.yocto_per_gas,
-                ACCESS_KEY_STORAGE
             );
 
             // Check if auto_withdrawing to the funder's entire balance
@@ -786,6 +781,17 @@ impl Keypom {
             // Delete the key
             Promise::new(env::current_account_id()).delete_key(signer_pk);
         }
+
+        // Calculate the storage being freed. initial - final should be >= 0 since final should be smaller than initial.
+        let final_storage = env::storage_usage();
+        let total_storage_freed =
+            Balance::from(initial_storage - final_storage) * env::storage_byte_cost();
+        near_sdk::log!(
+            "Total storage freed: {}. Initial storage: {}. Final storage: {}",
+            total_storage_freed,
+            initial_storage,
+            final_storage
+        );
 
         // Return the drop and optional token ID with how much storage was freed
         (

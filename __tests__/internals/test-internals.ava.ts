@@ -24,6 +24,9 @@ test.beforeEach(async (t) => {
     const ali = await root.createSubAccount('ali');
     const bob = await root.createSubAccount('bob');
 
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: bob.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, ali, bob };

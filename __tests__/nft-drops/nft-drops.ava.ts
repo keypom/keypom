@@ -51,6 +51,9 @@ test.beforeEach(async (t) => {
     console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
     console.log('keypom total INITIAL: ', keypomBalance.total.toString())
 
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+    
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, owner, ali, minter, nftSeries };
