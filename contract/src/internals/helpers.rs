@@ -462,9 +462,16 @@ impl Keypom {
         auto_withdraw: bool,
         promise: Option<Promise>,
     ) {
+
+        near_sdk::log!(
+            "promise is_some {:?}",
+            promise.is_some()
+        );
+
         macro_rules! resolve_promise_or_call {
             ( $func:ident ( $($call:tt)* ) ) => {
                 if let Some(promise) = promise {
+
                     promise.then(
                         // Call on_claim_fc with all unspent GAS + min gas for on claim. No attached attached_deposit.
                         Self::ext(env::current_account_id())

@@ -120,13 +120,17 @@ impl Keypom {
                 deposit_per_use.0 == 0,
                 "cannot specify gas to attach and have a balance in the linkdrop"
             );
-            require!(
-                gas <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE,
-                &format!(
-                    "cannot attach more than {:?} GAS.",
-                    ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE
-                )
-            );
+
+            if num_uses_per_key > 1 {
+                require!(
+                    gas <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE,
+                    &format!(
+                        "cannot attach more than {:?} GAS.",
+                        ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE
+                    )
+                );
+            }
+            
             gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
         }

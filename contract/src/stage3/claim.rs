@@ -44,6 +44,12 @@ impl Keypom {
         };
 
         let mut promise = None;
+
+        near_sdk::log!(
+            "Deposit Per Use {:?}",
+            drop_data.deposit_per_use,
+        );
+
         // Only create a promise to transfer $NEAR if the drop's balance is > 0.
         if drop_data.deposit_per_use > 0 {
             // Send the account ID the desired balance.
@@ -387,18 +393,19 @@ impl Keypom {
         let prepaid_gas = env::prepaid_gas();
 
         near_sdk::log!(
-            "Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?}",
+            "Beginning of on claim Function Call used gas: {:?} prepaid gas: {:?} execute: {:?}",
             used_gas.0,
-            prepaid_gas.0
+            prepaid_gas.0,
+            execute
         );
 
         // Get the status of the cross contract call. If this function is invoked directly via an execute, default the claim succeeded to true
         let mut claim_succeeded = true;
-        if !execute {
-            // Get the status of the cross contract call
-            claim_succeeded = check_promise_result();
-        }
-        near_sdk::log!("Has function been executed via CCC: {}", !execute);
+        // if !execute {
+        //     // Get the status of the cross contract call
+        //     claim_succeeded = check_promise_result();
+        // }
+        // near_sdk::log!("Has function been executed via CCC: {}", !execute);
 
         // Default amount to refund to be the storage used
         let mut amount_to_refund = storage_used;
