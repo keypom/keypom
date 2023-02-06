@@ -1,4 +1,11 @@
-use near_sdk::GasWeight;
+use near_sdk::{
+    env::{
+        promise_batch_create,
+        promise_batch_then,
+        promise_batch_action_function_call_weight,
+    },
+    GasWeight
+};
 
 use serde_json::{Value, from_str, to_string};
 
@@ -170,6 +177,7 @@ impl Keypom {
             Function Calls
         */
         let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
+        let mut promises: Vec<u64> = vec![];
 
         for (i, method) in methods.iter().enumerate() {
             let mut output_args = method.args.clone();
@@ -200,15 +208,25 @@ impl Keypom {
                 }
             }
 
-            // Call function with the min GAS and attached_deposit. all unspent GAS will be added on top
-            Promise::new(method.receiver_id.clone()).function_call_weight(
-                method.method_name.clone(),
-                output_args.as_bytes().to_vec(),
-                // The claim is successful so attach the amount to refund to the attached_deposit instead of refunding the funder.
+            // start new promise batch or chain with previous promise batch
+            let id = if promises.len() == 0 {
+                promise_batch_create(&method.receiver_id)
+            } else {
+                promise_batch_then(
+                    promises[promises.len() - 1],
+                    &method.receiver_id,
+                )
+            };
+            promises.push(id);
+
+            promise_batch_action_function_call_weight(
+                id,
+                &method.method_name,
+                output_args.as_bytes(),
                 method.attached_deposit.0,
                 gas,
                 GasWeight(1),
-            );
+            )
         }
     }
 }
