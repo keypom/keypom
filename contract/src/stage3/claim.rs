@@ -214,10 +214,10 @@ impl Keypom {
         storage_used: Balance,
         // FT Data for the drop
         ft_data: FTData,
-        // Was this function invoked via an execute (no callback)
-        execute: bool,
         // Is it an auto withdraw case
         auto_withdraw: bool,
+        // Was this function invoked via an execute (no callback)
+        execute: bool,
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -291,10 +291,10 @@ impl Keypom {
         contract_id: AccountId,
         // Token ID for the NFT
         token_id: String,
-        // Was this function invoked via an execute (no callback)
-        execute: bool,
         // Is it an auto withdraw case
         auto_withdraw: bool,
+        // Was this function invoked via an execute (no callback)
+        execute: bool,
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
@@ -378,10 +378,10 @@ impl Keypom {
         remaining_uses: u64,
         // How many uses the key had left before sit was decremented
         uses_per_key: u64,
-        // Was this function invoked via an execute (no callback)
-        execute: bool,
         // Is it an auto withdraw case
         auto_withdraw: bool,
+        // Was this function invoked via an execute (no callback)
+        execute: bool,
     ) -> bool {
         let used_gas = env::used_gas();
         let prepaid_gas = env::prepaid_gas();
