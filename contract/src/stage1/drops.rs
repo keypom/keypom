@@ -42,6 +42,8 @@ impl Keypom {
         // Pessimistically measure storage
         let initial_storage = env::storage_usage();
 
+        require!(self.global_freeze == false, "Contract is frozen and no new drops or keys can be created");
+
         let mut actual_drop_id = self.next_drop_id;
 
         if let Some(id) = drop_id {
@@ -588,6 +590,8 @@ impl Keypom {
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
     ) -> Option<DropIdJson> {
+        require!(self.global_freeze == false, "Contract is frozen and no new drops or keys can be created");
+        
         let mut drop = self
             .drop_for_id
             .get(&drop_id.0)

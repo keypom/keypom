@@ -44,13 +44,17 @@ test.beforeEach(async (t) => {
     // Mint the NFT
     await nftSeries.call(nftSeries, 'create_series', { mint_id: 0, metadata: nftMetadata }, { attachedDeposit: NEAR.parse("1").toString() });
     await nftSeries.call(nftSeries, 'nft_mint', { mint_id: '0', receiver_id: minter, keypom_args }, { attachedDeposit: NEAR.parse("1").toString() });
-
+    
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+    
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())
     console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
     console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
     console.log('keypom total INITIAL: ', keypomBalance.total.toString())
 
+    
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, owner, ali, minter, nftSeries };

@@ -1,4 +1,4 @@
-use near_sdk::GasWeight;
+use near_sdk::{GasWeight};
 use std::cmp;
 
 use crate::*;
@@ -27,10 +27,12 @@ impl Keypom {
         let mut drop = self.drop_for_id.remove(&drop_id.0).expect("No drop found");
         let owner_id = drop.owner_id.clone();
         let drop_type = &drop.drop_type;
-        require!(
-            owner_id == env::predecessor_account_id(),
-            "only drop funder can delete keys"
-        );
+        if env::predecessor_account_id() != self.owner_id {
+            require!(
+                owner_id == env::predecessor_account_id(),
+                "only drop funder can delete keys"
+            );
+        }
 
         // Get the max uses per key. Default to 1 if not specified in the drop config.
         let uses_per_key = drop
@@ -62,7 +64,7 @@ impl Keypom {
         };
 
         // Keep track of the total refund amount
-        let total_refund_amount;
+        let mut total_refund_amount = 0;
         // Default the keys to use to be the public keys or an empty vector. We'll populate it if no PKs are passed in.
         let keys_to_delete;
         let mut total_allowance_left = 0;
@@ -206,8 +208,17 @@ impl Keypom {
                 drop.deposit_per_use * (num_uses_to_refund - total_num_none_fcs) as u128;
             let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
-            total_refund_amount = total_storage_freed
-                + total_allowance_left
+            // Only refund unspent allowance if the funder is in the allowlist
+            if self.refund_allowlist.contains(&drop.owner_id) {
+                total_refund_amount += total_allowance_left;
+                near_sdk::log!(
+                    "Funder is on allowlist. Adding to refund amount.
+                    Total Allowance Left: {}",
+                    yocto_to_near(total_allowance_left),
+                );
+            }
+
+            total_refund_amount += total_storage_freed
                 + total_access_key_storage
                 + total_deposits
                 + total_fc_deposits
@@ -366,8 +377,17 @@ impl Keypom {
                 drop.deposit_per_use * (num_uses_to_refund - total_num_none_fcs) as u128;
             let total_ft_costs = ft_optional_costs_per_claim * total_num_uses_refunded as u128;
 
-            total_refund_amount = total_storage_freed
-                + total_allowance_left
+            // Only refund unspent allowance if the funder is in the allowlist
+            if self.refund_allowlist.contains(&drop.owner_id) {
+                total_refund_amount += total_allowance_left;
+                near_sdk::log!(
+                    "Funder is on allowlist. Adding to refund amount.
+                    Total Allowance Left: {}",
+                    yocto_to_near(total_allowance_left),
+                );
+            }
+
+            total_refund_amount += total_storage_freed
                 + total_access_key_storage
                 + total_deposits
                 + total_fc_deposits
@@ -420,10 +440,13 @@ impl Keypom {
         // get the drop object
         let mut drop = self.drop_for_id.get(&drop_id.0).expect("No drop found");
         let owner_id = drop.owner_id.clone();
-        require!(
-            owner_id == env::predecessor_account_id(),
-            "only drop funder can delete keys"
-        );
+        
+        if env::predecessor_account_id() != self.owner_id {
+            require!(
+                owner_id == env::predecessor_account_id(),
+                "only drop funder can delete keys"
+            );
+        }
 
         // Get the number of uses registered for the drop.
         let uses_registered = drop.registered_uses;

@@ -197,11 +197,11 @@ impl Keypom {
         let (current_user_balance, _) = self.attached_deposit_to_user_balance(&owner_id);
 
         if let Some(mut sale) = config.sale {
-            sale.max_num_keys = max_num_keys;
-            sale.price_per_key = price_per_key.map(|p| p.0);
-            sale.auto_withdraw_funds = auto_withdraw_funds;
-            sale.start = start;
-            sale.end = end;
+            sale.max_num_keys = if max_num_keys.is_some() { max_num_keys } else { sale.max_num_keys };
+            sale.price_per_key = if price_per_key.is_some() { price_per_key.map(|p| p.0) } else { sale.price_per_key };
+            sale.auto_withdraw_funds = if auto_withdraw_funds.is_some() { auto_withdraw_funds } else { sale.auto_withdraw_funds };
+            sale.start = if start.is_some() { start } else { sale.start };
+            sale.end = if end.is_some() { end } else { sale.end };
 
             config.sale = Some(sale);
             drop.config = Some(config);

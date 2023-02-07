@@ -966,6 +966,7 @@ enum StorageKey {
     UserBalances,
     ProhibitedMethods,
     RegisteredFtContracts,
+    RefundAllowlist,
     ContractMetadata,
 }
 
@@ -992,7 +993,6 @@ pub struct Keypom {
     pub key_fee: u128,
     /// Total amount of fees available for withdrawal collected overtime.
     pub fees_collected: u128,
-
     /// Overload the `drop_fee` and `key_fee` for specific users by providing custom fees
     /// Tuple is (drop_fee, key_fee)
     pub fees_per_user: LookupMap<AccountId, (u128, u128)>,
@@ -1011,6 +1011,12 @@ pub struct Keypom {
 
     /// Which contract has Keypom been automatically registered on?
     pub registered_ft_contracts: LookupSet<AccountId>,
+
+    /// Which accounts will be automatically refunded for any unused gas.
+    pub refund_allowlist: LookupSet<AccountId>,
+    
+    /// Whether or not the contract is frozen and no new drops can be created / keys added.
+    pub global_freeze: bool,
 
     /// Source metadata extension:
     pub contract_metadata: LazyOption<ContractSourceMetadata>,
@@ -1035,6 +1041,8 @@ impl Keypom {
             next_drop_id: 0,
             prohibited_fc_methods: LookupSet::new(StorageKey::ProhibitedMethods),
             registered_ft_contracts: LookupSet::new(StorageKey::RegisteredFtContracts),
+            refund_allowlist: LookupSet::new(StorageKey::RefundAllowlist),
+            global_freeze: false,
             /*
                 FEES
             */

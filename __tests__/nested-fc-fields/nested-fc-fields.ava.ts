@@ -30,6 +30,15 @@ test.beforeEach(async (t) => {
     await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
     await nftContract.call(nftContract, 'new_default_meta', { owner_id: nftContract });
 
+    // Test users
+    const ali = await root.createSubAccount('ali');
+    const owner = await root.createSubAccount('owner');
+    const bob = await root.createSubAccount('bob');
+    
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: bob.accountId });
+    
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())
     console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
@@ -41,11 +50,6 @@ test.beforeEach(async (t) => {
     console.log('nftContract staked INITIAL: ', nftBalance.staked.toString())
     console.log('nftContract stateStaked INITIAL: ', nftBalance.stateStaked.toString())
     console.log('nftContract total INITIAL: ', nftBalance.total.toString())
-
-    // Test users
-    const ali = await root.createSubAccount('ali');
-    const owner = await root.createSubAccount('owner');
-    const bob = await root.createSubAccount('bob');
 
     // Save state for test runs
     t.context.worker = worker;
