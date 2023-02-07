@@ -47,16 +47,16 @@ test.beforeEach(async (t) => {
     // Mint the FTs
     await ftContract.call(ftContract, 'storage_deposit', { account_id: minter.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
     await ftContract.call(ftContract, 'ft_transfer', { receiver_id: minter.accountId, amount: (oneGtNear * BigInt(1000)).toString() }, { attachedDeposit: "1" });
-
+    
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+    
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())
     console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
     console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
     console.log('keypom total INITIAL: ', keypomBalance.total.toString())
 
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
-    
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, keypom, owner, ali, minter, ftContract };

@@ -32,27 +32,27 @@ test.beforeEach(async (t) => {
     await root.call(root, 'new', {});
     await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
 
-    let keypomBalance = await keypom.balance();
-    console.log('keypom available INITIAL: ', keypomBalance.available.toString())
-    console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
-    console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
-    console.log('keypom total INITIAL: ', keypomBalance.total.toString())
-
     // Test users
     const ali = await root.createSubAccount('ali');
     const owner = await root.createSubAccount('owner');
     const bob = await root.createSubAccount('bob');
     const eve = await root.createSubAccount('eve');
-
+    
     // Add 10k $NEAR to owner's account
     await owner.updateAccount({
         amount: NEAR.parse('10000 N').toString()
     })
-
+    
     await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
     await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
     await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: bob.accountId });
     await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: eve.accountId });
+    
+    let keypomBalance = await keypom.balance();
+    console.log('keypom available INITIAL: ', keypomBalance.available.toString())
+    console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
+    console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
+    console.log('keypom total INITIAL: ', keypomBalance.total.toString())
 
     // Save state for test runs
     t.context.worker = worker;

@@ -37,7 +37,16 @@ test.beforeEach(async (t) => {
     
     // Add Keypom as an approved minter
     await nftSeries.call(nftSeries, 'add_approved_minter', { account_id: keypom });
-
+    
+    // Test users
+    const ali = await root.createSubAccount('ali');
+    const owner = await root.createSubAccount('owner');
+    const bob = await root.createSubAccount('bob');
+    
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
+    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: bob.accountId });
+    
     let keypomBalance = await keypom.balance();
     console.log('keypom available INITIAL: ', keypomBalance.available.toString())
     console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
@@ -49,15 +58,6 @@ test.beforeEach(async (t) => {
     console.log('nftSeries staked INITIAL: ', nftBalance.staked.toString())
     console.log('nftSeries stateStaked INITIAL: ', nftBalance.stateStaked.toString())
     console.log('nftSeries total INITIAL: ', nftBalance.total.toString())
-
-    // Test users
-    const ali = await root.createSubAccount('ali');
-    const owner = await root.createSubAccount('owner');
-    const bob = await root.createSubAccount('bob');
-
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: bob.accountId });
 
     // Save state for test runs
     t.context.worker = worker;
