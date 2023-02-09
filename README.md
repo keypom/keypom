@@ -1180,6 +1180,36 @@ There are 4 deploy scripts that have been made available for you to use and easi
 - FT Drops
 - Function Call Drops
 
+Each drop type deploy script has a version using `NEAR-API-JS`, and a version using the `Keypom-JS SDK`.
+
+The file tree for these scripts is shown below. 
+
+```bash
+/deploy
+├── ft
+│   └── configurations.js
+│   └── ft-create-sdk.js
+│   └── ft-create.js
+│
+├── function-call
+│   └── configurations.js
+│   └── fc-create-sdk.js
+│   └── fc-create.js
+│
+├── nft
+│   └── configurations.js
+│   └── nft-create-sdk-minted.js
+│   └── nft-create-sdk-owned.js
+│   └── nft-create.js
+│
+├── simple
+│   └── configurations.js
+│   └── simple-create-sdk.js
+│   └── simple-create.js
+│
+├── utils
+```
+
 In order to use these scripts, open the `deploy/` directory and modify the `configurations.js` file for the drop you want to create. In this file, you can specify important information such as the number of keys you wish to create, the amount of $NEAR you want to send, how many uses per key etc.
 
 You must specify the account that you will fund the drops with under the `FUNDING_ACCOUNT_ID` variable. This account needs to have keys stored in your `~/.near-credentials` folder. To do this, simply run `near login` on your terminal and follow the prompts using the NEAR CLI.
@@ -1189,19 +1219,35 @@ root directory and run the deploy script.
 
 For simple drops:
 ```
+// Using NEAR-API-JS
 yarn simple
+
+// Using SDK
+yarn simple-sdk
 ```
 For FT drops:
 ```
+// Using NEAR-API-JS
 yarn ft
+
+// Using SDK
+yarn ft-sdk
 ```
 For NFT drops:
 ```
+// Using NEAR-API-JS
 yarn nft
+
+// Using SDK
+yarn nft-sdk
 ```
 For Function Call drops:
 ```
+// Using NEAR-API-JS
 yarn fc
+
+// Using SDK
+yarn fc-sdk
 ```
 
 # Query Information From Keypom
