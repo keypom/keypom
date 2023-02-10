@@ -171,15 +171,13 @@ impl Keypom {
                 deposit_required_for_fc_deposits = num_uses_per_key as u128 * attached_deposit;
             // In the case where either there's 1 claim per key or the number of FCs is not 1,
             // We can simply loop through and manually get this data
-            } else {
-                let mut highest_gas_per_method_set = Gas(0);
-                
+            } else {                
                 for method_data in data.methods {
                     num_none_fcs += method_data.is_none() as u64;
                     
-                    let mut cur_gas_per_method_set = Gas(0);
                     // If the method is not None, we need to get the attached_deposit by looping through the method datas
                     if let Some(data) = method_data {
+                        let mut cur_gas_per_method_set = Gas(0);
                         // Keep track of the total attached deposit across all methods in the method data
                         let mut attached_deposit = 0;
                         // Iterate through each method in the method data and accumulate the attached deposit
@@ -201,7 +199,7 @@ impl Keypom {
                             );
                         }
 
-                        if cur_gas_per_method_set > highest_gas_per_method_set {
+                        if cur_gas_per_method_set.0 > highest_gas_per_method_set.0 {
                             highest_gas_per_method_set = cur_gas_per_method_set;
                         }
 
@@ -220,8 +218,16 @@ impl Keypom {
                         MAX_GAS_CAN_ATTACH - GAS_OFFSET_IF_FC_EXECUTE
                     )
                 );
+
                 access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 gas_to_attach = highest_gas_per_method_set + GAS_OFFSET_IF_FC_EXECUTE;
+
+                near_sdk::log!(
+                    "Gas found in method data. Highest per set: {:?}, offset: {:?}, total: {:?}",
+                    highest_gas_per_method_set.0,
+                    GAS_OFFSET_IF_FC_EXECUTE.0,
+                    gas_to_attach.0
+                );
             }
         }
 

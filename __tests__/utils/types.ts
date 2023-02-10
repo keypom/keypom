@@ -39,7 +39,6 @@ export type FTData = {
 
 export type FCData = {
     methods: Array<(MethodData | null)[]>
-    config?: FCConfig;
 }
 
 export type FCConfig = {
@@ -51,6 +50,7 @@ export type MethodData = {
     method_name: string;
     args: string;
     attached_deposit: string;
+    attached_gas?: string;
     account_id_field?: string;
     drop_id_field?: string;
     key_id_field?: string;

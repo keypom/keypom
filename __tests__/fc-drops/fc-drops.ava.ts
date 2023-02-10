@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { ExecutionStatusBasic, NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, generateKeyPairs, getDropInformation, getKeyInformation, LARGE_GAS, WALLET_GAS } from "../utils/general";
 import { DropConfig, FCData } from "../utils/types";
 
 const test = anyTest as TestFn<{
@@ -61,6 +61,76 @@ test.afterEach(async t => {
     await t.context.worker.tearDown().catch(error => {
         console.log('Failed to tear down the worker:', error);
     });
+});
+
+const TERA_GAS = 1000000000000;
+
+test('Attached Gas', async t => {
+    const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
+
+    const fcData1: FCData = {
+        methods: [
+            [
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                    attached_gas: (20 * TERA_GAS).toString(),
+                },
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                },
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                },
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                }
+            ],
+            [
+            {
+                receiver_id: nftContract.accountId,
+                method_name: 'nft_mint',
+                args: "",
+                attached_deposit: NEAR.parse("1").toString(),
+            },
+            {
+                receiver_id: nftContract.accountId,
+                method_name: 'nft_mint',
+                args: "",
+                attached_deposit: NEAR.parse("1").toString(),
+            },
+            {
+                receiver_id: nftContract.accountId,
+                method_name: 'nft_mint',
+                args: "",
+                attached_deposit: NEAR.parse("1").toString(),
+            }
+            ]
+        ]
+    }
+
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await ali.call(keypom, 'create_drop', {
+        public_keys: publicKeys, 
+        deposit_per_use: "0", 
+        fc: fcData1,
+        config: {
+            uses_per_key: 2,
+        }
+    }, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
+    const drop = await getDropInformation(keypom, "0");
+    t.is(drop.required_gas, (40 * TERA_GAS).toString());
 });
 
 test('All Funder Tests', async t => {
