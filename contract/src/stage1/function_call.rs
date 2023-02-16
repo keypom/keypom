@@ -166,7 +166,6 @@ impl Keypom {
     pub(crate) fn internal_fc_execute(
         &mut self,
         methods: &Vec<MethodData>,
-        fc_config: Option<FCConfig>,
         key_id: u64,
         account_id: AccountId,
         funder_id: AccountId,
@@ -176,10 +175,10 @@ impl Keypom {
         /*
             Function Calls
         */
-        let gas = fc_config.and_then(|c| c.attached_gas).unwrap_or(Gas(0));
         let mut promises: Vec<u64> = vec![];
 
         for (i, method) in methods.iter().enumerate() {
+            let gas = method.attached_gas.unwrap_or(Gas(0));
             let mut output_args = method.args.clone();
             if output_args.len() == 0 {
                 output_args = "{}".to_string();

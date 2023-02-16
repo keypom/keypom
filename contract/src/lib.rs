@@ -892,6 +892,10 @@ const MIN_GAS_FOR_RESOLVE_BATCH: Gas =
 /// Value equates to 100 TGas
 const ATTACHED_GAS_FROM_WALLET: Gas = Gas(100_000_000_000_000);
 
+/// Specifies the maximum Gas that can be attached to a transaction
+/// Value equates to 300 TGas
+const MAX_GAS_CAN_ATTACH: Gas = Gas(300_000_000_000_000);
+
 /// Specifies the amount of GAS to attach on top of the FC Gas if executing a regular function call in claim
 /// This is to to ensure there is enough Gas to execute everything except the CCC
 /// This value is equal to 20 TGas

@@ -110,24 +110,125 @@ impl Keypom {
 
         // Default the gas to attach to be the gas from the wallet. This will be used to calculate allowances.
         let mut gas_to_attach = ATTACHED_GAS_FROM_WALLET;
-        // Depending on the FC Data, set the Gas to attach and the access key method_name names
-        if let Some(gas) = fc
-            .clone()
-            .and_then(|d| d.config.and_then(|c| c.attached_gas))
-        {
-            require!(
-                deposit_per_use.0 == 0,
-                "cannot specify gas to attach and have a balance in the linkdrop"
-            );
-            require!(
-                gas <= ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE,
-                &format!(
-                    "cannot attach more than {:?} GAS.",
-                    ATTACHED_GAS_FROM_WALLET - GAS_OFFSET_IF_FC_EXECUTE
-                )
-            );
-            gas_to_attach = gas + GAS_OFFSET_IF_FC_EXECUTE;
-            access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+        let lazy_register = simple.clone().and_then(|s| s.lazy_register).unwrap_or(false);
+        // Keep track of the total attached_deposit required for the FC data (depending on None and Some cases)
+        let mut deposit_required_for_fc_deposits = 0;
+        // Keep track of the number of none FCs so we don't charge the user
+        let mut num_none_fcs = 0;
+        if let Some(data) = fc.clone() {
+            require!(lazy_register == false, "lazy_register is reserved for simple drops only");
+
+            // Ensure proper method data is passed in
+            let num_method_data = data.clone().methods.len() as u64;
+            // If there's 1 claim, there should be 1 method data defined
+            if num_uses_per_key == 1 {
+                require!(
+                    num_method_data == 1,
+                    "Cannot have more Method Data than the number of uses per key"
+                );
+            // If there's more than 1 method data defined and the number of uses per key more than 1, the number of methods should equal the number of uses per key
+            } else if num_method_data > 1 {
+                require!(
+                    num_method_data == num_uses_per_key,
+                    "Number of FCs must match number of uses per key if more than 1 is specified"
+                );
+            }
+
+            let mut highest_gas_per_method_set = Gas(0);
+
+            // If there's one method data specified and more than 1 claim per key, that data is to be used
+            // For all the uses. In this case, we need to tally all the deposits for each method in all method data.
+            if num_uses_per_key > 1 && num_method_data == 1 {
+                let method_data = data
+                    .methods
+                    .iter()
+                    .next()
+                    .unwrap()
+                    .clone()
+                    .expect("cannot have a single none function call");
+
+                // Keep track of the total attached deposit across all methods in the method data
+                let mut attached_deposit = 0;
+                // Iterate through each method in the method data and accumulate the attached deposit
+                for method in method_data {
+                    // Add the attached_deposit to the total deposit required
+                    attached_deposit += method.attached_deposit.0;
+
+                    // Add the method's attached_gas to the total gas. Since there's only 1 set of method data - this is automatically the highest gas per method set.
+                    highest_gas_per_method_set += method.attached_gas.unwrap_or(Gas(0));
+
+                    // Ensure no malicious activity is going on
+                    require!(
+                        method.receiver_id != env::current_account_id(),
+                        "Cannot invoke functions on keypom"
+                    );
+                    require!(
+                        self.prohibited_fc_methods.contains(&method.method_name) == false,
+                        "Cannot invoke a prohibited function call"
+                    );
+                }
+
+                deposit_required_for_fc_deposits = num_uses_per_key as u128 * attached_deposit;
+            // In the case where either there's 1 claim per key or the number of FCs is not 1,
+            // We can simply loop through and manually get this data
+            } else {                
+                for method_data in data.methods {
+                    num_none_fcs += method_data.is_none() as u64;
+                    
+                    // If the method is not None, we need to get the attached_deposit by looping through the method datas
+                    if let Some(data) = method_data {
+                        let mut cur_gas_per_method_set = Gas(0);
+                        // Keep track of the total attached deposit across all methods in the method data
+                        let mut attached_deposit = 0;
+                        // Iterate through each method in the method data and accumulate the attached deposit
+                        for method in data {
+                            // Add the attached_deposit to the total deposit required
+                            attached_deposit += method.attached_deposit.0;
+
+                            // Tally up all the attached gas parameters and keep track of the highest attached gas set at the end.
+                            cur_gas_per_method_set += method.attached_gas.unwrap_or(Gas(0));
+
+                            // Ensure no malicious activity is going on
+                            require!(
+                                method.receiver_id != env::current_account_id(),
+                                "Cannot invoke functions on keypom"
+                            );
+                            require!(
+                                self.prohibited_fc_methods.contains(&method.method_name) == false,
+                                "Cannot invoke a prohibited function call"
+                            );
+                        }
+
+                        if cur_gas_per_method_set.0 > highest_gas_per_method_set.0 {
+                            highest_gas_per_method_set = cur_gas_per_method_set;
+                        }
+
+                        deposit_required_for_fc_deposits += attached_deposit;
+                    }
+                }
+            }
+
+            if highest_gas_per_method_set.0 > 0 {
+                require!(deposit_per_use.0 == 0, "Cannot have a deposit per use when any FC methods have attached gas");
+                
+                require!(
+                    highest_gas_per_method_set <= MAX_GAS_CAN_ATTACH - GAS_OFFSET_IF_FC_EXECUTE,
+                    &format!(
+                        "cannot attach more than {:?} GAS.",
+                        MAX_GAS_CAN_ATTACH - GAS_OFFSET_IF_FC_EXECUTE
+                    )
+                );
+
+                access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+                gas_to_attach = highest_gas_per_method_set + GAS_OFFSET_IF_FC_EXECUTE;
+
+                near_sdk::log!(
+                    "Gas found in method data. Highest per set: {:?}, offset: {:?}, total: {:?}",
+                    highest_gas_per_method_set.0,
+                    GAS_OFFSET_IF_FC_EXECUTE.0,
+                    gas_to_attach.0
+                );
+            }
         }
 
         // Calculate the base allowance to attach
@@ -211,9 +312,6 @@ impl Keypom {
             next_key_id += 1;
         }
 
-        // Add this drop ID to the funder's set of drops
-        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &actual_drop_id);
-
         // Create drop object
         let mut drop = Drop {
             owner_id: env::predecessor_account_id(),
@@ -238,16 +336,10 @@ impl Keypom {
                 },
                 metadata.as_ref(),
             ),
-            next_key_id,
+            next_key_id: 0,
         };
 
-        let lazy_register = simple.clone().and_then(|s| s.lazy_register).unwrap_or(false);
-        // Keep track of the total attached_deposit required for the FC data (depending on None and Some cases)
-        let mut deposit_required_for_fc_deposits = 0;
-        // Keep track of the number of none FCs so we don't charge the user
-        let mut num_none_fcs = 0;
         let mut was_ft_registered = false;
-
         // If NFT data was provided, we need to build the set of token IDs and cast the config to actual NFT data
         if let Some(data) = nft {
             require!(lazy_register == false, "lazy_register is reserved for simple drops only");
@@ -273,9 +365,6 @@ impl Keypom {
             // The number of uses is 0 until NFTs are sent to the contract
             drop.registered_uses = 0;
             drop.drop_type = DropType::nft(actual_nft);
-
-            // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&actual_drop_id, &drop);
         } else if let Some(data) = ft.clone() {
             require!(lazy_register == false, "lazy_register is reserved for simple drops only");
 
@@ -303,92 +392,9 @@ impl Keypom {
             // The number of uses is 0 until FTs are sent to the contract
             drop.registered_uses = 0;
             drop.drop_type = DropType::ft(actual_ft);
-
-            // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&actual_drop_id, &drop);
         } else if let Some(data) = fc.clone() {
-            require!(lazy_register == false, "lazy_register is reserved for simple drops only");
-
             drop.drop_type = DropType::fc(data.clone());
-
-            // Ensure proper method data is passed in
-            let num_method_data = data.clone().methods.len() as u64;
-            // If there's 1 claim, there should be 1 method data defined
-            if num_uses_per_key == 1 {
-                require!(
-                    num_method_data == 1,
-                    "Cannot have more Method Data than the number of uses per key"
-                );
-            // If there's more than 1 method data defined and the number of uses per key more than 1, the number of methods should equal the number of uses per key
-            } else if num_method_data > 1 {
-                require!(
-                    num_method_data == num_uses_per_key,
-                    "Number of FCs must match number of uses per key if more than 1 is specified"
-                );
-            }
-
-            // If there's one method data specified and more than 1 claim per key, that data is to be used
-            // For all the uses. In this case, we need to tally all the deposits for each method in all method data.
-            if num_uses_per_key > 1 && num_method_data == 1 {
-                let method_data = data
-                    .methods
-                    .iter()
-                    .next()
-                    .unwrap()
-                    .clone()
-                    .expect("cannot have a single none function call");
-
-                // Keep track of the total attached deposit across all methods in the method data
-                let mut attached_deposit = 0;
-                // Iterate through each method in the method data and accumulate the attached deposit
-                for method in method_data {
-                    // Add the attached_deposit to the total deposit required
-                    attached_deposit += method.attached_deposit.0;
-
-                    // Ensure no malicious activity is going on
-                    require!(
-                        method.receiver_id != env::current_account_id(),
-                        "Cannot invoke functions on keypom"
-                    );
-                    require!(
-                        self.prohibited_fc_methods.contains(&method.method_name) == false,
-                        "Cannot invoke a prohibited function call"
-                    );
-                }
-
-                deposit_required_for_fc_deposits = num_uses_per_key as u128 * attached_deposit;
-            // In the case where either there's 1 claim per key or the number of FCs is not 1,
-            // We can simply loop through and manually get this data
-            } else {
-                for method_data in data.methods {
-                    num_none_fcs += method_data.is_none() as u64;
-                    // If the method is not None, we need to get the attached_deposit by looping through the method datas
-                    if let Some(data) = method_data {
-                        // Keep track of the total attached deposit across all methods in the method data
-                        let mut attached_deposit = 0;
-                        // Iterate through each method in the method data and accumulate the attached deposit
-                        for method in data {
-                            // Add the attached_deposit to the total deposit required
-                            attached_deposit += method.attached_deposit.0;
-
-                            // Ensure no malicious activity is going on
-                            require!(
-                                method.receiver_id != env::current_account_id(),
-                                "Cannot invoke functions on keypom"
-                            );
-                            require!(
-                                self.prohibited_fc_methods.contains(&method.method_name) == false,
-                                "Cannot invoke a prohibited function call"
-                            );
-                        }
-
-                        deposit_required_for_fc_deposits += attached_deposit;
-                    }
-                }
-            }
-
-            // Add the drop with the empty token IDs
-            self.drop_for_id.insert(&actual_drop_id, &drop);
+            drop.required_gas = gas_to_attach;
         } else {
             require!(
                 deposit_per_use.0 > 0,
@@ -403,10 +409,13 @@ impl Keypom {
             if let Some(simple_data) = simple {
                 drop.drop_type = DropType::simple(simple_data);
             }
-
-            // In simple case, we just insert the drop with whatever it was initialized with.
-            self.drop_for_id.insert(&actual_drop_id, &drop);
         }
+
+        // Insert any modifications made to the drop at the very end
+        self.drop_for_id.insert(&actual_drop_id, &drop);
+
+        // Add this drop ID to the funder's set of drops
+        self.internal_add_drop_to_funder(&env::predecessor_account_id(), &actual_drop_id);
 
         // Calculate the storage being used for the entire drop
         let final_storage = env::storage_usage();
@@ -734,11 +743,11 @@ impl Keypom {
 
         // Increment the uses registered if drop is FC or Simple
         match &drop.drop_type {
-            DropType::fc(data) => {
+            DropType::fc(_) => {
                 drop.registered_uses += num_uses_per_key * len as u64;
 
-                // If GAS is specified, set the GAS to attach for allowance calculations
-                if let Some(_) = data.config.clone().and_then(|c| c.attached_gas) {
+                // If the deposit_per_use is 0, the claim permissions should just be `claim`. 
+                if drop.deposit_per_use == 0 {
                     access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
                 }
             }

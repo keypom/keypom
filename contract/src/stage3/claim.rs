@@ -478,7 +478,6 @@ impl Keypom {
 
         self.internal_fc_execute(
             &cur_method_data,
-            fc_data.config,
             cur_key_id,
             account_id,
             funder_id,
