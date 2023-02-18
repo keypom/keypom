@@ -24,6 +24,17 @@ export function displayFailureLog(
   })
 }
 
+export function displayAllLogs(
+  transaction: TransactionResult
+) {
+  // Loop through each receipts_outcome in the transaction's result field
+  transaction.result.receipts_outcome.forEach((receipt) => {
+    if (receipt.outcome.logs.length > 0) {
+      console.log('Log: ', receipt.outcome.logs)
+    }
+  })
+}
+
 export async function getDropSupplyForOwner(
   keypom: NearAccount,
   ownerId: string

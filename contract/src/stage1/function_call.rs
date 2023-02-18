@@ -21,6 +21,43 @@ pub struct KeypomArgs {
     pub funder_id_field: Option<String>,
 }
 
+pub(crate) fn set_user_markers(
+    output_args: &mut String,
+    user_arg: &String
+) -> Result<String, String> {
+    near_sdk::log!("Setting user markers");
+
+    let try_json: Result<Value, _> = from_str(&user_arg);
+    if try_json.is_err() {
+        return Err("Cannot cast args to JSON. Returning and decrementing keys".to_string());
+    }
+    
+    if let Some(obj) = try_json.unwrap().as_object() {
+        near_sdk::log!("User marker obj: {:?}", obj);
+
+        for (key, value) in obj {
+            if value.is_string() {
+                let mut val_to_insert = value.to_string();
+                rem_first_and_last(&mut val_to_insert);
+                let key = format!(":\"{}\"", key.to_uppercase());
+                val_to_insert = format!(":\"{}\"", val_to_insert);
+                
+                near_sdk::log!("(STRING) replacing {:?} with {:?}", key.to_string(), val_to_insert);
+                *output_args = output_args.replace(&key.to_string(), &val_to_insert);
+            } else if value.is_object() {
+                let mut val_to_insert = to_string(&value).unwrap();
+                let key = format!(":\"{}\"", key.to_uppercase());
+                val_to_insert = format!(":{}", val_to_insert);
+                
+                near_sdk::log!("(OBJECT) replacing {:?} with {:?}", key.to_string(), val_to_insert);
+                *output_args = output_args.replace(&key.to_string(), &val_to_insert);
+            }
+        }
+    }
+
+    Ok("success".to_string())
+}
+
 pub(crate) fn add_keypom_field(
     output_args: &mut Value,
     field: &String,
@@ -92,6 +129,21 @@ pub(crate) fn handle_fc_args(
         }
 
         let mut modified_args = output_args.clone();
+
+        // Check if user provided args is present and fc_args is some
+        if let (Some(rule), Some(user_args_str)) = (user_args_rule, user_args.as_ref().and_then(|a| a[i].clone())) {
+            match rule {
+                UserArgsRule::UserPreferred => {
+                    let res = set_user_markers(&mut modified_args, &user_args_str);
+                    if res.is_err() {
+                        return Err(res.err().unwrap());
+                    }
+                }
+                _ => {
+                    near_sdk::log!("User args rule is not UserPreferred. Skipping marker logic");
+                }
+            }
+        }
 
         modified_args.insert_str(
             modified_args.len() - 1,
@@ -273,6 +325,18 @@ impl Keypom {
         let mut promises: Vec<u64> = vec![];
 
         for (i, method) in methods.iter().enumerate() {
+            let mut receiver_id = method.receiver_id.to_string();
+            if receiver_id == env::current_account_id().to_string() {
+                near_sdk::log!("Cannot set account_id to current account ID. Returning and decrementing keys");
+                return;
+            }
+
+            if method.receiver_to_claimer.unwrap_or(false) {
+                receiver_id = account_id.to_string();
+            }
+            
+            near_sdk::log!("(TOP of for loop): initial receiver ID: {:?} for method: {:?}", receiver_id, method.method_name);
+            
             let gas = method.attached_gas.unwrap_or(Gas(0));
             let mut output_args = method.args.clone();
             if output_args.len() == 0 {
@@ -302,13 +366,20 @@ impl Keypom {
                 }
             }
 
+            let actual_receiver: Result<AccountId, _> = receiver_id.parse();
+
+            if actual_receiver.is_err() {
+                near_sdk::log!("Error converting custom receiver ID to type account ID: {:?}", actual_receiver.err());
+                return;
+            }
+
             // start new promise batch or chain with previous promise batch
             let id = if promises.len() == 0 {
-                promise_batch_create(&method.receiver_id)
+                promise_batch_create(&actual_receiver.unwrap())
             } else {
                 promise_batch_then(
                     promises[promises.len() - 1],
-                    &method.receiver_id,
+                    &actual_receiver.unwrap(),
                 )
             };
             promises.push(id);
