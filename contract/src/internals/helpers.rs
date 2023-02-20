@@ -15,6 +15,11 @@ pub(crate) fn hash_account_id(account_id: &String) -> CryptoHash {
     env::sha256_array(account_id.as_bytes())
 }
 
+pub(crate) fn rem_first_and_last(value: &mut String) {
+    value.pop();
+    value.remove(0);
+}
+
 /// Helper function to convert yoctoNEAR to $NEAR with 7 decimals of precision.
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^17 yoctoNEAR (1 NEAR would be 10_000_000). This is to give a precision of 7 decimal places.

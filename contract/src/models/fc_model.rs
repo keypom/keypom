@@ -17,7 +17,7 @@ pub enum UserArgsRule {
 #[serde(crate = "near_sdk::serde")]
 pub struct MethodData {
     /// Contract that will be called
-    pub receiver_id: AccountId,
+    pub receiver_id: String,
     /// Method to call on receiver_id contract
     pub method_name: String,
     /// Arguments to pass in (stringified JSON)
@@ -39,6 +39,9 @@ pub struct MethodData {
     // Specifies what field the funder id should go in when calling the function. To insert into nested objects, use periods to separate. For example, to insert into args.metadata.field, you would specify "metadata.field"
     // If Some(string), attach the funder ID to the args. Else, don't attach.
     pub funder_id_field: Option<String>,
+    // If set to true, the claiming account ID will be the receiver ID of the method call.
+    // Ths receiver must be a valid account and non-malicious (cannot be set to the keypom contract) 
+    pub receiver_to_claimer: Option<bool>,
     // What permissions does the user have when providing custom arguments to the function call?
     // By default, the user cannot provide any custom arguments
     pub user_args_rule: Option<UserArgsRule>,

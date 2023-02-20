@@ -159,7 +159,7 @@ impl Keypom {
 
                     // Ensure no malicious activity is going on
                     require!(
-                        method.receiver_id != env::current_account_id(),
+                        method.receiver_id != env::current_account_id().to_string(),
                         "Cannot invoke functions on keypom"
                     );
                     require!(
@@ -190,7 +190,7 @@ impl Keypom {
 
                             // Ensure no malicious activity is going on
                             require!(
-                                method.receiver_id != env::current_account_id(),
+                                method.receiver_id != env::current_account_id().to_string(),
                                 "Cannot invoke functions on keypom"
                             );
                             require!(

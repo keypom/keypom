@@ -1,7 +1,8 @@
 import anyTest, { TestFn } from "ava";
 import { ExecutionStatusBasic, NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, getDropInformation, getKeyInformation, LARGE_GAS, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, displayAllLogs, displayFailureLog, generateKeyPairs, getDropInformation, getKeyInformation, LARGE_GAS, WALLET_GAS } from "../utils/general";
 import { DropConfig, FCData } from "../utils/types";
+const { readFileSync } = require('fs')
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -23,12 +24,14 @@ test.beforeEach(async (t) => {
     // Deploy all 3 contracts
     const keypom = await root.devDeploy(`./out/keypom.wasm`);
     const nftContract = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
+    const nftContractNested = await root.devDeploy(`./__tests__/ext-wasm/nested-fields-nft.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
     
     // Init the 3 contracts
     await root.call(root, 'new', {});
     await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
     await nftContract.call(nftContract, 'new_default_meta', { owner_id: nftContract });
+    await nftContractNested.call(nftContractNested, 'new_default_meta', { owner_id: nftContractNested });
 
     // Test users
     const ali = await root.createSubAccount('ali');
@@ -53,7 +56,7 @@ test.beforeEach(async (t) => {
 
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, keypom, nftContract, owner, ali, bob };
+    t.context.accounts = { root, keypom, nftContract, nftContractNested, owner, ali, bob };
 });
 
 // If the environment is reused, use test.after to replace test.afterEach
@@ -295,4 +298,65 @@ test('Funder Preferred Tests', async t => {
     const aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
     console.log('aliTokens: ', aliTokens);
     t.is(aliTokens.length, 0);
+});
+
+test('User Marker Tests', async t => {
+    const { keypom, nftContractNested: nftContract, owner, ali, bob } = t.context.accounts;
+
+    // More tests:
+    // https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=ad88d2128047a170d744a09d4d61c2db
+    
+    const fcData: FCData = {
+        methods: [
+            [
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: JSON.stringify({
+                        receiver_id: "INSERT_RECEIVER_ID",
+                        token_id: 'lower_case',
+                        metadata: {
+                            title: "INSERT_TITLE",
+                            description: "INSERT_DESCRIPTION",
+                            nested: "INSERT_NESTED"
+                        },
+                        long_args: [...readFileSync(`./__tests__/ext-wasm/nested-fields-nft.wasm`)].slice(0, 5000)
+                    }),
+                    attached_deposit: NEAR.parse("1").toString(),
+                    user_args_rule: "UserPreferred"
+                }
+            ]
+        ]
+    }
+
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
+    await keypom.setKey(keys[0]);
+
+    let fcArgs = {
+        "lower_case": "inserted token id",
+        "INSERT_RECEIVER_ID": ali.accountId,
+        "INSERT_TITLE": "inserted title",
+        "INSERT_DESCRIPTION": "inserted description",
+        "INSERT_NESTED": {
+            "account_id": bob.accountId,
+            "key_id": "0",
+            "funder_id": ali.accountId,
+            "drop_id": "0"
+        }
+    }
+    // This should pass and none of the user provided args should be used.
+    const res = await keypom.callRaw(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify(fcArgs)]}, {gas: WALLET_GAS});
+    displayFailureLog(res);
+    displayAllLogs(res);
+    let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('aliTokens: ', aliTokens)
+    t.is(aliTokens.length, 1);
+    t.is(aliTokens[0].token_id, "lower_case");
+    t.is(aliTokens[0].metadata.title, "inserted title");
+    t.is(aliTokens[0].metadata.description, "inserted description");
+    t.is(aliTokens[0].metadata.nested.account_id, bob.accountId);
+    t.is(aliTokens[0].metadata.nested.funder_id, ali.accountId);
+    t.is(aliTokens[0].metadata.nested.key_id, "0");
+    t.is(aliTokens[0].metadata.nested.drop_id, "0");
 });
