@@ -68,241 +68,244 @@ test.afterEach(async t => {
 
 const TERA_GAS = 1000000000000;
 
-// test('Attached Gas', async t => {
-//     const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
+test('Attached Gas', async t => {
+    const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
 
-//     const fcData1: FCData = {
-//         methods: [
-//             [
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: "",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                     attached_gas: (20 * TERA_GAS).toString(),
-//                 },
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: "",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 },
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: "",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 },
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: "",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 }
-//             ],
-//             [
-//             {
-//                 receiver_id: nftContract.accountId,
-//                 method_name: 'nft_mint',
-//                 args: "",
-//                 attached_deposit: NEAR.parse("1").toString(),
-//             },
-//             {
-//                 receiver_id: nftContract.accountId,
-//                 method_name: 'nft_mint',
-//                 args: "",
-//                 attached_deposit: NEAR.parse("1").toString(),
-//             },
-//             {
-//                 receiver_id: nftContract.accountId,
-//                 method_name: 'nft_mint',
-//                 args: "",
-//                 attached_deposit: NEAR.parse("1").toString(),
-//             }
-//             ]
-//         ]
-//     }
+    const fcData1: FCData = {
+        methods: [
+            [
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                    attached_gas: (20 * TERA_GAS).toString(),
+                },
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                },
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                },
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: "",
+                    attached_deposit: NEAR.parse("1").toString(),
+                }
+            ],
+            [
+            {
+                receiver_id: nftContract.accountId,
+                method_name: 'nft_mint',
+                args: "",
+                attached_deposit: NEAR.parse("1").toString(),
+            },
+            {
+                receiver_id: nftContract.accountId,
+                method_name: 'nft_mint',
+                args: "",
+                attached_deposit: NEAR.parse("1").toString(),
+            },
+            {
+                receiver_id: nftContract.accountId,
+                method_name: 'nft_mint',
+                args: "",
+                attached_deposit: NEAR.parse("1").toString(),
+            }
+            ]
+        ]
+    }
 
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await ali.call(keypom, 'create_drop', {
-//         public_keys: publicKeys, 
-//         deposit_per_use: "0", 
-//         fc: fcData1,
-//         config: {
-//             uses_per_key: 2,
-//         }
-//     }, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
-//     const drop = await getDropInformation(keypom, "0");
-//     t.is(drop.required_gas, (40 * TERA_GAS).toString());
-// });
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await ali.call(keypom, 'create_drop', {
+        public_keys: publicKeys, 
+        deposit_per_use: "0", 
+        fc: fcData1,
+        config: {
+            uses_per_key: 2,
+        }
+    }, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
+    const drop = await getDropInformation(keypom, "0");
+    t.is(drop.required_gas, (40 * TERA_GAS).toString());
+});
 
-// test('All Funder Tests', async t => {
-//     const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
+test('All Funder Tests', async t => {
+    const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
 
-//     const fcData: FCData = {
-//         methods: [
-//             [
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: JSON.stringify({
-//                         token_id: '1',
-//                         metadata: {
-//                             title: "foo"
-//                         }
-//                     }),
-//                     account_id_field: "receiver_id",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 }
-//             ]
-//         ]
-//     }
+    const fcData: FCData = {
+        methods: [
+            [
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: JSON.stringify({
+                        token_id: '1',
+                        metadata: {
+                            title: "foo"
+                        }
+                    }),
+                    account_id_field: "receiver_id",
+                    attached_deposit: NEAR.parse("1").toString(),
+                }
+            ]
+        ]
+    }
 
-//     const config: DropConfig = { 
-//         uses_per_key: 10
-//     }
+    const config: DropConfig = { 
+        uses_per_key: 10
+    }
 
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
-//     await keypom.setKey(keys[0]);
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
+    await keypom.setKey(keys[0]);
 
-//     // This should pass and none of the user provided args should be used.
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({keypom_args: {account_id_field: "foo"}})]}, {gas: WALLET_GAS});
-//     let bobSupply = await nftContract.view('nft_supply_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobSupply)
-//     t.is(bobSupply, '1');
+    // This should pass and none of the user provided args should be used.
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({keypom_args: {account_id_field: "foo"}})]}, {gas: WALLET_GAS});
+    let bobSupply = await nftContract.view('nft_supply_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobSupply)
+    t.is(bobSupply, '1');
     
-//     // This should fail since number of fc args is not equal to number of methods
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({keypom_args: {account_id_field: "foo"}}), JSON.stringify({keypom_args: {account_id_field: "foo"}})]}, {gas: WALLET_GAS});
-//     bobSupply = await nftContract.view('nft_supply_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobSupply)
-//     t.is(bobSupply, '1');
-// });
+    // This should fail since number of fc args is not equal to number of methods
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({keypom_args: {account_id_field: "foo"}}), JSON.stringify({keypom_args: {account_id_field: "foo"}})]}, {gas: WALLET_GAS});
+    bobSupply = await nftContract.view('nft_supply_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobSupply)
+    t.is(bobSupply, '1');
+});
 
-// test('User Preferred Tests', async t => {
-//     const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
+test('User Preferred Tests', async t => {
+    const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
 
-//     const fcData: FCData = {
-//         methods: [
-//             [
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: JSON.stringify({
-//                         token_id: '1',
-//                         metadata: {}
-//                     }),
-//                     user_args_rule: "UserPreferred",
-//                     account_id_field: "receiver_id",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 }
-//             ]
-//         ]
-//     }
+    const fcData: FCData = {
+        methods: [
+            [
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: JSON.stringify({
+                        token_id: '1',
+                        metadata: {}
+                    }),
+                    user_args_rule: "UserPreferred",
+                    account_id_field: "receiver_id",
+                    attached_deposit: NEAR.parse("1").toString(),
+                }
+            ]
+        ]
+    }
 
-//     const config: DropConfig = { 
-//         uses_per_key: 10
-//     }
+    const config: DropConfig = { 
+        uses_per_key: 10
+    }
 
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
-//     await keypom.setKey(keys[0]);
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
+    await keypom.setKey(keys[0]);
 
-//     // Should go through with token ID equal to 1
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
-//     let bobTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens)
-//     t.is(bobTokens[0].token_id, '1');
+    // Should go through with token ID equal to 1
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
+    let bobTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens)
+    t.is(bobTokens[0].token_id, '1');
 
-//     // Token ID should be replaced with 2
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "2"})]}, {gas: WALLET_GAS});
-//     bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens)
-//     t.is(bobTokens[1].token_id, '2');
+    // Token ID should be replaced with 2
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "2"})]}, {gas: WALLET_GAS});
+    bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens)
+    t.is(bobTokens[1].token_id, '2');
 
-//     // Token ID should be replaced with 3 and metadata should now be included
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "3", metadata: {title: "i injected this"}})]}, {gas: WALLET_GAS});
-//     bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens);
-//     t.is(bobTokens[2].token_id, '3');
-//     t.is(bobTokens[2].metadata.title, "i injected this");
+    // Token ID should be replaced with 3 and metadata should now be included
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "3", metadata: {title: "i injected this"}})]}, {gas: WALLET_GAS});
+    bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens);
+    t.is(bobTokens[2].token_id, '3');
+    t.is(bobTokens[2].metadata.title, "i injected this");
 
-//     // Receiver ID should be overwritten to bob even though bob passed in ali
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "4", receiver_id: ali.accountId})]}, {gas: WALLET_GAS});
-//     bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens);
-//     t.is(bobTokens.length, 4);
+    // Receiver ID should be overwritten to bob even though bob passed in ali
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "4", receiver_id: ali.accountId})]}, {gas: WALLET_GAS});
+    bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens);
+    t.is(bobTokens.length, 4);
 
-//     const aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('aliTokens: ', aliTokens);
-//     t.is(aliTokens.length, 0);
-// });
+    const aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('aliTokens: ', aliTokens);
+    t.is(aliTokens.length, 0);
+});
 
-// test('Funder Preferred Tests', async t => {
-//     const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
+test('Funder Preferred Tests', async t => {
+    const { keypom, nftContract, owner, ali, bob } = t.context.accounts;
 
-//     const fcData: FCData = {
-//         methods: [
-//             [
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: JSON.stringify({
-//                         metadata: {
-//                             title: "this was here"
-//                         }
-//                     }),
-//                     user_args_rule: "FunderPreferred",
-//                     account_id_field: "receiver_id",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 }
-//             ]
-//         ]
-//     }
+    const fcData: FCData = {
+        methods: [
+            [
+                {
+                    receiver_id: nftContract.accountId,
+                    method_name: 'nft_mint',
+                    args: JSON.stringify({
+                        metadata: {
+                            title: "this was here"
+                        }
+                    }),
+                    user_args_rule: "FunderPreferred",
+                    account_id_field: "receiver_id",
+                    attached_deposit: NEAR.parse("1").toString(),
+                }
+            ]
+        ]
+    }
 
-//     const config: DropConfig = { 
-//         uses_per_key: 10
-//     }
+    const config: DropConfig = { 
+        uses_per_key: 10
+    }
 
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
-//     await keypom.setKey(keys[0]);
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
+    await keypom.setKey(keys[0]);
 
-//     // Should go through with token ID equal to 1
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "1"})]}, {gas: WALLET_GAS});
-//     let bobTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens)
-//     t.is(bobTokens[0].token_id, '1');
+    // Should go through with token ID equal to 1
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "1"})]}, {gas: WALLET_GAS});
+    let bobTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens)
+    t.is(bobTokens[0].token_id, '1');
 
-//     // metadata should not be replaced
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "2", metadata: {title: "i injected this"}})]}, {gas: WALLET_GAS});
-//     bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens)
-//     t.is(bobTokens[1].token_id, '2');
-//     t.is(bobTokens[1].metadata.title, "this was here");
+    // metadata should not be replaced
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "2", metadata: {title: "i injected this"}})]}, {gas: WALLET_GAS});
+    bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens)
+    t.is(bobTokens[1].token_id, '2');
+    t.is(bobTokens[1].metadata.title, "this was here");
 
-//     // metadata should have appended fields
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "3", metadata: {title: "i injected this", description: "i injected this"}})]}, {gas: WALLET_GAS});
-//     bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens)
-//     t.is(bobTokens[2].token_id, '3');
-//     t.is(bobTokens[2].metadata.title, "this was here");
-//     t.is(bobTokens[2].metadata.description, "i injected this");
+    // metadata should have appended fields
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "3", metadata: {title: "i injected this", description: "i injected this"}})]}, {gas: WALLET_GAS});
+    bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens)
+    t.is(bobTokens[2].token_id, '3');
+    t.is(bobTokens[2].metadata.title, "this was here");
+    t.is(bobTokens[2].metadata.description, "i injected this");
 
-//     // Receiver ID should be overwritten to bob even though bob passed in ali
-//     await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "4", receiver_id: ali.accountId})]}, {gas: WALLET_GAS});
-//     bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
-//     console.log('bobSupply: ', bobTokens);
-//     t.is(bobTokens.length, 4);
+    // Receiver ID should be overwritten to bob even though bob passed in ali
+    await keypom.call(keypom, 'claim', {account_id: bob.accountId, fc_args: [JSON.stringify({token_id: "4", receiver_id: ali.accountId})]}, {gas: WALLET_GAS});
+    bobTokens = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobSupply: ', bobTokens);
+    t.is(bobTokens.length, 4);
 
-//     const aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('aliTokens: ', aliTokens);
-//     t.is(aliTokens.length, 0);
-// });
+    const aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('aliTokens: ', aliTokens);
+    t.is(aliTokens.length, 0);
+});
 
 test('User Marker Tests', async t => {
     const { keypom, nftContractNested: nftContract, owner, ali, bob } = t.context.accounts;
 
+    // More tests:
+    // https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=ad88d2128047a170d744a09d4d61c2db
+    
     const fcData: FCData = {
         methods: [
             [
