@@ -336,7 +336,7 @@ impl Keypom {
                 },
                 metadata.as_ref(),
             ),
-            next_key_id: 0,
+            next_key_id,
         };
 
         let mut was_ft_registered = false;
