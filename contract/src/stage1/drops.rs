@@ -29,6 +29,9 @@ impl Keypom {
         // Give the drop some metadata (simple string)
         metadata: Option<DropMetadata>,
 
+        // Specify how much Gas should be attached to `claim` or `create_account_and_claim` calls
+        required_gas: Option<Gas>,
+
         // Mutually Exclusive. Use-case specific configurations
         simple: Option<SimpleData>,
         ft: Option<JsonFTData>,
@@ -232,6 +235,7 @@ impl Keypom {
         }
 
         // Calculate the base allowance to attach
+        gas_to_attach = required_gas.unwrap_or(gas_to_attach);
         let calculated_base_allowance = self.calculate_base_allowance(gas_to_attach);
         // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
         let actual_allowance = calculated_base_allowance * num_uses_per_key as u128;
@@ -394,7 +398,6 @@ impl Keypom {
             drop.drop_type = DropType::ft(actual_ft);
         } else if let Some(data) = fc.clone() {
             drop.drop_type = DropType::fc(data.clone());
-            drop.required_gas = gas_to_attach;
         } else {
             require!(
                 deposit_per_use.0 > 0,

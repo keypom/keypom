@@ -565,19 +565,23 @@ impl Keypom {
 
     /// Used to calculate the base allowance needed given attached GAS
     pub(crate) fn calculate_base_allowance(&self, attached_gas: Gas) -> u128 {
+        let prepaid: u64 = attached_gas.0 + GAS_PER_CCC.0;
+
         // Get the number of CCCs you can make with the attached GAS
-        let calls_with_gas = (attached_gas.0 / GAS_PER_CCC.0) as f32;
+        // 5 TGas GAS_PER_CCC
+        let calls_with_gas = (prepaid / GAS_PER_CCC.0) as f32;
         // Get the constant used to pessimistically calculate the required allowance
         let pow_outcome = 1.03_f32.powf(calls_with_gas);
 
         // Get the required GAS based on the calculated constant
-        let required_allowance = ((attached_gas.0 + RECEIPT_GAS_COST.0) as f32 * pow_outcome
+        // 2.5 TGas receipt cost
+        let required_allowance = ((prepaid + RECEIPT_GAS_COST.0) as f32 * pow_outcome
             + RECEIPT_GAS_COST.0 as f32) as u128
             * self.yocto_per_gas;
         near_sdk::log!(
             "{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}",
             calls_with_gas,
-            attached_gas.0,
+            prepaid,
             pow_outcome,
             required_allowance
         );

@@ -1055,7 +1055,6 @@ impl Keypom {
             key_fee: KEY_ADDITION_FEE,
             fees_collected: 0,
             yocto_per_gas: 100_000_000,
-
             /*
                 CONTRACT METADATA
             */
