@@ -939,6 +939,7 @@ mod stage1;
 mod stage2;
 mod stage3;
 mod views;
+mod nft;
 
 use internals::*;
 use models::*;
@@ -960,7 +961,8 @@ enum StorageKey {
     DropsForId,
     DropIdsForFunder,      
     DropIdsForFunderInner { account_id_hash: CryptoHash },
-    PksForDrop { account_id_hash: CryptoHash },
+    TokenPerOwnerInner { account_id_hash: CryptoHash },
+    KeyInfosForDrop { account_id_hash: CryptoHash },
     PasswordsPerUse { account_id_hash: CryptoHash },
     DropMetadata { account_id_hash: CryptoHash },
     TokenIdsForDrop { account_id_hash: CryptoHash },
@@ -983,13 +985,15 @@ pub struct Keypom {
     /// Which contract is the actual linkdrop deployed to (i.e `testnet` or `near`)
     pub root_account: AccountId,
 
-    /// Map of each key to its respective drop ID. This is much more efficient than repeating the
-    /// Drop data for every single key.
-    pub drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
     /// Map a drop ID to its respective Drop data
     pub drop_for_id: LookupMap<DropId, Drop>,
     /// Keep track of the drop ids that each funder has created. This is used for view methods.
-    pub drop_ids_for_owner: LookupMap<AccountId, UnorderedSet<DropId>>,
+    pub drop_ids_for_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
+
+    /// Get the token ID for any given public key
+    pub token_id_by_pk: UnorderedMap<PublicKey, TokenId>,
+    /// Keeps track of all the token IDs for a given account
+    pub tokens_per_owner: LookupMap<AccountId, UnorderedSet<TokenId>>,
 
     /// Fee taken by the contract every time a new drop is created
     pub drop_fee: u128,

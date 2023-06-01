@@ -54,6 +54,9 @@ pub struct JsonDrop {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonDropConfig {
+    /// What metadata should all the keys in the drop derive from?
+    pub nft_metadata: Option<TokenMetadata>,
+
     /// How many uses can each key have before it's deleted. If None, default to 1.
     pub uses_per_key: Option<u64>,
 

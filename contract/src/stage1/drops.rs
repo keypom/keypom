@@ -1,3 +1,5 @@
+use std::{collections::HashMap};
+
 use crate::*;
 
 use near_sdk::{
@@ -69,14 +71,6 @@ impl Keypom {
             "You cannot specify more than one drop type data"
         );
 
-        // Warn if the balance for each drop is less than the minimum
-        if deposit_per_use.0 < NEW_ACCOUNT_BASE {
-            near_sdk::log!(
-                "Warning: Balance is less than absolute minimum for creating an account: {}",
-                NEW_ACCOUNT_BASE
-            );
-        }
-
         // Funder is the predecessor
         let owner_id = env::predecessor_account_id();
 
@@ -91,8 +85,8 @@ impl Keypom {
         // Convert any attached deposit to a user balance and return the attached $NEAR and current balance
         let (mut current_user_balance, near_attached) = self.attached_deposit_to_user_balance(&owner_id);
 
-        let mut key_map: UnorderedMap<PublicKey, KeyInfo> =
-            UnorderedMap::new(StorageKey::PksForDrop {
+        let mut key_info_by_token_id: UnorderedMap<TokenId, KeyInfo> =
+            UnorderedMap::new(StorageKey::KeyInfosForDrop {
                 // We get a new unique prefix for the collection
                 account_id_hash: hash_account_id(&format!("{}{}", actual_drop_id, owner_id)),
             });
@@ -259,9 +253,12 @@ impl Keypom {
                 == len,
             "Passwords per key must be equal to the number of public keys"
         );
+
         // Loop through and add each drop ID to the public keys. Also populate the key set.
         let mut next_key_id: u64 = 0;
         for pk in &keys_to_iter {
+            let token_id = format!("{}:{}", actual_drop_id, next_key_id);
+
             let pw_per_key = passwords_per_key
                 .clone()
                 .and_then(|f| f[next_key_id as usize].clone())
@@ -298,20 +295,27 @@ impl Keypom {
                 "You cannot specify both local and global passwords for a key"
             );
 
-            key_map.insert(
-                pk,
+            let token_owner = Some(env::predecessor_account_id());
+            key_info_by_token_id.insert(
+                &token_id,
                 &KeyInfo {
                     remaining_uses: num_uses_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
-                    key_id: next_key_id,
+                    owner_id: token_owner,
+                    next_approval_id: 0,
+                    approved_account_ids: HashMap::new(),
                     pw_per_use,
                     pw_per_key,
                 },
             );
+            if let Some(owner) = token_owner {
+                self.internal_add_token_to_owner(&owner, &token_id);
+            }
+
             require!(
-                self.drop_id_for_pk.insert(pk, &actual_drop_id).is_none(),
-                "Keys cannot belong to another drop"
+                self.token_id_by_pk.insert(pk, &token_id).is_none(),
+                "Keys must be unique"
             );
             next_key_id += 1;
         }
@@ -320,7 +324,8 @@ impl Keypom {
         let mut drop = Drop {
             owner_id: env::predecessor_account_id(),
             deposit_per_use: deposit_per_use.0,
-            pks: key_map,
+            key_info_by_token_id,
+            nft_metadata: config.and_then(|c| c.nft_metadata),
             // Default to simple but will overwrite if not
             drop_type: DropType::simple(
                 SimpleData {
@@ -637,7 +642,7 @@ impl Keypom {
         let num_uses_per_key = config.as_ref().and_then(|c| c.uses_per_key).unwrap_or(1);
 
         // get the existing key set and add new PKs
-        let mut exiting_key_map = drop.pks;
+        let mut key_info_by_token_id = drop.key_info_by_token_id;
 
         // Calculate the base allowance to attach
         let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
@@ -667,6 +672,7 @@ impl Keypom {
         let mut next_key_id: u64 = drop.next_key_id;
         let mut idx = 0;
         for pk in &public_keys {
+            let token_id = format!("{}:{}", drop_id.0, next_key_id);
             let pw_per_key = passwords_per_key
                 .clone()
                 .and_then(|f| f[idx as usize].clone())
@@ -703,27 +709,35 @@ impl Keypom {
                 "You cannot specify both local and global passwords for a key"
             );
 
-            exiting_key_map.insert(
-                &pk,
+            let token_owner = Some(env::predecessor_account_id());
+            key_info_by_token_id.insert(
+                &token_id,
                 &KeyInfo {
                     remaining_uses: num_uses_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
-                    key_id: next_key_id,
+                    owner_id: token_owner,
+                    next_approval_id: 0,
+                    approved_account_ids: HashMap::new(),
                     pw_per_use,
                     pw_per_key,
                 },
             );
+            if let Some(owner) = token_owner {
+                self.internal_add_token_to_owner(&owner, &token_id);
+            }
+
             require!(
-                self.drop_id_for_pk.insert(&pk, &drop_id.0).is_none(),
-                "Keys cannot belong to another drop"
+                self.token_id_by_pk.insert(pk, &token_id).is_none(),
+                "Keys must be unique"
             );
+
             next_key_id += 1;
             idx += 1;
         }
 
         // Set the drop's PKs to the newly populated set
-        drop.pks = exiting_key_map;
+        drop.key_info_by_token_id = key_info_by_token_id;
         // Set the drop's current key nonce
         drop.next_key_id = next_key_id;
 

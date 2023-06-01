@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{*, stage1::KeypomArgs};
 
 /// Drop Metadata should be a string which can be JSON or anything the users want.
@@ -5,6 +7,8 @@ pub type DropMetadata = String;
 
 /// ID for a specific drop as a u128.
 pub type DropId = u128;
+/// ID for a specific NFT (will always be `${drop ID}:${key nonce}`)
+pub type TokenId = String;
 /// JSON equivalent of the Drop ID as a U128.
 pub type DropIdJson = U128;
 /// Default drop ID as JSON set equal to 0.
@@ -37,7 +41,10 @@ pub struct Drop {
     /// Owner of this specific drop
     pub owner_id: AccountId,
     /// Set of public keys associated with this drop mapped to their specific key information.
-    pub pks: UnorderedMap<PublicKey, KeyInfo>,
+    pub key_info_by_token_id: UnorderedMap<TokenId, KeyInfo>,
+
+    /// Set of public keys associated with this drop mapped to their specific key information.
+    pub nft_metadata: Option<TokenMetadata>,
 
     /// Each time a key is used, how much $NEAR should be sent to the claiming account (can be 0).
     pub deposit_per_use: u128,
@@ -165,12 +172,18 @@ pub struct KeyInfo {
     /// How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.
     pub allowance: u128,
 
-    /// Nonce for the current key.
-    pub key_id: u64,
-
     /// Password for each use for this specific key
     pub pw_per_use: Option<UnorderedMap<u64, Vec<u8>>>,
 
     /// Password for the key regardless of the use
     pub pw_per_key: Option<Vec<u8>>,
+
+    //owner of the token
+    pub owner_id: Option<AccountId>,
+
+    //list of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
+    pub approved_account_ids: HashMap<AccountId, u64>,
+
+    //the next approval ID to give out. 
+    pub next_approval_id: u64,
 }
