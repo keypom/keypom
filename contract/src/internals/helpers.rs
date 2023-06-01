@@ -20,6 +20,15 @@ pub(crate) fn rem_first_and_last(value: &mut String) {
     value.remove(0);
 }
 
+/// Take a token ID and return the drop ID and key nonce based on the `:` delimiter.
+pub(crate) fn parse_token_id(token_id: &TokenId) -> (DropId, u64) {
+    let delimiter = ":";
+    let split: Vec<&str> = token_id.split(delimiter).collect();
+    let drop_id = u128::from_str(split[0]).unwrap();
+    let key_nonce = u64::from_str(split[1]).unwrap();
+    return (drop_id, key_nonce);
+}
+
 /// Helper function to convert yoctoNEAR to $NEAR with 7 decimals of precision.
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^17 yoctoNEAR (1 NEAR would be 10_000_000). This is to give a precision of 7 decimal places.

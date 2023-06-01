@@ -4,10 +4,8 @@ use crate::*;
 impl Keypom {
     /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
     pub fn get_key_balance(&self, key: PublicKey) -> U128 {
-        let drop_id = self
-            .drop_id_for_pk
-            .get(&key)
-            .expect("no drop ID found for key");
+        let token_id = self.token_id_by_pk.get(&key).expect("no token ID found for key");
+        let (drop_id, key_id) = parse_token_id(&token_id);
         let drop = self
             .drop_for_id
             .get(&drop_id)
@@ -21,7 +19,7 @@ impl Keypom {
     /// Query for the total supply of keys on the contract
     pub fn get_key_total_supply(&self) -> u64 {
         //return the length of the data_for_pk set
-        self.drop_id_for_pk.len()
+        self.token_id_by_pk.len()
     }
 
     /// Paginate through all active keys on the contract and return a vector of key info.
