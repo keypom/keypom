@@ -87,12 +87,15 @@ impl Keypom {
 
             // Loop through and remove keys
             for key in &keys_to_delete {
-                // Unlink key to drop ID
-                self.drop_id_for_pk.remove(key);
+                // Unlink key to token ID
+                let token_id = self.token_id_by_pk.remove(key).unwrap();
                 // Attempt to remove the public key. panic if it didn't exist
-                let key_info = drop.pks.remove(key).expect("public key must be in drop");
+                let key_info = drop.key_info_by_token_id.remove(&token_id).expect("public key must be in drop");
                 if let Some(mut k) = key_info.pw_per_use {
                     k.clear();
+                }
+                if let Some(owner) = key_info.owner_id {
+                    self.internal_remove_token_from_owner(&owner, &token_id);
                 }
 
                 total_num_uses_refunded += key_info.remaining_uses;
@@ -166,7 +169,7 @@ impl Keypom {
             }
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
-            if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
+            if drop.key_info_by_token_id.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
                 // If there are any excess uses, refund them since the drop is being deleted
                 if let DropType::simple(data) = &drop.drop_type {
@@ -178,7 +181,7 @@ impl Keypom {
 
                 self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
-                near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
+                near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.key_info_by_token_id.len(), delete_on_empty.unwrap_or(false));
                 self.drop_for_id.insert(&drop_id.0, &drop);
             }
 
@@ -250,19 +253,22 @@ impl Keypom {
             );
         } else {
             // If no PKs were passed in, attempt to remove limit or 100 keys at a time
-            keys_to_delete = drop.pks.keys().take(limit.unwrap_or(100).into()).collect();
+            keys_to_delete = drop.key_info_by_token_id.iter().take(limit.unwrap_or(100).into()).map(|k| k.1.pub_key).collect();
 
             let len = keys_to_delete.len() as u128;
             near_sdk::log!("Removing {} keys from the drop", len);
 
             // Loop through and remove keys
             for key in &keys_to_delete {
-                // Unlink key to drop ID
-                self.drop_id_for_pk.remove(key);
+                // Unlink key to token ID
+                let token_id = self.token_id_by_pk.remove(key).unwrap();
                 // Attempt to remove the public key. panic if it didn't exist
-                let key_info = drop.pks.remove(key).expect("public key must be in drop");
+                let key_info = drop.key_info_by_token_id.remove(&token_id).expect("public key must be in drop");
                 if let Some(mut k) = key_info.pw_per_use {
                     k.clear();
+                }
+                if let Some(owner) = key_info.owner_id {
+                    self.internal_remove_token_from_owner(&owner, &token_id);
                 }
                 total_num_uses_refunded += key_info.remaining_uses;
 
@@ -334,7 +340,7 @@ impl Keypom {
             }
 
             // If the drop has no keys, remove it from the funder. Otherwise, insert it back with the updated keys.
-            if drop.pks.len() == 0 && delete_on_empty.unwrap_or(true) {
+            if drop.key_info_by_token_id.len() == 0 && delete_on_empty.unwrap_or(true) {
                 near_sdk::log!("Drop empty. Removing from funder. delete_on_empty: true");
 
                 // If there are any excess uses, refund them since the drop is being deleted
@@ -347,7 +353,7 @@ impl Keypom {
 
                 self.internal_remove_drop_for_funder(&owner_id, &drop_id.0);
             } else {
-                near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.pks.len(), delete_on_empty.unwrap_or(false));
+                near_sdk::log!("Drop non empty or delete on empty not set to true. Adding back. Len: {}. Delete on empty: {}", drop.key_info_by_token_id.len(), delete_on_empty.unwrap_or(false));
                 self.drop_for_id.insert(&drop_id.0, &drop);
             }
 

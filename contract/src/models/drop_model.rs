@@ -163,6 +163,9 @@ pub struct UsageConfig {
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct KeyInfo {
+    /// Current public key that is mapped to this key info
+    pub pub_key: PublicKey,
+    
     /// How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: u64,
 

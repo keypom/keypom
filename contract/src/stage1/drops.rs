@@ -299,10 +299,11 @@ impl Keypom {
             key_info_by_token_id.insert(
                 &token_id,
                 &KeyInfo {
+                    pub_key: pk.clone(),
                     remaining_uses: num_uses_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
-                    owner_id: token_owner,
+                    owner_id: token_owner.clone(),
                     next_approval_id: 0,
                     approved_account_ids: HashMap::new(),
                     pw_per_use,
@@ -712,10 +713,11 @@ impl Keypom {
             key_info_by_token_id.insert(
                 &token_id,
                 &KeyInfo {
+                    pub_key: pk.clone(),
                     remaining_uses: num_uses_per_key,
                     last_used: 0, // Set to 0 since this will make the key always claimable.
                     allowance: actual_allowance,
-                    owner_id: token_owner,
+                    owner_id: token_owner.clone(),
                     next_approval_id: 0,
                     approved_account_ids: HashMap::new(),
                     pw_per_use,

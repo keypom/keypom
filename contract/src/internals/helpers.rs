@@ -68,6 +68,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
     if let Some(config) = drop_config.clone() {
         actual_config = Some(DropConfig {
             uses_per_key: config.uses_per_key,
+            nft_metadata: config.nft_metadata,
             time: None,
             usage: config.usage,
             sale: None,
@@ -319,7 +320,7 @@ impl Keypom {
         drop: &mut Drop,
         key_info: &mut KeyInfo,
         cur_use: &u64,
-        signer_pk: &PublicKey,
+        token_id: &String,
     ) -> bool {
         let hashed = sha256(&pw.and_then(|f| hex::decode(f).ok()).unwrap_or(vec![]));
 
@@ -340,7 +341,7 @@ impl Keypom {
 
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
+                drop.key_info_by_token_id.insert(&token_id, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
                 return false;
             }
@@ -371,7 +372,7 @@ impl Keypom {
 
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
+                drop.key_info_by_token_id.insert(&token_id, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
                 return false;
             }
@@ -389,7 +390,7 @@ impl Keypom {
         drop_id: DropId,
         drop: &mut Drop,
         key_info: &mut KeyInfo,
-        signer_pk: &PublicKey,
+        token_id: &String,
     ) -> bool {
         if let Some(time_data) = drop.config.as_ref().and_then(|c| c.time.as_ref()) {
             // Ensure enough time has passed if a start timestamp was specified in the config.
@@ -405,7 +406,7 @@ impl Keypom {
     
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
+                drop.key_info_by_token_id.insert(&token_id, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
                 return false;
             }
@@ -421,7 +422,7 @@ impl Keypom {
 
                 key_info.allowance -= amount_to_decrement;
                 near_sdk::log!("Allowance is now {}", key_info.allowance);
-                drop.pks.insert(&signer_pk, &key_info);
+                drop.key_info_by_token_id.insert(&token_id, &key_info);
                 self.drop_for_id.insert(&drop_id, &drop);
                 return false;
             }
@@ -445,7 +446,7 @@ impl Keypom {
 
                     key_info.allowance -= amount_to_decrement;
                     near_sdk::log!("Allowance is now {}", key_info.allowance);
-                    drop.pks.insert(&signer_pk, &key_info);
+                    drop.key_info_by_token_id.insert(&token_id, &key_info);
                     self.drop_for_id.insert(&drop_id, &drop);
                     return false;
                 }
@@ -486,7 +487,7 @@ impl Keypom {
 
                     key_info.allowance -= amount_to_decrement;
                     near_sdk::log!("Allowance is now {}", key_info.allowance);
-                    drop.pks.insert(&signer_pk, &key_info);
+                    drop.key_info_by_token_id.insert(&token_id, &key_info);
                     self.drop_for_id.insert(&drop_id, &drop);
                     return false;
                 }
@@ -551,22 +552,23 @@ impl Keypom {
 
         // Loop through public keys and remove all the keys and remove the key / passwrds per key
         for pk in &public_keys {
-            if let Some(mut k) = drop.pks.remove(pk).unwrap().pw_per_use {
+            let token_id = self.token_id_by_pk.remove(pk).unwrap();
+            // Attempt to remove the public key. panic if it didn't exist
+            let key_info = drop.key_info_by_token_id.remove(&token_id).expect("public key must be in drop");
+            if let Some(mut k) = key_info.pw_per_use {
                 k.clear();
             }
+            if let Some(owner) = key_info.owner_id {
+                self.internal_remove_token_from_owner(&owner, &token_id);
+            }
         }
-        assert!(drop.pks.is_empty(), "drop not empty");
+        assert!(drop.key_info_by_token_id.is_empty(), "drop not empty");
         //drop.pks.clear();
 
         let owner_id = drop.owner_id.clone();
 
         // Remove the drop ID from the funder's list
         self.internal_remove_drop_for_funder(&drop.owner_id, &drop_id);
-
-        // Loop through the keys and remove the public keys' mapping
-        for pk in public_keys {
-            self.drop_id_for_pk.remove(&pk.clone());
-        }
 
         // Return the owner ID
         owner_id
@@ -601,7 +603,7 @@ impl Keypom {
     /// Add a drop ID to the set of drops a funder has
     pub(crate) fn internal_add_drop_to_funder(&mut self, account_id: &AccountId, drop_id: &DropId) {
         //get the set of drops for the given account
-        let mut drop_set = self.drop_ids_for_owner.get(account_id).unwrap_or_else(|| {
+        let mut drop_set = self.drop_ids_for_funder.get(account_id).unwrap_or_else(|| {
             //if the account doesn't have any drops, we create a new unordered set
             UnorderedSet::new(StorageKey::DropIdsForFunderInner {
                 //we get a new unique prefix for the collection
@@ -613,7 +615,7 @@ impl Keypom {
         drop_set.insert(drop_id);
 
         //we insert that set for the given account ID.
-        self.drop_ids_for_owner.insert(account_id, &drop_set);
+        self.drop_ids_for_funder.insert(account_id, &drop_set);
     }
 
     //remove a drop ID for a funder (internal method_name and can't be called directly via CLI).
@@ -624,7 +626,7 @@ impl Keypom {
     ) {
         //we get the set of drop IDs that the funder has
         let mut drop_set = self
-            .drop_ids_for_owner
+            .drop_ids_for_funder
             .get(account_id)
             //if there is no set of drops for the owner, we panic with the following message:
             .expect("No Drops found for the funder");
@@ -632,12 +634,12 @@ impl Keypom {
         //we remove the the drop ID from  the set of drops
         drop_set.remove(drop_id);
 
-        //if the set is now empty, we remove the funder from the drop_ids_for_owner collection
+        //if the set is now empty, we remove the funder from the drop_ids_for_funder collection
         if drop_set.is_empty() {
-            self.drop_ids_for_owner.remove(account_id);
+            self.drop_ids_for_funder.remove(account_id);
         } else {
             //if the key set is not empty, we simply insert it back for the funder ID.
-            self.drop_ids_for_owner.insert(account_id, &drop_set);
+            self.drop_ids_for_funder.insert(account_id, &drop_set);
         }
     }
 
@@ -771,7 +773,7 @@ impl Keypom {
         drop_id: DropId,
         drop: &mut Drop,
         key_info: &mut KeyInfo,
-        signer_pk: &PublicKey
+        token_id: &String
     ) -> bool {
         let account_id_valid = AccountId::try_from(account_id).is_ok();
         let mut pub_key_valid = true;
@@ -793,7 +795,7 @@ impl Keypom {
 
             key_info.allowance -= amount_to_decrement;
             near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(&signer_pk, &key_info);
+            drop.key_info_by_token_id.insert(&token_id, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
 
             return false

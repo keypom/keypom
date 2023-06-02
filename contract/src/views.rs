@@ -5,7 +5,7 @@ impl Keypom {
     /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
     pub fn get_key_balance(&self, key: PublicKey) -> U128 {
         let token_id = self.token_id_by_pk.get(&key).expect("no token ID found for key");
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id);
         let drop = self
             .drop_for_id
             .get(&drop_id)
@@ -201,8 +201,8 @@ impl Keypom {
             //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
             .take(limit.unwrap_or(50) as usize)
             //we'll map the public key which are strings into Drops
-            .map(|token| {
-                let 
+            .map(|(token_id, key_info)| {
+                let key_id = parse_token_id(&token_id).1;
                 let cur_use = drop
                     .config
                     .as_ref()
@@ -210,24 +210,24 @@ impl Keypom {
                     .unwrap_or(1)
                     - key_info.remaining_uses + 1;
 
-                Ok(JsonKeyInfo {
-                    drop_id: U128(drop_id),
-                    pk: key.clone(),
+                JsonKeyInfo {
+                    drop_id,
+                    pk: key_info.pub_key,
                     remaining_uses: key_info.remaining_uses,
                     last_used: key_info.last_used,
                     allowance: key_info.allowance,
                     key_id,
                     cur_key_use: cur_use
-                })
+                }
             })
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
             .collect()
     }
 
     /// Returns the total supply of active drops for a given owner
-    pub fn get_drop_supply_for_owner(&self, account_id: AccountId) -> u64 {
+    pub fn get_drop_supply_for_funder(&self, account_id: AccountId) -> u64 {
         //get the set of drops for the passed in owner
-        let drops_for_owner = self.drop_ids_for_owner.get(&account_id);
+        let drops_for_owner = self.drop_ids_for_funder.get(&account_id);
 
         //if there is some set of drops, we'll return the length
         if let Some(drops_for_owner) = drops_for_owner {
@@ -246,7 +246,7 @@ impl Keypom {
         limit: Option<u64>,
     ) -> Vec<JsonDrop> {
         // Iterate through each drop ID and push JsonDrop to a vector
-        let drop_ids = self.drop_ids_for_owner.get(&account_id);
+        let drop_ids = self.drop_ids_for_funder.get(&account_id);
 
         // If there are IDs, iterate and create the vector of JsonDrops otherwise return empty array.s
         if let Some(ids) = drop_ids {

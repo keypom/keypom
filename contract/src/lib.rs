@@ -847,10 +847,6 @@ use near_sdk::{
 /// Value equates to 0.001 $NEAR per key.
 const ACCESS_KEY_STORAGE: u128 = 1_000_000_000_000_000_000_000;
 
-/// The minimum amount of NEAR that it costs to create a new *named* account on NEAR.
-/// This is based off the longest possible account ID length and has a value of 0.00284 $NEAR
-const NEW_ACCOUNT_BASE: u128 = 2_840_000_000_000_000_000_000;
-
 /// Constant indicating no attached deposit should be sent to a function call.
 /// Declared for readability and to prevent magic numbers.
 const NO_DEPOSIT: u128 = 0;
@@ -957,7 +953,6 @@ pub struct ContractSourceMetadata {
 
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
-    DropIdForPk,
     DropsForId,
     DropIdsForFunder,      
     DropIdsForFunderInner { account_id_hash: CryptoHash },

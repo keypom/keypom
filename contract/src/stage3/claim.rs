@@ -532,29 +532,31 @@ impl Keypom {
             "predecessor != current"
         );
 
-        // TODO: check if methods.len() == user provided args if some provided.
-
         // Get the PK of the signer which should be the contract's function call access key
         let signer_pk = env::signer_account_pk();
 
         // By default, every key should have a drop ID. If we need to remove the key, remove later.
         // Panic doesn't affect allowance
-        let drop_id = self
-            .drop_id_for_pk
+        let token_id = self
+            .token_id_by_pk
             .get(&signer_pk)
             .expect("No drop ID found for PK");
+        let (drop_id, key_id) = parse_token_id(&token_id);
+
         // Remove the drop. If the drop shouldn't be removed, we re-insert later.
         // Panic doesn't affect allowance
         let mut drop = self.drop_for_id.remove(&drop_id).expect("drop not found");
-        // Remove the pk from the drop's set and check for key usage.
+        
+        // Remove the token ID from the drop's set and check for key usage.
         // Panic doesn't affect allowance
-        let mut key_info = drop.pks.remove(&signer_pk).unwrap();
+        let mut key_info = drop.key_info_by_token_id.remove(&token_id).unwrap();
+
         // Keep track of the current number of uses so that it can be used to index into FCData Method Data
-        let cur_key_id = key_info.key_id;
+        let cur_key_id = key_id;
         let remaining_uses = key_info.remaining_uses;
 
         // Ensure the account ID and public key are valid types.
-        if !self.assert_valid_args(account_id, pub_key, drop_id, &mut drop, &mut key_info, &signer_pk) {
+        if !self.assert_valid_args(account_id, pub_key, drop_id, &mut drop, &mut key_info, &token_id) {
             return (None, None, None, None, false, 0, 0, false);
         };
 
@@ -573,7 +575,7 @@ impl Keypom {
 
             key_info.allowance -= amount_to_decrement;
             near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(&signer_pk, &key_info);
+            drop.key_info_by_token_id.insert(&token_id, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
             return (None, None, None, None, false, 0, 0, false);
         }
@@ -592,7 +594,7 @@ impl Keypom {
             &mut drop,
             &mut key_info,
             cur_use,
-            &signer_pk,
+            &token_id,
         ) == false
         {
             return (None, None, None, None, false, 0, 0, false);
@@ -612,12 +614,12 @@ impl Keypom {
 
             key_info.allowance -= amount_to_decrement;
             near_sdk::log!("Allowance is now {}", key_info.allowance);
-            drop.pks.insert(&signer_pk, &key_info);
+            drop.key_info_by_token_id.insert(&token_id, &key_info);
             self.drop_for_id.insert(&drop_id, &drop);
             return (None, None, None, None, false, 0, 0, false);
         }
 
-        if self.assert_claim_timestamps(drop_id, &mut drop, &mut key_info, &signer_pk) == false {
+        if self.assert_claim_timestamps(drop_id, &mut drop, &mut key_info, &token_id) == false {
             return (None, None, None, None, false, 0, 0, false);
         };
 
@@ -626,12 +628,12 @@ impl Keypom {
             If it's an FC drop, get the next method_name data and check if it's none (to skip transfer of funds)
         */
         // Default the token ID to none and return / remove the next token ID if it's an NFT drop
-        let mut token_id = None;
+        let mut nft_data_token_id = None;
         // Default the should continue variable to true. If the next FC method_name is None, we set it to false
         let mut should_continue = true;
         match &mut drop.drop_type {
             DropType::nft(data) => {
-                token_id = data.token_ids.pop();
+                nft_data_token_id = data.token_ids.pop();
             }
             DropType::fc(data) => {
                 let starting_index = if data.methods.len() > 1 {
@@ -667,7 +669,7 @@ impl Keypom {
                         near_sdk::log!("Expected {} number of fc_args. Decrementing allowance by {}. Used GAS: {}", cur_parallel_methods, amount_to_decrement, used_gas.0);
                         key_info.allowance -= amount_to_decrement;
                         near_sdk::log!("Allowance is now {}", key_info.allowance);
-                        drop.pks.insert(&signer_pk, &key_info);
+                        drop.key_info_by_token_id.insert(&token_id, &key_info);
                         self.drop_for_id.insert(&drop_id, &drop);
                         return (None, None, None, None, false, 0, 0, false);
                     }
@@ -687,7 +689,10 @@ impl Keypom {
         // No uses left! The key should be deleted
         if key_info.remaining_uses == 1 {
             near_sdk::log!("Key has no uses left. It will be deleted");
-            self.drop_id_for_pk.remove(&signer_pk);
+            self.token_id_by_pk.remove(&signer_pk);
+            if let Some(owner) = key_info.owner_id {
+                self.internal_remove_token_from_owner(&owner, &token_id);
+            }
         } else {
             key_info.remaining_uses -= 1;
             key_info.allowance -= drop.required_gas.0 as u128 * self.yocto_per_gas;
@@ -698,14 +703,14 @@ impl Keypom {
                 key_info.allowance
             );
 
-            drop.pks.insert(&signer_pk, &key_info);
+            drop.key_info_by_token_id.insert(&token_id, &key_info);
             should_delete_key = false;
         }
 
         drop.registered_uses -= 1;
 
         // If there are keys still left in the drop, add the drop back in with updated data
-        if !drop.pks.is_empty() {
+        if !drop.key_info_by_token_id.is_empty() {
             // Add drop back with the updated data.
             self.drop_for_id.insert(&drop_id, &drop);
         } else {
@@ -759,7 +764,7 @@ impl Keypom {
 
             // Get the number of drops still left for the owner
             let cur_drop_num_for_owner = self
-                .drop_ids_for_owner
+                .drop_ids_for_funder
                 .get(&drop.owner_id)
                 .and_then(|d| Some(d.len()))
                 .unwrap_or(0);
@@ -801,7 +806,7 @@ impl Keypom {
             Some(drop),
             Some(drop_id),
             Some(total_storage_freed),
-            token_id,
+            nft_data_token_id,
             should_continue,
             cur_key_id,
             remaining_uses,

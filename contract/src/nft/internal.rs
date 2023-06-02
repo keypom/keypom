@@ -1,5 +1,6 @@
 use crate::*;
 
+#[near_bindgen]
 impl Keypom {
     // Add a token to the set of tokens an owner has
     pub(crate) fn internal_add_token_to_owner(
