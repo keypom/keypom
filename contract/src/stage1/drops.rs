@@ -40,6 +40,9 @@ impl Keypom {
         nft: Option<JsonNFTData>,
         fc: Option<FCData>,
 
+        // What will the owners of the keys be? Must match length of public keys
+        key_owners: Option<Vec<Option<AccountId>>>,
+
         // Passwords for the keys
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
@@ -79,6 +82,9 @@ impl Keypom {
 
         let keys_to_iter = public_keys.unwrap_or_default();
         let len = keys_to_iter.len() as u128;
+
+        require!(key_owners.clone().map(|o| o.len() as u128).unwrap_or(len) == len, "Must specify an owner for each key");
+
         // Get the number of uses per key to dictate what key usage data we should put in the map
         let num_uses_per_key = config.clone().and_then(|c| c.uses_per_key).unwrap_or(1);
 
@@ -295,7 +301,7 @@ impl Keypom {
                 "You cannot specify both local and global passwords for a key"
             );
 
-            let token_owner = Some(env::predecessor_account_id());
+            let token_owner = key_owners.clone().and_then(|o| o[next_key_id as usize].clone());
             key_info_by_token_id.insert(
                 &token_id,
                 &KeyInfo {
@@ -603,6 +609,9 @@ impl Keypom {
         // Overload the specific drop ID
         drop_id: DropIdJson,
 
+        // What will the owners of the keys be? Must match length of public keys
+        key_owners: Option<Vec<Option<AccountId>>>,
+
         // Passwords for the keys
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
@@ -617,6 +626,7 @@ impl Keypom {
         let funder = &drop.owner_id;
 
         let len = public_keys.len() as u128;
+        require!(key_owners.clone().map(|o| o.len() as u128).unwrap_or(len) == len, "Must specify an owner for each key");
 
         let mut revenue_generated = 0;
         // If there is a public sale and the predecessor isn't the funder, perform checks and return revenue
@@ -709,7 +719,7 @@ impl Keypom {
                 "You cannot specify both local and global passwords for a key"
             );
 
-            let token_owner = Some(env::predecessor_account_id());
+            let token_owner = key_owners.clone().and_then(|o| o[idx as usize].clone());
             key_info_by_token_id.insert(
                 &token_id,
                 &KeyInfo {
