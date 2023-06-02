@@ -919,6 +919,11 @@ const KEY_ADDITION_FEE: u128 = 0;
 /// Value is equal to 10 TGas
 const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000);
 
+/// This spec can be treated like a version of the standard.
+pub const NFT_METADATA_SPEC: &str = "1.0.0";
+/// This is the name of the NFT standard we're using
+pub const NFT_STANDARD_NAME: &str = "nep171";
+
 /// Which methods are prohibited from being called by an FC drop
 const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
     "nft_transfer",
@@ -938,6 +943,7 @@ mod views;
 mod nft;
 
 use internals::*;
+use nft::*;
 use models::*;
 use stage2::*;
 
