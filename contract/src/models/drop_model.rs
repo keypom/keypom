@@ -43,9 +43,6 @@ pub struct Drop {
     /// Set of public keys associated with this drop mapped to their specific key information.
     pub key_info_by_token_id: UnorderedMap<TokenId, KeyInfo>,
 
-    /// Set of public keys associated with this drop mapped to their specific key information.
-    pub nft_metadata: Option<TokenMetadata>,
-
     /// Each time a key is used, how much $NEAR should be sent to the claiming account (can be 0).
     pub deposit_per_use: u128,
     /// How many key uses are registered and can be used.
@@ -71,6 +68,9 @@ pub struct Drop {
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DropConfig {
+    /// Metadata that all the NFTs in this drop will have
+    pub nft_metadata: Option<TokenMetadata>,
+
     /// How many uses can each key have before it's deleted. If None, default to 1.
     pub uses_per_key: Option<u64>,
 

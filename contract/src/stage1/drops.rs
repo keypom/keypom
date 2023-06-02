@@ -325,7 +325,6 @@ impl Keypom {
             owner_id: env::predecessor_account_id(),
             deposit_per_use: deposit_per_use.0,
             key_info_by_token_id,
-            nft_metadata: config.and_then(|c| c.nft_metadata),
             // Default to simple but will overwrite if not
             drop_type: DropType::simple(
                 SimpleData {

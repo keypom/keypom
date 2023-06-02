@@ -28,7 +28,7 @@ impl Keypom {
         let start = u128::from(from_index.unwrap_or(U128(0)));
 
         //iterate through each key using an iterator
-        self.drop_id_for_pk
+        self.token_id_by_pk
             .keys()
             //skip to the index we specified in the start variable
             .skip(start as usize)
@@ -41,44 +41,48 @@ impl Keypom {
     }
 
     /// Returns the JsonKeyInfo corresponding to a specific key
-    pub fn get_key_information(&self, key: PublicKey) -> Option<JsonKeyInfo> {
+    #[handle_result]
+    pub fn get_key_information(&self, key: PublicKey) -> Result<JsonKeyInfo, String> {
         // Return the optional key info if it exists
-        if let Some(drop_id) = self.drop_id_for_pk.get(&key) {
-            let drop = self
-                .drop_for_id
-                .get(&drop_id)
-                .expect("no drop found for drop ID");
 
-            if let Some(key_info) = drop.pks.get(&key) {
-                let cur_use = drop
-                    .config
-                    .as_ref()
-                    .and_then(|c| c.uses_per_key)
-                    .unwrap_or(1)
-                    - key_info.remaining_uses + 1;
+        let token_id = self.token_id_by_pk.get(&key).expect("no token ID found for key");
+        let (drop_id, key_id) = parse_token_id(&token_id);
+        let drop = self
+            .drop_for_id
+            .get(&drop_id)
+            .expect("no drop found for drop ID");
+        
+        let key_info = drop.key_info_by_token_id.get(&token_id).expect("no key info found for token ID");
+        let cur_use = drop
+            .config
+            .as_ref()
+            .and_then(|c| c.uses_per_key)
+            .unwrap_or(1)
+            - key_info.remaining_uses + 1;
 
-                return Some(JsonKeyInfo {
-                    drop_id: U128(drop_id),
-                    pk: key.clone(),
-                    remaining_uses: key_info.remaining_uses,
-                    last_used: key_info.last_used,
-                    allowance: key_info.allowance,
-                    key_id: key_info.key_id,
-                    cur_key_use: cur_use
-                });
-            }
-
-            return None;
-        } else {
-            None
-        }
+        Ok(JsonKeyInfo {
+            drop_id: U128(drop_id),
+            pk: key.clone(),
+            remaining_uses: key_info.remaining_uses,
+            last_used: key_info.last_used,
+            allowance: key_info.allowance,
+            key_id,
+            cur_key_use: cur_use
+        })
     }
 
     /// Returns the JsonKeyInfo corresponding to a specific key
     pub fn get_key_information_batch(&self, keys: Vec<PublicKey>) -> Vec<Option<JsonKeyInfo>> {
         // Iterate through each key in the vector and return the JsonKeyInfo for that key
         keys.iter()
-            .map(|key| self.get_key_information(key.clone()))
+            .map(|key| {
+                let key_info = self.get_key_information(key.clone());
+                if key_info.is_ok() {
+                    Some(key_info.unwrap())
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 
@@ -98,7 +102,8 @@ impl Keypom {
 
         // If the user specifies a key, use that to get the drop ID.
         if let Some(key) = key {
-            drop_id = self.drop_id_for_pk.get(&key).expect("no drop ID for PK");
+            let token_id = self.token_id_by_pk.get(&key).expect("no token ID found for key");
+            drop_id = parse_token_id(&token_id).0;
         }
 
         let drop = self
@@ -124,6 +129,7 @@ impl Keypom {
         if let Some(config) = drop.config {
             let json_config = JsonDropConfig {
                 uses_per_key: config.uses_per_key,
+                nft_metadata: config.nft_metadata,
                 time: config.time,
                 usage: config.usage,
                 sale: config.sale.map(|sale| JsonPublicSaleConfig { 
@@ -168,7 +174,7 @@ impl Keypom {
         self.drop_for_id
             .get(&drop_id.0)
             .expect("no drop found")
-            .pks
+            .key_info_by_token_id
             .len()
     }
 
@@ -183,17 +189,37 @@ impl Keypom {
         let start = u128::from(from_index.unwrap_or(U128(0)));
 
         //iterate through each key using an iterator
-        self.drop_for_id
+        let drop = self.drop_for_id
             .get(&drop_id.0)
-            .expect("No drop for given ID")
-            .pks
-            .keys()
+            .expect("No drop for given ID");
+        
+        return drop
+            .key_info_by_token_id
+            .iter()
             //skip to the index we specified in the start variable
             .skip(start as usize)
             //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
             .take(limit.unwrap_or(50) as usize)
             //we'll map the public key which are strings into Drops
-            .map(|pk| self.get_key_information(pk.clone()).unwrap())
+            .map(|token| {
+                let 
+                let cur_use = drop
+                    .config
+                    .as_ref()
+                    .and_then(|c| c.uses_per_key)
+                    .unwrap_or(1)
+                    - key_info.remaining_uses + 1;
+
+                Ok(JsonKeyInfo {
+                    drop_id: U128(drop_id),
+                    pk: key.clone(),
+                    remaining_uses: key_info.remaining_uses,
+                    last_used: key_info.last_used,
+                    allowance: key_info.allowance,
+                    key_id,
+                    cur_key_use: cur_use
+                })
+            })
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
             .collect()
     }
