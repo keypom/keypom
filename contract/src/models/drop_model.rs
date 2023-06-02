@@ -71,6 +71,9 @@ pub struct DropConfig {
     /// Metadata that all the NFTs in this drop will have
     pub nft_metadata: Option<TokenMetadata>,
 
+    /// Royalties that all NFTs in this drop will have
+    pub nft_royalty: Option<HashMap<AccountId, u32>>,
+
     /// How many uses can each key have before it's deleted. If None, default to 1.
     pub uses_per_key: Option<u64>,
 
