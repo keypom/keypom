@@ -130,6 +130,7 @@ impl Keypom {
             let json_config = JsonDropConfig {
                 uses_per_key: config.uses_per_key,
                 nft_metadata: config.nft_metadata,
+                nft_royalty: config.nft_royalty,
                 time: config.time,
                 usage: config.usage,
                 sale: config.sale.map(|sale| JsonPublicSaleConfig { 

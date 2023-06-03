@@ -69,6 +69,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
         actual_config = Some(DropConfig {
             uses_per_key: config.uses_per_key,
             nft_metadata: config.nft_metadata,
+            nft_royalty: config.nft_royalty,
             time: None,
             usage: config.usage,
             sale: None,
