@@ -37,7 +37,30 @@ impl Keypom {
             let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
             let mut key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
             let pub_key = key_info.pub_key;
-            require!(key_info.owner_id == Some(sender_id), "Sender is not the owner of this token");
+            //if the sender doesn't equal the owner, we check if the sender is in the approval list
+            if Some(&sender_id) != key_info.owner_id.as_ref() {
+                //if the token's approved account IDs doesn't contain the sender, we panic
+                if !key_info.approved_account_ids.contains_key(&sender_id) {
+                    env::panic_str("Unauthorized");
+                }
+
+                // If they included an approval_id, check if the sender's actual approval_id is the same as the one included
+                if let Some(enforced_approval_id) = approval_id {
+                    //get the actual approval ID
+                    let actual_approval_id = key_info
+                        .approved_account_ids
+                        .get(&sender_id)
+                        //if the sender isn't in the map, we panic
+                        .expect("Sender is not approved account");
+
+                    //make sure that the actual approval ID is the same as the one provided
+                    assert_eq!(
+                        actual_approval_id, &enforced_approval_id,
+                        "The actual approval_id {} is different from the given approval_id {}",
+                        actual_approval_id, enforced_approval_id,
+                    );
+                }
+            }
 
             // Transfer the token to the receiver and re-insert the token with the new public key
             self.token_id_by_pk.remove(&pub_key);
