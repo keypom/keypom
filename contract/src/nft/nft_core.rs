@@ -17,8 +17,8 @@ impl Keypom {
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
 
-        let mut token_id_transferred = String::from("");
-        let mut old_owner_id: String = String::from("");
+        let token_id_transferred;
+        let old_owner_id;
 
         // NFT being transferred using public key 
         if let Some(token) = self.token_id_by_pk.remove(&sender_pk) {
