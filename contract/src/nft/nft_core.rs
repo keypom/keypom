@@ -17,28 +17,36 @@ impl Keypom {
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
 
+        let mut token_id_transferred = String::from("");
+        let mut old_owner_id: String = String::from("");
+
         // NFT being transferred using public key 
         if let Some(token) = self.token_id_by_pk.remove(&sender_pk) {
+            token_id_transferred = token.clone();
             let drop_id = parse_token_id(&token).0;
             let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
             
             let mut key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
 
+            old_owner_id = key_info.owner_id.unwrap_or(env::current_account_id()).to_string();
+
             // Transfer the token to the receiver and re-insert the token with the new public key
-            key_info.owner_id = receiver_id;
+            key_info.owner_id = receiver_id.clone();
             key_info.pub_key = memo.clone();
             drop.key_info_by_token_id.insert(&token, &key_info);
             self.token_id_by_pk.insert(&memo, &token);
 
         } else {
             let token = token_id.expect("Token ID not provided");
+            token_id_transferred = token.clone();
             let drop_id = parse_token_id(&token).0;
 
             let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
             let mut key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
-            let pub_key = key_info.pub_key;
+            
+            
             //if the sender doesn't equal the owner, we check if the sender is in the approval list
-            if Some(&sender_id) != key_info.owner_id.as_ref() {
+            if Some(&sender_id) != key_info.owner_id.clone().as_ref() {
                 //if the token's approved account IDs doesn't contain the sender, we panic
                 if !key_info.approved_account_ids.contains_key(&sender_id) {
                     env::panic_str("Unauthorized");
@@ -62,14 +70,46 @@ impl Keypom {
                 }
             }
 
+            old_owner_id = key_info.owner_id.unwrap_or(env::current_account_id()).to_string();
             // Transfer the token to the receiver and re-insert the token with the new public key
+            let pub_key = key_info.pub_key;
             self.token_id_by_pk.remove(&pub_key);
-            key_info.owner_id = receiver_id;
+            key_info.owner_id = receiver_id.clone();
             key_info.pub_key = memo.clone();
             drop.key_info_by_token_id.insert(&token, &key_info);
             self.token_id_by_pk.insert(&memo, &token);
         }
 
+        // Default the authorized ID to be None for the logs.
+        let mut authorized_id = None;
+        //if the approval ID was provided, set the authorized ID equal to the sender
+        if approval_id.is_some() {
+            authorized_id = Some(sender_id.to_string());
+        }
+
+        // Construct the transfer log as per the events standard.
+        let nft_transfer_log: EventLog = EventLog {
+            // Standard name ("nep171").
+            standard: NFT_STANDARD_NAME.to_string(),
+            // Version of the standard ("nft-1.0.0").
+            version: NFT_METADATA_SPEC.to_string(),
+            // The data related with the event stored in a vector.
+            event: EventLogVariant::NftTransfer(vec![NftTransferLog {
+                // The optional authorized account ID to transfer the token on behalf of the old owner.
+                authorized_id,
+                // The old owner's account ID.
+                old_owner_id,
+                // The account ID of the new owner of the token.
+                new_owner_id: receiver_id.unwrap_or(env::current_account_id()).to_string(),
+                // A vector containing the token IDs as strings.
+                token_ids: vec![token_id_transferred.to_string()],
+                // An optional memo to include.
+                memo: None,
+            }]),
+        };
+
+        // Log the serialized json.
+        env::log_str(&nft_transfer_log.to_string());
         
     }
 
