@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::*;
 use near_sdk::{ext_contract, Gas, PromiseResult};
 
@@ -13,37 +15,48 @@ impl Keypom {
         receiver_id: Option<AccountId>,
         approval_id: Option<u64>,
         memo: PublicKey,
-    ) {
+    ) -> (AccountId, HashMap<AccountId, u32>) {
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
 
         let token_id_transferred;
         let old_owner_id;
 
+        let nft_royalty;
+
         // NFT being transferred using public key 
         if let Some(token) = self.token_id_by_pk.remove(&sender_pk) {
             token_id_transferred = token.clone();
             let drop_id = parse_token_id(&token).0;
             let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
-            
-            let mut key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
+            nft_royalty = drop.config.and_then(|c| c.nft_royalty).unwrap_or(Default::default());
 
+            let key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
             old_owner_id = key_info.owner_id.unwrap_or(env::current_account_id()).to_string();
 
             // Transfer the token to the receiver and re-insert the token with the new public key
-            key_info.owner_id = receiver_id.clone();
-            key_info.pub_key = memo.clone();
-            drop.key_info_by_token_id.insert(&token, &key_info);
-            self.token_id_by_pk.insert(&memo, &token);
+            let new_key_info = KeyInfo {
+                owner_id: receiver_id.clone(),
+                pub_key: memo.clone(),
+                approved_account_ids: Default::default(),
+                remaining_uses: key_info.remaining_uses,
+                last_used: key_info.last_used,
+                pw_per_key: key_info.pw_per_key,
+                pw_per_use: key_info.pw_per_use,
+                allowance: key_info.allowance,
+                next_approval_id: key_info.next_approval_id,
+            };
 
+            drop.key_info_by_token_id.insert(&token, &new_key_info);
+            self.token_id_by_pk.insert(&memo, &token);
         } else {
             let token = token_id.expect("Token ID not provided");
             token_id_transferred = token.clone();
             let drop_id = parse_token_id(&token).0;
 
             let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
-            let mut key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
-            
+            nft_royalty = drop.config.and_then(|c| c.nft_royalty).unwrap_or(Default::default());
+            let key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
             
             //if the sender doesn't equal the owner, we check if the sender is in the approval list
             if Some(&sender_id) != key_info.owner_id.clone().as_ref() {
@@ -72,11 +85,22 @@ impl Keypom {
 
             old_owner_id = key_info.owner_id.unwrap_or(env::current_account_id()).to_string();
             // Transfer the token to the receiver and re-insert the token with the new public key
-            let pub_key = key_info.pub_key;
+            let pub_key = key_info.pub_key.clone();
             self.token_id_by_pk.remove(&pub_key);
-            key_info.owner_id = receiver_id.clone();
-            key_info.pub_key = memo.clone();
-            drop.key_info_by_token_id.insert(&token, &key_info);
+
+            let new_key_info = KeyInfo {
+                owner_id: receiver_id.clone(),
+                pub_key: memo.clone(),
+                approved_account_ids: Default::default(),
+                remaining_uses: key_info.remaining_uses,
+                last_used: key_info.last_used,
+                pw_per_key: key_info.pw_per_key,
+                pw_per_use: key_info.pw_per_use,
+                allowance: key_info.allowance,
+                next_approval_id: key_info.next_approval_id,
+            };
+
+            drop.key_info_by_token_id.insert(&token, &new_key_info);
             self.token_id_by_pk.insert(&memo, &token);
         }
 
@@ -98,7 +122,7 @@ impl Keypom {
                 // The optional authorized account ID to transfer the token on behalf of the old owner.
                 authorized_id,
                 // The old owner's account ID.
-                old_owner_id,
+                old_owner_id: old_owner_id.clone(),
                 // The account ID of the new owner of the token.
                 new_owner_id: receiver_id.unwrap_or(env::current_account_id()).to_string(),
                 // A vector containing the token IDs as strings.
@@ -111,6 +135,7 @@ impl Keypom {
         // Log the serialized json.
         env::log_str(&nft_transfer_log.to_string());
         
+        (old_owner_id.parse().unwrap(), nft_royalty)
     }
 
     // //implementation of the transfer call method. This will transfer the NFT and call a method on the receiver_id contract
