@@ -6,5 +6,4 @@ mod nft_core;
 mod royalty;
 
 pub use events::*;
-pub use internal::*;
 pub use metadata::*;

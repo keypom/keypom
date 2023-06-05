@@ -18,6 +18,7 @@ impl Keypom {
     ) -> (AccountId, HashMap<AccountId, u32>) {
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
+        let actual_receiver_id = receiver_id.unwrap_or(env::current_account_id());
 
         let token_id_transferred;
         let old_owner_id;
@@ -32,11 +33,11 @@ impl Keypom {
             nft_royalty = drop.config.and_then(|c| c.nft_royalty).unwrap_or(Default::default());
 
             let key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
-            old_owner_id = key_info.owner_id.unwrap_or(env::current_account_id()).to_string();
+            old_owner_id = key_info.owner_id.to_string();
 
             // Transfer the token to the receiver and re-insert the token with the new public key
             let new_key_info = KeyInfo {
-                owner_id: receiver_id.clone(),
+                owner_id: actual_receiver_id.clone(),
                 pub_key: memo.clone(),
                 approved_account_ids: Default::default(),
                 remaining_uses: key_info.remaining_uses,
@@ -59,7 +60,7 @@ impl Keypom {
             let key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
             
             //if the sender doesn't equal the owner, we check if the sender is in the approval list
-            if Some(&sender_id) != key_info.owner_id.clone().as_ref() {
+            if sender_id != key_info.owner_id.clone() {
                 //if the token's approved account IDs doesn't contain the sender, we panic
                 if !key_info.approved_account_ids.contains_key(&sender_id) {
                     env::panic_str("Unauthorized");
@@ -83,13 +84,13 @@ impl Keypom {
                 }
             }
 
-            old_owner_id = key_info.owner_id.unwrap_or(env::current_account_id()).to_string();
+            old_owner_id = key_info.owner_id.to_string();
             // Transfer the token to the receiver and re-insert the token with the new public key
             let pub_key = key_info.pub_key.clone();
             self.token_id_by_pk.remove(&pub_key);
 
             let new_key_info = KeyInfo {
-                owner_id: receiver_id.clone(),
+                owner_id: actual_receiver_id.clone(),
                 pub_key: memo.clone(),
                 approved_account_ids: Default::default(),
                 remaining_uses: key_info.remaining_uses,
@@ -124,7 +125,7 @@ impl Keypom {
                 // The old owner's account ID.
                 old_owner_id: old_owner_id.clone(),
                 // The account ID of the new owner of the token.
-                new_owner_id: receiver_id.unwrap_or(env::current_account_id()).to_string(),
+                new_owner_id: actual_receiver_id.to_string(),
                 // A vector containing the token IDs as strings.
                 token_ids: vec![token_id_transferred.to_string()],
                 // An optional memo to include.
@@ -206,7 +207,7 @@ impl Keypom {
             if let Some(key_info) = drop.key_info_by_token_id.get(&token_id) {
                 return Some(JsonToken {
                     token_id,
-                    owner_id: key_info.owner_id.unwrap_or(env::current_account_id()),
+                    owner_id: key_info.owner_id,
                     metadata: nft_metadata.unwrap_or(TokenMetadata {
                         title: Some(String::from("Keypom Access Key")),
                         description: Some(String::from("Keypom is pretty lit")),

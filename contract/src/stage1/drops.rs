@@ -1,5 +1,3 @@
-use std::{collections::HashMap};
-
 use crate::*;
 
 use near_sdk::{
@@ -301,7 +299,7 @@ impl Keypom {
                 "You cannot specify both local and global passwords for a key"
             );
 
-            let token_owner = key_owners.clone().and_then(|o| o[next_key_id as usize].clone());
+            let token_owner = key_owners.clone().and_then(|o| o[next_key_id as usize].clone()).unwrap_or(env::current_account_id());
             key_info_by_token_id.insert(
                 &token_id,
                 &KeyInfo {
@@ -316,31 +314,27 @@ impl Keypom {
                     pw_per_key,
                 },
             );
-            if let Some(owner) = token_owner {
-                self.internal_add_token_to_owner(&owner, &token_id);
+            self.internal_add_token_to_owner(&token_owner, &token_id);
 
-                if config.as_ref().and_then(|c| c.nft_metadata.as_ref()).is_some() {
-                    // Construct the mint log as per the events standard.
-                    let nft_mint_log: EventLog = EventLog {
-                        // Standard name ("nep171").
-                        standard: NFT_STANDARD_NAME.to_string(),
-                        // Version of the standard ("nft-1.0.0").
-                        version: NFT_METADATA_SPEC.to_string(),
-                        // The data related with the event stored in a vector.
-                        event: EventLogVariant::NftMint(vec![NftMintLog {
-                            // Owner of the token.
-                            owner_id: owner.to_string(),
-                            // Vector of token IDs that were minted.
-                            token_ids: vec![token_id.to_string()],
-                            // An optional memo to include.
-                            memo: None,
-                        }]),
-                    };
+            // Construct the mint log as per the events standard.
+            let nft_mint_log: EventLog = EventLog {
+                // Standard name ("nep171").
+                standard: NFT_STANDARD_NAME.to_string(),
+                // Version of the standard ("nft-1.0.0").
+                version: NFT_METADATA_SPEC.to_string(),
+                // The data related with the event stored in a vector.
+                event: EventLogVariant::NftMint(vec![NftMintLog {
+                    // Owner of the token.
+                    owner_id: token_owner.to_string(),
+                    // Vector of token IDs that were minted.
+                    token_ids: vec![token_id.to_string()],
+                    // An optional memo to include.
+                    memo: None,
+                }]),
+            };
 
-                    // Log the serialized json.
-                    env::log_str(&nft_mint_log.to_string());
-                }
-            }
+            // Log the serialized json.
+            env::log_str(&nft_mint_log.to_string());
 
             require!(
                 self.token_id_by_pk.insert(pk, &token_id).is_none(),
@@ -741,7 +735,7 @@ impl Keypom {
                 "You cannot specify both local and global passwords for a key"
             );
 
-            let token_owner = key_owners.clone().and_then(|o| o[idx as usize].clone());
+            let token_owner = key_owners.clone().and_then(|o| o[idx as usize].clone()).unwrap_or(env::current_account_id());
             key_info_by_token_id.insert(
                 &token_id,
                 &KeyInfo {
@@ -756,31 +750,28 @@ impl Keypom {
                     pw_per_key,
                 },
             );
-            if let Some(owner) = token_owner {
-                self.internal_add_token_to_owner(&owner, &token_id);
 
-                if config.as_ref().and_then(|c| c.nft_metadata.as_ref()).is_some() {
-                    // Construct the mint log as per the events standard.
-                    let nft_mint_log: EventLog = EventLog {
-                        // Standard name ("nep171").
-                        standard: NFT_STANDARD_NAME.to_string(),
-                        // Version of the standard ("nft-1.0.0").
-                        version: NFT_METADATA_SPEC.to_string(),
-                        // The data related with the event stored in a vector.
-                        event: EventLogVariant::NftMint(vec![NftMintLog {
-                            // Owner of the token.
-                            owner_id: owner.to_string(),
-                            // Vector of token IDs that were minted.
-                            token_ids: vec![token_id.to_string()],
-                            // An optional memo to include.
-                            memo: None,
-                        }]),
-                    };
+            self.internal_add_token_to_owner(&token_owner, &token_id);
+            
+            // Construct the mint log as per the events standard.
+            let nft_mint_log: EventLog = EventLog {
+                // Standard name ("nep171").
+                standard: NFT_STANDARD_NAME.to_string(),
+                // Version of the standard ("nft-1.0.0").
+                version: NFT_METADATA_SPEC.to_string(),
+                // The data related with the event stored in a vector.
+                event: EventLogVariant::NftMint(vec![NftMintLog {
+                    // Owner of the token.
+                    owner_id: token_owner.to_string(),
+                    // Vector of token IDs that were minted.
+                    token_ids: vec![token_id.to_string()],
+                    // An optional memo to include.
+                    memo: None,
+                }]),
+            };
 
-                    // Log the serialized json.
-                    env::log_str(&nft_mint_log.to_string());
-                }
-            }
+            // Log the serialized json.
+            env::log_str(&nft_mint_log.to_string());
 
             require!(
                 self.token_id_by_pk.insert(pk, &token_id).is_none(),

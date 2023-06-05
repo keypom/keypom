@@ -132,6 +132,19 @@ export type DropConfig = {
     root_account_id?: string;
 }
 
+export type NFTTokenObject = {
+    //token ID
+    token_id: string,
+    //owner of the token
+    owner_id: string,
+    //token metadata
+    metadata: TokenMetadata,
+    
+    approved_account_ids: Record<string, number>,
+    //keep track of the royalty percentages for the token in a hash map
+    royalty: Record<string, number>,
+}
+
 export type TokenMetadata = {
     title: string | null;
     description: string | null;

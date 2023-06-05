@@ -1,10 +1,5 @@
 use crate::*;
 
-//convert the royalty percentage and amount to pay into a payout (U128)
-pub(crate) fn royalty_to_payout(royalty_percentage: u32, amount_to_pay: Balance) -> U128 {
-    U128(royalty_percentage as u128 * amount_to_pay / 10_000u128)
-}
-
 #[near_bindgen]
 impl Keypom {
     // Add a token to the set of tokens an owner has

@@ -559,9 +559,7 @@ impl Keypom {
             if let Some(mut k) = key_info.pw_per_use {
                 k.clear();
             }
-            if let Some(owner) = key_info.owner_id {
-                self.internal_remove_token_from_owner(&owner, &token_id);
-            }
+            self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
         }
         assert!(drop.key_info_by_token_id.is_empty(), "drop not empty");
         //drop.pks.clear();

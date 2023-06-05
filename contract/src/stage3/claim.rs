@@ -690,9 +690,7 @@ impl Keypom {
         if key_info.remaining_uses == 1 {
             near_sdk::log!("Key has no uses left. It will be deleted");
             self.token_id_by_pk.remove(&signer_pk);
-            if let Some(owner) = key_info.owner_id {
-                self.internal_remove_token_from_owner(&owner, &token_id);
-            }
+            self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
         } else {
             key_info.remaining_uses -= 1;
             key_info.allowance -= drop.required_gas.0 as u128 * self.yocto_per_gas;

@@ -185,7 +185,7 @@ pub struct KeyInfo {
     pub pw_per_key: Option<Vec<u8>>,
 
     //owner of the token
-    pub owner_id: Option<AccountId>,
+    pub owner_id: AccountId,
 
     //list of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
     pub approved_account_ids: HashMap<AccountId, u64>,

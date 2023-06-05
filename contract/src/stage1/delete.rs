@@ -94,9 +94,7 @@ impl Keypom {
                 if let Some(mut k) = key_info.pw_per_use {
                     k.clear();
                 }
-                if let Some(owner) = key_info.owner_id {
-                    self.internal_remove_token_from_owner(&owner, &token_id);
-                }
+                self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
 
                 total_num_uses_refunded += key_info.remaining_uses;
 
@@ -267,9 +265,7 @@ impl Keypom {
                 if let Some(mut k) = key_info.pw_per_use {
                     k.clear();
                 }
-                if let Some(owner) = key_info.owner_id {
-                    self.internal_remove_token_from_owner(&owner, &token_id);
-                }
+                self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
                 total_num_uses_refunded += key_info.remaining_uses;
 
                 // If the drop is FC, we need to loop through method_name data for the remaining number of
