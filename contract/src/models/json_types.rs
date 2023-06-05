@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::*;
 
 #[allow(non_camel_case_types)]
@@ -56,11 +54,8 @@ pub struct JsonDrop {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JsonDropConfig {
-    /// What metadata should all the keys in the drop derive from?
-    pub nft_metadata: Option<TokenMetadata>,
-
-    /// Royalties that all NFTs in this drop will have
-    pub nft_royalty: Option<HashMap<AccountId, u32>>,
+    /// Information about NFT access keys in this drop
+    pub nft_key_behaviour: Option<NFTKeyBehaviour>,
 
     /// How many uses can each key have before it's deleted. If None, default to 1.
     pub uses_per_key: Option<u64>,

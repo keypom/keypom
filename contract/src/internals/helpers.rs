@@ -68,8 +68,7 @@ pub(crate) fn assert_valid_drop_config(drop_config: &Option<JsonDropConfig>, dro
     if let Some(config) = drop_config.clone() {
         actual_config = Some(DropConfig {
             uses_per_key: config.uses_per_key,
-            nft_metadata: config.nft_metadata,
-            nft_royalty: config.nft_royalty,
+            nft_key_behaviour: config.nft_key_behaviour,
             time: None,
             usage: config.usage,
             sale: None,

@@ -30,7 +30,7 @@ impl Keypom {
             token_id_transferred = token.clone();
             let drop_id = parse_token_id(&token).0;
             let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
-            nft_royalty = drop.config.and_then(|c| c.nft_royalty).unwrap_or(Default::default());
+            nft_royalty = drop.config.and_then(|c| c.nft_key_behaviour).and_then(|b| b.nft_royalty).unwrap_or(Default::default());
 
             let key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
             old_owner_id = key_info.owner_id.to_string();
@@ -56,7 +56,7 @@ impl Keypom {
             let drop_id = parse_token_id(&token).0;
 
             let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
-            nft_royalty = drop.config.and_then(|c| c.nft_royalty).unwrap_or(Default::default());
+            nft_royalty = drop.config.and_then(|c| c.nft_key_behaviour).and_then(|b| b.nft_royalty).unwrap_or(Default::default());
             let key_info = drop.key_info_by_token_id.remove(&token).expect("Key info not found");
             
             //if the sender doesn't equal the owner, we check if the sender is in the approval list
@@ -201,8 +201,8 @@ impl Keypom {
         if let Some(drop) = self.drop_for_id.get(&drop_id) {
             let config = drop.config;
 
-            let nft_metadata = config.as_ref().and_then(|c| c.nft_metadata.clone());
-            let royalty = config.and_then(|c| c.nft_royalty);
+            let nft_metadata = config.as_ref().and_then(|c| c.nft_key_behaviour.clone()).and_then(|b| b.nft_metadata.clone());
+            let royalty = config.and_then(|c| c.nft_key_behaviour).and_then(|b| b.nft_royalty);
 
             if let Some(key_info) = drop.key_info_by_token_id.get(&token_id) {
                 return Some(JsonToken {

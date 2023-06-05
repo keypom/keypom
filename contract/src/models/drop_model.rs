@@ -68,12 +68,9 @@ pub struct Drop {
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DropConfig {
-    /// Metadata that all the NFTs in this drop will have
-    pub nft_metadata: Option<TokenMetadata>,
-
-    /// Royalties that all NFTs in this drop will have
-    pub nft_royalty: Option<HashMap<AccountId, u32>>,
-
+    /// Information about NFT access keys in this drop
+    pub nft_key_behaviour: Option<NFTKeyBehaviour>,
+    
     /// How many uses can each key have before it's deleted. If None, default to 1.
     pub uses_per_key: Option<u64>,
 
@@ -91,6 +88,17 @@ pub struct DropConfig {
     /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
     /// be `ACCOUNT.fayyr.near`
     pub root_account_id: Option<AccountId>,
+}
+
+/// Keep track of different configuration options for each key in a drop
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct NFTKeyBehaviour {
+    /// Metadata that all the NFTs in this drop will have
+    pub nft_metadata: Option<TokenMetadata>,
+
+    /// Royalties that all NFTs in this drop will have
+    pub nft_royalty: Option<HashMap<AccountId, u32>>,
 }
 
 /// Keep track of different configuration options for each key in a drop
