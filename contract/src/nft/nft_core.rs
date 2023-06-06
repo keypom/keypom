@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use crate::*;
 use near_sdk::{ext_contract, Gas, PromiseResult};
 
@@ -21,7 +20,7 @@ impl Keypom {
         let receiver_id = receiver_id.unwrap_or(env::current_account_id());
 
         // Token ID is either from sender PK or passed in
-        let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or(token_id.expect("Token ID not provided"));
+        let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
         let drop_id = parse_token_id(&token_id).0;
         
         // Get drop in order to get key info (and royalties if applicable)
@@ -80,7 +79,7 @@ impl Keypom {
         self.token_id_by_pk.remove(&pub_key);
 
         let mut allowance_to_decrement = 0;
-        if sender_id != env::current_account_id() {
+        if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
             require!(
                 key_info.allowance >= env::prepaid_gas().0 as u128 * self.yocto_per_gas,
@@ -105,7 +104,8 @@ impl Keypom {
 
         // Reinsert key info mapping to NFT and then add token ID mapping to public key
         drop.key_info_by_token_id.insert(&token_id, &new_key_info);
-        self.token_id_by_pk.insert(&memo, &token_id);
+        let key_exists = self.token_id_by_pk.insert(&memo, &token_id);
+        assert!(key_exists.is_none(), "Key already exists");
 
         // Default the authorized ID to be None for the logs.
         let mut authorized_id = None;
