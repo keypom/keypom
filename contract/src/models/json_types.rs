@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::*;
 
 #[allow(non_camel_case_types)]
@@ -133,6 +135,12 @@ pub struct JsonKeyInfo {
     pub drop_id: DropIdJson,
     pub pk: PublicKey,
 
+    pub owner_id: AccountId,
+
+    pub approved_account_ids: HashMap<AccountId, u64>,
+
+    pub next_approval_id: u64,
+
     // Which use is the current key on?
     pub cur_key_use: u64,
 
@@ -143,7 +151,7 @@ pub struct JsonKeyInfo {
     pub last_used: u64,
 
     // How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.
-    pub allowance: u128,
+    pub allowance: U128,
 
     // Nonce for the current key.
     pub key_id: u64,

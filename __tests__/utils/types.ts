@@ -63,6 +63,9 @@ export type JsonKeyInfo = {
     pk: string;
     // How many uses this key has left. Once 0 is reached, the key is deleted
     remaining_uses: number,
+    owner_id: string,
+    next_approval_id: number,
+    approved_account_ids: Record<string, number>,
     // When was the last time the key was used
     last_used: number,
     // How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.

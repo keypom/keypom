@@ -32,6 +32,9 @@ impl Keypom {
         // Specify how much Gas should be attached to `claim` or `create_account_and_claim` calls
         required_gas: Option<Gas>,
 
+        // How much extra allowance should be given on top of what is required
+        extra_key_allowance: Option<U128>,
+
         // Mutually Exclusive. Use-case specific configurations
         simple: Option<SimpleData>,
         ft: Option<JsonFTData>,
@@ -236,7 +239,7 @@ impl Keypom {
         gas_to_attach = required_gas.unwrap_or(gas_to_attach);
         let calculated_base_allowance = self.calculate_base_allowance(gas_to_attach);
         // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
-        let actual_allowance = calculated_base_allowance * num_uses_per_key as u128;
+        let actual_allowance = (calculated_base_allowance + extra_key_allowance.unwrap_or(U128(0)).0) * num_uses_per_key as u128;
 
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");
@@ -628,6 +631,9 @@ impl Keypom {
         // What will the owners of the keys be? Must match length of public keys
         key_owners: Option<Vec<Option<AccountId>>>,
 
+        // How much extra allowance should be given to each key on top of what is required?
+        extra_key_allowance: Option<U128>,
+
         // Passwords for the keys
         passwords_per_use: Option<Vec<Option<Vec<JsonPasswordForUse>>>>,
         passwords_per_key: Option<Vec<Option<String>>>,
@@ -673,7 +679,7 @@ impl Keypom {
         // Calculate the base allowance to attach
         let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
         // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
-        let actual_allowance = calculated_base_allowance * num_uses_per_key as u128;
+        let actual_allowance = (calculated_base_allowance + extra_key_allowance.unwrap_or(U128(0)).0) * num_uses_per_key as u128;
 
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");

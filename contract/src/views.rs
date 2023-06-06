@@ -63,9 +63,12 @@ impl Keypom {
         Ok(JsonKeyInfo {
             drop_id: U128(drop_id),
             pk: key.clone(),
+            owner_id: key_info.owner_id,
+            next_approval_id: key_info.next_approval_id,
+            approved_account_ids: key_info.approved_account_ids,
             remaining_uses: key_info.remaining_uses,
             last_used: key_info.last_used,
-            allowance: key_info.allowance,
+            allowance: U128(key_info.allowance),
             key_id,
             cur_key_use: cur_use
         })
@@ -213,9 +216,12 @@ impl Keypom {
                 JsonKeyInfo {
                     drop_id,
                     pk: key_info.pub_key,
+                    owner_id: key_info.owner_id,
+                    next_approval_id: key_info.next_approval_id,
+                    approved_account_ids: key_info.approved_account_ids,
                     remaining_uses: key_info.remaining_uses,
                     last_used: key_info.last_used,
-                    allowance: key_info.allowance,
+                    allowance: U128(key_info.allowance),
                     key_id,
                     cur_key_use: cur_use
                 }

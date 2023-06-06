@@ -21,7 +21,7 @@ impl Keypom {
         let receiver_id = receiver_id.unwrap_or(env::current_account_id());
 
         // Token ID is either from sender PK or passed in
-        let token_id = self.token_id_by_pk.remove(&sender_pk).unwrap_or(token_id.expect("Token ID not provided"));
+        let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or(token_id.expect("Token ID not provided"));
         let drop_id = parse_token_id(&token_id).0;
         
         // Get drop in order to get key info (and royalties if applicable)
@@ -42,7 +42,7 @@ impl Keypom {
         let nft_royalty = drop.config.and_then(|c| c.nft_key_behaviour).and_then(|b| b.nft_royalty).unwrap_or(Default::default());
         
         // Get key info (remove token ID so we can re-insert later)
-        let key_info = drop.key_info_by_token_id.remove(&token_id).expect("Key info not found");
+        let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
         
         //if the sender doesn't equal the owner, we check if the sender is in the approval list
         if sender_id != key_info.owner_id.clone() {
