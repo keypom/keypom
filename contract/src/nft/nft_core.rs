@@ -38,7 +38,7 @@ impl Keypom {
                 }
             }
         }
-        let nft_royalty = drop.config.and_then(|c| c.nft_key_behaviour).and_then(|b| b.nft_royalty).unwrap_or(Default::default());
+        let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_key_behaviour.clone()).and_then(|b| b.nft_royalty).unwrap_or(Default::default());
         
         // Get key info (remove token ID so we can re-insert later)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
@@ -104,6 +104,8 @@ impl Keypom {
 
         // Reinsert key info mapping to NFT and then add token ID mapping to public key
         drop.key_info_by_token_id.insert(&token_id, &new_key_info);
+        self.drop_for_id.insert(&drop_id, &drop);
+        
         let key_exists = self.token_id_by_pk.insert(&memo, &token_id);
         assert!(key_exists.is_none(), "Key already exists");
 
