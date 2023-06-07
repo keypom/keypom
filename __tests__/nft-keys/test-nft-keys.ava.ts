@@ -38,107 +38,107 @@ test.afterEach(async t => {
     });
 });
 
-// test('Create drop with 1 NFT (no owner)', async t => {
-//     const { keypom, ali } = t.context.accounts;
-//     //add 2NEAR to ali's keypom balance
-//     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-//     const {publicKeys} = await generateKeyPairs(1);
-//     //create a drop with Ali, doesn't front any cost. 
-//     await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
+test('Create drop with 1 NFT (no owner)', async t => {
+    const { keypom, ali } = t.context.accounts;
+    //add 2NEAR to ali's keypom balance
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
+    const {publicKeys} = await generateKeyPairs(1);
+    //create a drop with Ali, doesn't front any cost. 
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
 
-//     const tokens: NFTTokenObject[] = await keypom.view('nft_tokens');
-//     console.log('tokens: ', tokens)
-//     t.is(tokens.length, 1)
-//     t.is(tokens[0].owner_id, keypom.accountId)
-//     t.is(tokens[0].metadata.title, "My Cool NFT!")
+    const tokens: NFTTokenObject[] = await keypom.view('nft_tokens');
+    console.log('tokens: ', tokens)
+    t.is(tokens.length, 1)
+    t.is(tokens[0].owner_id, keypom.accountId)
+    t.is(tokens[0].metadata.title, "My Cool NFT!")
 
-//     let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('tokensForOwner (ali): ', tokensForOwner)
-//     t.is(tokensForOwner.length, 0);
+    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('tokensForOwner (ali): ', tokensForOwner)
+    t.is(tokensForOwner.length, 0);
 
-//     tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
-//     console.log('tokensForOwner (keypom): ', tokensForOwner)
-//     t.is(tokensForOwner.length, 1);
-// });
+    tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
+    console.log('tokensForOwner (keypom): ', tokensForOwner)
+    t.is(tokensForOwner.length, 1);
+});
 
-// test('Create drop with 1 NFT (with owner)', async t => {
-//     const { keypom, ali } = t.context.accounts;
-//     //add 2NEAR to ali's keypom balance
-//     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-//     const {publicKeys} = await generateKeyPairs(1);
-//     //create a drop with Ali, doesn't front any cost. 
-//     await ali.call(keypom, 'create_drop', {public_keys: publicKeys, key_owners: [ali.accountId], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
+test('Create drop with 1 NFT (with owner)', async t => {
+    const { keypom, ali } = t.context.accounts;
+    //add 2NEAR to ali's keypom balance
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
+    const {publicKeys} = await generateKeyPairs(1);
+    //create a drop with Ali, doesn't front any cost. 
+    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, key_owners: [ali.accountId], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
 
-//     const tokens: NFTTokenObject[] = await keypom.view('nft_tokens');
-//     console.log('tokens: ', tokens)
-//     t.is(tokens.length, 1)
-//     t.is(tokens[0].owner_id, ali.accountId)
-//     t.is(tokens[0].metadata.title, "My Cool NFT!")
+    const tokens: NFTTokenObject[] = await keypom.view('nft_tokens');
+    console.log('tokens: ', tokens)
+    t.is(tokens.length, 1)
+    t.is(tokens[0].owner_id, ali.accountId)
+    t.is(tokens[0].metadata.title, "My Cool NFT!")
 
-//     let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('tokensForOwner (ali): ', tokensForOwner)
-//     t.is(tokensForOwner.length, 1);
+    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('tokensForOwner (ali): ', tokensForOwner)
+    t.is(tokensForOwner.length, 1);
 
-//     tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
-//     console.log('tokensForOwner (keypom): ', tokensForOwner)
-//     t.is(tokensForOwner.length, 0);
-// });
+    tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
+    console.log('tokensForOwner (keypom): ', tokensForOwner)
+    t.is(tokensForOwner.length, 0);
+});
 
-// test('Add keys to drop with owner', async t => {
-//     const { keypom, ali } = t.context.accounts;
-//     //add 2NEAR to ali's keypom balance
-//     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-//     const {publicKeys} = await generateKeyPairs(2);
-//     //create a drop with Ali, doesn't front any cost. 
-//     await ali.call(keypom, 'create_drop', {public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
-//     await ali.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[1]], key_owners: [ali.accountId]});
+test('Add keys to drop with owner', async t => {
+    const { keypom, ali } = t.context.accounts;
+    //add 2NEAR to ali's keypom balance
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
+    const {publicKeys} = await generateKeyPairs(2);
+    //create a drop with Ali, doesn't front any cost. 
+    await ali.call(keypom, 'create_drop', {public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
+    await ali.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[1]], key_owners: [ali.accountId]});
 
-//     let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('tokensForOwner (ali): ', tokensForOwner)
-//     t.is(tokensForOwner.length, 1);
+    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('tokensForOwner (ali): ', tokensForOwner)
+    t.is(tokensForOwner.length, 1);
 
-//     tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
-//     console.log('tokensForOwner (keypom): ', tokensForOwner)
-//     t.is(tokensForOwner.length, 1);
-// });
+    tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
+    console.log('tokensForOwner (keypom): ', tokensForOwner)
+    t.is(tokensForOwner.length, 1);
+});
 
-// test('Transfer key to new user', async t => {
-//     const { keypom, ali, bob } = t.context.accounts;
-//     //add 2NEAR to ali's keypom balance
-//     await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-//     const {publicKeys} = await generateKeyPairs(2);
-//     //create a drop with Ali, doesn't front any cost. 
-//     await ali.call(keypom, 'create_drop', {key_owners: [ali.accountId], public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
+test('Transfer key to new user', async t => {
+    const { keypom, ali, bob } = t.context.accounts;
+    //add 2NEAR to ali's keypom balance
+    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
+    const {publicKeys} = await generateKeyPairs(2);
+    //create a drop with Ali, doesn't front any cost. 
+    await ali.call(keypom, 'create_drop', {key_owners: [ali.accountId], public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
 
-//     let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('tokensForOwner (ali): ', tokensForOwner)
-//     t.is(tokensForOwner.length, 1);
-//     let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, publicKeys[0]);
-//     let initialAllowance = keyInfo.allowance;
-//     console.log('initialAllowance: ', initialAllowance)
+    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('tokensForOwner (ali): ', tokensForOwner)
+    t.is(tokensForOwner.length, 1);
+    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, publicKeys[0]);
+    let initialAllowance = keyInfo.allowance;
+    console.log('initialAllowance: ', initialAllowance)
 
 
-//     await ali.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: publicKeys[1]});
-//     // Should throw an error now since key was transferred
-//     try {
-//        await getKeyInformation(keypom, publicKeys[0]);
-//         t.is(1, 2);
-//     } catch (e) {
-//         t.is(1,1);
-//     }
+    await ali.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: publicKeys[1]});
+    // Should throw an error now since key was transferred
+    try {
+       await getKeyInformation(keypom, publicKeys[0]);
+        t.is(1, 2);
+    } catch (e) {
+        t.is(1,1);
+    }
 
-//     keyInfo = await getKeyInformation(keypom, publicKeys[1]);
-//     console.log('keyInfo: ', keyInfo)
-//     let newAllowance = keyInfo.allowance;
-//     console.log('newAllowance: ', newAllowance)
+    keyInfo = await getKeyInformation(keypom, publicKeys[1]);
+    console.log('keyInfo: ', keyInfo)
+    let newAllowance = keyInfo.allowance;
+    console.log('newAllowance: ', newAllowance)
 
-//     t.assert(new BN(initialAllowance).gt(new BN(newAllowance)));
+    t.assert(new BN(initialAllowance).gt(new BN(newAllowance)));
 
-//     const tokens: NFTTokenObject[] = await keypom.view('nft_tokens', {});
-//     console.log('tokens (all): ', tokens)
-//     t.is(tokens.length, 1);
-//     t.is(tokens[0].owner_id, bob.accountId);
-// });
+    const tokens: NFTTokenObject[] = await keypom.view('nft_tokens', {});
+    console.log('tokens (all): ', tokens)
+    t.is(tokens.length, 1);
+    t.is(tokens[0].owner_id, bob.accountId);
+});
 
 test('Rotate key using transfer', async t => {
     const { keypom, ali, bob } = t.context.accounts;

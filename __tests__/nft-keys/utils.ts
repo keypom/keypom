@@ -2,6 +2,23 @@ import * as crypto from "crypto";
 import { NEAR, NearAccount } from "near-workspaces";
 import { readFileSync } from 'fs';
 
+export interface ListingJson {
+    nft_token_id: string,
+    nft_approval_id: number,
+    nft_owner_id: string,
+    nft_contract_id: string,
+    price: string,
+    currency: string,
+    created_at: string,
+    current_offer?: OfferJson,
+}
+
+export interface OfferJson {
+    offerer_id: string,
+    amount: string,
+    referrer_id?: string,
+    referral_cut?: number
+}
 // helpers for keypom account contract args
 const PARAM_START = "|kP|";
 const PARAM_STOP = "|kS|";

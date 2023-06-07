@@ -239,7 +239,7 @@ impl Keypom {
         gas_to_attach = required_gas.unwrap_or(gas_to_attach);
         let calculated_base_allowance = self.calculate_base_allowance(gas_to_attach);
         // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
-        let actual_allowance = (calculated_base_allowance + extra_key_allowance.unwrap_or(U128(0)).0) * num_uses_per_key as u128;
+        let actual_allowance = (calculated_base_allowance) * num_uses_per_key as u128 + extra_key_allowance.unwrap_or(U128(0)).0;
 
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");
@@ -679,7 +679,7 @@ impl Keypom {
         // Calculate the base allowance to attach
         let calculated_base_allowance = self.calculate_base_allowance(drop.required_gas);
         // The actual allowance is the base * number of uses per key since each claim can potentially use the max pessimistic GAS.
-        let actual_allowance = (calculated_base_allowance + extra_key_allowance.unwrap_or(U128(0)).0) * num_uses_per_key as u128;
+        let actual_allowance = (calculated_base_allowance) * num_uses_per_key as u128 + extra_key_allowance.unwrap_or(U128(0)).0;
 
         if passwords_per_use.is_some() {
             require!(len <= 50, "Cannot add 50 keys at once with passwords");

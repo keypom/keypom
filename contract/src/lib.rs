@@ -902,13 +902,13 @@ const GAS_OFFSET_IF_FC_EXECUTE: Gas = Gas(20_000_000_000_000);
 const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000);
 
 /// Specifies both `claim` and `create_account_and_claim` functions can be called with the access key
-const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim,nft_transfer,nft_approve";
+const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim,nft_transfer,nft_approve,nft_revoke,nft_revoke_all";
 
 /// Specifies only `claim` can be called with the access key
-const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim,nft_transfer,nft_approve";
+const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim,nft_transfer,nft_approve,nft_revoke,nft_revoke_all";
 
 /// Specifies only `create_account_and_claim` can be called with the access key
-const ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME: &str = "create_account_and_claim,nft_transfer,nft_approve";
+const ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME: &str = "create_account_and_claim,nft_transfer,nft_approve,nft_revoke,nft_revoke_all";
 
 /// Fee for creating a drop. Currently 0 $NEAR
 const DROP_CREATION_FEE: u128 = 0;
