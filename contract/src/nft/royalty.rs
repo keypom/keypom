@@ -20,9 +20,20 @@ impl Keypom {
         balance: U128,
         max_len_payout: u32,
     ) -> Payout {
-        let (old_owner_id, nft_royalty) =
-            self.nft_transfer(token_id, receiver_id, approval_id, memo);
+        let sender_id = env::predecessor_account_id();
+        let sender_pk = env::signer_account_pk();
+        let receiver_id = receiver_id.unwrap_or(env::current_account_id());
 
+        // Token ID is either from sender PK or passed in
+        let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
+        let drop_id = parse_token_id(&token_id).0;
+        // Get drop in order to get key info (and royalties if applicable)
+        let drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
+        let default_royalty = &HashMap::new();
+        let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_key_behaviour.as_ref()).and_then(|b| b.nft_royalty.as_ref()).unwrap_or(default_royalty);
+
+        let old_owner_id = self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo, None);
+        
         //keep track of the total perpetual royalties
         let mut total_perpetual = 0;
         //get the u128 version of the passed in balance (which was U128 before)
