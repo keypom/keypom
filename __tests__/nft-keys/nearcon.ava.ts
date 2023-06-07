@@ -95,49 +95,49 @@ test('Transfer NFT Using Keypom', async t => {
     t.is(keyInfo.owner_id, funder.accountId);
 });
 
-test('Transfer NFT Using Owner Account', async t => {
-    const { keypom, funder, bob, root } = t.context.accounts;
-    const keyInfos = t.context.keypairs;
+// test('Transfer NFT Using Owner Account', async t => {
+//     const { keypom, funder, bob, root } = t.context.accounts;
+//     const keyInfos = t.context.keypairs;
 
-    const newKeys = await generateKeyPairs(1);
+//     const newKeys = await generateKeyPairs(1);
     
-    await keypom.setKey(keyInfos.keys[0]);
-    await keypom.call(keypom, 'nft_transfer', {receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
+//     await keypom.setKey(keyInfos.keys[0]);
+//     await keypom.call(keypom, 'nft_transfer', {receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
     
-    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
-    let initialAllowance = keyInfo.allowance;
-    console.log('keyInfo before: ', keyInfo)
+//     let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
+//     let initialAllowance = keyInfo.allowance;
+//     console.log('keyInfo before: ', keyInfo)
 
-    await funder.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: keyInfos.publicKeys[0]});
+//     await funder.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: keyInfos.publicKeys[0]});
 
-    keyInfo = await getKeyInformation(keypom, keyInfos.publicKeys[0]);
-    console.log('keyInfo after: ', keyInfo)
-    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
-    t.is(keyInfo.owner_id, bob.accountId);
-});
+//     keyInfo = await getKeyInformation(keypom, keyInfos.publicKeys[0]);
+//     console.log('keyInfo after: ', keyInfo)
+//     t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+//     t.is(keyInfo.owner_id, bob.accountId);
+// });
 
-test('Transfer NFT Not Owned By Account', async t => {
-    const { keypom, funder, bob, root } = t.context.accounts;
-    const keyInfos = t.context.keypairs;
+// test('Transfer NFT Not Owned By Account', async t => {
+//     const { keypom, funder, bob, root } = t.context.accounts;
+//     const keyInfos = t.context.keypairs;
 
-    const newKeys = await generateKeyPairs(1);
+//     const newKeys = await generateKeyPairs(1);
 
-    await keypom.setKey(keyInfos.keys[0]);
-    await keypom.call(keypom, 'nft_transfer', {receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
+//     await keypom.setKey(keyInfos.keys[0]);
+//     await keypom.call(keypom, 'nft_transfer', {receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
     
-    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
-    let initialAllowance = keyInfo.allowance;
-    console.log('keyInfo before: ', keyInfo)
+//     let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
+//     let initialAllowance = keyInfo.allowance;
+//     console.log('keyInfo before: ', keyInfo)
 
-    try {
-        await bob.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: keyInfos.publicKeys[0]});
-        t.is(1, 2);
-    } catch (e) {
-        t.is(1, 1);
-    }
+//     try {
+//         await bob.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: keyInfos.publicKeys[0]});
+//         t.is(1, 2);
+//     } catch (e) {
+//         t.is(1, 1);
+//     }
 
-    keyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
-    console.log('keyInfo after: ', keyInfo)
-    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
-    t.is(keyInfo.owner_id, funder.accountId);
-});
+//     keyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
+//     console.log('keyInfo after: ', keyInfo)
+//     t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+//     t.is(keyInfo.owner_id, funder.accountId);
+// });

@@ -78,7 +78,7 @@ export async function generatePerUsePasswords({
 const actualContracts = Array(10).fill('nft-v2.keypom.near');
 const actualAmounts = Array(10).fill(NEAR.parse("100").toString());
 const actualMethods = Array(10).fill('create_account_and_claim');
-const attachedDeposit = NEAR.parse("25").toString();
+const attachedDeposit = NEAR.parse("1").toString();
 const extraAllowance = NEAR.parse("0.1").toString();
 
 export const createDropArgs = ({
