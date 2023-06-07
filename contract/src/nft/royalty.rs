@@ -61,4 +61,54 @@ impl Keypom {
         //return the payout object
         payout_object
     }
+
+    //calculates the payout for a token given the passed in balance. This is a view method
+    pub fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: u32) -> Payout {
+        //get the key info object from the token_id
+        let drop_id = parse_token_id(&token_id).0;
+    
+        // Get drop in order to get key info
+        let drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
+        let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_key_behaviour.clone()).and_then(|b| b.nft_royalty).unwrap_or(Default::default());
+        let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
+        let owner_id = key_info.owner_id.clone();
+        
+        //keep track of the total perpetual royalties
+        let mut total_perpetual = 0;
+        //get the u128 version of the passed in balance (which was U128 before)
+        let balance_u128 = u128::from(balance);
+        //keep track of the payout object to send back
+        let mut payout_object = Payout {
+            payout: HashMap::new(),
+        };
+
+        //make sure we're not paying out to too many people (GAS limits this)
+        assert!(
+            nft_royalty.len() as u32 <= max_len_payout,
+            "Market cannot payout to that many receivers"
+        );
+
+        //go through each key and value in the royalty object
+        for (k, v) in nft_royalty.iter() {
+            //get the key
+            let key = k.clone();
+            //only insert into the payout if the key isn't the token owner (we add their payout at the end)
+            if key != owner_id {
+                //
+                payout_object
+                    .payout
+                    .insert(key, royalty_to_payout(*v, balance_u128));
+                total_perpetual += *v;
+            }
+        }
+
+        // payout to previous owner who gets 100% - total perpetual royalties
+        payout_object.payout.insert(
+            owner_id,
+            royalty_to_payout(10000 - total_perpetual, balance_u128),
+        );
+
+        //return the payout object
+        payout_object
+	}
 }
