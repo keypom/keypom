@@ -69,7 +69,7 @@ export type JsonKeyInfo = {
     // When was the last time the key was used
     last_used: number,
     // How much allowance does the key have left. When the key is deleted, this is refunded to the funder's balance.
-    allowance: number,
+    allowance: string,
     // Nonce for the current key.
     key_id: number,
     // Which use is the key currently on?

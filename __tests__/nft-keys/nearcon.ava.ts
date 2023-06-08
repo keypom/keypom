@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { KeyPair, NEAR, NearAccount, tGas, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, getDropInformation, getKeyInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { CONTRACT_METADATA, displayFailureLog, generateKeyPairs, getDropInformation, getKeyInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { DropConfig, JsonKeyInfo, NFTTokenObject, SimpleData, TokenMetadata } from "../utils/types";
 import { BN } from "bn.js";
 
@@ -24,10 +24,10 @@ const test = anyTest as TestFn<{
     // Deploy all 2 contracts
     const keypom = await root.createSubAccount('keypom');
     await keypom.deploy(`./out/keypom.wasm`);
-    
+
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
     const mintbase = await root.createSubAccount('mintbase');
-    await mintbase.deploy(`./__tests__/ext-wasm/mintbase-market-raw.wasm`);
+    await mintbase.deploy(`./__tests__/ext-wasm/mintbase-new.wasm`);
     console.log("Deployed contracts");
     
     // Init empty/default linkdrop contract
@@ -37,6 +37,13 @@ const test = anyTest as TestFn<{
     await mintbase.call(mintbase, 'init', { owner: mintbase, mintbase_cut: 0, fallback_cut: 0, listing_lock_seconds: "0" });
     await keypom.call(mintbase, 'deposit_storage', {},{attachedDeposit: NEAR.parse("10").toString()});
     console.log("Initialized contracts");
+
+    // const refFinance = await root.importContract({
+    //     testnetContract: 'market-v2-beta.mintspace2.testnet',
+    //     blockId: 50_000_000,
+    //     withData: true,
+    // });
+
     
     // Test users
     const funder = await root.createSubAccount('funder');
@@ -300,8 +307,9 @@ test('Key used to make listing that is purchased on Mintbase', async t => {
 
     /// Bob purchases the key
     const bobKeys = await generateKeyPairs(1);
-    await bob.call(mintbase, 'buy', {nft_contract_id: keypom.accountId, token_id: `0:0`, new_pub_key: bobKeys.publicKeys[0]}, {attachedDeposit: NEAR.parse('1').toString(), gas: '300000000000000'});
+    const logs = await bob.callRaw(mintbase, 'buy', {nft_contract_id: keypom.accountId, token_id: `0:0`, new_pub_key: bobKeys.publicKeys[0]}, {attachedDeposit: NEAR.parse('1').toString(), gas: '300000000000000'});
 
+    displayFailureLog(logs);
     keyInfo = await getKeyInformation(keypom, bobKeys.publicKeys[0]);
     console.log('keyInfo after bob purchase: ', keyInfo);
 
