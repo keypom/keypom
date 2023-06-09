@@ -925,10 +925,12 @@ pub const NFT_METADATA_SPEC: &str = "1.0.0";
 pub const NFT_STANDARD_NAME: &str = "nep171";
 
 /// Which methods are prohibited from being called by an FC drop
-const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
+const DEFAULT_PROHIBITED_FC_METHODS: [&str; 8] = [
     "nft_transfer",
     "nft_transfer_call",
     "nft_approve",
+    "nft_revoke",
+    "nft_revoke_all",
     "nft_transfer_payout",
     "ft_transfer",
     "ft_transfer_call",

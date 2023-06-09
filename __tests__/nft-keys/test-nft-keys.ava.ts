@@ -1,34 +1,67 @@
 import anyTest, { TestFn } from "ava";
-import { NEAR, NearAccount, tGas, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, getDropInformation, getKeyInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
+import { KeyPair, NEAR, NearAccount, tGas, Worker } from "near-workspaces";
+import { CONTRACT_METADATA, displayFailureLog, generateKeyPairs, getDropInformation, getKeyInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
 import { DropConfig, JsonKeyInfo, NFTTokenObject, SimpleData, TokenMetadata } from "../utils/types";
 import { BN } from "bn.js";
+
+import { createDropArgs, generatePerUsePasswords, ListingJson, PasswordPerUse, wrapTxnParamsForTrial } from "./utils";
+
 
 const test = anyTest as TestFn<{
     worker: Worker;
     accounts: Record<string, NearAccount>;
+    keypairs: {keys: KeyPair[], publicKeys: string[]}
   }>;
 
   test.beforeEach(async (t) => {
-  // Init the worker and start a Sandbox server
+    console.log("Starting test");
+    // Init the worker and start a Sandbox server
     const worker = await Worker.init();
 
     // Prepare sandbox for tests, create accounts, deploy contracts, etc.
     const root = worker.rootAccount;
 
-    // Deploy the keypom contract.
-    const keypom = await root.devDeploy(`./out/keypom.wasm`);
+    // Deploy all 2 contracts
+    const keypom = await root.createSubAccount('keypom');
+    await keypom.deploy(`./out/keypom.wasm`);
 
-    // Init the contract
-    await keypom.call(keypom, 'new', {root_account: 'testnet', owner_id: keypom, contract_metadata: CONTRACT_METADATA});
-
+    await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
+    console.log("Deployed contracts");
+    
+    // Init empty/default linkdrop contract
+    await root.call(root, 'new', {});
+    //init new keypom contract and setting keypom as the owner. 
+    await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
+    console.log("Initialized contracts");
+    
     // Test users
-    const ali = await root.createSubAccount('ali');
+    const funder = await root.createSubAccount('funder');
     const bob = await root.createSubAccount('bob');
+
+    // Add 10k $NEAR to owner's account
+    await funder.updateAccount({
+        amount: NEAR.parse('10000 N').toString()
+    })
+
+    //add 2NEAR to ali's keypom balance
+    await funder.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("5000").toString()});
+        
+    const keys = await generateKeyPairs(50);
+    const basePassword = "MASTER_KEY"
+
+    let passwords: Array<Array<PasswordPerUse>> = await generatePerUsePasswords({
+        publicKeys: keys.publicKeys,
+        basePassword,
+        uses: [1]
+    });
+
+    //create a drop with Ali, doesn't front any cost.
+    await funder.call(keypom, 'create_drop', createDropArgs({pubKeys: keys.publicKeys, passwords, root, wasmDirectory: `${require('path').resolve(__dirname, '..')}/ext-wasm/trial-accounts.wasm`}), {gas: '300000000000000'});
 
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, keypom, ali, bob };
+    t.context.accounts = { root, keypom, funder, bob };
+    t.context.keypairs = keys;
 });
 
 // If the environment is reused, use test.after to replace test.afterEach
@@ -38,142 +71,176 @@ test.afterEach(async t => {
     });
 });
 
-test('Create drop with 1 NFT (no owner)', async t => {
-    const { keypom, ali } = t.context.accounts;
-    //add 2NEAR to ali's keypom balance
-    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    const {publicKeys} = await generateKeyPairs(1);
-    //create a drop with Ali, doesn't front any cost. 
-    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
+test('Walletless Transfer NFT', async t => {
+    const { keypom, funder, bob, root } = t.context.accounts;
+    const keys = t.context.keypairs;
 
-    const tokens: NFTTokenObject[] = await keypom.view('nft_tokens');
-    console.log('tokens: ', tokens)
-    t.is(tokens.length, 1)
-    t.is(tokens[0].owner_id, keypom.accountId)
-    t.is(tokens[0].metadata.title, "My Cool NFT!")
-
-    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-    console.log('tokensForOwner (ali): ', tokensForOwner)
-    t.is(tokensForOwner.length, 0);
-
-    tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
-    console.log('tokensForOwner (keypom): ', tokensForOwner)
-    t.is(tokensForOwner.length, 1);
-});
-
-test('Create drop with 1 NFT (with owner)', async t => {
-    const { keypom, ali } = t.context.accounts;
-    //add 2NEAR to ali's keypom balance
-    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    const {publicKeys} = await generateKeyPairs(1);
-    //create a drop with Ali, doesn't front any cost. 
-    await ali.call(keypom, 'create_drop', {public_keys: publicKeys, key_owners: [ali.accountId], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
-
-    const tokens: NFTTokenObject[] = await keypom.view('nft_tokens');
-    console.log('tokens: ', tokens)
-    t.is(tokens.length, 1)
-    t.is(tokens[0].owner_id, ali.accountId)
-    t.is(tokens[0].metadata.title, "My Cool NFT!")
-
-    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-    console.log('tokensForOwner (ali): ', tokensForOwner)
-    t.is(tokensForOwner.length, 1);
-
-    tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
-    console.log('tokensForOwner (keypom): ', tokensForOwner)
-    t.is(tokensForOwner.length, 0);
-});
-
-test('Add keys to drop with owner', async t => {
-    const { keypom, ali } = t.context.accounts;
-    //add 2NEAR to ali's keypom balance
-    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    const {publicKeys} = await generateKeyPairs(2);
-    //create a drop with Ali, doesn't front any cost. 
-    await ali.call(keypom, 'create_drop', {public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
-    await ali.call(keypom, 'add_keys', {drop_id: '0', public_keys: [publicKeys[1]], key_owners: [ali.accountId]});
-
-    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-    console.log('tokensForOwner (ali): ', tokensForOwner)
-    t.is(tokensForOwner.length, 1);
-
-    tokensForOwner = await keypom.view('nft_tokens_for_owner', {account_id: keypom.accountId});
-    console.log('tokensForOwner (keypom): ', tokensForOwner)
-    t.is(tokensForOwner.length, 1);
-});
-
-test('Transfer key to new user', async t => {
-    const { keypom, ali, bob } = t.context.accounts;
-    //add 2NEAR to ali's keypom balance
-    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    const {publicKeys} = await generateKeyPairs(2);
-    //create a drop with Ali, doesn't front any cost. 
-    await ali.call(keypom, 'create_drop', {key_owners: [ali.accountId], public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
-
-    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-    console.log('tokensForOwner (ali): ', tokensForOwner)
-    t.is(tokensForOwner.length, 1);
-    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, publicKeys[0]);
+    const newKeys = await generateKeyPairs(1);
+    
+    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
     let initialAllowance = keyInfo.allowance;
-    console.log('initialAllowance: ', initialAllowance)
-
-
-    await ali.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: publicKeys[1]});
-    // Should throw an error now since key was transferred
+    console.log('keyInfo before: ', keyInfo)
+    
+    await keypom.setKey(keys.keys[0]);
+    await keypom.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
     try {
-       await getKeyInformation(keypom, publicKeys[0]);
-        t.is(1, 2);
+        await keypom.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: keys.publicKeys[0]});
+        keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+        t.fail();
     } catch (e) {
-        t.is(1,1);
+        t.pass()
     }
 
-    keyInfo = await getKeyInformation(keypom, publicKeys[1]);
-    console.log('keyInfo: ', keyInfo)
-    let newAllowance = keyInfo.allowance;
-    console.log('newAllowance: ', newAllowance)
-
-    t.assert(new BN(initialAllowance).gt(new BN(newAllowance)));
-
-    const tokens: NFTTokenObject[] = await keypom.view('nft_tokens', {});
-    console.log('tokens (all): ', tokens)
-    t.is(tokens.length, 1);
-    t.is(tokens[0].owner_id, bob.accountId);
+    keyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
+    console.log('keyInfo after: ', keyInfo)
+    t.assert(new BN(initialAllowance).gt(new BN(keyInfo.allowance)));
+    t.is(keyInfo.owner_id, funder.accountId);
 });
 
-test('Rotate key using transfer', async t => {
-    const { keypom, ali, bob } = t.context.accounts;
-    //add 2NEAR to ali's keypom balance
-    await ali.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("2").toString()});
-    const {publicKeys} = await generateKeyPairs(2);
-    //create a drop with Ali, doesn't front any cost. 
-    await ali.call(keypom, 'create_drop', {key_owners: [ali.accountId], public_keys: [publicKeys[0]], deposit_per_use: NEAR.parse('5 mN').toString(), config: {nft_key_behaviour: {nft_metadata: {title: "My Cool NFT!", media: 'bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq'}}}});
+test('Transfer NFT Using Owned Account', async t => {
+    const { keypom, funder, bob, root } = t.context.accounts;
+    const keyInfos = t.context.keypairs;
 
-    let tokensForOwner: NFTTokenObject[] = await keypom.view('nft_tokens_for_owner', {account_id: ali.accountId});
-    console.log('tokensForOwner (ali): ', tokensForOwner)
-    t.is(tokensForOwner.length, 1);
-    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, publicKeys[0]);
+    const newKeys = await generateKeyPairs(1);
+    
+    await keypom.setKey(keyInfos.keys[0]);
+    await keypom.call(keypom, 'nft_transfer', {receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
+    
+    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
     let initialAllowance = keyInfo.allowance;
-    console.log('initialAllowance: ', initialAllowance)
+    console.log('keyInfo before: ', keyInfo)
 
+    await funder.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: keyInfos.publicKeys[0]});
 
-    await ali.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: ali.accountId, memo: publicKeys[1]});
-    // Should throw an error now since key was transferred
+    keyInfo = await getKeyInformation(keypom, keyInfos.publicKeys[0]);
+    console.log('keyInfo after: ', keyInfo)
+    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+    t.is(keyInfo.owner_id, bob.accountId);
+});
+
+test('Malicious NFT Transfer', async t => {
+    const { keypom, funder, bob, root } = t.context.accounts;
+    const keyInfos = t.context.keypairs;
+
+    const newKeys = await generateKeyPairs(1);
+
+    await keypom.setKey(keyInfos.keys[0]);
+    await keypom.call(keypom, 'nft_transfer', {receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
+    
+    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
+    let initialAllowance = keyInfo.allowance;
+    console.log('keyInfo before: ', keyInfo)
+
     try {
-       await getKeyInformation(keypom, publicKeys[0]);
-        t.is(1, 2);
+        await bob.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: bob.accountId, memo: keyInfos.publicKeys[0]});
+        t.fail();
     } catch (e) {
-        t.is(1,1);
+        t.pass();
     }
 
-    keyInfo = await getKeyInformation(keypom, publicKeys[1]);
-    console.log('keyInfo: ', keyInfo)
-    let newAllowance = keyInfo.allowance;
-    console.log('newAllowance: ', newAllowance)
+    keyInfo = await getKeyInformation(keypom, newKeys.publicKeys[0]);
+    console.log('keyInfo after: ', keyInfo)
+    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+    t.is(keyInfo.owner_id, funder.accountId);
+});
 
-    t.assert(new BN(initialAllowance).gt(new BN(newAllowance)));
+test('Walletless Approve & revoke NFT', async t => {
+    const { keypom, funder, bob, root } = t.context.accounts;
+    const keys = t.context.keypairs;
+    
+    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    let initialAllowance = keyInfo.allowance;
+    console.log('keyInfo before: ', keyInfo)
+    
+    /// FIRST APPROVAL
+    await keypom.setKey(keys.keys[0]);
+    await keypom.call(keypom, 'nft_approve', {account_id: funder.accountId});
 
-    const tokens: NFTTokenObject[] = await keypom.view('nft_tokens', {});
-    console.log('tokens (all): ', tokens)
-    t.is(tokens.length, 1);
-    t.is(tokens[0].owner_id, ali.accountId);
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).gt(new BN(keyInfo.allowance)));
+    t.assert(keyInfo.approved_account_ids[funder.accountId] === 0);
+    t.is(keyInfo.next_approval_id, 1);
+    initialAllowance = keyInfo.allowance;
+
+    /// REVOKE FIRST APPROVAL
+    await keypom.call(keypom, 'nft_revoke', {account_id: funder.accountId});
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).gt(new BN(keyInfo.allowance)));
+    t.assert(Object.keys(keyInfo.approved_account_ids).length === 0);
+    t.is(keyInfo.next_approval_id, 1);
+    initialAllowance = keyInfo.allowance;
+
+
+    /// SECOND APPROVAL
+    await keypom.call(keypom, 'nft_approve', {account_id: funder.accountId});
+
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).gt(new BN(keyInfo.allowance)));
+    t.assert(keyInfo.approved_account_ids[funder.accountId] === 1);
+    t.is(keyInfo.next_approval_id, 2);
+
+    initialAllowance = keyInfo.allowance;
+
+    await keypom.call(keypom, 'nft_revoke_all', {});
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).gt(new BN(keyInfo.allowance)));
+    t.assert(Object.keys(keyInfo.approved_account_ids).length === 0);
+    t.is(keyInfo.next_approval_id, 2);
+});
+
+test('Approve & revoke NFT Using Owned Account', async t => {
+    const { keypom, funder, bob, root } = t.context.accounts;
+    const keys = t.context.keypairs;
+    
+    const newKeys = await generateKeyPairs(1);
+    
+    await keypom.setKey(keys.keys[0]);
+    await keypom.call(keypom, 'nft_transfer', {token_id: `0:0`, receiver_id: funder.accountId, memo: newKeys.publicKeys[0]});
+    
+    keys.publicKeys[0] = newKeys.publicKeys[0];
+    let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    let initialAllowance = keyInfo.allowance;
+    console.log('keyInfo before: ', keyInfo)
+    
+    /// FIRST APPROVAL
+    await funder.call(keypom, 'nft_approve', {token_id: `0:0`, account_id: bob.accountId});
+
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+    t.assert(keyInfo.approved_account_ids[bob.accountId] === 0);
+    t.is(keyInfo.next_approval_id, 1);
+    initialAllowance = keyInfo.allowance;
+
+    /// REVOKE FIRST APPROVAL
+    await funder.call(keypom, 'nft_revoke', {token_id: `0:0`, account_id: bob.accountId});
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+    t.assert(Object.keys(keyInfo.approved_account_ids).length === 0);
+    t.is(keyInfo.next_approval_id, 1);
+    initialAllowance = keyInfo.allowance;
+
+
+    /// SECOND APPROVAL
+    await funder.call(keypom, 'nft_approve', {token_id: `0:0`, account_id: bob.accountId});
+
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+    t.assert(keyInfo.approved_account_ids[bob.accountId] === 1);
+    t.is(keyInfo.next_approval_id, 2);
+
+    initialAllowance = keyInfo.allowance;
+
+    await funder.call(keypom, 'nft_revoke_all', {token_id: `0:0`});
+    keyInfo = await getKeyInformation(keypom, keys.publicKeys[0]);
+    
+    t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
+    t.assert(Object.keys(keyInfo.approved_account_ids).length === 0);
+    t.is(keyInfo.next_approval_id, 2);
 });

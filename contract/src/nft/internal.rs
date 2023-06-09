@@ -82,9 +82,17 @@ impl Keypom {
         
         // Get key info (remove token ID so we can re-insert later)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
-        
-        //if the sender doesn't equal the owner, we check if the sender is in the approval list
-        if sender_id != key_info.owner_id.clone() {
+        let mut allowance_to_decrement = 0;
+        if sender_id == env::current_account_id() {
+            // Ensure the key has enough allowance
+            require!(
+                key_info.allowance >= env::prepaid_gas().0 as u128 * self.yocto_per_gas,
+                "Not enough allowance on the key."
+            );
+            
+            allowance_to_decrement = (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0 + extra_gas.unwrap_or(Gas(0)).0) as u128 * self.yocto_per_gas;
+        } else if sender_id != key_info.owner_id.clone() {
+            //if the sender doesn't equal the owner, we check if the sender is in the approval list
             //if the token's approved account IDs doesn't contain the sender, we panic
             if !key_info.approved_account_ids.contains_key(&sender_id) {
                 env::panic_str("Unauthorized");
@@ -117,17 +125,6 @@ impl Keypom {
         // Remove old public key from mapping
         let pub_key = key_info.pub_key.clone();
         self.token_id_by_pk.remove(&pub_key);
-
-        let mut allowance_to_decrement = 0;
-        if sender_id == env::current_account_id() {
-            // Ensure the key has enough allowance
-            require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * self.yocto_per_gas,
-                "Not enough allowance on the key."
-            );
-            
-            allowance_to_decrement = (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0 + extra_gas.unwrap_or(Gas(0)).0) as u128 * self.yocto_per_gas;
-        }
 
         // Generate new key info struct
         let new_key_info = KeyInfo {

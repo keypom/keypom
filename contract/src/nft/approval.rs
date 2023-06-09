@@ -29,11 +29,6 @@ impl Keypom {
         // Get drop in order to get key info
         let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
-        
-        require!(
-            key_info.owner_id == sender_id,
-            "Sender does not own this token"
-        );
 
         if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
@@ -43,6 +38,11 @@ impl Keypom {
             );
             
             key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+        } else {
+            require!(
+                key_info.owner_id == sender_id,
+                "Sender does not own this token"
+            );
         }
 
         //get the next approval ID if we need a new approval
@@ -115,11 +115,6 @@ impl Keypom {
         // Get drop in order to get key info
         let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
-        
-        require!(
-            key_info.owner_id == sender_id,
-            "Sender does not own this token"
-        );
 
         if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
@@ -129,6 +124,11 @@ impl Keypom {
             );
             
             key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+        } else {
+            require!(
+                key_info.owner_id == sender_id,
+                "Sender does not own this token"
+            );
         }
 
         //if the account ID was in the token's approval, we remove it and the if statement logic executes
@@ -156,11 +156,6 @@ impl Keypom {
         // Get drop in order to get key info
         let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
-        
-        require!(
-            key_info.owner_id == sender_id,
-            "Sender does not own this token"
-        );
 
         if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
@@ -170,6 +165,11 @@ impl Keypom {
             );
             
             key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+        } else {
+            require!(
+                key_info.owner_id == sender_id,
+                "Sender does not own this token"
+            );
         }
 
         //if the account ID was in the token's approval, we remove it and the if statement logic executes
