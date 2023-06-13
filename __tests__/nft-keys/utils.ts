@@ -95,23 +95,27 @@ export async function generatePerUsePasswords({
     return passwords;
 }
 
-const actualContracts = Array(10).fill('nft-v2.keypom.near');
-const actualAmounts = Array(10).fill(NEAR.parse("100").toString());
-const actualMethods = Array(10).fill('create_account_and_claim');
-const attachedDeposit = NEAR.parse("1").toString();
-const extraAllowance = NEAR.parse("0.1").toString();
-
 export const createDropArgs = ({
     pubKeys, 
     nftOwners,
     root, 
-    passwords, 
+    passwords,
+    actualContracts,
+    actualAmounts,
+    actualMethods,
+    attachedDeposit,
+    extraAllowance,
     wasmDirectory
 }: {
     pubKeys: string[];
     root: NearAccount;
     nftOwners?: string[];
     passwords: Array<Array<PasswordPerUse>>,
+    actualContracts: string[],
+    actualAmounts: string[],
+    actualMethods: string[],
+    attachedDeposit: string,
+    extraAllowance: string,
     wasmDirectory: string;
 }) => {
     return {

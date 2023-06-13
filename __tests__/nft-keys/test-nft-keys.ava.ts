@@ -6,6 +6,11 @@ import { BN } from "bn.js";
 
 import { createDropArgs, generatePerUsePasswords, ListingJson, PasswordPerUse, wrapTxnParamsForTrial } from "./utils";
 
+let actualContracts = Array(10).fill('nft-v2.keypom.near');
+let actualAmounts = Array(10).fill(NEAR.parse("100").toString());
+let actualMethods = Array(10).fill('create_account_and_claim');
+let attachedDeposit = NEAR.parse("1").toString();
+let extraAllowance = NEAR.parse("0.1").toString();
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -56,7 +61,17 @@ const test = anyTest as TestFn<{
     });
 
     //create a drop with Ali, doesn't front any cost.
-    await funder.call(keypom, 'create_drop', createDropArgs({pubKeys: keys.publicKeys, passwords, root, wasmDirectory: `${require('path').resolve(__dirname, '..')}/ext-wasm/trial-accounts.wasm`}), {gas: '300000000000000'});
+    await funder.call(keypom, 'create_drop', createDropArgs({
+        pubKeys: keys.publicKeys, 
+        passwords, root, 
+        actualContracts,
+        actualMethods,
+        actualAmounts,
+        attachedDeposit,
+        extraAllowance,
+        wasmDirectory: `${require('path').resolve(__dirname, '..')}/ext-wasm/trial-accounts.wasm`}), 
+        {gas: '300000000000000'}
+    );
 
     // Save state for test runs
     t.context.worker = worker;
