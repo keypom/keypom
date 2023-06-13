@@ -204,7 +204,7 @@ export const sellNFT = async ({
     await keypom.setKey(sellerKeys.keys[0]);
     let new_mintbase_args = JSON.stringify({
         price: NEAR.parse('1').toString(),
-        owner_pub_key: sellerKeys.publicKeys[0]
+        owner_pub_key: seller == keypom ? sellerKeys.publicKeys[0] : undefined
     })
     await keypom.call(keypom, 'nft_approve', {account_id: mintbase.accountId, msg: new_mintbase_args});
     let listing: ListingJson = await mintbase.view('get_listing', {nft_contract_id: keypom, token_id: tokenId});

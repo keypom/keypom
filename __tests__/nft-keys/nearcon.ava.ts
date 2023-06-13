@@ -33,7 +33,7 @@ test.beforeEach(async (t) => {
     await root.call(root, 'new', {});
     //init new keypom contract and setting keypom as the owner. 
     await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
-    await mintbase.call(mintbase, 'init', { owner: mintbase, mintbase_cut: 0, fallback_cut: 0, listing_lock_seconds: "0" });
+    await mintbase.call(mintbase, 'init', { owner: mintbase, mintbase_cut: 0, fallback_cut: 0, listing_lock_seconds: "0", keypom_contract_root: keypom.accountId });
     await keypom.call(mintbase, 'deposit_storage', {},{attachedDeposit: NEAR.parse("10").toString()});
     console.log("Initialized contracts");
     
@@ -244,14 +244,27 @@ test('Journey 4: Crypto Native Purchases & Sells on Secondary Marketplace', asyn
     // Now with migration out of the way, we can test the new mintbase contract and sell access keys
     let initialAllowance = (await getKeyInformation(keypom, sellerKeys.publicKeys[0])).allowance;
     
-    // Put the first key up for sale (owner does NOT have a wallet here)
-    await keypom.setKey(sellerKeys.keys[0]);
-    let new_mintbase_args = JSON.stringify({
-        price: NEAR.parse('1').toString(),
-        owner_pub_key: sellerKeys.publicKeys[0]
-    })
+    // Put the first key up for sale
     await funder.call(mintbase, 'deposit_storage', {},{attachedDeposit: NEAR.parse("1").toString()});
+    
+    // owner_pub_key cannot be used to approve a key if the funder is signing the txn. It can only be used
+    // if Keypom is signing
+    try {
+        let new_mintbase_args = JSON.stringify({
+            price: NEAR.parse('1').toString(),
+            owner_pub_key: sellerKeys.publicKeys[0]
+        })
+        await funder.call(keypom, 'nft_approve', {token_id: `0:0`, account_id: mintbase.accountId, msg: new_mintbase_args});
+        t.fail();
+    } catch (e) {
+        t.pass();
+    }
+
+    let new_mintbase_args = JSON.stringify({
+        price: NEAR.parse('1').toString()
+    })
     await funder.call(keypom, 'nft_approve', {token_id: `0:0`, account_id: mintbase.accountId, msg: new_mintbase_args});
+    
     let listing: ListingJson = await mintbase.view('get_listing', {nft_contract_id: keypom, token_id: `0:0`});
     console.log('listing: ', listing)
     t.assert(listing.nft_token_id === `0:0`);
@@ -259,13 +272,13 @@ test('Journey 4: Crypto Native Purchases & Sells on Secondary Marketplace', asyn
     t.assert(listing.nft_owner_id === funder.accountId);
     t.assert(listing.nft_contract_id === keypom.accountId);
     t.assert(listing.currency === 'near');
-    t.assert(listing.nft_approval_id === 0);
+    t.assert(listing.nft_approval_id === 1);
 
     // After key is put for sale, its allowance should be the same
     let keyInfo: JsonKeyInfo = await getKeyInformation(keypom, sellerKeys.publicKeys[0]);
     t.assert(new BN(initialAllowance).eq(new BN(keyInfo.allowance)));
-    t.assert(keyInfo.approved_account_ids[mintbase.accountId] === 0);
-    t.is(keyInfo.next_approval_id, 1);
+    t.assert(keyInfo.approved_account_ids[mintbase.accountId] === 1);
+    t.is(keyInfo.next_approval_id, 2);
     initialAllowance = keyInfo.allowance;
 
     /// Bob purchases the key

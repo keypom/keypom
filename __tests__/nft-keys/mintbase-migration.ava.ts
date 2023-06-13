@@ -111,7 +111,7 @@ test('Test Migration', async t => {
     }
 
     // After migrating state, things should work well.
-    await mintbase.call(mintbase, 'migrate', {});
+    await mintbase.call(mintbase, 'migrate', {keypom_contract_root: keypom.accountId});
 
     listing = await mintbase.view('get_listing', {nft_contract_id: nftContract, token_id: `migration_token`});
     t.assert(listing.nft_token_id === `migration_token`);
