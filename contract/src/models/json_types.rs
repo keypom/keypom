@@ -135,6 +135,8 @@ pub struct JsonKeyInfo {
     pub drop_id: DropIdJson,
     pub pk: PublicKey,
 
+    pub token_id: TokenId,
+
     pub owner_id: AccountId,
 
     pub approved_account_ids: HashMap<AccountId, u64>,
