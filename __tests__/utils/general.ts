@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 import { BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
+=======
+import { initKeypom } from "keypom-js";
+import { Near } from "near-api-js";
+import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
+import { AccountBalance, BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
+>>>>>>> 2d98ca3 (started work on core architecture design)
 import { JsonDrop, JsonKeyInfo } from "./types";
+import { formatNearAmount } from "near-api-js/lib/utils/format";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -12,6 +20,77 @@ export const CONTRACT_METADATA = {
   "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
 }
 
+<<<<<<< HEAD
+=======
+export const displayBalances = (initialBalances: AccountBalance, finalBalances: AccountBalance) => {
+  const initialBalancesNear = {
+    available: formatNearAmount(initialBalances.available.toString()),
+    staked: formatNearAmount(initialBalances.staked.toString()),
+    stateStaked: formatNearAmount(initialBalances.stateStaked.toString()),
+    total: formatNearAmount(initialBalances.total.toString()),
+  };
+  
+  const finalBalancesNear = {
+    available: formatNearAmount(finalBalances.available.toString()),
+    staked: formatNearAmount(finalBalances.staked.toString()),
+    stateStaked: formatNearAmount(finalBalances.stateStaked.toString()),
+    total: formatNearAmount(finalBalances.total.toString()),
+  };
+
+  let isMoreState = false;
+  if(new BN(initialBalances.stateStaked.toString()).lt(new BN(finalBalances.stateStaked.toString()))) {
+    let temp = initialBalances.stateStaked;
+    initialBalances.stateStaked = finalBalances.stateStaked;
+    finalBalances.stateStaked = temp;
+    isMoreState = true;
+  }
+
+  console.log(`Available: ${initialBalancesNear.available.toString()} -> ${finalBalancesNear.available.toString()}`)
+  console.log(`Staked: ${initialBalancesNear.staked.toString()} -> ${finalBalancesNear.staked.toString()}`)
+  console.log(`State Staked: ${initialBalancesNear.stateStaked.toString()} -> ${finalBalancesNear.stateStaked.toString()}`)
+  console.log(`Total: ${initialBalancesNear.total.toString()} -> ${finalBalancesNear.total.toString()}`)
+  console.log(``)
+  console.log(`NET:`)
+  console.log(`Available: ${formatNearAmount(new BN(initialBalances.available.toString()).sub(new BN(finalBalances.available.toString())).toString())}`)
+  console.log(`Staked: ${formatNearAmount(new BN(initialBalances.staked.toString()).sub(new BN(finalBalances.staked.toString())).toString())}`)
+  console.log(`State Staked ${isMoreState ? "(more)" : "(less)"}: ${formatNearAmount(new BN(initialBalances.stateStaked.toString()).sub(new BN(finalBalances.stateStaked.toString())).toString())}`)
+  console.log(`Total: ${formatNearAmount(new BN(initialBalances.total.toString()).sub(new BN(finalBalances.total.toString())).toString())}`)
+}
+
+export async function initKeypomConnection(
+  rpcPort: string,
+  funder: NearAccount
+) {
+  console.log("init keypom connection")
+  const network = 'sandbox';
+    let networkConfig = {
+        networkId: 'localnet',
+        viewAccountId: 'test.near',
+        nodeUrl: rpcPort,
+        walletUrl: `https://wallet.${network}.near.org`,
+		helperUrl: `https://helper.${network}.near.org`,
+	};
+
+    const keyStore =  new InMemoryKeyStore();
+	  const near = new Near({
+        ...networkConfig,
+        keyStore,
+        headers: {}
+    });
+
+    const funderKey = (await funder.getKey())?.toString()
+    console.log(`funderKey: `, funderKey)
+    await initKeypom({
+        near,
+        network: "localnet",
+        funder: {
+            accountId: funder.accountId,
+            secretKey: funderKey
+        }
+    })
+}
+
+>>>>>>> 2d98ca3 (started work on core architecture design)
 export function displayFailureLog(
   transaction: TransactionResult
 ) {

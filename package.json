@@ -4,6 +4,7 @@
 	"license": "MIT",
 	"author": "Ben Kurrek, Matt Lockyer",
 	"scripts": {
+<<<<<<< HEAD
 		"pub-docs": "rm -rf doc && mkdir doc && cargo doc --no-deps && cp -r target/doc/* doc && gh-pages -d doc",
 		"dev-deploy": "echo building contract && yarn build-contract && echo removing neardev && rm -rf neardev && echo deploying && (near dev-deploy --wasmFile out/keypom.wasm || exit 0)",
 		"build-contract": "./build.sh",
@@ -30,6 +31,12 @@
 		"test:profiling": "ava __tests__/profiling/profiling.ava.ts",
 		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts",
 		"test:sales": "ava __tests__/pub-sales/pub-sales.ava.ts"
+=======
+		"build:contracts": "yarn build:mapping && yarn build:trial",
+		"build:trial": "cd trial-contract && ./build.sh",
+		"build:mapping": "cd mapping-contract && ./build.sh",
+		"test": "ava __tests__/v3-tests.ava.ts"
+>>>>>>> 2d98ca3 (started work on core architecture design)
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
