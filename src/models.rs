@@ -27,12 +27,13 @@ pub enum ExtAsset {
 
 impl ExtAsset {
     /// Convert an `InternalAsset` into an `ExtAsset`
-    pub fn from_internal_asset(internal_asset: &InternalAsset) -> Self {
+    pub fn from_internal_asset(internal_asset: &InternalAsset, asset_metadata: &AssetMetadata) -> Self {
         match internal_asset {
             InternalAsset::ft(ft_data) => ExtAsset::FTAsset(ExtFTData {
                 contract_id: ft_data.contract_id.clone(),
                 registration_cost: ft_data.registration_cost.into(),
-                tokens_per_use: ft_data.tokens_per_use.into()
+                // FTs should ALWAYS have a tokens_per_use value
+                tokens_per_use: asset_metadata.tokens_per_use.unwrap().into()
             })
         }
     }
@@ -70,13 +71,13 @@ impl ExtDrop {
         
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=internal_drop.uses_per_key {
-            let asset_ids = internal_drop.asset_ids_by_use.get(&use_number).unwrap();
+            let assets_metadata = internal_drop.assets_metadata_by_use.get(&use_number).unwrap();
 
             let mut assets: Vec<ExtAsset> = Vec::new();
             
-            for asset_id in asset_ids {
-                let asset = internal_drop.asset_by_id.get(&asset_id).unwrap();
-                assets.push(ExtAsset::from_internal_asset(&asset));
+            for metadata in assets_metadata {
+                let asset = internal_drop.asset_by_id.get(&metadata.asset_id).unwrap();
+                assets.push(ExtAsset::from_internal_asset(&asset, &metadata));
             }
             assets_by_use.insert(use_number, assets);
         }
@@ -92,22 +93,29 @@ impl ExtDrop {
 #[allow(non_camel_case_types)]
 #[derive(BorshSerialize, BorshDeserialize)]
 pub enum InternalAsset {
-    ft(ExtFTData),
+    ft(InternalFTData),
 }
 
-impl InternalAsset {
-    /// Convert an `ExtAsset` into an `InternalAsset`
-    pub fn from_ext_asset(ext_asset: &ExtAsset) -> Self {
-        match ext_asset {
-            ExtAsset::FTAsset(ft_data) => InternalAsset::ft(ExtFTData {
-                contract_id: ft_data.contract_id.clone(),
-                registration_cost: ft_data.registration_cost,
-                tokens_per_use: ft_data.tokens_per_use
-            })
-        }
-    }
+//impl InternalAsset {
+    // Convert an `ExtAsset` into an `InternalAsset`
+    // pub fn from_ext_asset(ext_asset: &ExtAsset) -> Self {
+    //     match ext_asset {
+    //         ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData {
+    //             contract_id: ft_data.contract_id.clone(),
+    //             registration_cost: ft_data.registration_cost.into(),
+    //             balance_avail: 0
+    //         })
+    //     }
+    // }
 
     // Implement standard methods such as near_cost etc.. here
+//}
+
+/// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct AssetMetadata {
+    pub asset_id: AssetId,
+    pub tokens_per_use: Option<U128>,
 }
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
@@ -115,5 +123,5 @@ impl InternalAsset {
 pub struct InternalDrop {
     pub uses_per_key: UseNumber,
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
-    pub asset_ids_by_use: LookupMap<UseNumber, Vec<AssetId>>,
+    pub assets_metadata_by_use: LookupMap<UseNumber, Vec<AssetMetadata>>,
 }

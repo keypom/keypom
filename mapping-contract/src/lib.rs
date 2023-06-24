@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -32,11 +31,12 @@ impl Mapping {
 
     #[payable]
     pub fn create_drop(&mut self, drop_id: String, public_keys: Vec<PublicKey>, assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>) {
+        // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);
         
         // Instantiate the two lookup maps used in the drop
-        let mut asset_ids_by_use: LookupMap<UseNumber, Vec<AssetId>> = LookupMap::new(StorageKeys::AssetIdsByUse {
+        let mut assets_metadata_by_use: LookupMap<UseNumber, Vec<AssetMetadata>> = LookupMap::new(StorageKeys::AssetIdsByUse {
             drop_id_hash: hash_drop_id(&drop_id.to_string()),
         });
         let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
@@ -51,14 +51,21 @@ impl Mapping {
             // Quick sanity check to make sure the use number is valid
             require!(use_number <= uses_per_key && use_number > 0, "Invalid use number");
 
-            let mut asset_ids: Vec<AssetId> = Vec::new();
+            let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
             
             // If there's assets, loop through and get all the asset IDs while also
             // adding them to the asset_by_id lookup map if they weren't already present
             // If there aren't any assets, the vector will be of length 1
             for ext_asset in ext_assets {
                 let asset_id = asset_id_from_ext_asset(&ext_asset);
-                asset_ids.push(asset_id.clone());
+                let tokens_per_use = match &ext_asset {
+                    ExtAsset::FTAsset(ft_data) => ft_data.tokens_per_use.into()
+                };
+
+                assets_metadata.push(AssetMetadata{
+                    asset_id: asset_id.clone(),
+                    tokens_per_use
+                });
 
                 // Every asset has a cost associated. We should add that to the total cost.
                 // This is for 1 key. At the end, we'll multiply by the number of keys
@@ -69,17 +76,23 @@ impl Mapping {
                 // Only insert into the asset ID map if it doesn't already exist
                 // If we insert, we should also add the cost to the total asset cost
                 if asset_by_id.get(&asset_id).is_none() {
-                    let internal_asset = InternalAsset::from_ext_asset(&ext_asset);
+                    let internal_asset = match ext_asset {
+                        ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData::new(
+                            ft_data.contract_id.clone(),
+                            ft_data.registration_cost.into()
+                        ))
+                    };
+
                     asset_by_id.insert(&asset_id, &internal_asset);
                 }
             }
 
-            asset_ids_by_use.insert(&use_number, &asset_ids);
+            assets_metadata_by_use.insert(&use_number, &assets_metadata);
         }
 
         let drop = InternalDrop {
             uses_per_key,
-            asset_ids_by_use,
+            assets_metadata_by_use,
             asset_by_id
         };
 
