@@ -62,7 +62,7 @@ impl InternalFTData {
         env::promise_batch_action_function_call_weight(
             batch_resolve,
             "ft_resolve_batch",
-            json!({ "amount": transfer_amount.to_string(), "drop_id": drop_id, "data_id": self.get_data_id() }).to_string().as_bytes(),
+            json!({ "amount": transfer_amount.to_string(), "drop_id": drop_id, "data_id": self.get_asset_id() }).to_string().as_bytes(),
             0,
             MIN_GAS_FOR_RESOLVE_BATCH,
             GasWeight(3)

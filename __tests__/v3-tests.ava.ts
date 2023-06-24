@@ -1,7 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, displayBalances, initKeypomConnection } from "./utils/general";
+import { CONTRACT_METADATA, displayBalances, generateKeyPairs, initKeypomConnection } from "./utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "./utils/ft-utils";
 import { BN } from "bn.js";
 const { readFileSync } = require('fs');
@@ -56,38 +56,68 @@ test.afterEach(async t => {
 });
 
 //testing drop empty initialization and that default values perform as expected
+// test('Send FTs', async t => {
+//     const {minter, ftContract, keypomV3} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+//     await keypomV3.call(keypomV3, 'init_ft_data', {ft_contract_id: ftContract.accountId, registration_cost: NEAR.parse("0.0125")});
+//     let res = await keypomV3.view('get_contract_data', {data_id: 0});
+//     console.log('res after init ft: ', res)
+
+//     let keypomFTBal = await ftContract.view('ft_balance_of', {account_id: keypomV3.accountId});
+//     console.log('keypomFTBal before send: ', keypomFTBal)
+
+//     await sendFTs(minter, NEAR.parse("10").toString(), keypomV3, ftContract, "0");
+
+//     res = await keypomV3.view('get_contract_data', {data_id: 0});
+//     console.log('res after send FTs: ', res)
+
+//     keypomFTBal = await ftContract.view('ft_balance_of', {account_id: keypomV3.accountId});
+//     console.log('keypomFTBal after send: ', keypomFTBal)
+
+//     let minterFtBal = await ftContract.view('ft_balance_of', {account_id: minter.accountId});
+//     console.log('minterFtBal before claim: ', minterFtBal)
+
+//     await keypomV3.call(keypomV3, 'claim_ft_data', {data_id: 0, receiver_id: minter.accountId, amount: NEAR.parse("10").toString()}, {gas: "300000000000000"});
+
+//     keypomFTBal = await ftContract.view('ft_balance_of', {account_id: keypomV3.accountId});
+//     console.log('keypomFTBal after claim: ', keypomFTBal)
+
+//     minterFtBal = await ftContract.view('ft_balance_of', {account_id: minter.accountId});
+//     console.log('minterFtBal after claim: ', minterFtBal)
+
+//     res = await keypomV3.view('get_contract_data', {data_id: 0});
+//     console.log('res after claim: ', res)
+
+//     let finalBal = await keypomV3.balance();
+//     displayBalances(initialBal, finalBal);
+// });
+
+interface FTAsset {
+    contract_id: string;
+    registration_cost: string;
+    tokens_per_use: string;
+}
+
 test('Send FTs', async t => {
     const {minter, ftContract, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
-    await keypomV3.call(keypomV3, 'init_ft_data', {ft_contract_id: ftContract.accountId, registration_cost: NEAR.parse("0.0125")});
-    let res = await keypomV3.view('get_contract_data', {data_id: 0});
-    console.log('res after init ft: ', res)
+    const ftAsset: FTAsset = {
+        contract_id: ftContract.accountId,
+        registration_cost: NEAR.parse("0.0125").toString(),
+        tokens_per_use: NEAR.parse("1").toString()
+    }
 
-    let keypomFTBal = await ftContract.view('ft_balance_of', {account_id: keypomV3.accountId});
-    console.log('keypomFTBal before send: ', keypomFTBal)
-
-    await sendFTs(minter, NEAR.parse("10").toString(), keypomV3, ftContract, "0");
-
-    res = await keypomV3.view('get_contract_data', {data_id: 0});
-    console.log('res after send FTs: ', res)
-
-    keypomFTBal = await ftContract.view('ft_balance_of', {account_id: keypomV3.accountId});
-    console.log('keypomFTBal after send: ', keypomFTBal)
-
-    let minterFtBal = await ftContract.view('ft_balance_of', {account_id: minter.accountId});
-    console.log('minterFtBal before claim: ', minterFtBal)
-
-    await keypomV3.call(keypomV3, 'claim_ft_data', {data_id: 0, receiver_id: minter.accountId, amount: NEAR.parse("10").toString()}, {gas: "300000000000000"});
-
-    keypomFTBal = await ftContract.view('ft_balance_of', {account_id: keypomV3.accountId});
-    console.log('keypomFTBal after claim: ', keypomFTBal)
-
-    minterFtBal = await ftContract.view('ft_balance_of', {account_id: minter.accountId});
-    console.log('minterFtBal after claim: ', minterFtBal)
-
-    res = await keypomV3.view('get_contract_data', {data_id: 0});
-    console.log('res after claim: ', res)
+    const assets_per_use = {
+        1: [ftAsset, ftAsset, ftAsset, ftAsset],
+        2: [ftAsset]
+    }
+    let pubKeys = (await generateKeyPairs(2)).publicKeys;
+    await keypomV3.call(keypomV3, 'create_drop', {drop_id: "foobar123", assets_per_use, public_keys: pubKeys});
+    let dropInfo = await keypomV3.view('get_drop_information', {drop_id: "foobar123"});
+    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
+    console.log('dropInfo: ', dropInfo)
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);

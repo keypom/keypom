@@ -31,7 +31,7 @@ impl Mapping {
     }
 
     #[payable]
-    pub fn create_drop(&mut self, drop_id: String, assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>) {
+    pub fn create_drop(&mut self, drop_id: String, public_keys: Vec<PublicKey>, assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>) {
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);
         
@@ -43,11 +43,13 @@ impl Mapping {
             drop_id_hash: hash_drop_id(&drop_id.to_string()),
         });
 
-        let max_num_uses = assets_per_use.len() as UseNumber;
+        let mut per_key_cost_from_assets = 0;
+
+        let uses_per_key = assets_per_use.len() as UseNumber;
         // Iterate through the external assets, convert them to internal assets and add them to both lookup maps
         for (use_number, ext_assets) in assets_per_use {
             // Quick sanity check to make sure the use number is valid
-            require!(use_number <= max_num_uses && use_number > 0, "Invalid use number");
+            require!(use_number <= uses_per_key && use_number > 0, "Invalid use number");
 
             let mut asset_ids: Vec<AssetId> = Vec::new();
             
@@ -56,14 +58,19 @@ impl Mapping {
             // If there aren't any assets, the vector will be of length 1
             for ext_asset in ext_assets {
                 let asset_id = asset_id_from_ext_asset(&ext_asset);
-                asset_ids.push(asset_id);
+                asset_ids.push(asset_id.clone());
+
+                // Every asset has a cost associated. We should add that to the total cost.
+                // This is for 1 key. At the end, we'll multiply by the number of keys
+                let cost_for_asset = ExtAsset::get_cost_per_key(&ext_asset);
+                near_sdk::log!("cost for asset {}", cost_for_asset);
+                per_key_cost_from_assets += cost_for_asset;
 
                 // Only insert into the asset ID map if it doesn't already exist
                 // If we insert, we should also add the cost to the total asset cost
                 if asset_by_id.get(&asset_id).is_none() {
                     let internal_asset = InternalAsset::from_ext_asset(&ext_asset);
                     asset_by_id.insert(&asset_id, &internal_asset);
-                    // TODO: Add cost to total asset cost
                 }
             }
 
@@ -71,7 +78,7 @@ impl Mapping {
         }
 
         let drop = InternalDrop {
-            max_num_uses,
+            uses_per_key,
             asset_ids_by_use,
             asset_by_id
         };
@@ -79,7 +86,11 @@ impl Mapping {
         self.drop_by_id.insert(&drop_id, &drop);
 
         let final_storage = env::storage_usage();
-        near_sdk::log!("final bytes {}", final_storage);
+        let storage_cost = (final_storage - initial_storage) as u128 * env::storage_byte_cost();
+        let num_keys = public_keys.len();
+        let total_asset_cost = per_key_cost_from_assets * num_keys as u128;
+        let total_cost = total_asset_cost + storage_cost;
+        near_sdk::log!("total {} storage {} asset {}", total_cost, storage_cost, total_asset_cost);
     }
 
     // #[payable]
@@ -109,7 +120,7 @@ impl Mapping {
 
     pub fn get_drop_information(&self, drop_id: DropId) -> Option<ExtDrop> {
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
-            return Some(ExtDrop::from(drop));
+            return Some(ExtDrop::from_internal_drop(&drop));
         } else {
             None
         }

@@ -24,4 +24,12 @@ impl InternalFTData {
             registration_cost
         }
     }
+
+    pub fn enough_balance(&self, amount: &u128) -> bool {
+        &self.balance_avail >= amount
+    }
+
+    pub fn get_asset_id(&self) -> AssetId {
+        self.contract_id.to_string()
+    }
 }
