@@ -16,7 +16,7 @@ pub struct InternalFTData {
 }
 
 impl InternalFTData {
-    /// Initialize a new set of FT data. The `available` field is set to 0 to start until tokens are transferred.
+    /// Initialize a new set of FT data. The available balance is initialize to 0 at the start
     pub fn new(contract_id: AccountId, registration_cost: u128) -> Self {
         Self {
             contract_id,
@@ -25,10 +25,19 @@ impl InternalFTData {
         }
     }
 
+    /// Return the amount of NEAR required to have been deposited for 1 claim
+    /// This is a standard method that should be implemented by each struct and should
+    /// Be called by each data type before each claim
+    pub fn required_near_for_claim(&self) -> u128 {
+        self.registration_cost
+    }
+
+    /// Query whether or not enough fungible tokens have been deposited to cover the claim
     pub fn enough_balance(&self, amount: &u128) -> bool {
         &self.balance_avail >= amount
     }
 
+    /// Get the asset ID for this asset. In the case of Fungible Tokens, the ID is the contract
     pub fn get_asset_id(&self) -> AssetId {
         self.contract_id.to_string()
     }

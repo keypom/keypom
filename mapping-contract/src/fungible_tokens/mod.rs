@@ -3,3 +3,4 @@ pub mod claims;
 pub mod balances;
 
 pub use ft_core::*;
+pub use claims::*;

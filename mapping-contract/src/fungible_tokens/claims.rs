@@ -4,16 +4,16 @@ use crate::*;
 
 /// Gas needed to execute any logic in the ft claim function
 /// 2 TGas
-const GAS_FOR_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000);
+pub const GAS_FOR_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000);
 /// Minimum Gas required to perform a simple transfer of fungible tokens.
 /// 5 TGas
-const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
+pub const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
 /// Minimum Gas required to register a user on the FT contract
 /// 5 TGas
-const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000);
+pub const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000);
 /// Minimum Gas required to resolve the batch of promises for transferring the FTs and registering the user.
 /// 5 TGas
-const MIN_GAS_FOR_RESOLVE_BATCH: Gas = Gas(5_000_000_000_000);
+pub const MIN_GAS_FOR_RESOLVE_BATCH: Gas = Gas(5_000_000_000_000);
 
 impl InternalFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).

@@ -4,13 +4,15 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Serialize, Deserialize};
-use near_sdk::{env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash};
+use near_sdk::{env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash, Gas};
 
 mod fungible_tokens;
+mod internals;
 mod models;
 mod helpers;
 
 use fungible_tokens::*;
+use internals::*;
 use helpers::*;
 use models::*;
 
@@ -43,7 +45,11 @@ impl Keypom {
             drop_id_hash: hash_drop_id(&drop_id.to_string()),
         });
 
+        // Keep track of the total cost of all assets for 1 key
         let mut per_key_cost_from_assets = 0;
+
+        // Keep track of how much allowance each key needs
+        let mut total_allowance_required_per_key = 0;
 
         let uses_per_key = assets_per_use.len() as UseNumber;
         // Iterate through the external assets, convert them to internal assets and add them to both lookup maps
@@ -51,7 +57,11 @@ impl Keypom {
             // Quick sanity check to make sure the use number is valid
             require!(use_number <= uses_per_key && use_number > 0, "Invalid use number");
 
+            // Keep track of the metadata for all the assets across each use
             let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
+
+            // Keep track of the total gas across all assets in a given use
+            let mut total_gas_for_use: Gas = Gas(0);
             
             // If there's assets, loop through and get all the asset IDs while also
             // adding them to the asset_by_id lookup map if they weren't already present
@@ -71,6 +81,11 @@ impl Keypom {
                 near_sdk::log!("cost for asset {}", cost_for_asset);
                 per_key_cost_from_assets += cost_for_asset;
 
+                // Every asset has a gas cost associated. We should add that to the total gas.
+                let gas_for_asset = ExtAsset::get_gas_for_asset(&ext_asset);
+                near_sdk::log!("gas for asset {:?}", gas_for_asset);
+                total_gas_for_use += gas_for_asset;
+
                 // Only insert into the asset ID map if it doesn't already exist
                 // If we insert, we should also add the cost to the total asset cost
                 if asset_by_id.get(&asset_id).is_none() {
@@ -79,6 +94,9 @@ impl Keypom {
                     asset_by_id.insert(&asset_id, &internal_asset);
                 }
             }
+
+            // Now that all the assets have been looped for the given use, we can get the allowance required
+            total_allowance_required_per_key += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use);
 
             assets_metadata_by_use.insert(&use_number, &assets_metadata);
         }
@@ -97,6 +115,9 @@ impl Keypom {
         let total_asset_cost = per_key_cost_from_assets * num_keys as u128;
         let total_cost = total_asset_cost + storage_cost;
         near_sdk::log!("total {} storage {} asset {}", total_cost, storage_cost, total_asset_cost);
+
+        internal_refund_excess_deposit(total_cost);
+        internal_add_keys_to_account(&public_keys, ACCESS_KEY_BOTH_METHOD_NAMES, total_allowance_required_per_key);
     }
 
     #[payable]
