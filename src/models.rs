@@ -38,9 +38,27 @@ impl ExtAsset {
         }
     }
 
+    pub fn to_internal_asset(&self) -> InternalAsset {
+        match self {
+            ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData::new(
+                ft_data.contract_id.clone(),
+                ft_data.registration_cost.into()
+            )),
+            _ => env::panic_str("Asset type not supported")
+        }
+    }
+
+    pub fn get_tokens_per_use(&self) -> U128 {
+        match self {
+            ExtAsset::FTAsset(ft_data) => ft_data.tokens_per_use.into(),
+            _ => env::panic_str("Asset type not supported")
+        }
+    }
+
     pub fn get_cost_per_key(&self) -> u128 {
         match self {
-            ExtAsset::FTAsset(ft_data) => ft_data.registration_cost.into()
+            ExtAsset::FTAsset(ft_data) => ft_data.registration_cost.into(),
+            _ => env::panic_str("Asset type not supported")
         }
     }
 }
@@ -96,20 +114,25 @@ pub enum InternalAsset {
     ft(InternalFTData),
 }
 
-//impl InternalAsset {
-    // Convert an `ExtAsset` into an `InternalAsset`
-    // pub fn from_ext_asset(ext_asset: &ExtAsset) -> Self {
-    //     match ext_asset {
-    //         ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData {
-    //             contract_id: ft_data.contract_id.clone(),
-    //             registration_cost: ft_data.registration_cost.into(),
-    //             balance_avail: 0
-    //         })
-    //     }
-    // }
+impl InternalAsset {
+    pub fn claim_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, tokens_per_use: &Option<u128>) {
+        match self {
+            InternalAsset::ft(ref mut ft_data) => {
+                ft_data.claim_ft_asset(drop_id, receiver_id, &tokens_per_use.unwrap())
+            },
+            _ => env::panic_str("Asset type not supported")
+        }
+    }
 
-    // Implement standard methods such as near_cost etc.. here
-//}
+    pub fn fund_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, tokens_per_use: &Option<u128>) {
+        match self {
+            InternalAsset::ft(ref mut ft_data) => {
+                ft_data.claim_ft_asset(drop_id, receiver_id, &tokens_per_use.unwrap())
+            },
+            _ => env::panic_str("Asset type not supported")
+        }
+    }
+}
 
 /// Keep track of specific data related to an access key. This allows us to optionally refund funders later.
 #[derive(BorshDeserialize, BorshSerialize)]

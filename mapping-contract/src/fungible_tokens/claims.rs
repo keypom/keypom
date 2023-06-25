@@ -19,7 +19,7 @@ impl InternalFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).
     /// If the transfer fails, the FTs will be returned to the available balance
     /// Should *only* be invoked if the available balance is greater than or equal to the transfer amount.
-    pub fn ft_claim(&mut self, drop_id: U128, receiver_id: AccountId, transfer_amount: u128) {
+    pub fn claim_ft_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, transfer_amount: &u128) {
         near_sdk::log!("ft_claim receiver: {} amount: {}", receiver_id, transfer_amount);
 
         require!(self.enough_balance(&transfer_amount), "not enough balance to transfer");

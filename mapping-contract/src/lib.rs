@@ -16,12 +16,12 @@ use models::*;
 
 #[near_bindgen]
 #[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
-pub struct Mapping {
+pub struct Keypom {
     drop_by_id: LookupMap<DropId, InternalDrop>
 }
 
 #[near_bindgen]
-impl Mapping {
+impl Keypom {
     #[init]
     pub fn new() -> Self {
         Self {
@@ -58,13 +58,11 @@ impl Mapping {
             // If there aren't any assets, the vector will be of length 1
             for ext_asset in ext_assets {
                 let asset_id = asset_id_from_ext_asset(&ext_asset);
-                let tokens_per_use = match &ext_asset {
-                    ExtAsset::FTAsset(ft_data) => ft_data.tokens_per_use.into()
-                };
+                let tokens_per_use = ext_asset.get_tokens_per_use();
 
-                assets_metadata.push(AssetMetadata{
+                assets_metadata.push(AssetMetadata {
                     asset_id: asset_id.clone(),
-                    tokens_per_use
+                    tokens_per_use: tokens_per_use.into()
                 });
 
                 // Every asset has a cost associated. We should add that to the total cost.
@@ -76,12 +74,7 @@ impl Mapping {
                 // Only insert into the asset ID map if it doesn't already exist
                 // If we insert, we should also add the cost to the total asset cost
                 if asset_by_id.get(&asset_id).is_none() {
-                    let internal_asset = match ext_asset {
-                        ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData::new(
-                            ft_data.contract_id.clone(),
-                            ft_data.registration_cost.into()
-                        ))
-                    };
+                    let internal_asset = ext_asset.to_internal_asset();
 
                     asset_by_id.insert(&asset_id, &internal_asset);
                 }
@@ -106,30 +99,42 @@ impl Mapping {
         near_sdk::log!("total {} storage {} asset {}", total_cost, storage_cost, total_asset_cost);
     }
 
-    // #[payable]
-    // pub fn claim_ft_data(&mut self, data_id: u64, amount: U128, receiver_id: AccountId) {
-    //     let mut ft_data: InternalFTData = self.custom_struct.get(&data_id).expect("No FT data found");
-    //     ft_data.ft_claim(U128(data_id.into()), receiver_id, amount.0);
-    //     self.custom_struct.insert(&data_id, &ft_data);
-    // }
+    #[payable]
+    pub fn claim(&mut self, drop_id: DropId, use_number: UseNumber, receiver_id: AccountId) {
+        let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        let assets_metadata = drop.assets_metadata_by_use.get(&use_number).expect("Use number not found");
 
-    // /// Allows users to attach fungible tokens to the Linkdrops. Must have storage recorded by this point. You can only attach one set of FTs or NFT at a time.
-    // pub fn ft_on_transfer(
-    //     &mut self,
-    //     sender_id: AccountId,
-    //     amount: U128,
-    //     msg: U128,
-    // ) -> PromiseOrValue<U128> {
-    //     let contract_id = env::predecessor_account_id();
-    //     let data_id = msg.0 as u64;
+        for metadata in assets_metadata {
+            let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
+            asset.claim_asset(&drop_id, &receiver_id, &metadata.tokens_per_use.map(|x| x.into()));
+            drop.asset_by_id.insert(&metadata.asset_id, &asset);
+        }
 
-    //     let mut ft_data: InternalFTData = self.custom_struct.get(&data_id).expect("No FT data found");
-    //     require!(ft_data.contract_id == contract_id, "Incorrect FT contract ID");
-    //     ft_data.increment_avail_balance(amount.0);
-    //     self.custom_struct.insert(&data_id, &ft_data);
+        self.drop_by_id.insert(&drop_id, &drop);
+    }
 
-    //     PromiseOrValue::Value(U128(0))
-    // }
+    /// Allows users to attach fungible tokens to the Linkdrops. Must have storage recorded by this point. You can only attach one set of FTs or NFT at a time.
+    pub fn ft_on_transfer(
+        &mut self,
+        sender_id: AccountId,
+        amount: U128,
+        msg: DropId,
+    ) -> PromiseOrValue<U128> {
+        let drop_id = msg;
+        let asset_id = env::predecessor_account_id();
+        let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+
+        let mut asset: InternalAsset = drop.asset_by_id.get(&asset_id.to_string()).expect("Asset not found");
+        // Ensure asset is fungible token and then call the internal function
+        if let InternalAsset::ft(ft_data) = &mut asset {
+            ft_data.add_to_balance_avail(&amount.0);
+        };
+
+        drop.asset_by_id.insert(&asset_id.to_string(), &asset);
+        self.drop_by_id.insert(&drop_id, &drop);
+
+        PromiseOrValue::Value(U128(0))
+    }
 
     pub fn get_drop_information(&self, drop_id: DropId) -> Option<ExtDrop> {
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
