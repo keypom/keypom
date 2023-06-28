@@ -6,7 +6,9 @@ use crate::*;
 pub enum StorageKeys {
     AssetIdsByUse { drop_id_hash: CryptoHash },
     AssetById { drop_id_hash: CryptoHash },
-    DropById
+    KeyInfoByPk { drop_id_hash: CryptoHash },
+    DropById,
+    DropIdByPk
 }
 
 /// Internal drop data that is stored in the contract
@@ -18,6 +20,20 @@ pub struct InternalDrop {
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
     /// For every use number, keep track of what assets there are.
     pub assets_metadata_by_use: LookupMap<UseNumber, Vec<AssetMetadata>>,
+    /// Set of public keys associated with this drop mapped to their specific key information.
+    pub key_info_by_pk: UnorderedMap<PublicKey, InternalKeyInfo>,
+    /// Keep track of the next nonce to give out to a key
+    pub next_key_id: u64
+}
+
+/// Keep track of different configuration options for each key in a drop
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct InternalKeyInfo {
+    /// How many uses this key has left. Once 0 is reached, the key is deleted
+    pub remaining_uses: UseNumber,
+
+    /// Nonce for the current key.
+    pub key_id: u64,
 }
 
 /// Outlines the different asset types that can be used in drops. This is the internal version of `ExtAsset`

@@ -96,7 +96,7 @@ test.afterEach(async t => {
 interface FTAsset {
     contract_id: string;
     registration_cost: string;
-    tokens_per_use: string;
+    amount: string;
 }
 
 test('Send FTs', async t => {
@@ -109,19 +109,19 @@ test('Send FTs', async t => {
     }
     const ftAsset1: FTAsset = {
         ...ftContractData,
-        tokens_per_use: NEAR.parse("1").toString()
+        amount: NEAR.parse("1").toString()
     }
     const ftAsset2: FTAsset = {
         ...ftContractData,
-        tokens_per_use: NEAR.parse("2").toString()
+        amount: NEAR.parse("2").toString()
     }
 
     const dropId = "foobar123";
     const assets_per_use = {
-        1: [ftAsset1, ftAsset2, ftAsset2, ftAsset2, ftAsset2, ftAsset2, ftAsset2, ftAsset2],
+        1: [ftAsset1],
     }
-    let pubKeys = (await generateKeyPairs(2)).publicKeys;
-    await keypomV3.call(keypomV3, 'create_drop', {drop_id: dropId, assets_per_use, public_keys: pubKeys});
+    let keyPairs = await generateKeyPairs(2);
+    await keypomV3.call(keypomV3, 'create_drop', {drop_id: dropId, assets_per_use, public_keys: keyPairs.publicKeys}, {attachedDeposit: NEAR.parse("1").toString()});
     let dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
 
@@ -130,7 +130,12 @@ test('Send FTs', async t => {
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
 
-    await keypomV3.call(keypomV3, 'claim', {drop_id: dropId, use_number: 1, receiver_id: minter.accountId}, {gas: "300000000000000"});
+    let keyPk = keyPairs.publicKeys[0];
+    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    
+    await keypomV3.setKey(keyPairs.keys[0]);
+    await keypomV3.call(keypomV3, 'claim', {receiver_id: minter.accountId}, {gas: keyInfo.required_gas});
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);

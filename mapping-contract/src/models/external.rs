@@ -17,7 +17,7 @@ impl ExtAsset {
                 contract_id: ft_data.contract_id.clone(),
                 registration_cost: ft_data.registration_cost.into(),
                 // FTs should ALWAYS have a tokens_per_use value
-                tokens_per_use: asset_metadata.tokens_per_use.unwrap().into()
+                amount: asset_metadata.tokens_per_use.unwrap().into()
             })
         }
     }
@@ -36,7 +36,7 @@ impl ExtAsset {
     /// Standard function to check how many tokens a given asset transfers per use
     pub fn get_tokens_per_use(&self) -> U128 {
         match self {
-            ExtAsset::FTAsset(ft_data) => ft_data.tokens_per_use.into(),
+            ExtAsset::FTAsset(ft_data) => ft_data.amount.into(),
             _ => env::panic_str("Asset type not supported")
         }
     }
@@ -67,7 +67,7 @@ pub struct ExtFTData {
     /// How much $NEAR (in yocto) it costs to register a new user on the fungible token contract
     pub registration_cost: U128,
     /// How many fungible tokens (in their smallest indivisible unit) should be transferred when the drop is claimed
-    pub tokens_per_use: U128
+    pub amount: U128
 }
 
 /// Drop data being returned from view calls from Keypom
@@ -99,4 +99,22 @@ impl ExtDrop {
             assets_by_use
         }
     }
+}
+
+/// Information about a specific public key.
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ExtKeyInfo {
+    /// How much Gas should be attached when the key is used to call `claim` or `create_account_and_claim`.
+   /// It is up to the smart contract developer to calculate the required gas (which can be done either automatically on the contract or on the client-side).
+   pub required_gas: String,
+
+   /// yoctoNEAR$ amount that will be sent to the account that claims the linkdrop (either new or existing)
+   /// when the key is successfully used.
+   pub yoctonear: String,
+
+   /// If using the FT standard extension, a set of FTData can be linked to the public key
+   /// indicating that all those assets will be sent to the account that claims the linkdrop (either new or
+   /// existing) when the key is successfully used.
+   pub ft_list: Option<Vec<ExtFTData>>
 }
