@@ -1,6 +1,7 @@
-pub mod ft_core;
-pub mod claims;
-pub mod balances;
+pub mod internal_ft_core;
+pub mod ft_claims;
+pub mod ft_balances;
+pub mod ft_refunds;
 
-pub use ft_core::*;
-pub use claims::*;
+pub use internal_ft_core::*;
+pub use ft_claims::*;

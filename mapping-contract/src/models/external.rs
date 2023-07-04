@@ -6,7 +6,7 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 #[serde(untagged)]
 pub enum ExtAsset {
-    FTAsset(ExtFTData),
+    FTAsset(ExtFTData)
 }
 
 impl ExtAsset {
@@ -27,7 +27,7 @@ impl ExtAsset {
         match self {
             ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData::new(
                 ft_data.contract_id.clone(),
-                ft_data.registration_cost.into()
+                ft_data.registration_cost.into(),
             )),
             _ => env::panic_str("Asset type not supported")
         }
@@ -42,7 +42,7 @@ impl ExtAsset {
     }
 
     /// Standard function to check how much $NEAR (in yocto) it costs for 1 use of a given asset
-    pub fn get_cost_per_key(&self) -> u128 {
+    pub fn get_cost_per_key(&self) -> Balance {
         match self {
             ExtAsset::FTAsset(ft_data) => ft_data.registration_cost.into(),
             _ => env::panic_str("Asset type not supported")

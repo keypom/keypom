@@ -1,4 +1,4 @@
-use near_sdk::collections::UnorderedMap;
+use near_sdk::collections::{UnorderedMap, LazyOption};
 
 use crate::*;
 
@@ -7,13 +7,20 @@ pub enum StorageKeys {
     AssetIdsByUse { drop_id_hash: CryptoHash },
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
+    DropMetadata { drop_id_hash: CryptoHash },
     DropById,
-    DropIdByPk
+    DropIdByPk,
+    UserBalances
 }
 
 /// Internal drop data that is stored in the contract
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InternalDrop {
+    /// Account ID who funded / owns the rights to this specific drop
+    pub funder_id: AccountId,
+    /// Metadata for the drop in the form of stringified JSON. The format is completely up to the
+    /// user and there are no standards for format.
+    pub metadata: LazyOption<DropMetadata>,
     /// How many uses there are per key in the drop. This should be equal to the length of keys in assets_metadata_by_use
     pub uses_per_key: UseNumber,
     /// Map an asset ID to a specific asset. This is a hyper optimization so the asset data isn't repeated in the contract
@@ -46,10 +53,25 @@ pub enum InternalAsset {
 
 impl InternalAsset {
     /// Standard function for claiming an asset regardless of its type
-    pub fn claim_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, tokens_per_use: &Option<u128>) {
+    pub fn claim_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, tokens_per_use: &Option<Balance>) {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 ft_data.claim_ft_asset(drop_id, receiver_id, &tokens_per_use.unwrap())
+            },
+            _ => env::panic_str("Asset type not supported")
+        }
+    }
+
+    /// Standard function for refunding assets
+    pub fn refund_funder(
+        &mut self, 
+        drop_id: &DropId, 
+        refund_to: &AccountId, 
+        tokens_per_use: Option<Balance>
+    ) {
+        match self {
+            InternalAsset::ft(ref mut ft_data) => {
+                ft_data.ft_refund(drop_id, tokens_per_use.unwrap(), refund_to);
             },
             _ => env::panic_str("Asset type not supported")
         }

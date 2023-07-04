@@ -118,7 +118,9 @@ test('Send FTs', async t => {
 
     const dropId = "foobar123";
     const assets_per_use = {
-        1: [ftAsset1],
+        1: [ftAsset1, ftAsset2, ftAsset2, ftAsset2],
+        2: [ftAsset1],
+        3: [ftAsset2]
     }
     let keyPairs = await generateKeyPairs(2);
     await keypomV3.call(keypomV3, 'create_drop', {drop_id: dropId, assets_per_use, public_keys: keyPairs.publicKeys}, {attachedDeposit: NEAR.parse("1").toString()});

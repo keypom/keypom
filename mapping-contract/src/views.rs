@@ -2,6 +2,15 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
+    /// Returns the drop information associated with given drop ID.
+    pub fn get_drop_information(&self, drop_id: DropId) -> Option<ExtDrop> {
+        if let Some(drop) = self.drop_by_id.get(&drop_id) {
+            return Some(ExtDrop::from_internal_drop(&drop));
+        } else {
+            None
+        }
+    }
+
     /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
     pub fn get_key_information(&self, key: PublicKey) -> ExtKeyInfo {
         let drop_id = self

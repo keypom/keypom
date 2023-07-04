@@ -1,4 +1,4 @@
-use near_sdk::Gas;
+use crate::*;
 
 /// Specifies both `claim` and `create_account_and_claim` functions can be called with the access key
 pub const ACCESS_KEY_BOTH_METHOD_NAMES: &str = "claim,create_account_and_claim,nft_transfer,nft_approve,nft_revoke,nft_revoke_all";
@@ -10,7 +10,7 @@ pub const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim,nft_transfer,nft_approve,n
 pub const ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME: &str = "create_account_and_claim,nft_transfer,nft_approve,nft_revoke,nft_revoke_all";
 
 /// How much yoctoNEAR is in 1 unit of Gas
-pub const YOCTO_PER_GAS: u128 = 100_000_000;
+pub const YOCTO_PER_GAS: Balance = 100_000_000;
 
 /// For every cross contract call, there is a base 5 TGas cost on top of what is sent to the contract
 pub const MIN_BASE_GAS_FOR_ONE_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas
@@ -34,3 +34,5 @@ pub type UseNumber = u16;
 pub type AssetId = String;
 /// The ID for a given drop (this is the unique identifier for the drop and is how it will be referenced)
 pub type DropId = String;
+/// Drop Metadata should be a string which can be JSON or anything the users want.
+pub type DropMetadata = String;
