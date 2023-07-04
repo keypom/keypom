@@ -30,7 +30,7 @@
 		"test:profiling": "ava __tests__/profiling/profiling.ava.ts",
 		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts",
 		"test:sales": "ava __tests__/pub-sales/pub-sales.ava.ts",
-		"test:basic-costs": "ava __tests__/costs/basic4-costs.ava.ts"
+		"test:basic4-costs": "ava __tests__/costs/basic4-costs.ava.ts"
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
