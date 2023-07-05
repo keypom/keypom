@@ -1,10 +1,10 @@
-use near_sdk::serde::Serialize;
+use near_sdk::serde::{Serialize, Serializer};
+use near_sdk::serde::ser::SerializeStruct;
 
 use crate::*;
 
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Serialize)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
 pub struct InternalFTData {
     /// Account ID of the token contract
     pub contract_id: AccountId,
@@ -14,6 +14,20 @@ pub struct InternalFTData {
     /// How much it costs to register a new user on the FT contract
     pub registration_cost: Balance
 }
+
+// Implement a custom serialization that converts both `balance_avail` and `registration_cost` to a `U128` for the frontend
+impl Serialize for InternalFTData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("InternalFTData", 3)?;
+        state.serialize_field("contract_id", &self.contract_id)?;
+        state.serialize_field("balance_avail", &U128(self.balance_avail))?;
+        state.serialize_field("registration_cost", &U128(self.registration_cost))?;
+        state.end()
+    }
+} 
 
 impl InternalFTData {
     /// Initialize a new set of FT data. The available balance is initialize to 0 at the start

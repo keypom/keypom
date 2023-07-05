@@ -30,17 +30,19 @@ export async function functionCall({
   methodName,
   args,
   attachedDeposit,
-  gas
+  gas,
+  canPanic = false
 }: {
   signer: NearAccount,
   receiver: NearAccount,
   methodName: string,
   args: any,
   attachedDeposit?: string,
-  gas?: string
+  gas?: string,
+  canPanic?: boolean
 }) {
   let rawValue = await signer.callRaw(receiver, methodName, args, {gas: gas || LARGE_GAS, attachedDeposit: attachedDeposit || "0"});
-  displayFailureLog(methodName, receiver.accountId, rawValue);
+  parseExecutionResults(methodName, receiver.accountId, rawValue, canPanic);
 }
 
 >>>>>>> e4f81fd (expanding tests and utility functions. Continued fixing refunds)
@@ -112,11 +114,16 @@ export async function initKeypomConnection(
     })
 }
 
+<<<<<<< HEAD
 >>>>>>> 2d98ca3 (started work on core architecture design)
 export function displayFailureLog(
+=======
+export function parseExecutionResults(
+>>>>>>> e7cc628 (implemented custom serializer for internal structs and expanded ext drop data to include internal info. Started work on deletion tests)
   methodName: string,
   receiverId: string,
   transaction: TransactionResult,
+  canPanic: boolean
 ) {
   let logString = `Logs For ${methodName} on ${receiverId}:\n`;
   // Loop through each receipts_outcome in the transaction's result field
@@ -134,10 +141,11 @@ export function displayFailureLog(
     
     const status = (receipt.outcome.status as any);
     if (status.Failure?.ActionError?.kind?.FunctionCallError) {
-      console.log(`
-        Method: ${methodName} Receiver: ${receiverId} 
-        Failure: ${JSON.stringify(status.Failure?.ActionError?.kind?.FunctionCallError)}
-      `)
+      let str = `Method: ${methodName} Receiver: ${receiverId} Failure: ${JSON.stringify(status.Failure?.ActionError?.kind?.FunctionCallError)}`
+      console.log(str)
+      if (!canPanic) {
+        throw new Error(str)
+      }
     }
   })
 

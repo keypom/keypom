@@ -1,5 +1,5 @@
 import { NEAR, NearAccount } from "near-workspaces"
-import { LARGE_GAS, displayFailureLog, functionCall } from "./general";
+import { LARGE_GAS, functionCall } from "./general";
 import { BN } from "bn.js";
 
 export const oneGtNear = new BN("1000000000000000000000000")

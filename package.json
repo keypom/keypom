@@ -35,8 +35,14 @@
 		"build:contracts": "yarn build:mapping && yarn build:trial",
 		"build:trial": "cd trial-contract && ./build.sh",
 		"build:mapping": "cd mapping-contract && ./build.sh",
+<<<<<<< HEAD
 		"test": "ava __tests__/v3-tests.ava.ts"
 >>>>>>> 2d98ca3 (started work on core architecture design)
+=======
+		"test": "ava __tests__/v3-tests.ava.ts",
+		"test:deletion": "ava __tests__/deletion/ft-single-use.ava.ts",
+		"test:creation": "ava __tests__/v3-tests.ava.ts"
+>>>>>>> e7cc628 (implemented custom serializer for internal structs and expanded ext drop data to include internal info. Started work on deletion tests)
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",

@@ -46,7 +46,9 @@ pub struct InternalKeyInfo {
 /// Outlines the different asset types that can be used in drops. This is the internal version of `ExtAsset`
 /// And represents the data that is stored inside the Keypom contract to keep track of assets
 #[allow(non_camel_case_types)]
-#[derive(BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize)]
+#[serde(crate = "near_sdk::serde")]
+#[serde(untagged)]
 pub enum InternalAsset {
     ft(InternalFTData),
 }
@@ -62,20 +64,35 @@ impl InternalAsset {
         }
     }
 
+    /// Standard function to check whether an asset is empty or not
+    pub fn is_empty(&self) -> bool {
+        match self {
+            InternalAsset::ft(ft) => {
+                if ft.balance_avail != 0 {
+                    near_sdk::log!("There are {} FTs still in the drop. Please withdraw them before deleting.", ft.balance_avail);
+                    return false;
+                }
+                return true;
+            }
+        }
+    }
+
     /// Standard function for refunding assets
     pub fn refund_funder(
-        &mut self, 
+        &mut self,
+        keypom: &mut Keypom, 
         drop_id: &DropId, 
         refund_to: &AccountId, 
         tokens_per_use: Option<Balance>
     ) {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
+                // Only refund if the balance is available. Otherwise, just refund the registration cost to the user balance
                 let refund_registration = true;
-                if tokens_per_use.unwrap() > 0 {
+                if ft_data.balance_avail >= tokens_per_use.unwrap() {
                     ft_data.ft_refund(drop_id, tokens_per_use.unwrap(), refund_to, refund_registration);
                 } else {
-                    self.internal_modify_user_balance(&refund_to, self.registration_cost, false);
+                    keypom.internal_modify_user_balance(&refund_to, ft_data.registration_cost, false);
                 }
             },
             _ => env::panic_str("Asset type not supported")

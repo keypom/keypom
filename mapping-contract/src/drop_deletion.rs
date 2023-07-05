@@ -23,6 +23,14 @@ impl Keypom {
         
         // Now that the drop is empty, we can delete the assets by use and asset by ID
         // The drop has already been removed from storage, so we can just clear the maps
+        
+        // Loop through each asset and ensure it's empty before the map is cleared.
+        // Otherwise there might be the case where someone over-paid and didn't withdraw from
+        // The contract
+        for (_, asset) in drop.asset_by_id.iter() {
+            require!(asset.is_empty(), "All assets must be empty to delete the drop.");
+        }
+
         drop.asset_by_id.clear();
         clear_asset_metadata_map(drop.uses_per_key, &mut drop.assets_metadata_by_use);
 
@@ -83,7 +91,7 @@ impl Keypom {
                         .expect("Asset not found");
     
                     // Delete the asset
-                    internal_asset.refund_funder(&drop_id, funder_id, metadata.tokens_per_use.map(|x| x.into()));
+                    internal_asset.refund_funder(self, &drop_id, funder_id, metadata.tokens_per_use.map(|x| x.into()));
     
                     // Put the asset back in storage. The internal balances for the asset structs
                     // Will have decremented by the time the promise is fired so there is no re-entrancy attack

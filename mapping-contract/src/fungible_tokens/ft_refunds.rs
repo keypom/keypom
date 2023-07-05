@@ -114,34 +114,29 @@ impl InternalFTData {
         // Possible re-entrancy attack if we don't do this
         self.balance_avail -= tokens_to_transfer;
 
-        // If there are tokens to transfer, initiate the flow
-        // Otherwise, simply increment the user balance and return
-        if tokens_to_transfer > 0 {
-            // All FTs can be refunded at once. Funder responsible for registering themselves
-            ext_ft_contract::ext(self.contract_id.clone())
-            // Call ft transfer with 1 yoctoNEAR. 1/2 unspent GAS will be added on top
-            .with_attached_deposit(1)
-            .with_static_gas(MIN_GAS_FOR_FT_TRANSFER)
-            .ft_transfer(
-                refund_to.clone(),
-                U128(tokens_to_transfer),
-                Some("Keypom Refund".to_string()),
-            )
-            // We then resolve the promise and call ft_resolve_refund on our own contract
-            .then(
-                // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
-                Keypom::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_RESOLVE_REFUND)
-                    .ft_resolve_refund(
-                        drop_id.to_string(), 
-                        self.contract_id.to_string(), 
-                        refund_to.clone(),
-                        tokens_to_transfer,
-                        if refund_registration == true { self.registration_cost } else { 0 }
-                    )
-            )
-            .as_return();
-        }
-        
+        // All FTs can be refunded at once. Funder responsible for registering themselves
+        ext_ft_contract::ext(self.contract_id.clone())
+        // Call ft transfer with 1 yoctoNEAR. 1/2 unspent GAS will be added on top
+        .with_attached_deposit(1)
+        .with_static_gas(MIN_GAS_FOR_FT_TRANSFER)
+        .ft_transfer(
+            refund_to.clone(),
+            U128(tokens_to_transfer),
+            Some("Keypom Refund".to_string()),
+        )
+        // We then resolve the promise and call ft_resolve_refund on our own contract
+        .then(
+            // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
+            Keypom::ext(env::current_account_id())
+                .with_static_gas(MIN_GAS_FOR_RESOLVE_REFUND)
+                .ft_resolve_refund(
+                    drop_id.to_string(), 
+                    self.contract_id.to_string(), 
+                    refund_to.clone(),
+                    tokens_to_transfer,
+                    if refund_registration == true { self.registration_cost } else { 0 }
+                )
+        )
+        .as_return();                           
     }
 }

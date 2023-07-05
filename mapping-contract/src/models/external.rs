@@ -71,16 +71,18 @@ pub struct ExtFTData {
 }
 
 /// Drop data being returned from view calls from Keypom
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDrop {
-    assets_by_use: HashMap<UseNumber, Vec<ExtAsset>>,
+    assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>,
+    internal_assets_data: Vec<InternalAsset>,
 }
 
 impl ExtDrop {
     /// Convert an `InternalDrop` into an `ExtDrop`
     pub fn from_internal_drop(internal_drop: &InternalDrop) -> Self {
-        let mut assets_by_use: HashMap<UseNumber, Vec<ExtAsset>> = HashMap::new();
+        let mut assets_per_use: HashMap<UseNumber, Vec<ExtAsset>> = HashMap::new();
+        let internal_assets_data: Vec<InternalAsset> = internal_drop.asset_by_id.values().collect();
         
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=internal_drop.uses_per_key {
@@ -92,11 +94,12 @@ impl ExtDrop {
                 let asset = internal_drop.asset_by_id.get(&metadata.asset_id).unwrap();
                 assets.push(ExtAsset::from_internal_asset(&asset, &metadata));
             }
-            assets_by_use.insert(use_number, assets);
+            assets_per_use.insert(use_number, assets);
         }
 
         ExtDrop {
-            assets_by_use
+            assets_per_use,
+            internal_assets_data
         }
     }
 }

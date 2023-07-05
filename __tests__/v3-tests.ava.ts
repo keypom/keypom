@@ -1,7 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, displayBalances, displayFailureLog, functionCall, generateKeyPairs, initKeypomConnection } from "./utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "./utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "./utils/ft-utils";
 import { BN } from "bn.js";
 const { readFileSync } = require('fs');
@@ -187,9 +187,9 @@ test('Delete FT Drop', async t => {
 
     const dropId = "foobar123";
     const assets_per_use = {
-        1: [ftAsset1],
-        // 2: [ftAsset2],
-        // 3: [ftAsset3]
+        1: [ftAsset1, ftAsset3],
+        2: [ftAsset2, ftAsset1],
+        3: [ftAsset3, ftAsset2]
     }
     let keyPairs = await generateKeyPairs(50);
     await functionCall({
@@ -215,11 +215,46 @@ test('Delete FT Drop', async t => {
     const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
     console.log('keyInfo: ', keyInfo)
 
+    // await functionCall({
+    //     signer: funder,
+    //     receiver: keypomV3,
+    //     methodName: 'withdraw_ft_balance',
+    //     args: {
+    //         drop_id: dropId, 
+    //         ft_contract_id: ftContract.accountId, 
+    //         tokens_to_withdraw: NEAR.parse("1").toString()
+    //     },
+    //     gas: LARGE_GAS,
+    //     attachedDeposit: "0"
+    // })
+
     await functionCall({
         signer: funder,
         receiver: keypomV3,
         methodName: 'delete_keys',
-        args: {drop_id: dropId, limit: 10},
+        args: {drop_id: dropId},
+        gas: LARGE_GAS,
+        attachedDeposit: "0"
+    })
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'delete_drop',
+        args: {drop_id: dropId},
+        gas: LARGE_GAS,
+        attachedDeposit: "0",
+    })
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'withdraw_ft_balance',
+        args: {
+            drop_id: dropId, 
+            ft_contract_id: ftContract.accountId, 
+            tokens_to_withdraw: NEAR.parse("99").toString()
+        },
         gas: LARGE_GAS,
         attachedDeposit: "0"
     })
