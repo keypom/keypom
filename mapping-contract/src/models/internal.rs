@@ -71,7 +71,12 @@ impl InternalAsset {
     ) {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
-                ft_data.ft_refund(drop_id, tokens_per_use.unwrap(), refund_to);
+                let refund_registration = true;
+                if tokens_per_use.unwrap() > 0 {
+                    ft_data.ft_refund(drop_id, tokens_per_use.unwrap(), refund_to, refund_registration);
+                } else {
+                    self.internal_modify_user_balance(&refund_to, self.registration_cost, false);
+                }
             },
             _ => env::panic_str("Asset type not supported")
         }

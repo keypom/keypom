@@ -9,6 +9,7 @@ impl InternalFTData {
     }
 }
 
+#[near_bindgen]
 impl Keypom {
     /// Allows users to attach fungible tokens to the Linkdrops. Must have storage recorded by this point. You can only attach one set of FTs or NFT at a time.
     pub fn ft_on_transfer(
@@ -25,9 +26,11 @@ impl Keypom {
         // Ensure asset is fungible token and then call the internal function
         if let InternalAsset::ft(ft_data) = &mut asset {
             ft_data.add_to_balance_avail(&amount.0);
+            near_sdk::log!("Added {} FTs to drop ID {}. New asset amount: {}", amount.0, drop_id, ft_data.balance_avail);
         };
 
         drop.asset_by_id.insert(&asset_id.to_string(), &asset);
+
         self.drop_by_id.insert(&drop_id, &drop);
 
         PromiseOrValue::Value(U128(0))

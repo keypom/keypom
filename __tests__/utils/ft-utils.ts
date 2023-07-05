@@ -1,5 +1,5 @@
 import { NEAR, NearAccount } from "near-workspaces"
-import { LARGE_GAS } from "./general";
+import { LARGE_GAS, displayFailureLog, functionCall } from "./general";
 import { BN } from "bn.js";
 
 export const oneGtNear = new BN("1000000000000000000000000")
@@ -13,9 +13,17 @@ export async function sendFTs(
     ftContract: NearAccount,
     dropId: String
 ) {
-    await minter.call(ftContract, "ft_transfer_call", {
-        receiver_id: keypom,
-        amount,
-        msg: dropId 
-    },{gas: LARGE_GAS, attachedDeposit: "1"});
+
+    await functionCall({
+        signer: minter,
+        receiver: ftContract,
+        methodName: 'ft_transfer_call',
+        args: {
+            receiver_id: keypom,
+            amount,
+            msg: dropId 
+        },
+        gas: LARGE_GAS,
+        attachedDeposit: "1"
+    })
 }

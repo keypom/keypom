@@ -167,12 +167,10 @@ pub(crate) fn parse_ext_assets_per_use (
             // Every asset has a cost associated. We should add that to the total cost.
             // This is for 1 key. At the end, we'll multiply by the number of keys
             let cost_for_asset = ExtAsset::get_cost_per_key(&ext_asset);
-            near_sdk::log!("cost for asset {}", cost_for_asset);
             *per_key_cost_from_assets += cost_for_asset;
 
             // Every asset has a gas cost associated. We should add that to the total gas.
             let gas_for_asset = ExtAsset::get_gas_for_asset(&ext_asset);
-            near_sdk::log!("gas for asset {:?}", gas_for_asset);
             total_gas_for_use += gas_for_asset;
 
             // Only insert into the asset ID map if it doesn't already exist

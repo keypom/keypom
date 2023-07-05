@@ -27,7 +27,7 @@ impl Keypom {
 
         let mut required_gas = BASE_GAS_FOR_CLAIM;
 
-        let mut ft_list: Option<Vec<ExtFTData>> = None;
+        let mut actual_ft_list: Vec<ExtFTData> = Vec::new();
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             let ext_asset = ExtAsset::from_internal_asset(&internal_asset, &metadata);
@@ -35,14 +35,14 @@ impl Keypom {
             
             match ext_asset {
                 ExtAsset::FTAsset(ft) => {
-                    ft_list.as_mut().and_then(|list| Some(list.push(ft)));
+                    actual_ft_list.push(ft);
                 }
             }
         }
 
         ExtKeyInfo {
             yoctonear: 0.to_string(),
-            ft_list,
+            ft_list: if actual_ft_list.len() > 0 { Some(actual_ft_list) } else { None },
             required_gas: u64::from(required_gas).to_string(),
         }
     }

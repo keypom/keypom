@@ -1,7 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, displayBalances, generateKeyPairs, initKeypomConnection } from "./utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, displayBalances, displayFailureLog, functionCall, generateKeyPairs, initKeypomConnection } from "./utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "./utils/ft-utils";
 import { BN } from "bn.js";
 const { readFileSync } = require('fs');
@@ -31,20 +31,23 @@ test.beforeEach(async (t) => {
     await keypomV3.call(keypomV3, 'new', {});
     // Test users
     const minter = await root.createSubAccount('minter');
+    const funder = await root.createSubAccount('funder');
 
     const ftContract = await root.createSubAccount('ft_contract');
     await ftContract.deploy(`./out/ft.wasm`);
     await ftContract.call(ftContract, 'new_default_meta', { owner_id: ftContract, total_supply: totalSupply.toString() });
     
     // Mint the FTs
-    await ftContract.call(ftContract, 'storage_deposit', { account_id: minter.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
-    await ftContract.call(ftContract, 'storage_deposit', { account_id: keypomV3.accountId }, { attachedDeposit: NEAR.parse("1").toString() });
-    await ftContract.call(ftContract, 'ft_transfer', { receiver_id: minter.accountId, amount: NEAR.parse("1000").toString() }, { attachedDeposit: "1" });
-        
+    await functionCall({signer: ftContract, receiver: ftContract, methodName: 'storage_deposit', args: {account_id: minter.accountId},attachedDeposit: NEAR.parse("1").toString()})
+    await functionCall({signer: ftContract, receiver: ftContract, methodName: 'storage_deposit', args: {account_id: keypomV3.accountId},attachedDeposit: NEAR.parse("1").toString()})
+    await functionCall({signer: ftContract, receiver: ftContract, methodName: 'storage_deposit', args: {account_id: funder.accountId},attachedDeposit: NEAR.parse("1").toString()})
+
+    await functionCall({signer: ftContract, receiver: ftContract, methodName: 'ft_transfer', args: {receiver_id: minter.accountId, amount: NEAR.parse("1000").toString()},attachedDeposit: "1"})
+    await functionCall({signer: ftContract, receiver: ftContract, methodName: 'ft_transfer', args: {receiver_id: funder.accountId, amount: NEAR.parse("1000").toString()},attachedDeposit: "1"})
 
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, minter, keypomV3, ftContract };
+    t.context.accounts = { root, funder, minter, keypomV3, ftContract };
     t.context.rpcPort = rpcPort;
 });
 
@@ -99,8 +102,70 @@ interface FTAsset {
     amount: string;
 }
 
-test('Send FTs', async t => {
-    const {minter, ftContract, keypomV3} = t.context.accounts;
+// test('Claim FTs', async t => {
+//     const {minter, funder, ftContract, keypomV3} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+//     const ftContractData = {
+//         contract_id: ftContract.accountId,
+//         registration_cost: NEAR.parse("0.0125").toString(),
+//     }
+//     const ftAsset1: FTAsset = {
+//         ...ftContractData,
+//         amount: NEAR.parse("1").toString()
+//     }
+//     const ftAsset2: FTAsset = {
+//         ...ftContractData,
+//         amount: NEAR.parse("2").toString()
+//     }
+
+//     const dropId = "foobar123";
+//     const assets_per_use = {
+//         1: [ftAsset1, ftAsset2, ftAsset2, ftAsset2],
+//         2: [ftAsset1],
+//         3: [ftAsset2]
+//     }
+//     let keyPairs = await generateKeyPairs(2);
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId, 
+//             assets_per_use, 
+//             public_keys: keyPairs.publicKeys
+//         },
+//         attachedDeposit: NEAR.parse("1").toString()
+//     })
+//     let dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo: ', dropInfo)
+
+//     await sendFTs(funder, NEAR.parse("100").toString(), keypomV3, ftContract, dropId);
+    
+//     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo after: ', dropInfo)
+
+//     let keyPk = keyPairs.publicKeys[0];
+//     const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+//     console.log('keyInfo: ', keyInfo)
+    
+//     await keypomV3.setKey(keyPairs.keys[0]);
+//     await functionCall({
+//         signer: keypomV3,
+//         receiver: keypomV3,
+//         methodName: 'claim',
+//         args: {
+//             receiver_id: minter.accountId
+//         },
+//         gas: keyInfo.required_gas
+//     })
+    
+//     let finalBal = await keypomV3.balance();
+//     displayBalances(initialBal, finalBal);
+// });
+
+test('Delete FT Drop', async t => {
+    const {minter, funder, ftContract, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
     const ftContractData = {
@@ -115,19 +180,33 @@ test('Send FTs', async t => {
         ...ftContractData,
         amount: NEAR.parse("2").toString()
     }
+    const ftAsset3: FTAsset = {
+        ...ftContractData,
+        amount: NEAR.parse("3").toString()
+    }
 
     const dropId = "foobar123";
     const assets_per_use = {
-        1: [ftAsset1, ftAsset2, ftAsset2, ftAsset2],
-        2: [ftAsset1],
-        3: [ftAsset2]
+        1: [ftAsset1],
+        // 2: [ftAsset2],
+        // 3: [ftAsset3]
     }
-    let keyPairs = await generateKeyPairs(2);
-    await keypomV3.call(keypomV3, 'create_drop', {drop_id: dropId, assets_per_use, public_keys: keyPairs.publicKeys}, {attachedDeposit: NEAR.parse("1").toString()});
+    let keyPairs = await generateKeyPairs(50);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId, 
+            assets_per_use, 
+            public_keys: keyPairs.publicKeys
+        },
+        attachedDeposit: NEAR.parse("10").toString()
+    })
     let dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
 
-    await sendFTs(minter, NEAR.parse("100").toString(), keypomV3, ftContract, dropId);
+    await sendFTs(funder, NEAR.parse("100").toString(), keypomV3, ftContract, dropId);
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
@@ -135,10 +214,25 @@ test('Send FTs', async t => {
     let keyPk = keyPairs.publicKeys[0];
     const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
     console.log('keyInfo: ', keyInfo)
-    
-    await keypomV3.setKey(keyPairs.keys[0]);
-    await keypomV3.call(keypomV3, 'claim', {receiver_id: minter.accountId}, {gas: keyInfo.required_gas});
 
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'delete_keys',
+        args: {drop_id: dropId, limit: 10},
+        gas: LARGE_GAS,
+        attachedDeposit: "0"
+    })
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'delete_drop',
+        args: {drop_id: dropId},
+        gas: LARGE_GAS,
+        attachedDeposit: "0"
+    })
+    
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
 });

@@ -21,7 +21,29 @@ export const CONTRACT_METADATA = {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+export async function functionCall({
+  signer,
+  receiver,
+  methodName,
+  args,
+  attachedDeposit,
+  gas
+}: {
+  signer: NearAccount,
+  receiver: NearAccount,
+  methodName: string,
+  args: any,
+  attachedDeposit?: string,
+  gas?: string
+}) {
+  let rawValue = await signer.callRaw(receiver, methodName, args, {gas: gas || LARGE_GAS, attachedDeposit: attachedDeposit || "0"});
+  displayFailureLog(methodName, receiver.accountId, rawValue);
+}
+
+>>>>>>> e4f81fd (expanding tests and utility functions. Continued fixing refunds)
 export const displayBalances = (initialBalances: AccountBalance, finalBalances: AccountBalance) => {
   const initialBalancesNear = {
     available: formatNearAmount(initialBalances.available.toString()),
@@ -51,10 +73,10 @@ export const displayBalances = (initialBalances: AccountBalance, finalBalances: 
   console.log(`Total: ${initialBalancesNear.total.toString()} -> ${finalBalancesNear.total.toString()}`)
   console.log(``)
   console.log(`NET:`)
-  console.log(`Available: ${formatNearAmount(new BN(initialBalances.available.toString()).sub(new BN(finalBalances.available.toString())).toString())}`)
-  console.log(`Staked: ${formatNearAmount(new BN(initialBalances.staked.toString()).sub(new BN(finalBalances.staked.toString())).toString())}`)
+  console.log(`Available: ${formatNearAmount(new BN(finalBalances.available.toString()).sub(new BN(initialBalances.available.toString())).toString())}`)
+  console.log(`Staked: ${formatNearAmount(new BN(finalBalances.staked.toString()).sub(new BN(initialBalances.staked.toString())).toString())}`)
   console.log(`State Staked ${isMoreState ? "(more)" : "(less)"}: ${formatNearAmount(new BN(initialBalances.stateStaked.toString()).sub(new BN(finalBalances.stateStaked.toString())).toString())}`)
-  console.log(`Total: ${formatNearAmount(new BN(initialBalances.total.toString()).sub(new BN(finalBalances.total.toString())).toString())}`)
+  console.log(`Total: ${formatNearAmount(new BN(finalBalances.total.toString()).sub(new BN(initialBalances.total.toString())).toString())}`)
 }
 
 export async function initKeypomConnection(
@@ -92,26 +114,38 @@ export async function initKeypomConnection(
 
 >>>>>>> 2d98ca3 (started work on core architecture design)
 export function displayFailureLog(
-  transaction: TransactionResult
+  methodName: string,
+  receiverId: string,
+  transaction: TransactionResult,
 ) {
+  let logString = `Logs For ${methodName} on ${receiverId}:\n`;
   // Loop through each receipts_outcome in the transaction's result field
-  transaction.result.receipts_outcome.forEach((receipt) => {
+  transaction.result.receipts_outcome.forEach((receipt) => {   
+    const logs = receipt.outcome.logs;
+    if (logs.length > 0) {
+      // Turn logs into a string
+      const logs = receipt.outcome.logs.reduce((acc, log) => {
+        return acc.concat(log).concat('\n')
+      }, '');
+      logString += logs;
+    } else {//if (logString[logString.length - 1] !== `\n`) {
+      logString += '\n';
+    }
+    
     const status = (receipt.outcome.status as any);
     if (status.Failure?.ActionError?.kind?.FunctionCallError) {
-      console.log('Failure: ', status.Failure?.ActionError?.kind?.FunctionCallError)
+      console.log(`
+        Method: ${methodName} Receiver: ${receiverId} 
+        Failure: ${JSON.stringify(status.Failure?.ActionError?.kind?.FunctionCallError)}
+      `)
     }
   })
-}
 
-export function displayAllLogs(
-  transaction: TransactionResult
-) {
-  // Loop through each receipts_outcome in the transaction's result field
-  transaction.result.receipts_outcome.forEach((receipt) => {
-    if (receipt.outcome.logs.length > 0) {
-      console.log('Log: ', receipt.outcome.logs)
-    }
-  })
+  const styles = [
+    'color: green',
+  ].join(';');
+
+  console.log('%c%s', styles, logString);
 }
 
 export async function getDropSupplyForOwner(

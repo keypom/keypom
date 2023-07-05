@@ -21,7 +21,8 @@ impl InternalFTData {
     /// If the transfer fails, the FTs will be returned to the available balance
     /// Should *only* be invoked if the available balance is greater than or equal to the transfer amount.
     pub fn claim_ft_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, transfer_amount: &Balance) {
-        require!(self.enough_balance(&transfer_amount), "not enough balance to transfer");
+        require!(self.enough_balance(&transfer_amount), format!("not enough balance to transfer. Found {} but needed {}", self.balance_avail, transfer_amount));
+        
         // Decrement the available balance and then invoke the transfer
         self.balance_avail -= transfer_amount;
 
