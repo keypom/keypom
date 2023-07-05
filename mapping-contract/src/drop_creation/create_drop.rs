@@ -166,11 +166,13 @@ pub(crate) fn parse_ext_assets_per_use (
 
             // Every asset has a cost associated. We should add that to the total cost.
             // This is for 1 key. At the end, we'll multiply by the number of keys
-            let cost_for_asset = ExtAsset::get_cost_per_key(&ext_asset);
+
+            
+            let cost_for_asset = ext_asset.get_cost_per_key();
             *per_key_cost_from_assets += cost_for_asset;
 
             // Every asset has a gas cost associated. We should add that to the total gas.
-            let gas_for_asset = ExtAsset::get_gas_for_asset(&ext_asset);
+            let gas_for_asset = ext_asset.get_required_gas();
             total_gas_for_use += gas_for_asset;
 
             // Only insert into the asset ID map if it doesn't already exist
@@ -184,7 +186,7 @@ pub(crate) fn parse_ext_assets_per_use (
 
         require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, "Cannot exceed 300 TGas for any given key use");
         // Now that all the assets have been looped for the given use, we can get the allowance required
-        *total_allowance_required_per_key += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use);
+        *total_allowance_required_per_key += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, true);
 
         assets_metadata_by_use.insert(&use_number, &assets_metadata);
     }

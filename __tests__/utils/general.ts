@@ -5,8 +5,11 @@ import { initKeypom } from "keypom-js";
 import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
 import { AccountBalance, BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
+<<<<<<< HEAD
 >>>>>>> 2d98ca3 (started work on core architecture design)
 import { JsonDrop, JsonKeyInfo } from "./types";
+=======
+>>>>>>> 08ba860 (refactored to decouple withdrawal from deletion to fix issues)
 import { formatNearAmount } from "near-api-js/lib/utils/format";
 
 export const DEFAULT_GAS: string = "30000000000000";
@@ -156,38 +159,6 @@ export function parseExecutionResults(
   console.log('%c%s', styles, logString);
 }
 
-export async function getDropSupplyForOwner(
-  keypom: NearAccount,
-  ownerId: string
-): Promise<number> {
-  const dropSupplyForOwner: number = await keypom.view('get_drop_supply_for_owner', {account_id: ownerId});
-  return dropSupplyForOwner;
-}
-
-export async function getKeySupplyForDrop(
-  keypom: NearAccount,
-  dropId: string
-): Promise<number> {
-  const getKeySupplyForDrop: number = await keypom.view('get_key_supply_for_drop', {drop_id: dropId});
-  return getKeySupplyForDrop;
-}
-
-export async function getKeyInformation(
-  keypom: NearAccount,
-  publicKey: string
-): Promise<JsonKeyInfo> {
-  const keyInformation: JsonKeyInfo = await keypom.view('get_key_information', {key: publicKey});
-  return keyInformation;
-}
-
-export async function getDropInformation(
-  keypom: NearAccount,
-  dropId: string
-): Promise<JsonDrop> {
-  const dropInfo: JsonDrop = await keypom.view('get_drop_information', {drop_id: dropId});
-  return dropInfo;
-}
-
 export async function generateKeyPairs(
   numKeys: number,
 ): Promise<{ keys: KeyPair[]; publicKeys: string[] }> {
@@ -222,6 +193,7 @@ export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, p
   let range = expected_change.abs().div(numToDivide);
   console.log('range addition: ', range.toString())
 
+<<<<<<< HEAD
   let acceptableRange = {
     upper: expected_change.abs().add(range), // 1 + .05 = 1.05
     lower: expected_change.abs().sub(range) // 1 - .05  = .95
@@ -339,3 +311,13 @@ export async function createSeries(
     }, {attachedDeposit: DEFAULT_DEPOSIT});
   }
 }
+=======
+//   let acceptableRange = {
+//     upper: expected_change.abs().add(range), // 1 + .05 = 1.05
+//     lower: expected_change.abs().sub(range) // 1 - .05  = .95
+//   }
+//   let diff = b2.sub(b1).abs();
+//   console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
+//   return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
+// }
+>>>>>>> 08ba860 (refactored to decouple withdrawal from deletion to fix issues)

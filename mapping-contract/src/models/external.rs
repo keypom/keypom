@@ -50,7 +50,7 @@ impl ExtAsset {
     }
 
     /// Standard function to query how much gas it takes for 1 claim of a given asset
-    pub fn get_gas_for_asset(&self) -> Gas {
+    pub fn get_required_gas(&self) -> Gas {
         match self {
             ExtAsset::FTAsset(_) => (GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH),
             _ => env::panic_str("Asset type not supported")

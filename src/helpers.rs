@@ -40,7 +40,7 @@ pub(crate) fn get_key_cur_use(drop: &InternalDrop, key_info: &InternalKeyInfo) -
 }
 
 /// Used to calculate the base allowance needed given attached GAS
-pub(crate) fn calculate_base_allowance(yocto_per_gas: Balance, attached_gas: Gas) -> Balance {
+pub(crate) fn calculate_base_allowance(yocto_per_gas: Balance, attached_gas: Gas, should_log: bool) -> Balance {
     let prepaid: u64 = attached_gas.0 + GAS_PER_CCC.0;
 
     // Get the number of CCCs you can make with the attached GAS
@@ -54,13 +54,16 @@ pub(crate) fn calculate_base_allowance(yocto_per_gas: Balance, attached_gas: Gas
     let required_allowance = ((prepaid + RECEIPT_GAS_COST.0) as f32 * pow_outcome
         + RECEIPT_GAS_COST.0 as f32) as Balance
         * yocto_per_gas;
-    near_sdk::log!(
-        "{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}",
-        calls_with_gas,
-        prepaid,
-        pow_outcome,
-        required_allowance
-    );
+
+    if should_log {
+        near_sdk::log!(
+            "{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}",
+            calls_with_gas,
+            prepaid,
+            pow_outcome,
+            required_allowance
+        );
+    }
 
     required_allowance
 }

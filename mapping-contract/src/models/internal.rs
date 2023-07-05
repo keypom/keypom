@@ -78,23 +78,22 @@ impl InternalAsset {
     }
 
     /// Standard function for refunding assets
-    pub fn refund_funder(
-        &mut self,
-        keypom: &mut Keypom, 
-        drop_id: &DropId, 
-        refund_to: &AccountId, 
-        tokens_per_use: Option<Balance>
-    ) {
+    /// This does not include any ext assets such as FTs or NFTs.
+    /// This simply refunds the funder for the $NEAR cost associated with 1 key use for the given asset
+    pub fn refund_amount(&self) -> Balance {
         match self {
-            InternalAsset::ft(ref mut ft_data) => {
-                // Only refund if the balance is available. Otherwise, just refund the registration cost to the user balance
-                let refund_registration = true;
-                if ft_data.balance_avail >= tokens_per_use.unwrap() {
-                    ft_data.ft_refund(drop_id, tokens_per_use.unwrap(), refund_to, refund_registration);
-                } else {
-                    keypom.internal_modify_user_balance(&refund_to, ft_data.registration_cost, false);
-                }
+            InternalAsset::ft(ft_data) => {
+                require!(ft_data.balance_avail == 0, "Cannot refund funder if there are still FTs in the drop");
+                return ft_data.registration_cost;
             },
+            _ => env::panic_str("Asset type not supported")
+        }
+    }
+
+    /// Standard function to query how much gas it takes for 1 claim of a given asset
+    pub fn get_required_gas(&self) -> Gas {
+        match self {
+            InternalAsset::ft(_) => (GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH),
             _ => env::panic_str("Asset type not supported")
         }
     }

@@ -4,6 +4,7 @@ import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
+import { ExtDrop } from "../utils/types";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -76,7 +77,7 @@ interface FTAsset {
     amount: string;
 }
 
-test('Single Use Single FT', async t => {
+test('Single Use Single FT Underpay', async t => {
     const {funder, ftContract1, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
@@ -105,75 +106,209 @@ test('Single Use Single FT', async t => {
         },
         attachedDeposit: NEAR.parse("10").toString()
     })
-    let dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
+    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset.balance_avail, '0');
 
-    await sendFTs(funder, NEAR.parse("100").toString(), keypomV3, ftContract1, dropId);
+    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 50)
+
+    await sendFTs(funder, "5", keypomV3, ftContract1, dropId);
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset.balance_avail, '5');
 
-    // let keyPk = keyPairs.publicKeys[0];
-    // const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-    // console.log('keyInfo: ', keyInfo)
+    try {
+        await functionCall({
+            signer: funder,
+            receiver: keypomV3,
+            methodName: 'delete_keys',
+            args: {drop_id: dropId},
+            gas: LARGE_GAS,
+            attachedDeposit: "0"
+        })
+        t.fail('Delete keys should have failed since not all assets are withdrawn')
+    } catch(e) {
+        t.pass();
+    }
 
-    // // await functionCall({
-    // //     signer: funder,
-    // //     receiver: keypomV3,
-    // //     methodName: 'withdraw_ft_balance',
-    // //     args: {
-    // //         drop_id: dropId, 
-    // //         ft_contract_id: ftContract.accountId, 
-    // //         tokens_to_withdraw: NEAR.parse("1").toString()
-    // //     },
-    // //     gas: LARGE_GAS,
-    // //     attachedDeposit: "0"
-    // // })
+    dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo after failed deletion: ', dropInfo)
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset.balance_avail, '5');
 
-    // await functionCall({
-    //     signer: funder,
-    //     receiver: keypomV3,
-    //     methodName: 'delete_keys',
-    //     args: {drop_id: dropId},
-    //     gas: LARGE_GAS,
-    //     attachedDeposit: "0"
-    // })
+    keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 50)
 
-    // await functionCall({
-    //     signer: funder,
-    //     receiver: keypomV3,
-    //     methodName: 'delete_drop',
-    //     args: {drop_id: dropId},
-    //     gas: LARGE_GAS,
-    //     attachedDeposit: "0",
-    // })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'withdraw_ft_balance',
+        args: {
+            drop_id: dropId, 
+            ft_contract_id: ftContract1.accountId, 
+            tokens_to_withdraw: '5'
+        },
+        gas: LARGE_GAS,
+        attachedDeposit: "0"
+    })
 
-    // await functionCall({
-    //     signer: funder,
-    //     receiver: keypomV3,
-    //     methodName: 'withdraw_ft_balance',
-    //     args: {
-    //         drop_id: dropId, 
-    //         ft_contract_id: ftContract.accountId, 
-    //         tokens_to_withdraw: NEAR.parse("99").toString()
-    //     },
-    //     gas: LARGE_GAS,
-    //     attachedDeposit: "0"
-    // })
+    dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo after failed deletion: ', dropInfo)
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset.balance_avail, '0');
 
-    // await functionCall({
-    //     signer: funder,
-    //     receiver: keypomV3,
-    //     methodName: 'delete_drop',
-    //     args: {drop_id: dropId},
-    //     gas: LARGE_GAS,
-    //     attachedDeposit: "0"
-    // })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'delete_keys',
+        args: {drop_id: dropId},
+        gas: LARGE_GAS,
+        attachedDeposit: "0"
+    })
+
+    try {
+        keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+        console.log('keysForDrop: ', keysForDrop)
+        t.fail('Drop should have been deleted so method should panic')
+    } catch (e) {
+        t.pass();
+    }
+
+    // After keys have been deleted, 50 * 0.0125 = 0.625 should be returned to the funder
+    let userBal: string = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
+    console.log('userBal: ', userBal)
+    t.assert(NEAR.from(userBal).gte(NEAR.parse("0.625")))
+
+    let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo (after drop is deleted): ', dropInfo)
+    t.is(endingDropInfo, null);
     
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
 });
 
+// test('Single Use Single FT Overpay Delete', async t => {
+//     const {funder, ftContract1, keypomV3} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+//     const ftContractData = {
+//         contract_id: ftContract1.accountId,
+//         registration_cost: NEAR.parse("0.0125").toString(),
+//     }
+//     const ftAsset: FTAsset = {
+//         ...ftContractData,
+//         amount: NEAR.parse("1").toString()
+//     }
+
+//     const dropId = "underpay-delete-all";
+//     const assets_per_use = {
+//         1: [ftAsset],
+//     }
+//     let keyPairs = await generateKeyPairs(50);
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId, 
+//             assets_per_use, 
+//             public_keys: keyPairs.publicKeys
+//         },
+//         attachedDeposit: NEAR.parse("10").toString()
+//     })
+//     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo: ', dropInfo)
+//     let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+//     t.is(ftInternalAsset.balance_avail, '0');
+
+//     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+//     console.log('keysForDrop: ', keysForDrop)
+//     t.is(keysForDrop, 50)
+
+//     await sendFTs(funder, "5", keypomV3, ftContract1, dropId);
+    
+//     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo after: ', dropInfo)
+//     ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+//     t.is(ftInternalAsset.balance_avail, '5');
+
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'delete_keys',
+//         args: {drop_id: dropId},
+//         gas: LARGE_GAS,
+//         attachedDeposit: "0"
+//     })
+
+//     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo after deletion: ', dropInfo)
+//     ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+//     t.is(ftInternalAsset.balance_avail, '5');
+
+//     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+//     console.log('keysForDrop: ', keysForDrop)
+//     t.is(keysForDrop, 0)
+
+//     // After keys have been deleted, 50 * 0.0125 = 0.625 should be returned to the funder
+//     let userBal: string = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
+//     console.log('userBal: ', userBal)
+//     t.assert(NEAR.from(userBal).gte(NEAR.parse("0.625")))
+
+//     try {
+//         await functionCall({
+//             signer: funder,
+//             receiver: keypomV3,
+//             methodName: 'delete_drop',
+//             args: {drop_id: dropId},
+//             gas: LARGE_GAS,
+//             attachedDeposit: "0",
+//         })
+//         t.fail('Should have failed to delete drop with FTs remaining')
+//     } catch (e) {
+//         t.pass()
+//     }
+
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'withdraw_ft_balance',
+//         args: {
+//             drop_id: dropId, 
+//             ft_contract_id: ftContract1.accountId, 
+//             tokens_to_withdraw: '5'
+//         },
+//         gas: LARGE_GAS,
+//         attachedDeposit: "0"
+//     })
+
+//     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo after withdraw: ', dropInfo)
+//     ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
+//     t.is(ftInternalAsset.balance_avail, '0');
+
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'delete_drop',
+//         args: {drop_id: dropId},
+//         gas: LARGE_GAS,
+//         attachedDeposit: "0",
+//     })
+
+//     let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo (after drop is deleted): ', dropInfo)
+//     t.is(endingDropInfo, null);
+    
+//     let finalBal = await keypomV3.balance();
+//     displayBalances(initialBal, finalBal);
+// });
 /*
     TODO TESTS:
 
@@ -183,7 +318,6 @@ test('Single Use Single FT', async t => {
     - Multi-Use Single FT
     - Multi-Use Multi-FT
     
-    1. Underpay, delete all at once
-    2. Overpay, delete all at once (gas issues most probably)
-    3. Overpay, withdraw, delete
+    1. Underpay, withdraw, delete
+    2. Overpay,withdraw, delete
 */
