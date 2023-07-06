@@ -1,6 +1,12 @@
-use near_sdk::PromiseResult;
+use near_sdk::{PromiseResult, ext_contract};
 
 use crate::*;
+
+/// Interface for account creation
+#[ext_contract(ext_account_creation)]
+trait ExtAccountCreation {
+    fn create_account(&mut self, new_account_id: AccountId, new_public_key: PublicKey) -> Promise;
+}
 
 #[near_bindgen]
 impl Keypom {
@@ -21,18 +27,13 @@ impl Keypom {
         // Is written in the same block.
         let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("Drop not found");
 
-        // Define the args as strigified JSON
-        let mut final_args = format!(
-            "{{\"new_account_id\":\"{}\",\"new_public_key\":\"{}\"}}", new_account_id.clone(), new_public_key.clone()
-        );
         // First, create the zero-balance account and then, claim the assets
-        Promise::new(self.root_account).function_call_weight(
-        "create_account".to_string(),
-        final_args.as_bytes().to_vec(),
-            // Attach the balance of the linkdrop along with the exact gas for create account. No unspent GAS is attached.
-            0,
-            GAS_FOR_CREATE_ACCOUNT,
-            near_sdk::GasWeight(0),
+        ext_account_creation::ext(self.root_account.clone())
+            .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
+            .with_unused_gas_weight(0)
+            .create_account(
+                new_account_id.clone(),
+                new_public_key
         ).then(
             // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
             Self::ext(env::current_account_id())
