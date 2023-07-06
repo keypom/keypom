@@ -150,7 +150,8 @@ pub(crate) fn parse_ext_assets_per_use (
         let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
 
         // Keep track of the total gas across all assets in a given use
-        let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM;
+        // Default to account creation Gas on top unless otherwise explicitly set
+        let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT;
         
         // If there's assets, loop through and get all the asset IDs while also
         // adding them to the asset_by_id lookup map if they weren't already present

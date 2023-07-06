@@ -17,6 +17,7 @@ mod drop_deletion;
 mod views;
 
 use fungible_tokens::*;
+use drop_deletion::*;
 use internals::*;
 use helpers::*;
 use models::*;
@@ -31,16 +32,19 @@ pub struct Keypom {
     drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
     /// Keep track of the balances for each user. This is to prepay for drop creations
     user_balances: LookupMap<AccountId, Balance>,
+    /// Which account should all newly created accounts be sub-accounts of? (i.e `testnet` or `near`)
+    pub root_account: AccountId,
 }
 
 #[near_bindgen]
 impl Keypom {
     #[init]
-    pub fn new() -> Self {
+    pub fn new(root_account: AccountId) -> Self {
         Self {
             drop_by_id: LookupMap::new(StorageKeys::DropById),
             drop_id_for_pk: UnorderedMap::new(StorageKeys::DropIdByPk),
             user_balances: LookupMap::new(StorageKeys::UserBalances),
+            root_account
         }
     }
 }

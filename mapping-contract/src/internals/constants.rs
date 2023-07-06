@@ -22,6 +22,10 @@ pub const MAX_GAS_ATTACHABLE: Gas = Gas(300_000_000_000_000); // 300 TGas
 /// And execute claim code (outside of asset transfers)
 pub const BASE_GAS_FOR_CLAIM: Gas = Gas(15_000_000_000_000); // 7.5 TGas
 
+/// Actual amount of GAS to attach for creating a new account.
+/// This value is equal to 28 TGas
+pub const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000);
+
 /// For pessimistic allowance calculations:
 /// Lowest amount of Gas a CCC can use 
 pub const GAS_PER_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas

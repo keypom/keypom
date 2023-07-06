@@ -21,9 +21,9 @@ impl Keypom {
         // get the drop object (remove it and only re-insert at the end if it shouldn't be deleted)
         let mut drop = self.drop_by_id.remove(&drop_id).expect("No drop found");
         
-        let funder_id = &drop.funder_id;
+        let funder_id = drop.funder_id.clone();
         require!(
-            funder_id == &env::predecessor_account_id(),
+            funder_id == env::predecessor_account_id(),
             "Only drop funder can delete keys"
         );
 
@@ -93,8 +93,7 @@ impl Keypom {
         if drop.key_info_by_pk.is_empty() && !keep_empty_drop.unwrap_or(false) {
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
-            drop.asset_by_id.clear();
-            clear_key_behaviors(drop.uses_per_key, &mut drop.key_behavior_by_use);
+            internal_clear_drop_storage(&mut drop);
         } else {
             // Put the modified drop back in storage
             self.drop_by_id.insert(&drop_id, &drop);
@@ -110,6 +109,12 @@ impl Keypom {
 
         env::promise_return(key_deletion_promise);
     }
+}
+
+/// Internal helper function to clear the storage in the drop
+pub(crate) fn internal_clear_drop_storage(drop: &mut InternalDrop) {
+    drop.asset_by_id.clear();
+    clear_key_behaviors(drop.uses_per_key, &mut drop.key_behavior_by_use);
 }
 
 /// Loop through each use number and remove the assets metadata for that use number
