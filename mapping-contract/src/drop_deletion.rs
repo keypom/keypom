@@ -27,6 +27,14 @@ impl Keypom {
             "Only drop funder can delete keys"
         );
 
+        // Loop through all the assets in the drop and ensure they're empty
+        for asset in drop.asset_by_id.values() {
+            require!(
+                asset.is_empty(),
+                "Withdraw all assets in the drop before deleting keys"
+            );
+        }
+
         // Get a list of all the public keys that should be deleted.
         // This is either what was passed in, or the first limit (or 100) keys in the drop
         let public_keys = public_keys.unwrap_or_else(|| drop.key_info_by_pk.keys().take(limit.unwrap_or(100) as usize).collect());

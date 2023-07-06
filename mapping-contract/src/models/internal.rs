@@ -83,7 +83,6 @@ impl InternalAsset {
     pub fn refund_amount(&self) -> Balance {
         match self {
             InternalAsset::ft(ft_data) => {
-                require!(ft_data.balance_avail == 0, "Cannot refund funder if there are still FTs in the drop");
                 return ft_data.registration_cost;
             },
             _ => env::panic_str("Asset type not supported")

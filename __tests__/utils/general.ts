@@ -34,6 +34,7 @@ export async function functionCall({
   args,
   attachedDeposit,
   gas,
+  shouldLog = true,
   canPanic = false
 }: {
   signer: NearAccount,
@@ -42,10 +43,11 @@ export async function functionCall({
   args: any,
   attachedDeposit?: string,
   gas?: string,
+  shouldLog?: boolean,
   canPanic?: boolean
 }) {
   let rawValue = await signer.callRaw(receiver, methodName, args, {gas: gas || LARGE_GAS, attachedDeposit: attachedDeposit || "0"});
-  parseExecutionResults(methodName, receiver.accountId, rawValue, canPanic);
+  parseExecutionResults(methodName, receiver.accountId, rawValue, shouldLog, canPanic);
 }
 
 >>>>>>> e4f81fd (expanding tests and utility functions. Continued fixing refunds)
@@ -126,6 +128,7 @@ export function parseExecutionResults(
   methodName: string,
   receiverId: string,
   transaction: TransactionResult,
+  shouldLog: boolean,
   canPanic: boolean
 ) {
   let logString = `Logs For ${methodName} on ${receiverId}:\n`;
@@ -156,7 +159,9 @@ export function parseExecutionResults(
     'color: green',
   ].join(';');
 
-  console.log('%c%s', styles, logString);
+  if (shouldLog) {
+    console.log('%c%s', styles, logString);
+  }
 }
 
 export async function generateKeyPairs(
