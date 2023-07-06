@@ -54,8 +54,8 @@ impl Keypom {
             // For every remaining use, we need to loop through all assets and refund
             for cur_use in 1..=key_info.remaining_uses {                
                 // Get the assets metadata for this use number (we only clear the map when the drop is empty and deleted)
-                let assets_metadata = drop
-                    .assets_metadata_by_use
+                let KeyBehavior {assets_metadata, config: _} = drop
+                    .key_behavior_by_use
                     .get(&cur_use)
                     .expect("Use number not found");
     
@@ -94,7 +94,7 @@ impl Keypom {
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
             drop.asset_by_id.clear();
-            clear_asset_metadata_map(drop.uses_per_key, &mut drop.assets_metadata_by_use);
+            clear_key_behaviors(drop.uses_per_key, &mut drop.key_behavior_by_use);
         } else {
             // Put the modified drop back in storage
             self.drop_by_id.insert(&drop_id, &drop);
@@ -113,11 +113,11 @@ impl Keypom {
 }
 
 /// Loop through each use number and remove the assets metadata for that use number
-pub(crate) fn clear_asset_metadata_map (
+pub(crate) fn clear_key_behaviors (
     uses_per_key: UseNumber,
-    assets_metadata_by_use: &mut LookupMap<UseNumber, Vec<AssetMetadata>>,
+    key_behavior_by_use: &mut LookupMap<UseNumber, KeyBehavior>,
 ) {
     for use_number in 1..=uses_per_key {
-        assets_metadata_by_use.remove(&use_number);
+        key_behavior_by_use.remove(&use_number);
     }
 }

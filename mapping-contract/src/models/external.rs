@@ -86,7 +86,7 @@ impl ExtDrop {
         
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=internal_drop.uses_per_key {
-            let assets_metadata = internal_drop.assets_metadata_by_use.get(&use_number).unwrap();
+            let KeyBehavior {assets_metadata, config: _} = internal_drop.key_behavior_by_use.get(&use_number).expect("Use number not found");
 
             let mut assets: Vec<ExtAsset> = Vec::new();
             

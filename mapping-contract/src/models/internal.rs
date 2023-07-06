@@ -26,7 +26,7 @@ pub struct InternalDrop {
     /// Map an asset ID to a specific asset. This is a hyper optimization so the asset data isn't repeated in the contract
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
     /// For every use number, keep track of what assets there are.
-    pub assets_metadata_by_use: LookupMap<UseNumber, Vec<AssetMetadata>>,
+    pub key_behavior_by_use: LookupMap<UseNumber, KeyBehavior>,
     /// Set of public keys associated with this drop mapped to their specific key information.
     pub key_info_by_pk: UnorderedMap<PublicKey, InternalKeyInfo>,
     /// Keep track of the next nonce to give out to a key
@@ -98,9 +98,21 @@ impl InternalAsset {
     }
 }
 
+/// Every use number has corresponding behavior data which includes information about all the assets in that use
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct KeyBehavior {
+    /// Configurations for this specific use
+    pub config: Option<bool>,
+    /// Metadata for each asset in this use
+    pub assets_metadata: Vec<AssetMetadata>
+}
+
 /// Metadata corresponding to a specific asset. This keeps track of the ID and optionally tokens being transferred per use
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct AssetMetadata {
+    /// What asset is mapped to this specific use
     pub asset_id: AssetId,
+    /// How many tokens should be transferred in this use?
+    /// This is only relevant for FT and $NEAR assets
     pub tokens_per_use: Option<U128>,
 }

@@ -23,7 +23,7 @@ impl Keypom {
             .expect("no drop found for drop ID");
         let key_info = drop.key_info_by_pk.get(&key).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let assets_metadata = drop.assets_metadata_by_use.get(&cur_key_use).expect("Use number not found");
+        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
         let mut required_gas = BASE_GAS_FOR_CLAIM;
 

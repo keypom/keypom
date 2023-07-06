@@ -18,7 +18,7 @@ impl Keypom {
         let public_keys = public_keys.unwrap_or(Vec::new());
         
         // Instantiate the drop data structures
-        let mut assets_metadata_by_use: LookupMap<UseNumber, Vec<AssetMetadata>> = LookupMap::new(StorageKeys::AssetIdsByUse {
+        let mut key_behavior_by_use: LookupMap<UseNumber, KeyBehavior> = LookupMap::new(StorageKeys::AssetIdsByUse {
             drop_id_hash: hash_drop_id(&drop_id.to_string()),
         });
         let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
@@ -38,7 +38,7 @@ impl Keypom {
         parse_ext_assets_per_use(
             uses_per_key, 
             assets_per_use,
-            &mut assets_metadata_by_use, 
+            &mut key_behavior_by_use, 
             &mut asset_by_id, 
             &mut total_allowance_required_per_key, 
             &mut per_key_cost_from_assets
@@ -61,7 +61,7 @@ impl Keypom {
         // Write the drop data to storage
         let drop = InternalDrop {
             uses_per_key,
-            assets_metadata_by_use,
+            key_behavior_by_use,
             asset_by_id,
             key_info_by_pk,
             next_key_id,
@@ -136,7 +136,7 @@ impl Keypom {
 pub(crate) fn parse_ext_assets_per_use (
     uses_per_key: UseNumber,
     assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>, 
-    assets_metadata_by_use: &mut LookupMap<UseNumber, Vec<AssetMetadata>>,
+    key_behavior_by_use: &mut LookupMap<UseNumber, KeyBehavior>,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>, 
     total_allowance_required_per_key: &mut Balance, 
     per_key_cost_from_assets: &mut Balance
@@ -188,6 +188,9 @@ pub(crate) fn parse_ext_assets_per_use (
         // Now that all the assets have been looped for the given use, we can get the allowance required
         *total_allowance_required_per_key += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, true);
 
-        assets_metadata_by_use.insert(&use_number, &assets_metadata);
+        key_behavior_by_use.insert(&use_number, &KeyBehavior {
+            assets_metadata,
+            config: None
+        });
     }
 }
