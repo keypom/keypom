@@ -31,12 +31,13 @@ impl Keypom {
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             let ext_asset = ExtAsset::from_internal_asset(&internal_asset, &metadata);
-            required_gas += ext_asset.get_required_gas();
+            required_gas += ext_asset.as_ref().and_then(|a| Some(a.get_required_gas())).unwrap_or(GAS_FOR_NONE_ASSET);
             
             match ext_asset {
-                ExtAsset::FTAsset(ft) => {
+                Some(ExtAsset::FTAsset(ft)) => {
                     actual_ft_list.push(ft);
-                }
+                },
+                None => {}
             }
         }
 

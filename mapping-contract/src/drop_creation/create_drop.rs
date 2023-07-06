@@ -9,7 +9,7 @@ impl Keypom {
         &mut self, 
         drop_id: String, 
         public_keys: Option<Vec<PublicKey>>, 
-        assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>,
+        assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
         drop_metadata: Option<DropMetadata>
     ) {
         // Before anything, measure storage usage so we can net the cost and charge the funder
@@ -135,7 +135,7 @@ impl Keypom {
 
 pub(crate) fn parse_ext_assets_per_use (
     uses_per_key: UseNumber,
-    assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>, 
+    assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>, 
     key_behavior_by_use: &mut LookupMap<UseNumber, KeyBehavior>,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>, 
     total_allowance_required_per_key: &mut Balance, 
@@ -156,8 +156,8 @@ pub(crate) fn parse_ext_assets_per_use (
         // adding them to the asset_by_id lookup map if they weren't already present
         // If there aren't any assets, the vector will be of length 1
         for ext_asset in ext_assets {
-            let asset_id = asset_id_from_ext_asset(&ext_asset);
-            let tokens_per_use = ext_asset.get_tokens_per_use();
+            let asset_id = ext_asset.as_ref().and_then(|a| Some(asset_id_from_ext_asset(&a))).unwrap_or(NONE_ASSET_ID.to_string());
+            let tokens_per_use = ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use())).unwrap_or(U128(0));
 
             assets_metadata.push(AssetMetadata {
                 asset_id: asset_id.clone(),
@@ -168,17 +168,17 @@ pub(crate) fn parse_ext_assets_per_use (
             // This is for 1 key. At the end, we'll multiply by the number of keys
 
             
-            let cost_for_asset = ext_asset.get_cost_per_key();
+            let cost_for_asset = ext_asset.as_ref().and_then(|a| Some(a.get_cost_per_key())).unwrap_or(0);
             *per_key_cost_from_assets += cost_for_asset;
 
             // Every asset has a gas cost associated. We should add that to the total gas.
-            let gas_for_asset = ext_asset.get_required_gas();
+            let gas_for_asset = ext_asset.as_ref().and_then(|a| Some(a.get_required_gas())).unwrap_or(GAS_FOR_NONE_ASSET);
             total_gas_for_use += gas_for_asset;
 
             // Only insert into the asset ID map if it doesn't already exist
             // If we insert, we should also add the cost to the total asset cost
             if asset_by_id.get(&asset_id).is_none() {
-                let internal_asset = ext_asset.to_internal_asset();
+                let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
 
                 asset_by_id.insert(&asset_id, &internal_asset);
             }

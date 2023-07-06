@@ -164,7 +164,7 @@ interface FTAsset {
 //     displayBalances(initialBal, finalBal);
 // });
 
-test('Delete FT Drop', async t => {
+test('Null Claims', async t => {
     const {minter, funder, ftContract, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
@@ -187,11 +187,10 @@ test('Delete FT Drop', async t => {
 
     const dropId = "foobar123";
     const assets_per_use = {
-        1: [ftAsset1, ftAsset3],
-        2: [ftAsset2, ftAsset1],
-        3: [ftAsset3, ftAsset2]
+        //1: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+        1: [null]
     }
-    let keyPairs = await generateKeyPairs(50);
+    let keyPairs = await generateKeyPairs(1);
     await functionCall({
         signer: funder,
         receiver: keypomV3,
@@ -206,7 +205,7 @@ test('Delete FT Drop', async t => {
     let dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
 
-    await sendFTs(funder, NEAR.parse("100").toString(), keypomV3, ftContract, dropId);
+    // await sendFTs(funder, NEAR.parse("100").toString(), keypomV3, ftContract, dropId);
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
@@ -227,47 +226,22 @@ test('Delete FT Drop', async t => {
     //     gas: LARGE_GAS,
     //     attachedDeposit: "0"
     // })
-
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'delete_keys',
-        args: {drop_id: dropId},
-        gas: LARGE_GAS,
-        attachedDeposit: "0"
-    })
-
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'delete_drop',
-        args: {drop_id: dropId},
-        gas: LARGE_GAS,
-        attachedDeposit: "0",
-    })
-
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'withdraw_ft_balance',
-        args: {
-            drop_id: dropId, 
-            ft_contract_id: ftContract.accountId, 
-            tokens_to_withdraw: NEAR.parse("99").toString()
-        },
-        gas: LARGE_GAS,
-        attachedDeposit: "0"
-    })
-
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'delete_drop',
-        args: {drop_id: dropId},
-        gas: LARGE_GAS,
-        attachedDeposit: "0"
-    })
     
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
 });
+
+/*
+    TODO TESTS:
+
+    For each of the following:
+    - Single Use Single FT
+    - Single Use Multi-FT
+    - Multi-Use Single FT
+    - Multi-Use Multi-FT
+    
+    1. Underpay, delete all at once
+    2. Underpay, withdraw, delete
+    3. Overpay, delete all at once (gas issues most probably)
+    4. Overpay, withdraw, delete
+*/

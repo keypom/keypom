@@ -51,6 +51,7 @@ pub struct InternalKeyInfo {
 #[serde(untagged)]
 pub enum InternalAsset {
     ft(InternalFTData),
+    none
 }
 
 impl InternalAsset {
@@ -60,7 +61,7 @@ impl InternalAsset {
             InternalAsset::ft(ref mut ft_data) => {
                 ft_data.claim_ft_asset(drop_id, receiver_id, &tokens_per_use.unwrap())
             },
-            _ => env::panic_str("Asset type not supported")
+            InternalAsset::none => {}
         }
     }
 
@@ -73,7 +74,8 @@ impl InternalAsset {
                     return false;
                 }
                 return true;
-            }
+            },
+            InternalAsset::none => true
         }
     }
 
@@ -85,15 +87,15 @@ impl InternalAsset {
             InternalAsset::ft(ft_data) => {
                 return ft_data.registration_cost;
             },
-            _ => env::panic_str("Asset type not supported")
+            InternalAsset::none => 0
         }
     }
 
     /// Standard function to query how much gas it takes for 1 claim of a given asset
     pub fn get_required_gas(&self) -> Gas {
         match self {
-            InternalAsset::ft(_) => (GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH),
-            _ => env::panic_str("Asset type not supported")
+            InternalAsset::ft(_) => GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH,
+            InternalAsset::none => GAS_FOR_NONE_ASSET
         }
     }
 }

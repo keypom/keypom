@@ -17,8 +17,7 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn asset_id_from_ext_asset(ext_asset: &ExtAsset) -> AssetId {
     match ext_asset {
-        ExtAsset::FTAsset(ft_data) => ft_data.contract_id.to_string(),
-        _ => env::panic_str("Asset type not supported")
+        ExtAsset::FTAsset(ft_data) => ft_data.contract_id.to_string()
     }
 }
 

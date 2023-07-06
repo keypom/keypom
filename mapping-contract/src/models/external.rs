@@ -9,16 +9,25 @@ pub enum ExtAsset {
     FTAsset(ExtFTData)
 }
 
+pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAsset {
+    if let Some(asset) = ext_asset {
+        return asset.to_internal_asset();
+    }
+
+    return InternalAsset::none;
+}
+
 impl ExtAsset {
     /// Convert an `InternalAsset` into an `ExtAsset`
-    pub fn from_internal_asset(internal_asset: &InternalAsset, asset_metadata: &AssetMetadata) -> Self {
+    pub fn from_internal_asset(internal_asset: &InternalAsset, asset_metadata: &AssetMetadata) -> Option<Self> {
         match internal_asset {
-            InternalAsset::ft(ft_data) => ExtAsset::FTAsset(ExtFTData {
+            InternalAsset::ft(ft_data) => Some(ExtAsset::FTAsset(ExtFTData {
                 contract_id: ft_data.contract_id.clone(),
                 registration_cost: ft_data.registration_cost.into(),
                 // FTs should ALWAYS have a tokens_per_use value
                 amount: asset_metadata.tokens_per_use.unwrap().into()
-            })
+            })),
+            InternalAsset::none => None
         }
     }
 
@@ -28,32 +37,28 @@ impl ExtAsset {
             ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData::new(
                 ft_data.contract_id.clone(),
                 ft_data.registration_cost.into(),
-            )),
-            _ => env::panic_str("Asset type not supported")
+            ))
         }
     }
 
     /// Standard function to check how many tokens a given asset transfers per use
     pub fn get_tokens_per_use(&self) -> U128 {
         match self {
-            ExtAsset::FTAsset(ft_data) => ft_data.amount.into(),
-            _ => env::panic_str("Asset type not supported")
+            ExtAsset::FTAsset(ft_data) => ft_data.amount.into()
         }
     }
 
     /// Standard function to check how much $NEAR (in yocto) it costs for 1 use of a given asset
     pub fn get_cost_per_key(&self) -> Balance {
         match self {
-            ExtAsset::FTAsset(ft_data) => ft_data.registration_cost.into(),
-            _ => env::panic_str("Asset type not supported")
+            ExtAsset::FTAsset(ft_data) => ft_data.registration_cost.into()
         }
     }
 
     /// Standard function to query how much gas it takes for 1 claim of a given asset
     pub fn get_required_gas(&self) -> Gas {
         match self {
-            ExtAsset::FTAsset(_) => (GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH),
-            _ => env::panic_str("Asset type not supported")
+            ExtAsset::FTAsset(_) => GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH
         }
     }
 }
@@ -74,21 +79,21 @@ pub struct ExtFTData {
 #[derive(BorshSerialize, BorshDeserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDrop {
-    assets_per_use: HashMap<UseNumber, Vec<ExtAsset>>,
+    assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
     internal_assets_data: Vec<InternalAsset>,
 }
 
 impl ExtDrop {
     /// Convert an `InternalDrop` into an `ExtDrop`
     pub fn from_internal_drop(internal_drop: &InternalDrop) -> Self {
-        let mut assets_per_use: HashMap<UseNumber, Vec<ExtAsset>> = HashMap::new();
+        let mut assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>> = HashMap::new();
         let internal_assets_data: Vec<InternalAsset> = internal_drop.asset_by_id.values().collect();
         
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=internal_drop.uses_per_key {
             let KeyBehavior {assets_metadata, config: _} = internal_drop.key_behavior_by_use.get(&use_number).expect("Use number not found");
 
-            let mut assets: Vec<ExtAsset> = Vec::new();
+            let mut assets: Vec<Option<ExtAsset>> = Vec::new();
             
             for metadata in assets_metadata {
                 let asset = internal_drop.asset_by_id.get(&metadata.asset_id).unwrap();
