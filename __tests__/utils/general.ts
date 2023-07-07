@@ -35,7 +35,7 @@ export async function functionCall({
   attachedDeposit,
   gas,
   shouldLog = true,
-  canPanic = false
+  shouldPanic = false
 }: {
   signer: NearAccount,
   receiver: NearAccount,
@@ -44,10 +44,10 @@ export async function functionCall({
   attachedDeposit?: string,
   gas?: string,
   shouldLog?: boolean,
-  canPanic?: boolean
+  shouldPanic?: boolean
 }) {
   let rawValue = await signer.callRaw(receiver, methodName, args, {gas: gas || LARGE_GAS, attachedDeposit: attachedDeposit || "0"});
-  parseExecutionResults(methodName, receiver.accountId, rawValue, shouldLog, canPanic);
+  parseExecutionResults(methodName, receiver.accountId, rawValue, shouldLog, shouldPanic);
 }
 
 >>>>>>> e4f81fd (expanding tests and utility functions. Continued fixing refunds)
@@ -129,9 +129,13 @@ export function parseExecutionResults(
   receiverId: string,
   transaction: TransactionResult,
   shouldLog: boolean,
-  canPanic: boolean
+  shouldPanic: boolean
 ) {
   let logString = `Logs For ${methodName} on ${receiverId}:\n`;
+
+  let didPanic = false;
+  let panicMessages: string[] = [];
+
   // Loop through each receipts_outcome in the transaction's result field
   transaction.result.receipts_outcome.forEach((receipt) => {   
     const logs = receipt.outcome.logs;
@@ -141,29 +145,28 @@ export function parseExecutionResults(
         return acc.concat(log).concat('\n')
       }, '');
       logString += logs;
-    } else {//if (logString[logString.length - 1] !== `\n`) {
+    } else {
       logString += '\n';
     }
     
     const status = (receipt.outcome.status as any);
     if (status.Failure) {
       let failure = status.Failure.ActionError;
+      let str = `Failure for method: ${methodName} Failure: ${JSON.stringify(failure)}`
+      console.log(str)
 
-      if (failure.ActionError?.kind?.FunctionCallError) {
-        let str = `Method: ${methodName} Receiver: ${receiverId} Failure: ${JSON.stringify(status.Failure?.ActionError?.kind?.FunctionCallError)}`
-        console.log(str)
-        if (!canPanic) {
-          throw new Error(str)
-        }
-      } else {
-        let str = `Unknown Failure for method: ${methodName} Failure: ${JSON.stringify(failure)}`
-        console.log(str)
-        if (!canPanic) {
-          throw new Error(str)
-        }
-      }
+      panicMessages.push(str);
+      didPanic = true;
     }
   })
+
+  if (shouldPanic && !didPanic) {
+    throw new Error(panicMessages.join('\n'));
+  }
+
+  if (!shouldPanic && didPanic) {
+    throw new Error(`Expected failure for method: ${methodName}`)
+  }
 
   const styles = [
     'color: green',

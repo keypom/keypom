@@ -74,26 +74,25 @@ pub(crate) fn get_total_costs_for_key(
     total_allowance_for_keys: &mut Balance,
     remaining_uses: UseNumber, 
     max_uses_per_key: UseNumber, 
-    drop: &InternalDrop
+    asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
+    key_behavior_by_use: &LookupMap<UseNumber, KeyBehavior>
 ) {
     // For every remaining use, we need to loop through all assets and refund
     for cur_use in 1..=remaining_uses {
         let use_to_refund = max_uses_per_key - remaining_uses + cur_use;
 
         // Get the assets metadata for this use number (we only clear the map when the drop is empty and deleted)
-        let KeyBehavior {assets_metadata, config: _} = drop
-            .key_behavior_by_use
+        let KeyBehavior {assets_metadata, config: _} = key_behavior_by_use
             .get(&use_to_refund)
             .expect("Use number not found");
 
         // Keep track of the total gas across all assets in a given use
-        let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM;
+        let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT;
 
         // Loop through each asset metadata and delete it
         for metadata in assets_metadata {
             // Get the asset object (we only clear the assets by ID when the drop is empty and deleted)
-            let internal_asset = drop
-                .asset_by_id
+            let internal_asset = asset_by_id
                 .get(&metadata.asset_id)
                 .expect("Asset not found");
 
@@ -104,6 +103,7 @@ pub(crate) fn get_total_costs_for_key(
             // Delete the asset
             *total_cost_for_keys += internal_asset.refund_amount();
         }
+        require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, format!("Cannot exceed 300 TGas for any given key use. Found {}", total_gas_for_use.0));
 
         // Increment the user's balance by the gas cost for this use
         *total_allowance_for_keys += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, false);

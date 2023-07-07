@@ -33,6 +33,32 @@ pub struct InternalDrop {
     pub next_key_id: u64
 }
 
+impl InternalDrop {
+    /// Convert an `InternalDrop` into an `ExtDrop`
+    pub fn to_external_drop(&self) -> ExtDrop {
+        let mut assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>> = HashMap::new();
+        let internal_assets_data: Vec<InternalAsset> = self.asset_by_id.values().collect();
+        
+        // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
+        for use_number in 1..=self.uses_per_key {
+            let KeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
+
+            let mut assets: Vec<Option<ExtAsset>> = Vec::new();
+            
+            for metadata in assets_metadata {
+                let asset = self.asset_by_id.get(&metadata.asset_id).unwrap();
+                assets.push(asset.to_external_asset(&metadata));
+            }
+            assets_per_use.insert(use_number, assets);
+        }
+
+        ExtDrop {
+            assets_per_use,
+            internal_assets_data
+        }
+    }
+}
+
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InternalKeyInfo {
@@ -55,6 +81,19 @@ pub enum InternalAsset {
 }
 
 impl InternalAsset {
+    /// Convert an `InternalAsset` into an `ExtAsset`
+    pub fn to_external_asset(self, asset_metadata: &AssetMetadata) -> Option<ExtAsset> {
+        match self {
+            InternalAsset::ft(ft_data) => Some(ExtAsset::FTAsset(ExtFTData {
+                contract_id: ft_data.contract_id.clone(),
+                registration_cost: ft_data.registration_cost.into(),
+                // FTs should ALWAYS have a tokens_per_use value
+                amount: asset_metadata.tokens_per_use.unwrap().into()
+            })),
+            InternalAsset::none => None
+        }
+    }
+
     /// Standard function for claiming an asset regardless of its type
     pub fn claim_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, tokens_per_use: &Option<Balance>) {
         match self {

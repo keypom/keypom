@@ -41,10 +41,15 @@
 =======
 		"test": "ava __tests__/v3-tests.ava.ts",
 		"test:deletion:single": "ava __tests__/deletion/ft-single-use.ava.ts",
+		"test:creation": "ava __tests__/creation/create-and-add.ava.ts",
 		"test:deletion:multi": "ava __tests__/deletion/ft-multi-use.ava.ts",
 		"test:claim:null": "ava __tests__/claims/null-claim.ava.ts",
+<<<<<<< HEAD
 		"test:creation": "ava __tests__/v3-tests.ava.ts"
 >>>>>>> e7cc628 (implemented custom serializer for internal structs and expanded ext drop data to include internal info. Started work on deletion tests)
+=======
+		"test:general": "ava __tests__/v3-tests.ava.ts"
+>>>>>>> a04e48e (refactored and abstracted cost analysis fns in delete, create, and add keys to all reference same function)
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",

@@ -58,7 +58,8 @@ impl Keypom {
                 &mut total_allowance_for_keys,
                 key_info.remaining_uses,
                 drop.uses_per_key,
-                &drop,
+                &drop.asset_by_id,
+                &drop.key_behavior_by_use
             );
 
             // Add the delete key action to the batch promise

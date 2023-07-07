@@ -5,7 +5,7 @@ impl Keypom {
     /// Returns the drop information associated with given drop ID.
     pub fn get_drop_information(&self, drop_id: DropId) -> Option<ExtDrop> {
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
-            return Some(ExtDrop::from_internal_drop(&drop));
+            return Some(drop.to_external_drop());
         } else {
             None
         }
@@ -30,8 +30,9 @@ impl Keypom {
         let mut actual_ft_list: Vec<ExtFTData> = Vec::new();
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
-            let ext_asset = ExtAsset::from_internal_asset(&internal_asset, &metadata);
-            required_gas += ext_asset.as_ref().and_then(|a| Some(a.get_required_gas())).unwrap_or(GAS_FOR_NONE_ASSET);
+            required_gas += internal_asset.get_required_gas();
+
+            let ext_asset = internal_asset.to_external_asset(&metadata);
             
             match ext_asset {
                 Some(ExtAsset::FTAsset(ft)) => {
