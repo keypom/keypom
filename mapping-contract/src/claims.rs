@@ -63,10 +63,12 @@ impl Keypom {
     /// Internal function that loops through all assets for the given use and claims them.
     /// Should be executed in both `claim` or `create_account_and_claim`
     pub(crate) fn internal_claim_assets(&mut self, drop_id: DropId, receiver_id: AccountId, signer_pk: PublicKey) {
+        let initial_storage = env::storage_usage();
+
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_pk.remove(&signer_pk).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.remove(&cur_key_use).expect("Use number not found");
+        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
         for metadata in assets_metadata {
             let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
@@ -87,12 +89,21 @@ impl Keypom {
         // If the drop is now empty, we should delete it
         // Otherwise, re-insert the drop into state
         if drop.key_info_by_pk.is_empty() {
+            near_sdk::log!("Drop {} is now empty. Deleting", drop_id);
             // Remove the drop from storage and clear the maps inside of it
             self.drop_by_id.remove(&drop_id);
             internal_clear_drop_storage(&mut drop);
         } else {
+            near_sdk::log!("Drop {} is not empty. Re-inserting", drop_id);
             // Put the modified drop back in storage
             self.drop_by_id.insert(&drop_id, &drop);
+        }
+
+        let final_storage = env::storage_usage();
+        // Some storage was freed so we should refund the user's balance
+        if final_storage < initial_storage {
+            let storage_cost = (initial_storage - final_storage) as u128 * env::storage_byte_cost();
+            self.internal_modify_user_balance(&drop.funder_id, storage_cost, false);
         }
     }
 }

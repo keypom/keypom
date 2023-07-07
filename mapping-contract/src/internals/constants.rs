@@ -34,7 +34,7 @@ pub const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
 
 /// Asset ID for the none / null asset
 pub const NONE_ASSET_ID: &str = "none-asset";
-pub const GAS_FOR_NONE_ASSET: Gas = Gas(8_000_000_000_000); // 8 TGas
+pub const GAS_FOR_NONE_ASSET: Gas = Gas(450_000_000_000); // 0.45 TGas
 
 /// Which specific use is something being acted on. This is not zero indexed (i.e the first use is 1)
 pub type UseNumber = u16;

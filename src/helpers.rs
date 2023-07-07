@@ -66,3 +66,46 @@ pub(crate) fn calculate_base_allowance(yocto_per_gas: Balance, attached_gas: Gas
 
     required_allowance
 }
+
+/// Helper function that returns the total cost for a given key as well as its allowance
+/// This key can be partially used or not
+pub(crate) fn get_total_costs_for_key(
+    total_cost_for_keys: &mut Balance,
+    total_allowance_for_keys: &mut Balance,
+    remaining_uses: UseNumber, 
+    max_uses_per_key: UseNumber, 
+    drop: &InternalDrop
+) {
+    // For every remaining use, we need to loop through all assets and refund
+    for cur_use in 1..=remaining_uses {
+        let use_to_refund = max_uses_per_key - remaining_uses + cur_use;
+
+        // Get the assets metadata for this use number (we only clear the map when the drop is empty and deleted)
+        let KeyBehavior {assets_metadata, config: _} = drop
+            .key_behavior_by_use
+            .get(&use_to_refund)
+            .expect("Use number not found");
+
+        // Keep track of the total gas across all assets in a given use
+        let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM;
+
+        // Loop through each asset metadata and delete it
+        for metadata in assets_metadata {
+            // Get the asset object (we only clear the assets by ID when the drop is empty and deleted)
+            let internal_asset = drop
+                .asset_by_id
+                .get(&metadata.asset_id)
+                .expect("Asset not found");
+
+            // Every asset has a gas cost associated. We should add that to the total gas.
+            let gas_for_asset = internal_asset.get_required_gas();
+            total_gas_for_use += gas_for_asset;
+
+            // Delete the asset
+            *total_cost_for_keys += internal_asset.refund_amount();
+        }
+
+        // Increment the user's balance by the gas cost for this use
+        *total_allowance_for_keys += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, false);
+    }
+}

@@ -45,6 +45,7 @@ impl Keypom {
             yoctonear: 0.to_string(),
             ft_list: if actual_ft_list.len() > 0 { Some(actual_ft_list) } else { None },
             required_gas: u64::from(required_gas).to_string(),
+            uses_remaining: key_info.remaining_uses,
         }
     }
 

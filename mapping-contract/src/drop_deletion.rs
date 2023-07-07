@@ -50,41 +50,16 @@ impl Keypom {
         for pk in &public_keys {
             // Get the key info for this public key (by removing - re-entrancy attack prevention)
             let key_info = drop.key_info_by_pk.remove(pk).expect("Key not found");
+            self.drop_id_for_pk.remove(pk);
 
             // For every remaining use, we need to loop through all assets and refund
-            for cur_use in 1..=key_info.remaining_uses {                
-                // Get the assets metadata for this use number (we only clear the map when the drop is empty and deleted)
-                let KeyBehavior {assets_metadata, config: _} = drop
-                    .key_behavior_by_use
-                    .get(&cur_use)
-                    .expect("Use number not found");
-    
-                // Keep track of the total gas across all assets in a given use
-                let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM;
-
-                // Loop through each asset metadata and delete it
-                for metadata in assets_metadata {
-                    // Get the asset object (we only clear the assets by ID when the drop is empty and deleted)
-                    let internal_asset = drop
-                        .asset_by_id
-                        .get(&metadata.asset_id)
-                        .expect("Asset not found");
-    
-                    // Every asset has a gas cost associated. We should add that to the total gas.
-                    let gas_for_asset = internal_asset.get_required_gas();
-                    total_gas_for_use += gas_for_asset;
-
-                    // Delete the asset
-                    total_cost_for_keys += internal_asset.refund_amount();
-    
-                    // Put the asset back in storage. The internal balances for the asset structs
-                    // Will have decremented by the time the promise is fired so there is no re-entrancy attack
-                    drop.asset_by_id.insert(&metadata.asset_id, &internal_asset);
-                }
-
-                // Increment the user's balance by the gas cost for this use
-                total_allowance_for_keys += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, false);
-            }
+            get_total_costs_for_key(
+                &mut total_cost_for_keys,
+                &mut total_allowance_for_keys,
+                key_info.remaining_uses,
+                drop.uses_per_key,
+                &drop,
+            );
 
             // Add the delete key action to the batch promise
             env::promise_batch_action_delete_key(key_deletion_promise, &pk);

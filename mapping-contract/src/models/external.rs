@@ -124,5 +124,8 @@ pub struct ExtKeyInfo {
    /// If using the FT standard extension, a set of FTData can be linked to the public key
    /// indicating that all those assets will be sent to the account that claims the linkdrop (either new or
    /// existing) when the key is successfully used.
-   pub ft_list: Option<Vec<ExtFTData>>
+   pub ft_list: Option<Vec<ExtFTData>>,
+
+   /* CUSTOM */
+   pub uses_remaining: UseNumber
 }

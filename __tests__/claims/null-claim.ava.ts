@@ -27,25 +27,16 @@ test.beforeEach(async (t) => {
     const keypomV3 = await root.createSubAccount('keypom');
     // Test users
     const funder = await root.createSubAccount('funder');
-    const ftContract1 = await root.createSubAccount('ft_contract_1');
     
     await keypomV3.deploy(`./out/mapping.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
-    await ftContract1.deploy(`./out/ft.wasm`);
     
     await root.call(root, 'new', {});
     await keypomV3.call(keypomV3, 'new', { root_account: root.accountId });
-    await ftContract1.call(ftContract1, 'new_default_meta', { owner_id: ftContract1, total_supply: totalSupply.toString() });
     
-    // Deposit storage
-    await functionCall({signer: ftContract1, receiver: ftContract1, methodName: 'storage_deposit', args: {account_id: keypomV3.accountId},attachedDeposit: NEAR.parse("1").toString(), shouldLog: false})
-    await functionCall({signer: ftContract1, receiver: ftContract1, methodName: 'storage_deposit', args: {account_id: funder.accountId},attachedDeposit: NEAR.parse("1").toString(), shouldLog: false})
-
-    // Send FTs
-    await functionCall({signer: ftContract1, receiver: ftContract1, methodName: 'ft_transfer', args: {receiver_id: funder.accountId, amount: NEAR.parse("1000").toString()},attachedDeposit: "1", shouldLog: false})
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, funder, keypomV3, ftContract1 };
+    t.context.accounts = { root, funder, keypomV3 };
     t.context.rpcPort = rpcPort;
 });
 
@@ -63,14 +54,8 @@ interface FTAsset {
 }
 
 test('Single Null Claim', async t => {
-    const {funder, ftContract1, keypomV3, root} = t.context.accounts;
+    const {funder, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
-
-    const ftAsset1: FTAsset = {
-        contract_id: ftContract1.accountId,
-        registration_cost: NEAR.parse("0.0125").toString(),
-        amount: NEAR.parse("1").toString()
-    }
 
     const dropId = "Null Claim";
     const assets_per_use = {
@@ -116,6 +101,10 @@ test('Single Null Claim', async t => {
     keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
     t.is(keypomKeys.keys.length, 1);
 
+    let doesExist = await (keypomV3.getAccount(newAccountId)).exists();
+    console.log('doesExist: ', doesExist)
+    t.is(doesExist, true);
+
     try {
         const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
         console.log('keyInfo (Should have panicked): ', keyInfo)
@@ -125,7 +114,228 @@ test('Single Null Claim', async t => {
     }
 
     let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log('dropInfo (after drop is deleted): ', dropInfo)
+    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
+    t.is(endingDropInfo, null);
+    
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+});
+
+test('Multi Null Claim', async t => {
+    const {funder, keypomV3, root} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "Null Claim";
+    const assets_per_use = {
+        1: [null, null, null, null, null, null, null, null, null],
+        2: [null, null, null, null, null, null, null, null, null],
+        3: [null, null, null, null, null, null, null, null, null],
+    }
+    let keyPairs = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            assets_per_use,
+            public_keys: keyPairs.publicKeys
+        },
+        attachedDeposit: NEAR.parse("10").toString()
+    })
+    let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo: ', dropInfo)
+    t.is(dropInfo.internal_assets_data.length, 1);
+    t.is(dropInfo.internal_assets_data[0], null);
+
+    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 1)
+    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+    t.is(keypomKeys.keys.length, 2);
+
+    await keypomV3.setKey(keyPairs.keys[0]);
+    let newAccountId = `new-account.${root.accountId}`;
+    let keyPk = keyPairs.publicKeys[0];
+    let keyInfo: {required_gas: string, uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    t.is(keyInfo.uses_remaining, 3);
+    
+    await functionCall({
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'claim',
+        args: {account_id: newAccountId},
+        gas: keyInfo.required_gas
+    })
+
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    t.is(keyInfo.uses_remaining, 2);
+
+    await functionCall({
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'claim',
+        args: {account_id: newAccountId},
+        gas: keyInfo.required_gas
+    })
+    
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    t.is(keyInfo.uses_remaining, 1);
+    
+    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+    t.is(keypomKeys.keys.length, 2);
+
+    await functionCall({
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'create_account_and_claim',
+        args: {new_account_id: newAccountId, new_public_key: keyPk},
+        gas: keyInfo.required_gas
+    })
+
+    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+    t.is(keypomKeys.keys.length, 1);
+
+    let doesExist = await (keypomV3.getAccount(newAccountId)).exists();
+    console.log('doesExist: ', doesExist)
+    t.is(doesExist, true);
+
+    try {
+        const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+        console.log('keyInfo (Should have panicked): ', keyInfo)
+        t.fail('Key should have been deleted');
+    } catch (e) {
+        t.pass();
+    }
+
+    let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
+    t.is(endingDropInfo, null);
+    
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+});
+
+test('Tons of null claims', async t => {
+    const {funder, keypomV3, root} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "Null Claim";
+    const assets_per_use = {
+        1: [
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+        ],
+    }
+    let keyPairs = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            assets_per_use,
+            public_keys: keyPairs.publicKeys
+        },
+        attachedDeposit: NEAR.parse("10").toString()
+    })
+    let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo: ', dropInfo)
+    t.is(dropInfo.internal_assets_data.length, 1);
+    t.is(dropInfo.internal_assets_data[0], null);
+
+    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 1)
+    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+    t.is(keypomKeys.keys.length, 2);
+
+    await keypomV3.setKey(keyPairs.keys[0]);
+    let newAccountId = `new-account.${root.accountId}`;
+    let keyPk = keyPairs.publicKeys[0];
+    let keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    
+    await functionCall({
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'create_account_and_claim',
+        args: {new_account_id: newAccountId, new_public_key: keyPk},
+        gas: keyInfo.required_gas
+    })
+
+    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+    t.is(keypomKeys.keys.length, 1);
+
+    let doesExist = await (keypomV3.getAccount(newAccountId)).exists();
+    console.log('doesExist: ', doesExist)
+    t.is(doesExist, true);
+
+    try {
+        const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+        console.log('keyInfo (Should have panicked): ', keyInfo)
+        t.fail('Key should have been deleted');
+    } catch (e) {
+        t.pass();
+    }
+
+    let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
     t.is(endingDropInfo, null);
     
     let finalBal = await keypomV3.balance();

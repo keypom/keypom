@@ -87,6 +87,66 @@ impl Keypom {
         internal_refund_excess_deposit(total_cost);
     }
 
+    #[payable]
+    pub fn add_keys(
+        &mut self, 
+        drop_id: String, 
+        public_keys: Vec<PublicKey>
+    ) {
+        // Before anything, measure storage usage so we can net the cost and charge the funder
+        let initial_storage = env::storage_usage();
+        near_sdk::log!("initial bytes {}", initial_storage);
+
+        // get the drop object (remove it and only re-insert at the end if it shouldn't be deleted)
+        let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
+        
+        let funder_id = drop.funder_id.clone();
+        require!(
+            funder_id == env::predecessor_account_id(),
+            "Only drop funder can add keys"
+        );
+
+        // Parse the external assets and store them in the contract
+        let uses_per_key = drop.uses_per_key;
+
+        let mut total_cost_per_key = 0;
+        let mut total_allowance_per_key = 0;
+
+        // Get the total cost and allowance required for a key that has all its uses remaining
+        // We'll then multiply this by the number of keys we want to add and charge the user
+        get_total_costs_for_key(
+            &mut total_cost_per_key,
+            &mut total_allowance_per_key,
+            uses_per_key,
+            uses_per_key,
+            &drop,
+        );
+
+        // Add the keys to the contract
+        self.internal_add_keys_to_account(
+            &mut drop.next_key_id,
+            &mut drop.key_info_by_pk,
+            &drop_id,
+            uses_per_key,
+            &public_keys, 
+            ACCESS_KEY_BOTH_METHOD_NAMES, 
+            total_allowance_per_key
+        );
+
+        // Write the updated drop data to storage
+        self.drop_by_id.insert(&drop_id, &drop);
+
+        // Measure final storage costs
+        let final_storage = env::storage_usage();
+        let storage_cost = (final_storage - initial_storage) as Balance * env::storage_byte_cost();
+        let num_keys = public_keys.len() as Balance;
+        let total_asset_cost = total_cost_per_key * num_keys;
+        let total_allowance_cost = total_allowance_per_key * num_keys;
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
+        near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
+        internal_refund_excess_deposit(total_cost);
+    }
+
     /// Loops through public keys and adds them to the current contract account
     /// Also adds the keys to the drop_id_for_pk map and ensures that no keys are already on the contract
     pub(crate) fn internal_add_keys_to_account(
@@ -133,6 +193,7 @@ impl Keypom {
     }
 }
 
+/// Parses the external assets and stores them in the drop's internal maps
 pub(crate) fn parse_ext_assets_per_use (
     uses_per_key: UseNumber,
     assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>, 
@@ -141,10 +202,12 @@ pub(crate) fn parse_ext_assets_per_use (
     total_allowance_required_per_key: &mut Balance, 
     per_key_cost_from_assets: &mut Balance
 ) {
+    require!(uses_per_key == assets_per_use.len() as UseNumber, "Must specify behavior for all uses");
+
     // Iterate through the external assets, convert them to internal assets and add them to both lookup maps
     for (use_number, ext_assets) in assets_per_use {
         // Quick sanity check to make sure the use number is valid
-        require!(use_number <= uses_per_key && use_number > 0, "Invalid use number");
+        require!(use_number <= uses_per_key, "Invalid use number");
 
         // Keep track of the metadata for all the assets across each use
         let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
@@ -167,8 +230,6 @@ pub(crate) fn parse_ext_assets_per_use (
 
             // Every asset has a cost associated. We should add that to the total cost.
             // This is for 1 key. At the end, we'll multiply by the number of keys
-
-            
             let cost_for_asset = ext_asset.as_ref().and_then(|a| Some(a.get_cost_per_key())).unwrap_or(0);
             *per_key_cost_from_assets += cost_for_asset;
 
@@ -185,7 +246,7 @@ pub(crate) fn parse_ext_assets_per_use (
             }
         }
 
-        require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, "Cannot exceed 300 TGas for any given key use");
+        require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, format!("Cannot exceed 300 TGas for any given key use. Found {}", total_gas_for_use.0));
         // Now that all the assets have been looped for the given use, we can get the allowance required
         *total_allowance_required_per_key += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, true);
 
