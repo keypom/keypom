@@ -61,7 +61,9 @@ impl InternalAsset {
             InternalAsset::ft(ref mut ft_data) => {
                 ft_data.claim_ft_asset(drop_id, receiver_id, &tokens_per_use.unwrap())
             },
-            InternalAsset::none => {}
+            InternalAsset::none => {
+                near_sdk::log!("Skipping null asset.")
+            }
         }
     }
 

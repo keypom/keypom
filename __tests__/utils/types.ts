@@ -1,6 +1,6 @@
 export type ExtDrop = {
     assets_by_use: Record<number, Array<ExtAsset>>;
-    internal_assets_data: Array<InternalAsset>;
+    internal_assets_data: Array<InternalAsset | null>;
 }
 
 export type InternalAsset = InternalFTData;

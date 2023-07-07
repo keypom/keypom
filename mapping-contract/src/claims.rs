@@ -31,6 +31,7 @@ impl Keypom {
         ext_account_creation::ext(self.root_account.clone())
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
             .with_unused_gas_weight(0)
+            .with_attached_deposit(10000000000000000000000) // TODO: remove (needed for sandbox testing)
             .create_account(
                 new_account_id.clone(),
                 new_public_key

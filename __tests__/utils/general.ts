@@ -146,11 +146,21 @@ export function parseExecutionResults(
     }
     
     const status = (receipt.outcome.status as any);
-    if (status.Failure?.ActionError?.kind?.FunctionCallError) {
-      let str = `Method: ${methodName} Receiver: ${receiverId} Failure: ${JSON.stringify(status.Failure?.ActionError?.kind?.FunctionCallError)}`
-      console.log(str)
-      if (!canPanic) {
-        throw new Error(str)
+    if (status.Failure) {
+      let failure = status.Failure.ActionError;
+
+      if (failure.ActionError?.kind?.FunctionCallError) {
+        let str = `Method: ${methodName} Receiver: ${receiverId} Failure: ${JSON.stringify(status.Failure?.ActionError?.kind?.FunctionCallError)}`
+        console.log(str)
+        if (!canPanic) {
+          throw new Error(str)
+        }
+      } else {
+        let str = `Unknown Failure for method: ${methodName} Failure: ${JSON.stringify(failure)}`
+        console.log(str)
+        if (!canPanic) {
+          throw new Error(str)
+        }
       }
     }
   })

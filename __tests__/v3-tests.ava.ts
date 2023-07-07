@@ -28,7 +28,7 @@ test.beforeEach(async (t) => {
     await root.deploy(`./out/linkdrop.wasm`);
     await keypomV3.deploy(`./out/mapping.wasm`);
     await root.call(root, 'new', {});
-    await keypomV3.call(keypomV3, 'new', {});
+    await keypomV3.call(keypomV3, 'new', {root_account: root.accountId});
     // Test users
     const minter = await root.createSubAccount('minter');
     const funder = await root.createSubAccount('funder');

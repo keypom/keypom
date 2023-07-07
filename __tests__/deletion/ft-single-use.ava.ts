@@ -13,7 +13,7 @@ const test = anyTest as TestFn<{
     rpcPort: string;
   }>;
 
-test.beforeEach(async (t) => {
+test?.beforeEach(async (t) => {
     console.log(t.title);
     // Init the worker and start a Sandbox server
     const worker = await Worker.init();
@@ -27,7 +27,7 @@ test.beforeEach(async (t) => {
     const keypomV3 = await root.createSubAccount('keypom');
     
     await keypomV3.deploy(`./out/mapping.wasm`);
-    await keypomV3.call(keypomV3, 'new', {});
+    await keypomV3.call(keypomV3, 'new', {root_account: root.accountId});
     // Test users
     const funder = await root.createSubAccount('funder');
 
@@ -108,8 +108,8 @@ test('Underpay, Withdraw, Delete', async t => {
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '0');
+    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '0');
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -125,8 +125,8 @@ test('Underpay, Withdraw, Delete', async t => {
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '5');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '5');
 
     try {
         await functionCall({
@@ -144,8 +144,8 @@ test('Underpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '5');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '5');
 
     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -177,8 +177,8 @@ test('Underpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '0');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '0');
 
     await functionCall({
         signer: funder,
@@ -244,8 +244,8 @@ test('Overpay, Withdraw, Delete', async t => {
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '0');
+    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '0');
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -262,8 +262,8 @@ test('Overpay, Withdraw, Delete', async t => {
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
 
     try {
         await functionCall({
@@ -281,8 +281,8 @@ test('Overpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
 
     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -314,8 +314,8 @@ test('Overpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '0');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '0');
 
     await functionCall({
         signer: funder,
@@ -381,8 +381,8 @@ test('Create & Delete Empty Drop', async t => {
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '0');
+    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '0');
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -399,8 +399,8 @@ test('Create & Delete Empty Drop', async t => {
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
 
     try {
         await functionCall({
@@ -418,8 +418,8 @@ test('Create & Delete Empty Drop', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
 
     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -451,8 +451,8 @@ test('Create & Delete Empty Drop', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset.balance_avail, '0');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
+    t.is(ftInternalAsset?.balance_avail, '0');
 
     await functionCall({
         signer: funder,

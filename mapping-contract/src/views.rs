@@ -25,7 +25,7 @@ impl Keypom {
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
-        let mut required_gas = BASE_GAS_FOR_CLAIM;
+        let mut required_gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT;
 
         let mut actual_ft_list: Vec<ExtFTData> = Vec::new();
         for metadata in assets_metadata {
