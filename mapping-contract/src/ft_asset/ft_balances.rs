@@ -14,7 +14,7 @@ impl Keypom {
     /// Allows users to attach fungible tokens to the Linkdrops. Must have storage recorded by this point. You can only attach one set of FTs or NFT at a time.
     pub fn ft_on_transfer(
         &mut self,
-        sender_id: AccountId,
+        _sender_id: AccountId,
         amount: U128,
         msg: DropId,
     ) -> PromiseOrValue<U128> {

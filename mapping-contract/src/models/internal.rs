@@ -54,7 +54,8 @@ impl InternalDrop {
 
         ExtDrop {
             assets_per_use,
-            internal_assets_data
+            internal_assets_data,
+            metadata: self.metadata.get()
         }
     }
 }
@@ -77,6 +78,7 @@ pub struct InternalKeyInfo {
 #[serde(untagged)]
 pub enum InternalAsset {
     ft(InternalFTData),
+    near,
     none
 }
 
@@ -90,6 +92,7 @@ impl InternalAsset {
                 // FTs should ALWAYS have a tokens_per_use value
                 amount: asset_metadata.tokens_per_use.unwrap().into()
             })),
+            InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: asset_metadata.tokens_per_use.unwrap().into() })),
             InternalAsset::none => None
         }
     }
@@ -99,6 +102,9 @@ impl InternalAsset {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 ft_data.claim_ft_asset(drop_id, receiver_id, &tokens_per_use.unwrap())
+            },
+            InternalAsset::near => {
+                Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
             },
             InternalAsset::none => {}
         }
@@ -114,6 +120,7 @@ impl InternalAsset {
                 }
                 return true;
             },
+            InternalAsset::near => true,
             InternalAsset::none => true
         }
     }
@@ -121,10 +128,13 @@ impl InternalAsset {
     /// Standard function for refunding assets
     /// This does not include any ext assets such as FTs or NFTs.
     /// This simply refunds the funder for the $NEAR cost associated with 1 key use for the given asset
-    pub fn refund_amount(&self) -> Balance {
+    pub fn refund_amount(&self, tokens_per_use: &Option<Balance>) -> Balance {
         match self {
             InternalAsset::ft(ft_data) => {
                 return ft_data.registration_cost;
+            },
+            InternalAsset::near => {
+                return tokens_per_use.unwrap();
             },
             InternalAsset::none => 0
         }
@@ -134,6 +144,7 @@ impl InternalAsset {
     pub fn get_required_gas(&self) -> Gas {
         match self {
             InternalAsset::ft(_) => GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH,
+            InternalAsset::near => GAS_FOR_NEAR_TRANSFER,
             InternalAsset::none => GAS_FOR_NONE_ASSET
         }
     }

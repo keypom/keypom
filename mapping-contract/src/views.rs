@@ -28,6 +28,7 @@ impl Keypom {
         let mut required_gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT;
 
         let mut actual_ft_list: Vec<ExtFTData> = Vec::new();
+        let mut yoctonear = 0;
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             required_gas += internal_asset.get_required_gas();
@@ -38,12 +39,15 @@ impl Keypom {
                 Some(ExtAsset::FTAsset(ft)) => {
                     actual_ft_list.push(ft);
                 },
+                Some(ExtAsset::NearAsset(near)) => {
+                    yoctonear += near.yoctonear.0;
+                },
                 None => {}
             }
         }
 
         ExtKeyInfo {
-            yoctonear: 0.to_string(),
+            yoctonear: U128(yoctonear),
             ft_list: if actual_ft_list.len() > 0 { Some(actual_ft_list) } else { None },
             required_gas: u64::from(required_gas).to_string(),
             uses_remaining: key_info.remaining_uses,

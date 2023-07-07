@@ -83,15 +83,14 @@ impl Keypom {
         };
         self.drop_by_id.insert(&drop_id, &drop);
 
-        // Measure final storage costs
-        let final_storage = env::storage_usage();
-        let storage_cost = (final_storage - initial_storage) as Balance * env::storage_byte_cost();
-        let num_keys = public_keys.len() as Balance;
-        let total_asset_cost = total_cost_per_key * num_keys;
-        let total_allowance_cost = total_allowance_per_key * num_keys;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
-        near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
-        internal_refund_excess_deposit(total_cost);
+        // Measure final costs
+        let net_storage = env::storage_usage() - initial_storage;
+        determine_costs(
+            public_keys.len(),
+            total_cost_per_key,
+            total_allowance_per_key,
+            net_storage,
+        );
     }
 
     #[payable]
@@ -144,15 +143,14 @@ impl Keypom {
         // Write the updated drop data to storage
         self.drop_by_id.insert(&drop_id, &drop);
 
-        // Measure final storage costs
-        let final_storage = env::storage_usage();
-        let storage_cost = (final_storage - initial_storage) as Balance * env::storage_byte_cost();
-        let num_keys = public_keys.len() as Balance;
-        let total_asset_cost = total_cost_per_key * num_keys;
-        let total_allowance_cost = total_allowance_per_key * num_keys;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
-        near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
-        internal_refund_excess_deposit(total_cost);
+        // Measure final costs
+        let net_storage = env::storage_usage() - initial_storage;
+        determine_costs(
+            public_keys.len(),
+            total_cost_per_key,
+            total_allowance_per_key,
+            net_storage,
+        );
     }
 
     /// Loops through public keys and adds them to the current contract account
@@ -218,10 +216,6 @@ pub(crate) fn parse_ext_assets_per_use (
         // Keep track of the metadata for all the assets across each use
         let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
 
-        // Keep track of the total gas across all assets in a given use
-        // Default to account creation Gas on top unless otherwise explicitly set
-        let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT;
-        
         // If there's assets, loop through and get all the asset IDs while also
         // adding them to the asset_by_id lookup map if they weren't already present
         // If there aren't any assets, the vector will be of length 1
@@ -247,4 +241,20 @@ pub(crate) fn parse_ext_assets_per_use (
             config: None
         });
     }
+}
+
+/// Tally up all the costs for adding keys / creating a drop and refund any excess deposit
+pub(crate) fn determine_costs(
+    num_keys: usize, 
+    asset_cost_per_key: Balance, 
+    allowance_per_key: Balance,
+    net_storage: u64
+) {
+    let num_keys = num_keys as u128;
+    let storage_cost = net_storage as Balance * env::storage_byte_cost();
+    let total_asset_cost = asset_cost_per_key * num_keys;
+    let total_allowance_cost = allowance_per_key * num_keys;
+    let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
+    near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
+    internal_refund_excess_deposit(total_cost);
 }

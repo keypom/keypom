@@ -6,7 +6,7 @@ use near_sdk::json_types::U128;
 use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::{env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash, Gas, Balance};
 
-mod fungible_tokens;
+mod ft_asset;
 mod drop_creation;
 mod internals;
 mod helpers;
@@ -16,7 +16,7 @@ mod user_balances;
 mod drop_deletion;
 mod views;
 
-use fungible_tokens::*;
+use ft_asset::*;
 use drop_deletion::*;
 use internals::*;
 use helpers::*;

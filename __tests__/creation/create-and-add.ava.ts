@@ -147,24 +147,85 @@ interface FTAsset {
 //     t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
 // });
 
-test('Adding Keys', async t => {
+// test('Adding Keys', async t => {
+//     const {funder, keypomV3, root} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+
+//     const ftAsset: FTAsset = {
+//         contract_id: "foo.bar",
+//         registration_cost: NEAR.parse("1").toString(),
+//         amount: NEAR.parse("1").toString()
+//     }
+
+//     const dropId = "drop-id";
+//     const assets_per_use = {
+//         1: [ftAsset],
+//     }
+//     let keyPairs = await generateKeyPairs(1);
+
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             assets_per_use,
+//             public_keys: keyPairs.publicKeys
+//         },
+//         attachedDeposit: NEAR.parse("10").toString()
+//     })
+
+//     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+//     console.log('keysForDrop: ', keysForDrop)
+//     t.is(keysForDrop, 1)
+
+//     let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+//     t.is(keypomKeys.keys.length, 2);
+
+//     keyPairs = await generateKeyPairs(1);
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'add_keys',
+//         args: {
+//             drop_id: dropId,
+//             public_keys: keyPairs.publicKeys
+//         },
+//         attachedDeposit: NEAR.parse("10").toString(),
+//     })
+
+//     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+//     console.log('keysForDrop: ', keysForDrop)
+//     t.is(keysForDrop, 2)
+
+//     keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+//     t.is(keypomKeys.keys.length, 3);
+
+//     let finalBal = await keypomV3.balance();
+//     displayBalances(initialBal, finalBal);
+// });
+
+test('Not enough $NEAR attached', async t => {
     const {funder, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
+    const nearAsset1 = {
+        yoctonear: NEAR.parse("1").toString()
+    }
 
-    const ftAsset: FTAsset = {
-        contract_id: "foo.bar",
-        registration_cost: NEAR.parse("1").toString(),
-        amount: NEAR.parse("1").toString()
+    const nearAsset2 = {
+        yoctonear: NEAR.parse("2").toString()
     }
 
     const dropId = "drop-id";
     const assets_per_use = {
-        1: [ftAsset],
+        1: [nearAsset1],
+        2: [nearAsset1, nearAsset2],
+        3: [nearAsset1, nearAsset2, nearAsset2],
     }
-    let keyPairs = await generateKeyPairs(1);
 
-    // There are more than 100 actions so the contract should panic
+    let keyPairs = await generateKeyPairs(70);
     await functionCall({
         signer: funder,
         receiver: keypomV3,
@@ -174,35 +235,22 @@ test('Adding Keys', async t => {
             assets_per_use,
             public_keys: keyPairs.publicKeys
         },
-        attachedDeposit: NEAR.parse("10").toString()
+        attachedDeposit: NEAR.parse("10").toString(),
+        shouldPanic: true
     })
 
-    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
-    console.log('keysForDrop: ', keysForDrop)
-    t.is(keysForDrop, 1)
+    try {
+        let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+        console.log('keysForDrop: ', keysForDrop)
+        t.fail('Should have panicked')
+    } catch (e) {
+        t.pass()
+    }
 
     let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 2);
-
-    keyPairs = await generateKeyPairs(1);
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'add_keys',
-        args: {
-            drop_id: dropId,
-            public_keys: keyPairs.publicKeys
-        },
-        attachedDeposit: NEAR.parse("10").toString(),
-    })
-
-    keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
-    console.log('keysForDrop: ', keysForDrop)
-    t.is(keysForDrop, 2)
-
-    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 3);
+    t.is(keypomKeys.keys.length, 1);
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
+    t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
 });

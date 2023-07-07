@@ -6,7 +6,8 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 #[serde(untagged)]
 pub enum ExtAsset {
-    FTAsset(ExtFTData)
+    FTAsset(ExtFTData),
+    NearAsset(ExtNEARData)
 }
 
 pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAsset {
@@ -24,16 +25,26 @@ impl ExtAsset {
             ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData::new(
                 ft_data.contract_id.clone(),
                 ft_data.registration_cost.into(),
-            ))
+            )),
+            ExtAsset::NearAsset(_) => InternalAsset::near,
         }
     }
 
     /// Standard function to check how many tokens a given asset transfers per use
     pub fn get_tokens_per_use(&self) -> U128 {
         match self {
-            ExtAsset::FTAsset(ft_data) => ft_data.amount.into()
+            ExtAsset::FTAsset(ft_data) => ft_data.amount.into(),
+            ExtAsset::NearAsset(near_data) => near_data.yoctonear.into()
         }
     }
+}
+
+/// Data going into or out of the Keypom contract representing the presence of fungible tokens as an asset for a drop
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ExtNEARData {
+    /// How much $NEAR should be transferred as part of the asset claim
+    pub yoctonear: U128
 }
 
 /// Data going into or out of the Keypom contract representing the presence of fungible tokens as an asset for a drop
@@ -44,7 +55,7 @@ pub struct ExtFTData {
     pub contract_id: AccountId,
     /// How much $NEAR (in yocto) it costs to register a new user on the fungible token contract
     pub registration_cost: U128,
-    /// How many fungible tokens (in their smallest indivisible unit) should be transferred when the drop is claimed
+    /// How many fungible tokens (in their smallest indivisible unit) should be transferred as part of the asset claim
     pub amount: U128
 }
 
@@ -54,33 +65,8 @@ pub struct ExtFTData {
 pub struct ExtDrop {
     pub assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
     pub internal_assets_data: Vec<InternalAsset>,
+    pub metadata: Option<DropMetadata>
 }
-
-//impl ExtDrop {
-    /// Convert an `InternalDrop` into an `ExtDrop`
-    // pub fn from_internal_drop(internal_drop: &InternalDrop) -> Self {
-    //     let mut assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>> = HashMap::new();
-    //     let internal_assets_data: Vec<InternalAsset> = internal_drop.asset_by_id.values().collect();
-        
-    //     // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
-    //     for use_number in 1..=internal_drop.uses_per_key {
-    //         let KeyBehavior {assets_metadata, config: _} = internal_drop.key_behavior_by_use.get(&use_number).expect("Use number not found");
-
-    //         let mut assets: Vec<Option<ExtAsset>> = Vec::new();
-            
-    //         for metadata in assets_metadata {
-    //             let asset = internal_drop.asset_by_id.get(&metadata.asset_id).unwrap();
-    //             assets.push(ExtAsset::from_internal_asset(&asset, &metadata));
-    //         }
-    //         assets_per_use.insert(use_number, assets);
-    //     }
-
-    //     ExtDrop {
-    //         assets_per_use,
-    //         internal_assets_data
-    //     }
-    // }
-//}
 
 /// Information about a specific public key.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
@@ -92,7 +78,7 @@ pub struct ExtKeyInfo {
 
    /// yoctoNEAR$ amount that will be sent to the account that claims the linkdrop (either new or existing)
    /// when the key is successfully used.
-   pub yoctonear: String,
+   pub yoctonear: U128,
 
    /// If using the FT standard extension, a set of FTData can be linked to the public key
    /// indicating that all those assets will be sent to the account that claims the linkdrop (either new or

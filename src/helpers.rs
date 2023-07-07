@@ -17,7 +17,8 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn asset_id_from_ext_asset(ext_asset: &ExtAsset) -> AssetId {
     match ext_asset {
-        ExtAsset::FTAsset(ft_data) => ft_data.contract_id.to_string()
+        ExtAsset::FTAsset(ft_data) => ft_data.contract_id.to_string(),
+        ExtAsset::NearAsset(_) => NEAR_ASSET_ID.to_string(),
     }
 }
 
@@ -101,7 +102,7 @@ pub(crate) fn get_total_costs_for_key(
             total_gas_for_use += gas_for_asset;
 
             // Delete the asset
-            *total_cost_for_keys += internal_asset.refund_amount();
+            *total_cost_for_keys += internal_asset.refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
         }
         require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, format!("Cannot exceed 300 TGas for any given key use. Found {}", total_gas_for_use.0));
 

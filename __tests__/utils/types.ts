@@ -3,7 +3,7 @@ export type ExtDrop = {
     internal_assets_data: Array<InternalAsset | null>;
 }
 
-export type InternalAsset = InternalFTData;
+export type InternalAsset = InternalFTData | ExtNearData;
 
 export type InternalFTData = {
     contract_id: string;
@@ -17,4 +17,8 @@ export type ExtFTData = {
     contract_id: string;
     registration_cost: string,
     amount: string
+}
+
+export type ExtNearData = {
+    yoctonear: string
 }
