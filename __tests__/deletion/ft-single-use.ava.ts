@@ -4,7 +4,7 @@ import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
-import { ExtDrop } from "../utils/types";
+import { ExtDrop, InternalFTData } from "../utils/types";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -13,7 +13,7 @@ const test = anyTest as TestFn<{
     rpcPort: string;
   }>;
 
-test?.beforeEach(async (t) => {
+test.beforeEach(async (t) => {
     console.log(t.title);
     // Init the worker and start a Sandbox server
     const worker = await Worker.init();
@@ -108,8 +108,8 @@ test('Underpay, Withdraw, Delete', async t => {
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '0');
+    let ftInternalAsset: InternalFTData = dropInfo.internal_assets_data.filter(a => {(a as InternalFTData).ft.contract_id === ftContract1.accountId})[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '0');
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -125,8 +125,8 @@ test('Underpay, Withdraw, Delete', async t => {
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '5');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '5');
 
     try {
         await functionCall({
@@ -144,8 +144,8 @@ test('Underpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '5');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '5');
 
     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -177,8 +177,8 @@ test('Underpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '0');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '0');
 
     await functionCall({
         signer: funder,
@@ -206,7 +206,7 @@ test('Underpay, Withdraw, Delete', async t => {
     t.assert(NEAR.from(userBal).gte(NEAR.parse("0.625")))
 
     let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log('dropInfo (after drop is deleted): ', dropInfo)
+    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
     t.is(endingDropInfo, null);
     
     let finalBal = await keypomV3.balance();
@@ -244,8 +244,8 @@ test('Overpay, Withdraw, Delete', async t => {
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '0');
+    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '0');
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -262,8 +262,8 @@ test('Overpay, Withdraw, Delete', async t => {
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, NEAR.parse("1000").toString());
 
     try {
         await functionCall({
@@ -281,8 +281,8 @@ test('Overpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, NEAR.parse("1000").toString());
 
     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -314,8 +314,8 @@ test('Overpay, Withdraw, Delete', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '0');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '0');
 
     await functionCall({
         signer: funder,
@@ -343,7 +343,7 @@ test('Overpay, Withdraw, Delete', async t => {
     t.assert(NEAR.from(userBal).gte(NEAR.parse("0.625")))
 
     let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log('dropInfo (after drop is deleted): ', dropInfo)
+    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
     t.is(endingDropInfo, null);
     
     let finalBal = await keypomV3.balance();
@@ -381,8 +381,8 @@ test('Create & Delete Empty Drop', async t => {
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '0');
+    let ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '0');
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -399,8 +399,8 @@ test('Create & Delete Empty Drop', async t => {
     
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, NEAR.parse("1000").toString());
 
     try {
         await functionCall({
@@ -418,8 +418,8 @@ test('Create & Delete Empty Drop', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, NEAR.parse("1000").toString());
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, NEAR.parse("1000").toString());
 
     keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -451,8 +451,8 @@ test('Create & Delete Empty Drop', async t => {
 
     dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo after failed deletion: ', dropInfo)
-    ftInternalAsset = dropInfo.internal_assets_data.filter(a => a?.contract_id === ftContract1.accountId)[0];
-    t.is(ftInternalAsset?.balance_avail, '0');
+    ftInternalAsset = dropInfo.internal_assets_data.filter(a => (a as InternalFTData).ft.contract_id === ftContract1.accountId)[0] as InternalFTData;
+    t.is(ftInternalAsset?.ft.balance_avail, '0');
 
     await functionCall({
         signer: funder,
@@ -475,7 +475,7 @@ test('Create & Delete Empty Drop', async t => {
     t.is(keypomKeys.keys.length, 1);
 
     let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log('dropInfo (after drop is deleted): ', dropInfo)
+    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
     t.is(endingDropInfo, null);
     
     let finalBal = await keypomV3.balance();

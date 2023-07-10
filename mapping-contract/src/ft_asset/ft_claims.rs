@@ -20,21 +20,24 @@ impl InternalFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).
     /// If the transfer fails, the FTs will be returned to the available balance
     /// Should *only* be invoked if the available balance is greater than or equal to the transfer amount.
-    pub fn claim_ft_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, transfer_amount: &Balance) {
-        require!(self.enough_balance(&transfer_amount), format!("not enough balance to transfer. Found {} but needed {}", self.balance_avail, transfer_amount));
+    pub fn claim_ft_asset(&mut self, receiver_id: &AccountId, transfer_amount: &Balance) -> Promise {
+        if !self.enough_balance(&transfer_amount) {
+            near_sdk::log!("not enough balance to transfer. Found {} but needed {}. Skipping asset claim.", self.balance_avail, transfer_amount);
+            return Promise::new(env::current_account_id());
+        }
+            
         
         // Decrement the available balance and then invoke the transfer
         self.balance_avail -= transfer_amount;
 
         // Create a new batch promise to pay storage and transfer FTs to the new account ID
-        let batch_transfer = env::promise_batch_create(&self.contract_id);
+        let mut batch_transfer = Promise::new(self.contract_id.clone());
 
         // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
         // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
-        env::promise_batch_action_function_call_weight(
-            batch_transfer,
-            "storage_deposit",
-            json!({ "account_id": receiver_id }).to_string().as_bytes(),
+        batch_transfer =  batch_transfer.function_call_weight(
+            "storage_deposit".to_string(),
+            json!({ "account_id": receiver_id }).to_string().into(),
             self.registration_cost,
             MIN_GAS_FOR_STORAGE_DEPOSIT,
             GasWeight(1),
@@ -42,31 +45,15 @@ impl InternalFTData {
 
         // Send the fungible tokens (after the storage attached_deposit is finished since these run sequentially)
         // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
-        env::promise_batch_action_function_call_weight(
-            batch_transfer,
-            "ft_transfer",
-            json!({ "receiver_id": receiver_id, "amount": transfer_amount.to_string(), "memo": "Keypom FT Tokens" }).to_string().as_bytes(),
+        batch_transfer = batch_transfer.function_call_weight(
+            "ft_transfer".to_string(),
+            json!({ "receiver_id": receiver_id, "amount": transfer_amount.to_string(), "memo": "Keypom FT Tokens" }).to_string().into(),
             1,
             MIN_GAS_FOR_FT_TRANSFER,
             GasWeight(1)
         );
 
-        // Create the second batch promise to execute after the storage & tokens were transferred
-        // It will execute on the current account ID (this contract)
-        let batch_resolve =
-            env::promise_batch_then(batch_transfer, &env::current_account_id());
-
-        // Execute a function call as part of the resolved promise index created in promise_batch_then
-        // Callback after both the storage was deposited and the fungible tokens were sent
-        // Call the function with the min GAS and then attach 3/5 of the unspent GAS to the call
-        env::promise_batch_action_function_call_weight(
-            batch_resolve,
-            "ft_resolve_batch",
-            json!({ "amount": transfer_amount.to_string(), "drop_id": drop_id, "data_id": self.get_asset_id() }).to_string().as_bytes(),
-            0,
-            MIN_GAS_FOR_RESOLVE_BATCH,
-            GasWeight(3)
-        );
+        batch_transfer
     }
 
     /// Private function that will be called after the FT claim is finished. This will check whether the claim went through successfully.

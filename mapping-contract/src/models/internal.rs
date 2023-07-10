@@ -23,10 +23,12 @@ pub struct InternalDrop {
     pub metadata: LazyOption<DropMetadata>,
     /// How many uses there are per key in the drop. This should be equal to the length of keys in assets_metadata_by_use
     pub uses_per_key: UseNumber,
+    
     /// Map an asset ID to a specific asset. This is a hyper optimization so the asset data isn't repeated in the contract
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
     /// For every use number, keep track of what assets there are.
     pub key_behavior_by_use: LookupMap<UseNumber, KeyBehavior>,
+    
     /// Set of public keys associated with this drop mapped to their specific key information.
     pub key_info_by_pk: UnorderedMap<PublicKey, InternalKeyInfo>,
     /// Keep track of the next nonce to give out to a key
@@ -37,8 +39,7 @@ impl InternalDrop {
     /// Convert an `InternalDrop` into an `ExtDrop`
     pub fn to_external_drop(&self) -> ExtDrop {
         let mut assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>> = HashMap::new();
-        let internal_assets_data: Vec<InternalAsset> = self.asset_by_id.values().collect();
-        
+        let internal_assets_data: Vec<InternalAsset> = self.asset_by_id.values_as_vector().to_vec();
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=self.uses_per_key {
             let KeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
@@ -73,9 +74,8 @@ pub struct InternalKeyInfo {
 /// Outlines the different asset types that can be used in drops. This is the internal version of `ExtAsset`
 /// And represents the data that is stored inside the Keypom contract to keep track of assets
 #[allow(non_camel_case_types)]
-#[derive(BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(BorshSerialize, BorshDeserialize, Debug, Serialize)]
 #[serde(crate = "near_sdk::serde")]
-#[serde(untagged)]
 pub enum InternalAsset {
     ft(InternalFTData),
     near,
@@ -98,15 +98,39 @@ impl InternalAsset {
     }
 
     /// Standard function for claiming an asset regardless of its type
-    pub fn claim_asset(&mut self, drop_id: &DropId, receiver_id: &AccountId, tokens_per_use: &Option<Balance>) {
+    /// This will return a promise for every asset that will be resolved in a standard callback
+    pub fn claim_asset(&mut self, receiver_id: &AccountId, tokens_per_use: &Option<Balance>) -> Promise {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
-                ft_data.claim_ft_asset(drop_id, receiver_id, &tokens_per_use.unwrap())
+                return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
             },
             InternalAsset::near => {
-                Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
+                return Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
             },
-            InternalAsset::none => {}
+            InternalAsset::none => {
+                return Promise::new(env::current_account_id());
+            }
+        }
+    }
+
+    /// Standard function outlining what should happen if a specific claim failed
+    /// This should return the amount of $NEAR that should be refunded to the user's balance
+    /// In addition, any internal state changes should be made (i.e balance_available incremented for FTs)
+    pub fn on_failed_claim(&mut self, tokens_per_use: &Option<Balance>) -> Balance {
+        match self {
+            InternalAsset::ft(ref mut ft_data) => {
+                near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, tokens_per_use.unwrap());
+                ft_data.balance_avail += tokens_per_use.unwrap();
+                0
+            },
+            InternalAsset::near => {
+                near_sdk::log!("Failed claim for NEAR asset. Refunding {} to the user's balance", tokens_per_use.unwrap());
+                tokens_per_use.unwrap()
+            },
+            InternalAsset::none => {
+                near_sdk::log!("Failed claim for null asset. SHOULD NEVER HAPPEN");
+                0
+            }
         }
     }
 
@@ -154,7 +178,7 @@ impl InternalAsset {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct KeyBehavior {
     /// Configurations for this specific use
-    pub config: Option<bool>,
+    pub config: Option<bool>, // TODO
     /// Metadata for each asset in this use
     pub assets_metadata: Vec<AssetMetadata>
 }

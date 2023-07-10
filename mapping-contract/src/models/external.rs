@@ -60,10 +60,11 @@ pub struct ExtFTData {
 }
 
 /// Drop data being returned from view calls from Keypom
-#[derive(BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(BorshDeserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDrop {
     pub assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
+    
     pub internal_assets_data: Vec<InternalAsset>,
     pub metadata: Option<DropMetadata>
 }
@@ -83,7 +84,7 @@ pub struct ExtKeyInfo {
    /// If using the FT standard extension, a set of FTData can be linked to the public key
    /// indicating that all those assets will be sent to the account that claims the linkdrop (either new or
    /// existing) when the key is successfully used.
-   pub ft_list: Option<Vec<ExtFTData>>,
+   pub ft_list: Vec<ExtFTData>, 
 
    /* CUSTOM */
    pub uses_remaining: UseNumber

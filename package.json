@@ -46,10 +46,14 @@
 		"test:claim:null": "ava __tests__/claims/null-claim.ava.ts",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 		"test:creation": "ava __tests__/v3-tests.ava.ts"
 >>>>>>> e7cc628 (implemented custom serializer for internal structs and expanded ext drop data to include internal info. Started work on deletion tests)
 =======
 =======
+=======
+		"test:claim:ft": "ava __tests__/claims/ft-claim.ava.ts",
+>>>>>>> e36684e (added callbacks for every claim and removed ext serializer)
 		"test:claim:near": "ava __tests__/claims/near-claim.ava.ts",
 >>>>>>> 7884904 (started work on near asset implementation)
 		"test:general": "ava __tests__/v3-tests.ava.ts"

@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::U128;
-use near_sdk::serde::{Serialize, Deserialize};
+use near_sdk::serde::{Serialize, Deserialize, Serializer};
+use near_sdk::serde::ser::SerializeStruct;
 use near_sdk::{env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash, Gas, Balance};
 
 mod ft_asset;

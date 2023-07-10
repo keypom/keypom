@@ -41,33 +41,35 @@ impl Keypom {
 
     /// Internal function to modify the user's balance. Defaults to adding the amount but decrement can also be specified
     pub(crate) fn internal_modify_user_balance(&mut self, account_id: &AccountId, amount: u128, decrement: bool) {
-        // Get the balance of the account (if the account isn't in the map we default to a balance of 0)
-        let mut balance: u128 = self
-            .user_balances
-            .get(account_id)
-            .unwrap_or(0);
-
-        // Either add or subtract the amount from the balance depending on whether or not decrement was passed in
-        if decrement == true {
-            near_sdk::log!(
-                "User balance decremented by {}. Old: {} new: {}",
-                yocto_to_near(amount),
-                yocto_to_near(balance),
-                yocto_to_near(balance - amount)
-            );    
-            balance -= amount;
-        } else {
-            near_sdk::log!(
-                "User balance incremented by {}. Old: {} new: {}",
-                yocto_to_near(amount),
-                yocto_to_near(balance),
-                yocto_to_near(balance + amount)
-            );  
-            balance += amount;
+        if amount > 0 {
+            // Get the balance of the account (if the account isn't in the map we default to a balance of 0)
+            let mut balance: u128 = self
+                .user_balances
+                .get(account_id)
+                .unwrap_or(0);
+    
+            // Either add or subtract the amount from the balance depending on whether or not decrement was passed in
+            if decrement == true {
+                near_sdk::log!(
+                    "User balance decremented by {}. Old: {} new: {}",
+                    yocto_to_near(amount),
+                    yocto_to_near(balance),
+                    yocto_to_near(balance - amount)
+                );    
+                balance -= amount;
+            } else {
+                near_sdk::log!(
+                    "User balance incremented by {}. Old: {} new: {}",
+                    yocto_to_near(amount),
+                    yocto_to_near(balance),
+                    yocto_to_near(balance + amount)
+                );  
+                balance += amount;
+            }
+    
+            // Insert the balance back into the map for that account ID
+            self.user_balances
+                .insert(account_id, &balance);
         }
-
-        // Insert the balance back into the map for that account ID
-        self.user_balances
-            .insert(account_id, &balance);
     }
 }

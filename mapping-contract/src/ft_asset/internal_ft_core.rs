@@ -1,10 +1,7 @@
-use near_sdk::serde::{Serialize, Serializer};
-use near_sdk::serde::ser::SerializeStruct;
-
 use crate::*;
 
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
+#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Debug)]
 pub struct InternalFTData {
     /// Account ID of the token contract
     pub contract_id: AccountId,
@@ -27,7 +24,7 @@ impl Serialize for InternalFTData {
         state.serialize_field("registration_cost", &U128(self.registration_cost))?;
         state.end()
     }
-} 
+}
 
 impl InternalFTData {
     /// Initialize a new set of FT data. The available balance is initialize to 0 at the start

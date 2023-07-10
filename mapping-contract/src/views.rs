@@ -25,9 +25,9 @@ impl Keypom {
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
-        let mut required_gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT;
+        let mut required_gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT + GAS_FOR_RESOLVE_ASSET_CLAIM;
 
-        let mut actual_ft_list: Vec<ExtFTData> = Vec::new();
+        let mut ft_list: Vec<ExtFTData> = Vec::new();
         let mut yoctonear = 0;
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
@@ -37,7 +37,7 @@ impl Keypom {
             
             match ext_asset {
                 Some(ExtAsset::FTAsset(ft)) => {
-                    actual_ft_list.push(ft);
+                    ft_list.push(ft);
                 },
                 Some(ExtAsset::NearAsset(near)) => {
                     yoctonear += near.yoctonear.0;
@@ -48,7 +48,7 @@ impl Keypom {
 
         ExtKeyInfo {
             yoctonear: U128(yoctonear),
-            ft_list: if actual_ft_list.len() > 0 { Some(actual_ft_list) } else { None },
+            ft_list,
             required_gas: u64::from(required_gas).to_string(),
             uses_remaining: key_info.remaining_uses,
         }

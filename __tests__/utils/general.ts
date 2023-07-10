@@ -48,6 +48,12 @@ export async function functionCall({
 }) {
   let rawValue = await signer.callRaw(receiver, methodName, args, {gas: gas || LARGE_GAS, attachedDeposit: attachedDeposit || "0"});
   parseExecutionResults(methodName, receiver.accountId, rawValue, shouldLog, shouldPanic);
+
+  if (rawValue.SuccessValue) {
+    return atob(rawValue.SuccessValue);
+  } else {
+    return rawValue.Failure?.error_message
+  }
 }
 
 >>>>>>> e4f81fd (expanding tests and utility functions. Continued fixing refunds)
@@ -159,21 +165,21 @@ export function parseExecutionResults(
       didPanic = true;
     }
   })
-
-  if (shouldPanic && !didPanic) {
-    throw new Error(panicMessages.join('\n'));
-  }
-
-  if (!shouldPanic && didPanic) {
-    throw new Error(`Expected failure for method: ${methodName}`)
-  }
-
+  
   const styles = [
     'color: green',
   ].join(';');
 
   if (shouldLog) {
     console.log('%c%s', styles, logString);
+  }
+
+  if (shouldPanic && !didPanic) {
+    throw new Error(`Expected failure for method: ${methodName}`)
+  }
+
+  if (!shouldPanic && didPanic) {
+    throw new Error(panicMessages.join('\n'));    
   }
 }
 

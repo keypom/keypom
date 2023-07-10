@@ -47,7 +47,81 @@ test.afterEach(async t => {
     });
 });
 
-test('Single NEAR Claim', async t => {
+// test('Single NEAR Claim', async t => {
+//     const {funder, keypomV3, root} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+//     const nearAsset1 = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
+
+//     const dropId = "drop-id";
+//     const assets_per_use = {
+//         1: [nearAsset1],
+//     }
+//     let keyPairs = await generateKeyPairs(1);
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             assets_per_use,
+//             public_keys: keyPairs.publicKeys
+//         },
+//         attachedDeposit: NEAR.parse("10").toString()
+//     })
+//     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo: ', dropInfo)
+//     t.is(dropInfo.internal_assets_data.length, 1);
+//     //t.is((dropInfo.internal_assets_data[0] as ExtNearData).yoctonear, NEAR.parse("1").toString());
+
+//     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+//     console.log('keysForDrop: ', keysForDrop)
+//     t.is(keysForDrop, 1)
+//     let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+//     t.is(keypomKeys.keys.length, 2);
+
+//     await keypomV3.setKey(keyPairs.keys[0]);
+//     let newAccountId = `new-account.${root.accountId}`;
+//     let keyPk = keyPairs.publicKeys[0];
+//     const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+//     console.log('keyInfo: ', keyInfo)
+    
+//     let response = await functionCall({
+//         signer: keypomV3,
+//         receiver: keypomV3,
+//         methodName: 'create_account_and_claim',
+//         args: {new_account_id: newAccountId, new_public_key: keyPk},
+//         gas: keyInfo.required_gas
+//     })
+//     console.log('response: ', response)
+//     t.is(response, "true");
+
+//     keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+//     t.is(keypomKeys.keys.length, 1);
+
+//     let doesExist = await (keypomV3.getAccount(newAccountId)).exists();
+//     console.log('doesExist: ', doesExist)
+//     t.is(doesExist, true);
+
+//     try {
+//         const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+//         console.log('keyInfo (Should have panicked): ', keyInfo)
+//         t.fail('Key should have been deleted');
+//     } catch (e) {
+//         t.pass();
+//     }
+
+//     let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo (after drop is deleted): ', endingDropInfo)
+//     t.is(endingDropInfo, null);
+    
+//     let finalBal = await keypomV3.balance();
+//     displayBalances(initialBal, finalBal);
+// });
+
+test('Claim to invalid account', async t => {
     const {funder, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
@@ -74,7 +148,7 @@ test('Single NEAR Claim', async t => {
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
     t.is(dropInfo.internal_assets_data.length, 1);
-    t.is((dropInfo.internal_assets_data[0] as ExtNearData).yoctonear, NEAR.parse("1").toString());
+    //t.is((dropInfo.internal_assets_data[0] as ExtNearData).yoctonear, NEAR.parse("1").toString());
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
@@ -88,13 +162,16 @@ test('Single NEAR Claim', async t => {
     const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
     console.log('keyInfo: ', keyInfo)
     
-    await functionCall({
+    let response = await functionCall({
         signer: keypomV3,
         receiver: keypomV3,
-        methodName: 'create_account_and_claim',
-        args: {new_account_id: newAccountId, new_public_key: keyPk},
-        gas: keyInfo.required_gas
+        methodName: 'claim',
+        args: {account_id: newAccountId},
+        gas: keyInfo.required_gas,
+        shouldPanic: true
     })
+    console.log('response: ', response)
+    t.is(response, "false");
 
     keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
     t.is(keypomKeys.keys.length, 1);

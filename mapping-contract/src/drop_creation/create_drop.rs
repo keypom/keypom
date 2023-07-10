@@ -16,7 +16,7 @@ impl Keypom {
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);
         let public_keys = public_keys.unwrap_or(Vec::new());
-        
+
         // Instantiate the drop data structures
         let mut key_behavior_by_use: LookupMap<UseNumber, KeyBehavior> = LookupMap::new(StorageKeys::AssetIdsByUse {
             drop_id_hash: hash_drop_id(&drop_id.to_string()),
@@ -212,6 +212,7 @@ pub(crate) fn parse_ext_assets_per_use (
     for (use_number, ext_assets) in assets_per_use {
         // Quick sanity check to make sure the use number is valid
         require!(use_number <= uses_per_key, "Invalid use number");
+        require!(ext_assets.len() > 0, "Must specify at least one asset per use");
 
         // Keep track of the metadata for all the assets across each use
         let mut assets_metadata: Vec<AssetMetadata> = Vec::new();

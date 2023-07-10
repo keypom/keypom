@@ -6,9 +6,11 @@ export type ExtDrop = {
 export type InternalAsset = InternalFTData | ExtNearData;
 
 export type InternalFTData = {
-    contract_id: string;
-    registration_cost: string,
-    balance_avail: string
+    ft: {
+        contract_id: string;
+        registration_cost: string,
+        balance_avail: string
+    }
 }
 
 export type ExtAsset = ExtFTData;
