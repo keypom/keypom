@@ -4,7 +4,7 @@ import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
-import { ExtDrop, InternalFTData } from "../utils/types";
+import { ExtDrop, ExtKeyInfo, InternalFTData } from "../utils/types";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -101,9 +101,10 @@ test('Failed Multi Claim', async t => {
         amount: NEAR.parse("0").toString()
     }
 
-    const dropId = "underpay, withdraw, delete";
+    const dropId = "failed-multiclaim";
     const assets_per_use = {
         1: [ftAsset1, ftAsset2, ftAsset3],
+        2: [ftAsset1],
     }
     let keyPairs = await generateKeyPairs(1);
     await functionCall({
@@ -140,10 +141,43 @@ test('Failed Multi Claim', async t => {
     await keypomV3.setKey(keyPairs.keys[0]);
     let newAccountId = `new-account.${root.accountId}`;
     let keyPk = keyPairs.publicKeys[0];
-    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+    let keyInfo: ExtKeyInfo = await keypomV3.view('get_key_information', {key: keyPk});
     console.log('keyInfo: ', keyInfo)
+    t.is(keyInfo.uses_remaining, 2);
 
     let response = await functionCall({
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'create_account_and_claim',
+        args: {new_account_id: newAccountId, new_public_key: keyPk},
+        //args: {account_id: root.accountId},
+        gas: keyInfo.required_gas,
+        shouldPanic: true
+    })
+    console.log('response: ', response)
+    t.is(response, "false");
+    
+    dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
+    for (var asset of dropInfo.internal_assets_data) {
+        let ftAsset = asset as InternalFTData;
+        
+        if (ftAsset.ft.contract_id === ftContract1.accountId) {
+            t.is(ftAsset.ft.balance_avail, '1');
+        } else {
+            t.is(ftAsset.ft.balance_avail, '0');
+        }
+    }
+
+
+    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+    t.is(keypomKeys.keys.length, 2);
+
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    t.is(keyInfo.uses_remaining, 1);
+
+    response = await functionCall({
         signer: keypomV3,
         receiver: keypomV3,
         methodName: 'claim',
@@ -153,23 +187,27 @@ test('Failed Multi Claim', async t => {
         shouldPanic: true
     })
     console.log('response: ', response)
-    
-    dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
+    t.is(response, "false");
 
-    // t.is(response, "false");
+    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+    t.is(keypomKeys.keys.length, 1);
 
-    // keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    // t.is(keypomKeys.keys.length, 1);
+    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 0)
 
-    // // After keys have been deleted, 50 * (0.0125 * 6) = 3.75 should be returned to the funder
-    // let userBal: string = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
-    // console.log('userBal: ', userBal)
-    // t.assert(NEAR.from(userBal).gte(NEAR.parse("3.75")))
+    try {
+        keyInfo = await keypomV3.view('get_key_information', {key: keyPk});
+        console.log('keyInfo: ', keyInfo)
+        t.fail("Key should have been deleted");
+    } catch(e) {
+        t.pass();
+    }
 
-    // let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    // console.log('dropInfo (after drop is deleted): ', dropInfo)
-    // t.is(endingDropInfo, null);
+    // Drop should not be deleted since there's 1 FT still in it
+    let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo: ', dropInfo)
+    t.assert(endingDropInfo != null);
     
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);

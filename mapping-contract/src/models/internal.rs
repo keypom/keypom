@@ -137,13 +137,7 @@ impl InternalAsset {
     /// Standard function to check whether an asset is empty or not
     pub fn is_empty(&self) -> bool {
         match self {
-            InternalAsset::ft(ft) => {
-                if ft.balance_avail != 0 {
-                    near_sdk::log!("There are {} FTs still in the drop. Please withdraw them before deleting.", ft.balance_avail);
-                    return false;
-                }
-                return true;
-            },
+            InternalAsset::ft(ft) => ft.balance_avail == 0,
             InternalAsset::near => true,
             InternalAsset::none => true
         }
