@@ -42,6 +42,8 @@
 		"test": "ava __tests__/v3-tests.ava.ts",
 		"test:deletion:single": "ava __tests__/deletion/ft-single-use.ava.ts",
 		"test:creation": "ava __tests__/creation/create-and-add.ava.ts",
+		"test:creation:near": "ava __tests__/creation/create-and-add.ava.ts",
+		"test:creation:nft": "ava __tests__/creation/nft-creation.ts",
 		"test:deletion:multi": "ava __tests__/deletion/ft-multi-use.ava.ts",
 		"test:claim:null": "ava __tests__/claims/null-claim.ava.ts",
 <<<<<<< HEAD
@@ -55,7 +57,11 @@
 		"test:claim:ft": "ava __tests__/claims/ft-claim.ava.ts",
 >>>>>>> e36684e (added callbacks for every claim and removed ext serializer)
 		"test:claim:near": "ava __tests__/claims/near-claim.ava.ts",
+<<<<<<< HEAD
 >>>>>>> 7884904 (started work on near asset implementation)
+=======
+		"test:claim:nft": "ava __tests__/claims/nft-claim.ava.ts",
+>>>>>>> 0a82cd9 (implemented proper view functions)
 		"test:general": "ava __tests__/v3-tests.ava.ts"
 >>>>>>> a04e48e (refactored and abstracted cost analysis fns in delete, create, and add keys to all reference same function)
 	},

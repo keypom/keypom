@@ -20,13 +20,20 @@ export type ExtKeyInfo = {
     uses_remaining: Number
 }
 
-export type InternalAsset = InternalFTData | ExtNearData;
+export type InternalAsset = InternalFTData | InternalNFTData | "near";
 
 export type InternalFTData = {
     ft: {
         contract_id: string;
         registration_cost: string,
         balance_avail: string
+    }
+}
+
+export type InternalNFTData = {
+    nft: {
+        contract_id: string;
+        token_ids: Array<string>
     }
 }
 

@@ -27,26 +27,38 @@ impl Keypom {
 
         let mut required_gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT + GAS_FOR_RESOLVE_ASSET_CLAIM;
 
-        let mut ft_list: Vec<ExtFTData> = Vec::new();
-        let mut nft_list: Vec<ExtNFTData> = Vec::new();
+        let mut ft_list: Vec<FTListData> = Vec::new();
+        let mut nft_list: Vec<NFTListData> = Vec::new();
         let mut yoctonear = 0;
+        let mut num_nfts = 0;
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             required_gas += internal_asset.get_required_gas();
-
-            let ext_asset = internal_asset.to_external_asset(&metadata);
             
-            match ext_asset {
-                Some(ExtAsset::FTAsset(ft)) => {
-                    ft_list.push(ft);
+            match internal_asset {
+                InternalAsset::ft(ft) => {
+                    ft_list.push(FTListData { 
+                        amount: metadata.tokens_per_use.unwrap().0.to_string(),
+                        contract_id: ft.contract_id.to_string()
+                    });
                 },
-                Some(ExtAsset::NFTAsset(nft)) => {
-                    nft_list.push(nft);
+                InternalAsset::nft(nft) => {
+                    let last_idx = nft.token_ids.len().checked_sub(1).unwrap_or(0);
+                    let idx = last_idx.checked_sub(num_nfts).unwrap_or(nft.token_ids.len());
+
+                    if let Some(token_id) = nft.token_ids.get(idx) {
+                        nft_list.push(NFTListData { 
+                            token_id: token_id.to_string(), 
+                            contract_id: nft.contract_id.to_string(), 
+                        });
+                    }
+                    
+                    num_nfts += 1;
                 },
-                Some(ExtAsset::NearAsset(near)) => {
-                    yoctonear += near.yoctonear.0;
+                InternalAsset::near => {
+                    yoctonear += metadata.tokens_per_use.unwrap().0;
                 },
-                None => {}
+                InternalAsset::none => {}
             }
         }
 
