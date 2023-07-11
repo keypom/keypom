@@ -15,7 +15,7 @@ impl InternalNFTData {
     /// If the transfer fails, the FTs will be returned to the available balance
     /// Should *only* be invoked if the available balance is greater than or equal to the transfer amount.
     pub fn claim_nft_asset(&mut self, receiver_id: &AccountId) -> Promise {
-        if !self.enough_tokens() {
+        if self.is_empty() {
             near_sdk::log!("No NFTs available to transfer. Skipping asset claim.");
             return Promise::new(env::current_account_id());
         }

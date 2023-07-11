@@ -153,7 +153,7 @@ impl InternalAsset {
     pub fn is_empty(&self) -> bool {
         match self {
             InternalAsset::ft(ft) => ft.enough_balance(&1),
-            InternalAsset::nft(nft) => nft.enough_tokens(),
+            InternalAsset::nft(nft) => nft.is_empty(),
             InternalAsset::near => true,
             InternalAsset::none => true
         }

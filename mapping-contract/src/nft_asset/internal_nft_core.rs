@@ -20,8 +20,8 @@ impl InternalNFTData {
     }
 
     /// Query whether or not there is at least 1 NFT to transfer
-    pub fn enough_tokens(&self) -> bool {
-        !&self.token_ids.is_empty()
+    pub fn is_empty(&self) -> bool {
+        self.token_ids.is_empty()
     }
 
     /// Query whether or not there is at least 1 NFT to transfer
