@@ -95,8 +95,7 @@ test('Lots of Failed Claims', async t => {
             drop_id: dropId,
             assets_per_use,
             public_keys: keyPairs.publicKeys,
-        },
-        attachedDeposit: NEAR.parse("10").toString()
+        }
     })
 
     // This token exists!!

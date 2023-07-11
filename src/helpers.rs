@@ -14,18 +14,6 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
-/// Checks that the attached deposit is greater than the required deposit and refunds any excess
-pub(crate) fn internal_refund_excess_deposit(required_deposit: Balance) {
-    let attached_deposit = env::attached_deposit();
-    require!(attached_deposit >= required_deposit, format!("Attached deposit {} must be greater than required deposit {}", attached_deposit, required_deposit));
-
-    if attached_deposit > required_deposit {
-        let refund_amount = attached_deposit - required_deposit;
-        near_sdk::log!("Refunding {} excess deposit", refund_amount);
-        Promise::new(env::predecessor_account_id()).transfer(refund_amount);
-    }
-}
-
 /// Query for the key's current use number given the drop and key info
 pub(crate) fn get_key_cur_use(drop: &InternalDrop, key_info: &InternalKeyInfo) -> UseNumber {
     drop.uses_per_key - key_info.remaining_uses + 1

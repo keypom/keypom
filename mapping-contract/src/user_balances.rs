@@ -52,7 +52,8 @@ impl Keypom {
             if decrement == true {
                 require!(
                     balance >= amount,
-                    "User balance is less than amount to decrement");
+                    format!("User balance {} is less than required {}", balance, amount)
+                );
                 near_sdk::log!(
                     "User balance decremented by {}. Old: {} new: {}",
                     yocto_to_near(amount),
@@ -74,5 +75,27 @@ impl Keypom {
             self.user_balances
                 .insert(account_id, &balance);
         }
+    }
+
+
+    /// Checks that the attached deposit is greater than the required deposit and refunds any excess
+    /// If the attached deposit is less than the required deposit, decrement the user balance
+    /// If the user doesn't have enough deposit or balance, panic
+    pub(crate) fn charge_with_deposit_or_balance(&mut self, required_deposit: Balance) {
+        let predecessor = env::predecessor_account_id();
+        let can_deposit_cover = env::attached_deposit() >= required_deposit;
+        
+        // In the case that the attached deposit covers what is required, refund the excess
+        if can_deposit_cover {
+            let amount_to_refund = env::attached_deposit() - required_deposit;
+
+            near_sdk::log!("Refunding {} excess deposit", amount_to_refund);
+            Promise::new(predecessor).transfer(amount_to_refund);
+            return;
+        }
+
+        // In the case that the attached deposit is less than the required, check user balance
+        let required_deposit_left = required_deposit - env::attached_deposit();
+        self.internal_modify_user_balance(&predecessor, required_deposit_left, true);
     }
 }

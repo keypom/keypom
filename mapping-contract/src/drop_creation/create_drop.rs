@@ -85,7 +85,7 @@ impl Keypom {
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
-        determine_costs(
+        self.determine_costs(
             public_keys.len(),
             total_cost_per_key,
             total_allowance_per_key,
@@ -145,7 +145,7 @@ impl Keypom {
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
-        determine_costs(
+        self.determine_costs(
             public_keys.len(),
             total_cost_per_key,
             total_allowance_per_key,
@@ -197,6 +197,23 @@ impl Keypom {
 
         env::promise_return(promise);
     }
+
+     /// Tally up all the costs for adding keys / creating a drop and refund any excess deposit
+     pub(crate) fn determine_costs(
+        &mut self,
+        num_keys: usize, 
+        asset_cost_per_key: Balance, 
+        allowance_per_key: Balance,
+        net_storage: u64
+    ) {
+        let num_keys = num_keys as u128;
+        let storage_cost = net_storage as Balance * env::storage_byte_cost();
+        let total_asset_cost = asset_cost_per_key * num_keys;
+        let total_allowance_cost = allowance_per_key * num_keys;
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
+        near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
+        self.charge_with_deposit_or_balance(total_cost);
+    }
 }
 
 /// Parses the external assets and stores them in the drop's internal maps
@@ -242,20 +259,4 @@ pub(crate) fn parse_ext_assets_per_use (
             config: None
         });
     }
-}
-
-/// Tally up all the costs for adding keys / creating a drop and refund any excess deposit
-pub(crate) fn determine_costs(
-    num_keys: usize, 
-    asset_cost_per_key: Balance, 
-    allowance_per_key: Balance,
-    net_storage: u64
-) {
-    let num_keys = num_keys as u128;
-    let storage_cost = net_storage as Balance * env::storage_byte_cost();
-    let total_asset_cost = asset_cost_per_key * num_keys;
-    let total_allowance_cost = allowance_per_key * num_keys;
-    let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
-    near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
-    internal_refund_excess_deposit(total_cost);
 }
