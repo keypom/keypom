@@ -135,7 +135,7 @@ impl Keypom {
             self.drop_by_id.remove(&drop_id);
             internal_clear_drop_storage(&mut drop);
         } else {
-            near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, drop_assets_empty);
+            near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, !drop_assets_empty);
             // Put the modified drop back in storage
             self.drop_by_id.insert(&drop_id, &drop);
         }

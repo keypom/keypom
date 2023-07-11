@@ -155,6 +155,10 @@ test('Lots of Failed Claims', async t => {
     t.is(dropInfo.internal_assets_data.length, 1);
     t.is((dropInfo.internal_assets_data[0] as InternalNFTData).nft.token_ids.length, 5);
 
+    let tokensForOwner = await nftContract.view('nft_supply_for_owner', {account_id: nftContract.accountId});
+    console.log('tokensForOwner: ', tokensForOwner)
+    t.is(tokensForOwner, '1');
+
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
 });
