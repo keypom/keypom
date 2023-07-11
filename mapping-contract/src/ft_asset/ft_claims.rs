@@ -1,20 +1,17 @@
-use near_sdk::{Gas, GasWeight, serde_json::json, PromiseResult, require};
+use near_sdk::{Gas, GasWeight, serde_json::json, PromiseResult};
 
 use crate::*;
 
 /// Gas needed to execute any logic in the ft claim function
-/// 2 TGas + 3 * CCC gas (since there are 3 CCCs)
-/// 17 TGas
-pub const GAS_FOR_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + 3 * MIN_BASE_GAS_FOR_ONE_CCC.0);
+/// 2 TGas + 2 * CCC gas (since there are 2 CCCs)
+/// 12 TGas
+pub const GAS_FOR_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + 2 * MIN_BASE_GAS_FOR_ONE_CCC.0);
 /// Minimum Gas required to perform a simple transfer of fungible tokens.
 /// 5 TGas
 pub const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
 /// Minimum Gas required to register a user on the FT contract
 /// 5 TGas
 pub const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000);
-/// Minimum Gas required to resolve the batch of promises for transferring the FTs and registering the user.
-/// 5 TGas
-pub const MIN_GAS_FOR_RESOLVE_BATCH: Gas = Gas(5_000_000_000_000);
 
 impl InternalFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).
@@ -35,7 +32,7 @@ impl InternalFTData {
 
         // Pay the required storage as outlined in the AccountData. This will run first and then we send the fungible tokens
         // Call the function with the min GAS and then attach 1/5 of the unspent GAS to the call
-        batch_transfer =  batch_transfer.function_call_weight(
+        batch_transfer = batch_transfer.function_call_weight(
             "storage_deposit".to_string(),
             json!({ "account_id": receiver_id }).to_string().into(),
             self.registration_cost,
@@ -54,21 +51,5 @@ impl InternalFTData {
         );
 
         batch_transfer
-    }
-
-    /// Private function that will be called after the FT claim is finished. This will check whether the claim went through successfully.
-    /// If it was unsuccessful, the available balance will be incremented (acting as a refund that can then be claimed via refund method)
-    pub fn resolve_ft_claim(&mut self, transfer_amount: Balance) -> bool {
-        // check whether or not the transfer was successful
-        let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
-
-        if transfer_succeeded {
-            return true;
-        }
-
-        // If the transfer failed, then we need to increment the available balance
-        self.balance_avail += transfer_amount;
-
-        false
     }
 }

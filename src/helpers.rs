@@ -14,14 +14,6 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
-/// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
-pub(crate) fn asset_id_from_ext_asset(ext_asset: &ExtAsset) -> AssetId {
-    match ext_asset {
-        ExtAsset::FTAsset(ft_data) => ft_data.contract_id.to_string(),
-        ExtAsset::NearAsset(_) => NEAR_ASSET_ID.to_string(),
-    }
-}
-
 /// Checks that the attached deposit is greater than the required deposit and refunds any excess
 pub(crate) fn internal_refund_excess_deposit(required_deposit: Balance) {
     let attached_deposit = env::attached_deposit();

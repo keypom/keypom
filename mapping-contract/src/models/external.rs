@@ -7,7 +7,8 @@ use crate::*;
 #[serde(untagged)]
 pub enum ExtAsset {
     FTAsset(ExtFTData),
-    NearAsset(ExtNEARData)
+    NearAsset(ExtNEARData),
+    NFTAsset(ExtNFTData),
 }
 
 pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAsset {
@@ -23,8 +24,11 @@ impl ExtAsset {
     pub fn to_internal_asset(&self) -> InternalAsset {
         match self {
             ExtAsset::FTAsset(ft_data) => InternalAsset::ft(InternalFTData::new(
-                ft_data.contract_id.clone(),
+                ft_data.ft_contract_id.clone(),
                 ft_data.registration_cost.into(),
+            )),
+            ExtAsset::NFTAsset(nft_data) => InternalAsset::nft(InternalNFTData::new(
+                nft_data.nft_contract_id.clone(),
             )),
             ExtAsset::NearAsset(_) => InternalAsset::near,
         }
@@ -33,8 +37,18 @@ impl ExtAsset {
     /// Standard function to check how many tokens a given asset transfers per use
     pub fn get_tokens_per_use(&self) -> U128 {
         match self {
-            ExtAsset::FTAsset(ft_data) => ft_data.amount.into(),
+            ExtAsset::FTAsset(ft_data) => ft_data.ft_amount.into(),
+            ExtAsset::NFTAsset(_) => U128(0),
             ExtAsset::NearAsset(near_data) => near_data.yoctonear.into()
+        }
+    }
+
+    /// Standard function to query for the asset ID of the current external asset
+    pub fn get_asset_id(&self) -> AssetId {
+        match self {
+            ExtAsset::FTAsset(ft_data) => ft_data.ft_contract_id.to_string(),
+            ExtAsset::NFTAsset(nft_data) => nft_data.nft_contract_id.to_string(),
+            ExtAsset::NearAsset(_) => NEAR_ASSET_ID.to_string(),
         }
     }
 }
@@ -52,11 +66,19 @@ pub struct ExtNEARData {
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtFTData {
     /// The contract that the fungible tokens originate from
-    pub contract_id: AccountId,
+    pub ft_contract_id: AccountId,
     /// How much $NEAR (in yocto) it costs to register a new user on the fungible token contract
     pub registration_cost: U128,
     /// How many fungible tokens (in their smallest indivisible unit) should be transferred as part of the asset claim
-    pub amount: U128
+    pub ft_amount: U128
+}
+
+/// Data going into or out of the Keypom contract representing the presence of non-fungible tokens as an asset for a drop
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ExtNFTData {
+    /// The contract that the non fungible tokens originate from
+    pub nft_contract_id: AccountId
 }
 
 /// Drop data being returned from view calls from Keypom
@@ -85,6 +107,11 @@ pub struct ExtKeyInfo {
    /// indicating that all those assets will be sent to the account that claims the linkdrop (either new or
    /// existing) when the key is successfully used.
    pub ft_list: Vec<ExtFTData>, 
+   
+   /// If using the NFT standard extension, a set of NFTData can be linked to the public key
+   /// indicating that all those assets will be sent to the account that claims the linkdrop (either new or
+   /// existing) when the key is successfully used.
+   pub nft_list: Vec<ExtNFTData>, 
 
    /* CUSTOM */
    pub uses_remaining: UseNumber

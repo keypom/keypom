@@ -4,7 +4,7 @@ import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
-import { ExtDrop, InternalFTData } from "../utils/types";
+import { ExtDrop, ExtFTData, InternalFTData } from "../utils/types";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -71,23 +71,17 @@ test.afterEach(async t => {
     });
 });
 
-interface FTAsset {
-    contract_id: string;
-    registration_cost: string;
-    amount: string;
-}
-
 test('Underpay, Withdraw, Delete', async t => {
     const {funder, ftContract1, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
     const ftContractData = {
-        contract_id: ftContract1.accountId,
+        ft_contract_id: ftContract1.accountId,
         registration_cost: NEAR.parse("0.0125").toString(),
     }
-    const ftAsset: FTAsset = {
+    const ftAsset: ExtFTData = {
         ...ftContractData,
-        amount: NEAR.parse("1").toString()
+        ft_amount: NEAR.parse("1").toString()
     }
 
     const dropId = "underpay, withdraw, delete";
@@ -218,12 +212,12 @@ test('Overpay, Withdraw, Delete', async t => {
     let initialBal = await keypomV3.balance();
 
     const ftContractData = {
-        contract_id: ftContract1.accountId,
+        ft_contract_id: ftContract1.accountId,
         registration_cost: NEAR.parse("0.0125").toString(),
     }
-    const ftAsset: FTAsset = {
+    const ftAsset: ExtFTData = {
         ...ftContractData,
-        amount: NEAR.parse("1").toString()
+        ft_amount: NEAR.parse("1").toString()
     }
 
     const dropId = "overpay, withdraw, delete";
@@ -355,12 +349,12 @@ test('Create & Delete Empty Drop', async t => {
     let initialBal = await keypomV3.balance();
 
     const ftContractData = {
-        contract_id: ftContract1.accountId,
+        ft_contract_id: ftContract1.accountId,
         registration_cost: NEAR.parse("0.0125").toString(),
     }
-    const ftAsset: FTAsset = {
+    const ftAsset: ExtFTData = {
         ...ftContractData,
-        amount: NEAR.parse("1").toString()
+        ft_amount: NEAR.parse("1").toString()
     }
 
     const dropId = "overpay, withdraw, delete";
@@ -487,10 +481,10 @@ test('Panic In Deletion, Ensure Keys Are Not Deleted', async t => {
     const {funder, ftContract1, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
-    const ftAsset: FTAsset = {
-        contract_id: ftContract1.accountId,
+    const ftAsset: ExtFTData = {
+        ft_contract_id: ftContract1.accountId,
         registration_cost: NEAR.parse("0.0125").toString(),
-        amount: NEAR.parse("1").toString()
+        ft_amount: NEAR.parse("1").toString()
     }
 
     const dropId = "deletion-test";

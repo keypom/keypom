@@ -47,12 +47,6 @@ test.afterEach(async t => {
     });
 });
 
-interface FTAsset {
-    contract_id: string;
-    registration_cost: string;
-    amount: string;
-}
-
 // test('Panic Ensure No Keys Added (duplicate keys)', async t => {
 //     const {funder, keypomV3, root} = t.context.accounts;
 //     let initialBal = await keypomV3.balance();

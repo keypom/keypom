@@ -62,7 +62,11 @@ impl Keypom {
     }
 
     #[private]
-    pub fn on_assets_claimed(&mut self, drop_id: DropId, signer_pk: PublicKey) -> PromiseOrValue<bool> {
+    pub fn on_assets_claimed(
+        &mut self, 
+        drop_id: DropId, 
+        signer_pk: PublicKey
+    ) -> PromiseOrValue<bool> {
         let num_promises = env::promise_results_count();
 
         let initial_storage = env::storage_usage();

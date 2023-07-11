@@ -51,3 +51,5 @@ pub type AssetId = String;
 pub type DropId = String;
 /// Drop Metadata should be a string which can be JSON or anything the users want.
 pub type DropMetadata = String;
+/// ID for NFTs that have been sent to the Keypom contract as part of NFT assets
+pub type TokenId = String;

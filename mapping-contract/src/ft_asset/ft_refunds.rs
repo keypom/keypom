@@ -2,9 +2,6 @@ use near_sdk::{ext_contract, PromiseResult};
 
 use crate::*;
 
-/// Minimum Gas required to perform a simple transfer of fungible tokens.
-/// 5 TGas
-const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
 /// Minimum Gas required to resolve the batch of promises for transferring the FTs and registering the user.
 /// 5 TGas
 const MIN_GAS_FOR_RESOLVE_REFUND: Gas = Gas(5_000_000_000_000);

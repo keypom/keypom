@@ -33,9 +33,9 @@ export type InternalFTData = {
 export type ExtAsset = ExtFTData;
 
 export type ExtFTData = {
-    contract_id: string;
+    ft_contract_id: string;
     registration_cost: string,
-    amount: string
+    ft_amount: string
 }
 
 export type ExtNearData = {

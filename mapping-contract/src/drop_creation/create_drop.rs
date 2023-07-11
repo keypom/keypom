@@ -221,7 +221,7 @@ pub(crate) fn parse_ext_assets_per_use (
         // adding them to the asset_by_id lookup map if they weren't already present
         // If there aren't any assets, the vector will be of length 1
         for ext_asset in ext_assets {
-            let asset_id = ext_asset.as_ref().and_then(|a| Some(asset_id_from_ext_asset(&a))).unwrap_or(NONE_ASSET_ID.to_string());
+            let asset_id = ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string());
             let tokens_per_use = ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use())).unwrap_or(U128(0));
 
             assets_metadata.push(AssetMetadata {

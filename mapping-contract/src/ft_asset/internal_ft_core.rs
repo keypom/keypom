@@ -52,4 +52,9 @@ impl InternalFTData {
     pub fn get_asset_id(&self) -> AssetId {
         self.contract_id.to_string()
     }
+
+    /// Query how much gas is required for a single claim
+    pub fn get_required_gas_for_claim(&self) -> Gas {
+        GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT
+    }
 }

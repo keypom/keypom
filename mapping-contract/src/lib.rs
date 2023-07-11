@@ -8,6 +8,7 @@ use near_sdk::serde::ser::SerializeStruct;
 use near_sdk::{env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash, Gas, Balance};
 
 mod ft_asset;
+mod nft_asset;
 mod drop_creation;
 mod internals;
 mod helpers;
@@ -18,6 +19,7 @@ mod drop_deletion;
 mod views;
 
 use ft_asset::*;
+use nft_asset::*;
 use drop_deletion::*;
 use internals::*;
 use helpers::*;

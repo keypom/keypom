@@ -78,6 +78,7 @@ pub struct InternalKeyInfo {
 #[serde(crate = "near_sdk::serde")]
 pub enum InternalAsset {
     ft(InternalFTData),
+    nft(InternalNFTData),
     near,
     none
 }
@@ -87,10 +88,13 @@ impl InternalAsset {
     pub fn to_external_asset(self, asset_metadata: &AssetMetadata) -> Option<ExtAsset> {
         match self {
             InternalAsset::ft(ft_data) => Some(ExtAsset::FTAsset(ExtFTData {
-                contract_id: ft_data.contract_id.clone(),
+                ft_contract_id: ft_data.contract_id.clone(),
                 registration_cost: ft_data.registration_cost.into(),
                 // FTs should ALWAYS have a tokens_per_use value
-                amount: asset_metadata.tokens_per_use.unwrap().into()
+                ft_amount: asset_metadata.tokens_per_use.unwrap().into()
+            })),
+            InternalAsset::nft(nft_data) => Some(ExtAsset::NFTAsset(ExtNFTData {
+                nft_contract_id: nft_data.contract_id.clone()
             })),
             InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: asset_metadata.tokens_per_use.unwrap().into() })),
             InternalAsset::none => None
@@ -103,6 +107,9 @@ impl InternalAsset {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
+            },
+            InternalAsset::nft(ref mut nft_data) => {
+                return nft_data.claim_nft_asset(receiver_id)
             },
             InternalAsset::near => {
                 return Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
@@ -120,7 +127,11 @@ impl InternalAsset {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, tokens_per_use.unwrap());
-                ft_data.balance_avail += tokens_per_use.unwrap();
+                ft_data.add_to_balance_avail(&tokens_per_use.unwrap());
+                0
+            },
+            InternalAsset::nft(ref mut nft_data) => {
+                near_sdk::log!("Failed claim for NFT asset. Contact Keypom Support");
                 0
             },
             InternalAsset::near => {
@@ -137,7 +148,8 @@ impl InternalAsset {
     /// Standard function to check whether an asset is empty or not
     pub fn is_empty(&self) -> bool {
         match self {
-            InternalAsset::ft(ft) => ft.balance_avail == 0,
+            InternalAsset::ft(ft) => ft.enough_balance(&1),
+            InternalAsset::nft(nft) => nft.enough_tokens(),
             InternalAsset::near => true,
             InternalAsset::none => true
         }
@@ -151,6 +163,7 @@ impl InternalAsset {
             InternalAsset::ft(ft_data) => {
                 return ft_data.registration_cost;
             },
+            InternalAsset::nft(_) => 0,
             InternalAsset::near => {
                 return tokens_per_use.unwrap();
             },
@@ -161,7 +174,8 @@ impl InternalAsset {
     /// Standard function to query how much gas it takes for 1 claim of a given asset
     pub fn get_required_gas(&self) -> Gas {
         match self {
-            InternalAsset::ft(_) => GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT + MIN_GAS_FOR_RESOLVE_BATCH,
+            InternalAsset::ft(ft_data) => ft_data.get_required_gas_for_claim(),
+            InternalAsset::nft(nft_data) => nft_data.get_required_gas_for_claim(),
             InternalAsset::near => GAS_FOR_NEAR_TRANSFER,
             InternalAsset::none => GAS_FOR_NONE_ASSET
         }

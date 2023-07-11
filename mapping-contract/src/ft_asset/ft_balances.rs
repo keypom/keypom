@@ -3,7 +3,8 @@ use crate::*;
 impl InternalFTData {
     /// Add to the available balance. This should only ever be invoked in:
     /// * `ft_on_transfer` (when the transfer is successful).
-    /// * `ft_resolve_batch` (when the ft_transfer failed and a refund needs to occur).
+    /// * `ft_resolve_refund` (when the refund failed).
+    /// * `on_assets_claimed` (when the FT claim failed and we need to refund).
     pub fn add_to_balance_avail(&mut self, amount: &Balance) {
         self.balance_avail += amount;
     }
@@ -11,7 +12,7 @@ impl InternalFTData {
 
 #[near_bindgen]
 impl Keypom {
-    /// Allows users to attach fungible tokens to the Linkdrops. Must have storage recorded by this point. You can only attach one set of FTs or NFT at a time.
+    /// Standard function for accepting FTs to then be claimable as part of linkdrops.
     pub fn ft_on_transfer(
         &mut self,
         amount: U128,

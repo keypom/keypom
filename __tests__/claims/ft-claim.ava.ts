@@ -4,7 +4,7 @@ import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
-import { ExtDrop, ExtKeyInfo, InternalFTData } from "../utils/types";
+import { ExtDrop, ExtFTData, ExtKeyInfo, InternalFTData } from "../utils/types";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -75,30 +75,24 @@ test.afterEach(async t => {
     });
 });
 
-interface FTAsset {
-    contract_id: string;
-    registration_cost: string;
-    amount: string;
-}
-
 test('Failed Multi Claim', async t => {
     const {funder, ftContract1, ftContract2, ftContract3, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
-    const ftAsset1: FTAsset = {
-        contract_id: ftContract1.accountId,
+    const ftAsset1: ExtFTData = {
+        ft_contract_id: ftContract1.accountId,
         registration_cost: NEAR.parse("0").toString(),
-        amount: "1"
+        ft_amount: "1"
     }
-    const ftAsset2: FTAsset = {
-        contract_id: "bar",
+    const ftAsset2: ExtFTData = {
+        ft_contract_id: "bar",
         registration_cost: NEAR.parse("0.0125").toString(),
-        amount: NEAR.parse("0").toString()
+        ft_amount: NEAR.parse("0").toString()
     }
-    const ftAsset3: FTAsset = {
-        contract_id: "baz",
+    const ftAsset3: ExtFTData = {
+        ft_contract_id: "baz",
         registration_cost: NEAR.parse("0.0125").toString(),
-        amount: NEAR.parse("0").toString()
+        ft_amount: NEAR.parse("0").toString()
     }
 
     const dropId = "failed-multiclaim";

@@ -96,12 +96,6 @@ test.afterEach(async t => {
 //     displayBalances(initialBal, finalBal);
 // });
 
-interface FTAsset {
-    contract_id: string;
-    registration_cost: string;
-    amount: string;
-}
-
 // test('Claim FTs', async t => {
 //     const {minter, funder, ftContract, keypomV3} = t.context.accounts;
 //     let initialBal = await keypomV3.balance();

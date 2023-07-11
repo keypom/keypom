@@ -50,6 +50,9 @@ impl Keypom {
     
             // Either add or subtract the amount from the balance depending on whether or not decrement was passed in
             if decrement == true {
+                require!(
+                    balance >= amount,
+                    "User balance is less than amount to decrement");
                 near_sdk::log!(
                     "User balance decremented by {}. Old: {} new: {}",
                     yocto_to_near(amount),
