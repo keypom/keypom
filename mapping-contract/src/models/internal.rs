@@ -123,20 +123,24 @@ impl InternalAsset {
     /// Standard function outlining what should happen if a specific claim failed
     /// This should return the amount of $NEAR that should be refunded to the user's balance
     /// In addition, any internal state changes should be made (i.e balance_available incremented for FTs)
-    pub fn on_failed_claim(&mut self, tokens_per_use: &Option<Balance>) -> Balance {
+    pub fn on_failed_claim(&mut self, tokens_per_use: &Option<String>) -> Balance {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
-                near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, tokens_per_use.unwrap());
-                ft_data.add_to_balance_avail(&tokens_per_use.unwrap());
+                let ft_to_refund = &tokens_per_use.as_ref().unwrap().parse::<u128>().unwrap();
+                near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, ft_to_refund);
+                ft_data.add_to_balance_avail(ft_to_refund);
                 0
             },
             InternalAsset::nft(ref mut nft_data) => {
-                near_sdk::log!("Failed claim for NFT asset. Contact Keypom Support");
+                let token_id = &tokens_per_use.as_ref().unwrap();
+                near_sdk::log!("Failed claim NFT asset with Token ID {}", token_id);
+                nft_data.add_to_token_ids(token_id);
                 0
             },
             InternalAsset::near => {
-                near_sdk::log!("Failed claim for NEAR asset. Refunding {} to the user's balance", tokens_per_use.unwrap());
-                tokens_per_use.unwrap()
+                let near_tokens = tokens_per_use.as_ref().unwrap().parse::<u128>().unwrap();
+                near_sdk::log!("Failed claim for NEAR asset. Refunding {} to the user's balance", near_tokens);
+                near_tokens
             },
             InternalAsset::none => {
                 near_sdk::log!("Failed claim for null asset. SHOULD NEVER HAPPEN");

@@ -24,8 +24,13 @@ impl InternalNFTData {
         !&self.token_ids.is_empty()
     }
 
+    /// Query whether or not there is at least 1 NFT to transfer
+    pub fn get_next_token_id(&self) -> Option<TokenId> {
+        self.token_ids.last().cloned()
+    }
+
     /// Query how much gas is required for a single claim
     pub fn get_required_gas_for_claim(&self) -> Gas {
-        GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_NFT_TRANSFER
+        GAS_FOR_NFT_CLAIM_LOGIC + MIN_GAS_FOR_NFT_TRANSFER
     }
 }

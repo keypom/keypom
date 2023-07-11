@@ -55,6 +55,6 @@ impl InternalFTData {
 
     /// Query how much gas is required for a single claim
     pub fn get_required_gas_for_claim(&self) -> Gas {
-        GAS_FOR_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT
+        GAS_FOR_FT_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT
     }
 }

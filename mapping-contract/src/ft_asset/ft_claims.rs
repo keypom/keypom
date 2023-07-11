@@ -1,11 +1,11 @@
-use near_sdk::{Gas, GasWeight, serde_json::json, PromiseResult};
+use near_sdk::{Gas, GasWeight, serde_json::json};
 
 use crate::*;
 
 /// Gas needed to execute any logic in the ft claim function
 /// 2 TGas + 2 * CCC gas (since there are 2 CCCs)
 /// 12 TGas
-pub const GAS_FOR_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + 2 * MIN_BASE_GAS_FOR_ONE_CCC.0);
+pub const GAS_FOR_FT_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + 2 * MIN_BASE_GAS_FOR_ONE_CCC.0);
 /// Minimum Gas required to perform a simple transfer of fungible tokens.
 /// 5 TGas
 pub const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);

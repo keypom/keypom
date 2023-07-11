@@ -5,7 +5,7 @@ use crate::*;
 /// Gas needed to execute any logic in the nft claim function
 /// 2 TGas + 1 * CCC gas (since there is 1 CCCs)
 /// 7 TGas
-pub const GAS_FOR_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + MIN_BASE_GAS_FOR_ONE_CCC.0);
+pub const GAS_FOR_NFT_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + MIN_BASE_GAS_FOR_ONE_CCC.0);
 /// Minimum Gas required to perform a simple NFT transfer.
 /// 5 TGas
 pub const MIN_GAS_FOR_NFT_TRANSFER: Gas = Gas(5_000_000_000_000);

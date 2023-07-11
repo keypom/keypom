@@ -65,7 +65,8 @@ impl Keypom {
     pub fn on_assets_claimed(
         &mut self, 
         drop_id: DropId, 
-        signer_pk: PublicKey
+        signer_pk: PublicKey,
+        token_ids_transferred: Vec<Option<TokenId>>
     ) -> PromiseOrValue<bool> {
         let num_promises = env::promise_results_count();
 
@@ -88,12 +89,20 @@ impl Keypom {
                     Self::ext(env::current_account_id())
                         .on_assets_claimed(
                             drop_id,
-                            signer_pk
+                            signer_pk,
+                            token_ids_transferred
                         )
                 ),
                 PromiseResult::Successful(_) => {},
                 PromiseResult::Failed => {
-                    let amount_to_increment = asset.on_failed_claim(&metadata.tokens_per_use.map(|x| x.into()));
+                    let mut tokens_per_use = metadata.tokens_per_use.map(|x| x.0.to_string());
+                    
+                    // If it's a NFT, we need to get the token ID
+                    if let InternalAsset::nft(_) = &mut asset {
+                        tokens_per_use = token_ids_transferred[i as usize].clone();
+                    };
+
+                    let amount_to_increment = asset.on_failed_claim(&tokens_per_use);
                     self.internal_modify_user_balance(&drop.funder_id, amount_to_increment, false);
                     // Re-insert into storage
                     drop.asset_by_id.insert(&metadata.asset_id, &asset);
@@ -152,8 +161,17 @@ impl Keypom {
         
         //let promises;
         let mut promises = Vec::new();
+        let mut token_ids_transferred = Vec::new();
         for metadata in assets_metadata {
             let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
+            
+            // We need to keep track of all the NFT token IDs in order to potentially perform refunds
+            if let InternalAsset::nft(data) = &asset {
+                token_ids_transferred.push(data.get_next_token_id());
+            } else {
+                token_ids_transferred.push(None);
+            }
+
             // Some cases may result in no promise index (i.e not enough balance)
             promises.push(asset.claim_asset(&receiver_id, &metadata.tokens_per_use.map(|x| x.into())));
 
@@ -171,7 +189,8 @@ impl Keypom {
                 .with_static_gas(GAS_FOR_RESOLVE_ASSET_CLAIM)
                 .on_assets_claimed(
                     drop_id,
-                    signer_pk
+                    signer_pk,
+                    token_ids_transferred
                 )
         )
     }
