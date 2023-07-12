@@ -137,7 +137,8 @@ export function parseExecutionResults(
   shouldLog: boolean,
   shouldPanic: boolean
 ) {
-  let logString = `Logs For ${methodName} on ${receiverId}:\n`;
+  console.log('');
+  let logMessages: string[] = [];
 
   let didPanic = false;
   let panicMessages: string[] = [];
@@ -147,31 +148,43 @@ export function parseExecutionResults(
     const logs = receipt.outcome.logs;
     if (logs.length > 0) {
       // Turn logs into a string
-      const logs = receipt.outcome.logs.reduce((acc, log) => {
-        return acc.concat(log).concat('\n')
+      let logs = receipt.outcome.logs.reduce((acc, log) => {
+        return acc.concat(log).concat('\n');
       }, '');
-      logString += logs;
-    } else {
-      logString += '\n';
+
+      logs = logs.substring(0, logs.length - 1);
+      logMessages.push(logs);
+
+    } else if (logMessages[logMessages.length - 1] != `\n` && logMessages.length > 0) {
+      logMessages.push(`\n`);
     }
-    
+
     const status = (receipt.outcome.status as any);
     if (status.Failure) {
       let failure = status.Failure.ActionError;
-      let str = `Failure for method: ${methodName} Failure: ${JSON.stringify(failure)}`
-      console.log(str)
+      let str = `Failure for method: ${methodName} Failure: ${JSON.stringify(failure)}\n`
 
       panicMessages.push(str);
       didPanic = true;
     }
   })
   
-  const styles = [
-    'color: green',
-  ].join(';');
 
-  if (shouldLog) {
-    console.log('%c%s', styles, logString);
+  console.log(`${methodName} -> ${receiverId}. ${logMessages.length} Logs Found. ${panicMessages.length} Panics Found.`);
+  
+  if (shouldLog && logMessages.length > 0) {
+    let logStr = logMessages.join('\n');
+    // Remove the last instance of `\n` from the log string
+    logStr = logStr.substring(0, logStr.length - 1);
+    console.log(logStr);
+  }
+
+  if (panicMessages.length > 0) { 
+    console.log("Panics:")
+    let panicStr = panicMessages.join('\n');
+    // Remove the last instance of `\n` from the panic string
+    panicStr = panicStr.substring(0, panicStr.length - 1);
+    console.log(panicStr)
   }
 
   if (shouldPanic && !didPanic) {
@@ -179,7 +192,7 @@ export function parseExecutionResults(
   }
 
   if (!shouldPanic && didPanic) {
-    throw new Error(panicMessages.join('\n'));    
+    throw new Error("Panic found when not expected");    
   }
 }
 

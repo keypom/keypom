@@ -24,6 +24,11 @@ impl InternalNFTData {
         self.token_ids.is_empty()
     }
 
+    /// Get the asset ID for this asset. In the case of Non Fungible Tokens, the ID is the contract
+    pub fn get_asset_id(&self) -> AssetId {
+        self.contract_id.to_string()
+    }
+
     /// Query whether or not there is at least 1 NFT to transfer
     pub fn get_next_token_id(&self) -> Option<TokenId> {
         self.token_ids.last().cloned()

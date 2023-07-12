@@ -51,15 +51,6 @@ const test = anyTest as TestFn<{
         shouldLog: false
     })
 
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'add_to_balance',
-        args: {},
-        attachedDeposit: NEAR.parse("10").toString(),
-        shouldLog: false
-    })
-    
     // Save state for test runs
     t.context.worker = worker;
     t.context.accounts = { root, funder, keypomV3, nftContract };
@@ -76,6 +67,15 @@ test.afterEach(async t => {
 test('Lots of Failed Claims', async t => {
     const {funder, keypomV3, nftContract, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'add_to_balance',
+        args: {},
+        attachedDeposit: NEAR.parse("10").toString(),
+        shouldLog: false
+    })
 
     const nftAsset1 = {
         nft_contract_id: nftContract.accountId
