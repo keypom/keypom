@@ -62,9 +62,14 @@
 >>>>>>> 7884904 (started work on near asset implementation)
 =======
 		"test:claim:nft": "ava __tests__/claims/nft-claim.ava.ts",
+<<<<<<< HEAD
 >>>>>>> 0a82cd9 (implemented proper view functions)
 		"test:general": "ava __tests__/v3-tests.ava.ts"
 >>>>>>> a04e48e (refactored and abstracted cost analysis fns in delete, create, and add keys to all reference same function)
+=======
+		"test:general": "ava __tests__/v3-tests.ava.ts",
+		"test:failed": "ava __tests__/creation/failed-creation.ts"
+>>>>>>> b19873e (failed creation tests added and wip)
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
