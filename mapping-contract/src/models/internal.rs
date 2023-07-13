@@ -39,7 +39,19 @@ impl InternalDrop {
     /// Convert an `InternalDrop` into an `ExtDrop`
     pub fn to_external_drop(&self) -> ExtDrop {
         let mut assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>> = HashMap::new();
-        let internal_assets_data: Vec<InternalAsset> = self.asset_by_id.values_as_vector().to_vec();
+
+        let mut nft_list = vec![];
+        let mut ft_list = vec![];
+
+        // Loop through all the valus in the asset_by_id hashmap and add them to the corresponding vectors
+        self.asset_by_id.values().for_each(|asset| {
+            match asset {
+                InternalAsset::nft(nft_asset) => nft_list.push(nft_asset),
+                InternalAsset::ft(ft_asset) => ft_list.push(ft_asset),
+                _ => {}
+            }
+        });
+
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=self.uses_per_key {
             let KeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
@@ -55,7 +67,8 @@ impl InternalDrop {
 
         ExtDrop {
             assets_per_use,
-            internal_assets_data,
+            nft_asset_data: nft_list,
+            ft_asset_data: ft_list,
             metadata: self.metadata.get()
         }
     }

@@ -1,7 +1,12 @@
 export type ExtDrop = {
     assets_by_use: Record<number, Array<ExtAsset>>;
-    internal_assets_data: Array<InternalAsset | null>;
+    nft_asset_data: Array<InternalNFTData>;
+    ft_asset_data: Array<InternalFTData>;
 }
+
+export type PickOnly<T, K extends keyof T> =
+    Pick<T, K> & { [P in Exclude<keyof T, K>]?: never };
+    
 export type ExtKeyInfo = {
     /// How much Gas should be attached when the key is used to call `claim` or `create_account_and_claim`.
     /// It is up to the smart contract developer to calculate the required gas (which can be done either automatically on the contract or on the client-side).
@@ -23,18 +28,14 @@ export type ExtKeyInfo = {
 export type InternalAsset = InternalFTData | InternalNFTData | "near";
 
 export type InternalFTData = {
-    ft: {
-        contract_id: string;
-        registration_cost: string,
-        balance_avail: string
-    }
+    contract_id: string;
+    registration_cost: string,
+    balance_avail: string
 }
 
 export type InternalNFTData = {
-    nft: {
-        contract_id: string;
-        token_ids: Array<string>
-    }
+    contract_id: string;
+    token_ids: Array<string>
 }
 
 export type ExtAsset = ExtFTData;

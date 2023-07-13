@@ -11,6 +11,7 @@ import { JsonDrop, JsonKeyInfo } from "./types";
 =======
 >>>>>>> 08ba860 (refactored to decouple withdrawal from deletion to fix issues)
 import { formatNearAmount } from "near-api-js/lib/utils/format";
+import { ExtDrop, InternalFTData, InternalNFTData, PickOnly } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -193,6 +194,89 @@ export function parseExecutionResults(
 
   if (!shouldPanic && didPanic) {
     throw new Error("Panic found when not expected");    
+  }
+}
+
+export async function assertKeypomInternalAssets({
+  keypom,
+  dropId,
+  expectedNftData,
+  expectedFtData,
+}: {
+  keypom: NearAccount,
+  dropId: string,
+  expectedNftData?: InternalNFTData[],
+  expectedFtData?: PickOnly<InternalFTData, "contract_id" | "balance_avail">[]
+}) {
+  expectedNftData = expectedNftData || [];
+  expectedFtData = expectedFtData || [];
+  let dropInfo: ExtDrop = await keypom.view('get_drop_information', {drop_id: dropId});
+  console.log('dropInfo: ', dropInfo)
+  
+  if (expectedNftData.length != dropInfo.nft_asset_data.length) {
+    throw new Error(`Expected ${expectedNftData.length} NFTs but found ${dropInfo.nft_asset_data.length}`);
+  } else {
+    for (let expectedAsset of expectedNftData) {
+      // Check if the NFT data matches one from the list
+      let matches = dropInfo.nft_asset_data.find((foundAsset) => {
+        let sameTokens = expectedAsset.token_ids.sort().join(',') === foundAsset.token_ids.sort().join(',')
+        console.log('sameTokens: ', sameTokens)
+        return foundAsset.contract_id == expectedAsset.contract_id && sameTokens
+      });
+
+      if (!matches) {
+        throw new Error(`Expected NFT Data ${expectedAsset} not found`);
+      }
+    }
+  }
+
+  if (expectedFtData.length != dropInfo.ft_asset_data.length) {
+    throw new Error(`Expected ${expectedFtData.length} FTs but found ${dropInfo.ft_asset_data.length}`);
+  } else {
+    for (let expectedAsset of expectedFtData) {
+      // Check if the NFT data matches one from the list
+      let matches = dropInfo.ft_asset_data.find((foundAsset) => {
+        return foundAsset.contract_id == expectedAsset.contract_id && foundAsset.balance_avail == expectedAsset.balance_avail
+      });
+
+      if (!matches) {
+        throw new Error(`Expected NFT Data ${expectedAsset} not found`);
+      }
+    }
+  }
+}
+
+export async function assertNFTBalance({
+  nftContract,
+  accountId,
+  tokensOwned
+}: {
+  nftContract: NearAccount,
+  accountId: string,
+  tokensOwned: string[]
+}) {
+  let nftTokens: Array<{owner_id: string, token_id: string}> = await nftContract.view('nft_tokens_for_owner', {account_id: accountId});
+  console.log(`NFTs for ${accountId} are: ${JSON.stringify(nftTokens)}`);
+
+  let sameTokens = nftTokens.sort().join(',') === tokensOwned.sort().join(',');
+  if (!sameTokens) {
+    throw new Error(`Expected NFTs for ${accountId} to be ${tokensOwned}. Got ${nftTokens} instead.`)
+  }
+}
+
+export async function assertFTBalance({
+  ftContract,
+  accountId,
+  amountOwned
+}: {
+  ftContract: NearAccount,
+  accountId: string,
+  amountOwned: string
+}) {
+  let ftBal = await ftContract.view('ft_balance_of', {account_id: accountId});
+  console.log(`FT Balance for ${accountId} is: ${ftBal}. Expected ${amountOwned}`)
+  if (ftBal != amountOwned) {
+    throw new Error(`Expected FT Balance for ${accountId} to be ${amountOwned}. Got ${ftBal} instead.`)
   }
 }
 

@@ -1,7 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, assertNFTBalance, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop, InternalNFTData } from "../utils/types";
@@ -128,10 +128,14 @@ test('Delete a lot of NFTs with some invalid by passing in token IDs', async t =
         })
     }
 
-    let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is((dropInfo.internal_assets_data[0] as InternalNFTData).nft.token_ids.length, numTokens + 1);
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids: tokenIds
+        }]
+    })
 
     let response = await functionCall({
         signer: funder,
@@ -147,15 +151,21 @@ test('Delete a lot of NFTs with some invalid by passing in token IDs', async t =
     console.log('response: ', response)
     t.is(response, "false");
 
-    dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is((dropInfo.internal_assets_data[0] as InternalNFTData).nft.token_ids.length, numTokens + 1);
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids: tokenIds
+        }]
+    })
 
     // None of the tokens should have been transferred
-    let tokensForOwner = await nftContract.view('nft_supply_for_owner', {account_id: funder.accountId});
-    console.log('tokensForOwner: ', tokensForOwner)
-    t.is(tokensForOwner, '0');
+    await assertNFTBalance({
+        nftContract,
+        accountId: funder.accountId,
+        tokensOwned: []
+    });
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
@@ -199,9 +209,10 @@ test('Delete NFTs, some invalid using limit', async t => {
         attachedDeposit: "1"
     })
 
-    // loop 20 times
+    let tokenIds = ["token1"]
     let numTokens = 3;
     for (let i = 0; i < numTokens; i++) {
+        tokenIds.push(`token1${i}`);
         await functionCall({
             signer: nftContract,
             receiver: keypomV3,
@@ -214,11 +225,15 @@ test('Delete NFTs, some invalid using limit', async t => {
         })
     }
 
-    let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is((dropInfo.internal_assets_data[0] as InternalNFTData).nft.token_ids.length, numTokens + 1);
-
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids: tokenIds
+        }]
+    })
+    
     let response = await functionCall({
         signer: funder,
         receiver: keypomV3,
@@ -232,15 +247,21 @@ test('Delete NFTs, some invalid using limit', async t => {
     console.log('response: ', response)
     t.is(response, "false");
 
-    dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is((dropInfo.internal_assets_data[0] as InternalNFTData).nft.token_ids.length, numTokens + 1);
-
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids: tokenIds
+        }]
+    })
+    
     // None of the tokens should have been transferred
-    let tokensForOwner = await nftContract.view('nft_supply_for_owner', {account_id: funder.accountId});
-    console.log('tokensForOwner: ', tokensForOwner)
-    t.is(tokensForOwner, '0');
+    await assertNFTBalance({
+        nftContract,
+        accountId: funder.accountId,
+        tokensOwned: []
+    });
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);

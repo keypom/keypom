@@ -86,7 +86,9 @@ pub struct ExtNFTData {
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDrop {
     pub assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
-    
-    pub internal_assets_data: Vec<InternalAsset>,
+
+    pub nft_asset_data: Vec<InternalNFTData>,
+    pub ft_asset_data: Vec<InternalFTData>,
+
     pub metadata: Option<DropMetadata>
 }
