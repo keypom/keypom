@@ -280,6 +280,29 @@ export async function assertFTBalance({
   }
 }
 
+export async function claimWithRequiredGas({
+  keypomV3,
+  root,
+  key,
+  publicKey
+}){
+  await keypomV3.setKey(key);
+    let newAccountId = `new-account.${root.accountId}`;
+    let keyPk = publicKey;
+    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    
+    let response = await functionCall({
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'claim',
+        args: {account_id: newAccountId},
+        gas: keyInfo.required_gas,
+    })
+
+    return response
+}
+
 export async function generateKeyPairs(
   numKeys: number,
 ): Promise<{ keys: KeyPair[]; publicKeys: string[] }> {

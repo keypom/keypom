@@ -68,8 +68,13 @@
 >>>>>>> a04e48e (refactored and abstracted cost analysis fns in delete, create, and add keys to all reference same function)
 =======
 		"test:general": "ava __tests__/v3-tests.ava.ts",
+<<<<<<< HEAD
 		"test:failed": "ava __tests__/creation/failed-creation.ts"
 >>>>>>> b19873e (failed creation tests added and wip)
+=======
+		"test:failed": "ava __tests__/creation/failed-creation.ava.ts",
+		"test:edge": "ava __tests__/creation/edge-creation.ava.ts"
+>>>>>>> 5998ba1 (drop creation edge cases wip)
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
