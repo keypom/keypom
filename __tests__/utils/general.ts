@@ -99,6 +99,7 @@ export const displayBalances = (initialBalances: AccountBalance, finalBalances: 
   console.log(`Total: ${formatNearAmount(new BN(finalBalances.total.toString()).sub(new BN(initialBalances.total.toString())).toString())}`)
 }
 
+
 export async function initKeypomConnection(
   rpcPort: string,
   funder: NearAccount
@@ -316,43 +317,61 @@ export async function claimWithRequiredGas({
   const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
   console.log('keyInfo: ', keyInfo)
 
-  // Claim
-  if(!createAccount){
-    let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
-    let newAccountId = `${myString}.${root.accountId}`;
-  
-    let response = await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'claim',
-        args: {account_id: newAccountId},
-        gas: keyInfo.required_gas,
-    })
-    console.log(response)
-    return response
-  }
-  // CAAC
-  else{
+  // CAAC - Use longest possible account ID
+  if(createAccount){
     // Invalid CAAC
     if(newPublicKey == "" ){
       console.log("CREATING ACCOUNT NEEDS A NEW PUBLIC KEY")
       return("false")
     }
 
-    let newAccountId = nearAPI.utils.PublicKey.fromString(newPublicKey).data
-
+    let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
+    let newAccountId = `${myString}.${root.accountId}`;
+  
     let response = await functionCall({
-      signer: keypomV3,
-      receiver: keypomV3,
-      methodName: 'create_account_and_claim',
-      args: {
-        new_account_id: newAccountId,
-        new_public_key: newPublicKey
-    },
-      gas: keyInfo.required_gas,
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'create_account_and_claim',
+        args: {
+          new_account_id: newAccountId,
+          new_public_key: newPublicKey
+        },
+        gas: keyInfo.required_gas,
     })
     console.log(response)
     return response
+  }
+  // Claim - use implicit account
+  else{
+    const stringToHex = (str: string) => {
+      let hex = '';
+      for (let i = 0; i < str.length; i++) {
+        const charCode = str.charCodeAt(i);
+        const hexValue = charCode.toString(16);
+    
+        // Pad with zeros to ensure two-digit representation
+        hex += hexValue.padStart(2, '0');
+      }
+      return hex;
+    };
+
+    // Hex public key
+    let implicitAccountId = stringToHex(nearAPI.utils.PublicKey.fromString("ed25519:BGCCDDHfysuuVnaNVtEhhqeT4k9Muyem3Kpgq2U1m9HX").data.toString())
+    console.log(implicitAccountId)
+    return implicitAccountId
+
+    // let response = await functionCall({
+    //   signer: keypomV3,
+    //   receiver: keypomV3,
+    //   methodName: 'create_account_and_claim',
+    //   args: {
+    //     new_account_id: newAccountId,
+    //     new_public_key: newPublicKey
+    // },
+    //   gas: keyInfo.required_gas,
+    // })
+    // console.log(response)
+    // return response
   }
 }
 
