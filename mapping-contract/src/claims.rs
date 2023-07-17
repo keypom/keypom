@@ -10,28 +10,46 @@ trait ExtAccountCreation {
 
 #[near_bindgen]
 impl Keypom {
-    pub fn claim(&mut self, account_id: AccountId) -> Promise {
+    /// Ensure re-entry protection and decrement remaining uses on a key
+    /// Returns the drop ID that the key is associated with
+    pub(crate) fn before_claim_logic(&mut self) -> TokenId {
         let signer_pk = env::signer_account_pk();
-        
-        // Remove the drop ID to prevent re-entrancy attack. Key deletion happens in another block but state
-        // Is written in the same block.
+
+        // Get the key info and decrement its remaining uses.
+        // If there are zero remaining uses, break the connection between
+        // The public key and token ID that way the key can't be used anymore.
+        // This state will be written in the current block so prevents re-entrancy attacks.
+        // We shouldn't just remove the public key mapping off the bat because there might be
+        // Multi use keys that submit multiple txns in the same block. Only delete if empty.
         let token_id = self
             .token_id_by_pk
             .get(&signer_pk)
             .expect("No drop ID found for PK");
-
-        let (drop_id, key_id) = parse_token_id(&token_id);
-        let drop_id = self.drop_by_id.remove(&signer_pk).expect("Drop not found");
         
-        self.internal_claim_assets(drop_id, account_id, signer_pk)
+        let (drop_id, key_id) = parse_token_id(&token_id);
+        let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        key_info.remaining_uses -= 1;
+        if key_info.remaining_uses == 0 {
+            // Delete everything except the token ID -> key info mapping since we need the key info in callbacks
+            self.token_id_by_pk.remove(&signer_pk);
+            Promise::new(env::current_account_id()).delete_key(signer_pk);
+        }
+
+        drop.key_info_by_token_id.insert(&token_id, &key_info);
+        self.drop_by_id.insert(&drop_id, &drop);
+
+        token_id
+    }
+
+    pub fn claim(&mut self, account_id: AccountId) -> Promise {
+        let token_id = self.before_claim_logic();
+
+        self.internal_claim_assets(token_id, account_id)
     }
 
     pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey) {
-        let signer_pk = env::signer_account_pk();
-        
-        // Remove the drop ID to prevent re-entrancy attack. Key deletion happens in another block but state
-        // Is written in the same block.
-        let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("Drop not found");
+        let token_id = self.before_claim_logic();
 
         // First, create the zero-balance account and then, claim the assets
         ext_account_creation::ext(self.root_account.clone())
@@ -45,40 +63,57 @@ impl Keypom {
             // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
             Self::ext(env::current_account_id())
                 .on_claim_account_created(
-                    drop_id,
-                    new_account_id,
-                    signer_pk
+                    token_id,
+                    new_account_id
                 )
         )
         .as_return(); 
     }
 
     #[private]
-    pub fn on_claim_account_created(&mut self, drop_id: DropId, receiver_id: AccountId, signer_pk: PublicKey) -> PromiseOrValue<bool> {
+    pub fn on_claim_account_created(&mut self, token_id: TokenId, receiver_id: AccountId) -> PromiseOrValue<bool> {
         let successful_creation = was_account_created();
 
         // If the account was successfully created, we should claim the assets
-        // Otherwise, we should re-insert the public key into state
+        // Otherwise, we should loop through all the assets in the current use and refund the tokens
         if successful_creation {
-            PromiseOrValue::Promise(self.internal_claim_assets(drop_id, receiver_id, signer_pk))
-        } else {
-            self.drop_id_for_pk.insert(&signer_pk, &drop_id);
-            PromiseOrValue::Value(false)
+            return PromiseOrValue::Promise(self.internal_claim_assets(token_id, receiver_id));
         }
+
+        // Get the assets metadata, loop through, and refund the failed claims
+        let (drop_id, key_id) = parse_token_id(&token_id);
+        let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        let cur_key_use = get_key_cur_use(&drop, &key_info);
+        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+
+        for metadata in assets_metadata {
+            let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
+            
+            let amount_to_increment = asset.on_failed_claim(&metadata.tokens_per_use.map(|x| x.0.to_string()));
+            self.internal_modify_user_balance(&drop.funder_id, amount_to_increment, false);
+            // Re-insert into storage
+            drop.asset_by_id.insert(&metadata.asset_id, &asset);
+        }
+
+        // Update the drop information
+        self.drop_by_id.insert(&drop_id, &drop);
+
+        PromiseOrValue::Value(false)
     }
 
     #[private]
     pub fn on_assets_claimed(
         &mut self, 
-        drop_id: DropId, 
-        signer_pk: PublicKey,
+        token_id: TokenId,
         token_ids_transferred: Vec<Option<TokenId>>
     ) -> PromiseOrValue<bool> {
         let num_promises = env::promise_results_count();
 
         let initial_storage = env::storage_usage();
+        let (drop_id, key_id) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        let mut key_info = drop.key_info_by_pk.remove(&signer_pk).expect("Key not found");
+        let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
@@ -94,8 +129,7 @@ impl Keypom {
                 PromiseResult::NotReady => return PromiseOrValue::Promise(
                     Self::ext(env::current_account_id())
                         .on_assets_claimed(
-                            drop_id,
-                            signer_pk,
+                            token_id,
                             token_ids_transferred
                         )
                 ),
@@ -123,27 +157,27 @@ impl Keypom {
             }
         }
 
-        // If this is the key's last remaining use, we should schedule a promise to delete it
-        // Otherwise, we should add the key back into state with the updated remaining uses
-        if key_info.remaining_uses == 1 {
-            Promise::new(env::current_account_id()).delete_key(signer_pk);
-        } else {
-            self.drop_id_for_pk.insert(&signer_pk, &drop_id);
-            key_info.remaining_uses -= 1;
-            drop.key_info_by_pk.insert(&signer_pk, &key_info);
-        }
+        // Potential error -> because we only re-insert the drop at the end of the loop, what happens
+        // If the promise result is not ready? Do we lose all the modifications that we made to the drop?
+        self.drop_by_id.insert(&drop_id, &drop);
 
-        // If the drop is now empty, we should delete it
-        // Otherwise, re-insert the drop into state
-        if drop.key_info_by_pk.is_empty() && drop_assets_empty {
-            near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
-            // Remove the drop from storage and clear the maps inside of it
-            self.drop_by_id.remove(&drop_id);
-            internal_clear_drop_storage(&mut drop);
-        } else {
-            near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, !drop_assets_empty);
-            // Put the modified drop back in storage
-            self.drop_by_id.insert(&drop_id, &drop);
+        // Now that the callback is finished, we can remove the key info from the drop
+        // Since no other functions need the key information
+        if key_info.remaining_uses == 0 {
+            drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
+
+            // Now that we've removed the key info, check if the drop is empty
+            // Otherwise, re-insert the drop into state
+            if drop.key_info_by_token_id.is_empty() && drop_assets_empty {
+                near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
+                // Remove the drop from storage and clear the maps inside of it
+                self.drop_by_id.remove(&drop_id);
+                internal_clear_drop_storage(&mut drop);
+            } else {
+                near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, !drop_assets_empty);
+                // Put the modified drop back in storage
+                self.drop_by_id.insert(&drop_id, &drop);
+            }
         }
 
         let final_storage = env::storage_usage();
@@ -159,9 +193,11 @@ impl Keypom {
     /// Internal function that loops through all assets for the given use and claims them.
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
-    pub(crate) fn internal_claim_assets(&mut self, drop_id: DropId, receiver_id: AccountId, signer_pk: PublicKey) -> Promise {
+    pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId) -> Promise {
+        let (drop_id, key_id) = parse_token_id(&token_id);
+
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        let key_info = drop.key_info_by_pk.get(&signer_pk).expect("Key not found");
+        let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
@@ -194,8 +230,7 @@ impl Keypom {
             Self::ext(env::current_account_id())
                 .with_static_gas(GAS_FOR_RESOLVE_ASSET_CLAIM)
                 .on_assets_claimed(
-                    drop_id,
-                    signer_pk,
+                    token_id,
                     token_ids_transferred
                 )
         )

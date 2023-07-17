@@ -12,16 +12,18 @@ impl Keypom {
     }
 
     /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
-    pub fn get_key_information(&self, key: PublicKey) -> ExtKeyInfo {
-        let drop_id = self
-            .drop_id_for_pk
-            .get(&key)
-            .expect("no drop ID found for key");
+    pub fn get_key_information(&self, key: Option<PublicKey>, token_id: Option<String>) -> ExtKeyInfo {
+        let token_id = token_id.unwrap_or_else(|| self
+            .token_id_by_pk
+            .get(&key.expect("Must provide a key if no token ID is provided"))
+            .expect("no token ID found for key"));
+        let (drop_id, key_id) = parse_token_id(&token_id);
+
         let drop = self
             .drop_by_id
             .get(&drop_id)
             .expect("no drop found for drop ID");
-        let key_info = drop.key_info_by_pk.get(&key).expect("Key not found");
+        let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
@@ -77,7 +79,7 @@ impl Keypom {
         self.drop_by_id
             .get(&drop_id)
             .expect("no drop found")
-            .key_info_by_pk
+            .key_info_by_token_id
             .len()
     }
 
@@ -97,14 +99,14 @@ impl Keypom {
             .expect("No drop for given ID");
         
         return drop
-            .key_info_by_pk
+            .key_info_by_token_id
             .keys()
             //skip to the index we specified in the start variable
             .skip(start as usize)
             //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
             .take(limit.unwrap_or(50) as usize)
             //we'll map the public key which are strings into Drops
-            .map(|pk| self.get_key_information(pk))
+            .map(|token_id| self.get_key_information(None, Some(token_id)))
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
             .collect()
     }

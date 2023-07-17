@@ -144,15 +144,24 @@ impl InternalAsset {
     pub fn on_failed_claim(&mut self, tokens_per_use: &Option<String>) -> Balance {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
-                let ft_to_refund = &tokens_per_use.as_ref().unwrap().parse::<u128>().unwrap();
-                near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, ft_to_refund);
-                ft_data.add_to_balance_avail(ft_to_refund);
+                if let Some(tokens_per_use) = tokens_per_use {
+                    let ft_to_refund = tokens_per_use.parse::<u128>().unwrap();
+                    near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, ft_to_refund);
+                    ft_data.add_to_balance_avail(&ft_to_refund);
+                } else {
+                    near_sdk::log!("Failed claim for FT asset");
+                }
+
                 0
             },
             InternalAsset::nft(ref mut nft_data) => {
-                let token_id = &tokens_per_use.as_ref().unwrap();
-                near_sdk::log!("Failed claim NFT asset with Token ID {}", token_id);
-                nft_data.add_to_token_ids(token_id);
+                if let Some(token_id) = tokens_per_use {
+                    near_sdk::log!("Failed claim NFT asset with Token ID {}", token_id);
+                    nft_data.add_to_token_ids(token_id);
+                } else {
+                    near_sdk::log!("Failed claim NFT asset");
+                }
+                
                 0
             },
             InternalAsset::near => {
