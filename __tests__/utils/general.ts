@@ -1,7 +1,11 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
 =======
 import { initKeypom } from "keypom-js";
+=======
+import { initKeypom, nearAPI } from "keypom-js";
+>>>>>>> 766b198 (wip)
 import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
 import { AccountBalance, BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
@@ -51,6 +55,8 @@ export async function functionCall({
   parseExecutionResults(methodName, receiver.accountId, rawValue, shouldLog, shouldPanic);
 
   if (rawValue.SuccessValue) {
+    console.log(`Start Time: ${rawValue.startMs}`)
+    console.log(`End Time: ${rawValue.endMs}`)
     return atob(rawValue.SuccessValue);
   } else {
     return rawValue.Failure?.error_message
@@ -219,12 +225,21 @@ export async function assertKeypomInternalAssets({
     for (let expectedAsset of expectedNftData) {
       // Check if the NFT data matches one from the list
       let matches = dropInfo.nft_asset_data.find((foundAsset) => {
+        console.log(`Expected Tokens: ${expectedAsset.token_ids.sort().join(',')}`)
+        console.log(`Found Tokens: ${foundAsset.token_ids.sort().join(',')}`)
         let sameTokens = expectedAsset.token_ids.sort().join(',') === foundAsset.token_ids.sort().join(',')
         console.log('sameTokens: ', sameTokens)
+        console.log(`Expected Contract ID: ${expectedAsset.contract_id}`)
+        console.log(`Found Contract: ${foundAsset.contract_id}`)
         return foundAsset.contract_id == expectedAsset.contract_id && sameTokens
       });
 
       if (!matches) {
+        console.log(`Expected Contract ID: ${expectedAsset.contract_id}`)
+        console.log(`Expected Tokens: ${expectedAsset.token_ids.sort().join(',')}`)
+
+        console.log(`Found Contract ID: ${dropInfo.nft_asset_data[0].contract_id}`)
+        console.log(`Found Tokens: ${dropInfo.nft_asset_data[0].token_ids.sort().join(',')}`)
         throw new Error(`Expected NFT Data ${expectedAsset} not found`);
       }
     }
@@ -284,19 +299,28 @@ export async function claimWithRequiredGas({
   keypomV3,
   root,
   key,
-  publicKey
+  publicKey,
+  createAccount=false,
+  newPublicKey=""
 }: {
   keypomV3: NearAccount,
   root: NearAccount,
   key: KeyPair,
-  publicKey: string
+  publicKey: string,
+  createAccount?: Boolean,
+  newPublicKey?: string
 }){
+  // Set key and get required gas
   await keypomV3.setKey(key);
-    let newAccountId = `new-account.${root.accountId}`;
-    let keyPk = publicKey;
-    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    
+  let keyPk = publicKey;
+  const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+  console.log('keyInfo: ', keyInfo)
+
+  // Claim
+  if(!createAccount){
+    let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
+    let newAccountId = `${myString}.${root.accountId}`;
+  
     let response = await functionCall({
         signer: keypomV3,
         receiver: keypomV3,
@@ -304,9 +328,34 @@ export async function claimWithRequiredGas({
         args: {account_id: newAccountId},
         gas: keyInfo.required_gas,
     })
-
+    console.log(response)
     return response
+  }
+  // CAAC
+  else{
+    // Invalid CAAC
+    if(newPublicKey == "" ){
+      console.log("CREATING ACCOUNT NEEDS A NEW PUBLIC KEY")
+      return("false")
+    }
+
+    let newAccountId = nearAPI.utils.PublicKey.fromString(newPublicKey).data
+
+    let response = await functionCall({
+      signer: keypomV3,
+      receiver: keypomV3,
+      methodName: 'create_account_and_claim',
+      args: {
+        new_account_id: newAccountId,
+        new_public_key: newPublicKey
+    },
+      gas: keyInfo.required_gas,
+    })
+    console.log(response)
+    return response
+  }
 }
+
 
 export async function generateKeyPairs(
   numKeys: number,

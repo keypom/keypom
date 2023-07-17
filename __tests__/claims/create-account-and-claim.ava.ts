@@ -122,12 +122,13 @@ test.afterEach(async t => {
 });
 
 // Multi-assets 
-test('Ensuring drop creation gas limit is accurate', async t => {
+// account creation failed -> should refund ALL assets & key is decremented
+test('Account Creation Fail in CAAC', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
     const dropId = "my-drop-id";
-    const numKeys = 1;
+    const numKeys = 2;
     let keyPairs = await generateKeyPairs(numKeys);
 
     const nftAsset1 = {
@@ -135,10 +136,8 @@ test('Ensuring drop creation gas limit is accurate', async t => {
     }
 
     const assets_per_use = {
-        1: [nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1, 
-            nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1, 
-            nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1,
-            nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1]
+        1: [nftAsset1],
+        2: [null]
     }
     
     await functionCall({
@@ -148,14 +147,14 @@ test('Ensuring drop creation gas limit is accurate', async t => {
         args: {
             drop_id: dropId,
             assets_per_use,
-            public_keys: keyPairs.publicKeys
+            public_keys: keyPairs.publicKeys[0]
         },
-        attachedDeposit: NEAR.parse("10").toString(),
+        attachedDeposit: NEAR.parse("1").toString(),
     })
 
     // 12TGas for NFT asset, 20 tokens + other gas = 293TGas
     let tokenIds: string[]= [];
-    let numTokens = 20;
+    let numTokens = 1;
     for (let i = 1; i < numTokens+1; i++) {
         let tokenId = `token-1-${i}`
 
@@ -199,13 +198,24 @@ test('Ensuring drop creation gas limit is accurate', async t => {
         },],
     })
 
-    // Claim
-    await claimWithRequiredGas({
-        keypomV3,
-        root,
-        key: keyPairs.keys[0],
-        publicKey: keyPairs.publicKeys[0]
+    await keypomV3.setKey(keyPairs.keys[0]);
+    let newAccountId = root.accountId;
+    let keyPk = keyPairs.publicKeys[0];
+    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+    console.log('keyInfo: ', keyInfo)
+    
+    let response = await functionCall({
+        signer: keypomV3,
+        receiver: keypomV3,
+        methodName: 'create_account_and_claim',
+        args: {
+            new_account_id: newAccountId,
+            new_public_key: keyPairs.publicKeys[1]
+        },
+        gas: keyInfo.required_gas,
+        shouldPanic: true
     })
+    t.is(response, "false")
 
     // After a succesful claim, Keypom keys should be back to just the one FAK
     let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
@@ -213,18 +223,24 @@ test('Ensuring drop creation gas limit is accurate', async t => {
 
 });
 
-// Lots of Keys
-// test('Bunch of Keys', async t => {
+// account creation succeeded but asset claims failed -> should refund assets that failed and do nothing for ones that weren’t
+// test('Ensuring drop creation gas limit is accurate', async t => {
 //     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2} = t.context.accounts;
 //     let initialBal = await keypomV3.balance();
 
-//     const dropId = "drop-id";
-//     // must be multiple of 100
-//     const numKeys = 10000;
+//     const dropId = "my-drop-id";
+//     const numKeys = 1;
 //     let keyPairs = await generateKeyPairs(numKeys);
-    
+
+//     const nftAsset1 = {
+//         nft_contract_id: nftContract.accountId
+//     }
+
 //     const assets_per_use = {
-//         1: [null],
+//         1: [nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1, 
+//             nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1, 
+//             nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1,
+//             nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1]
 //     }
     
 //     await functionCall({
@@ -234,60 +250,67 @@ test('Ensuring drop creation gas limit is accurate', async t => {
 //         args: {
 //             drop_id: dropId,
 //             assets_per_use,
-//             public_keys: []
+//             public_keys: keyPairs.publicKeys
 //         },
-//         attachedDeposit: NEAR.parse("0.01").toString(),
+//         attachedDeposit: NEAR.parse("10").toString(),
 //     })
 
-//     let keysAdded = 0
-//     while(keysAdded < numKeys){
-//         let keyPairs = await generateKeyPairs(100);
-//         // PK already exists on the contract
+//     // 12TGas for NFT asset, 20 tokens + other gas = 293TGas
+//     let tokenIds: string[]= [];
+//     let numTokens = 20;
+//     for (let i = 1; i < numTokens+1; i++) {
+//         let tokenId = `token-1-${i}`
+
 //         await functionCall({
 //             signer: funder,
-//             receiver: keypomV3,
-//             methodName: 'add_keys',
+//             receiver: nftContract,
+//             methodName: 'nft_mint',
 //             args: {
-//                 drop_id: dropId,
-//                 public_keys: keyPairs.publicKeys
+//                 token_id: tokenId,
+//                 metadata: {
+//                     title: "my token"
+//                 },
+//                 receiver_id: funder.accountId
 //             },
-//             attachedDeposit: NEAR.parse("1.4518865").toString()
+//             attachedDeposit: NEAR.parse("0.01").toString(),
+//             shouldLog: true
 //         })
-//         keysAdded += 100;
-//         console.log(`Keys added: ${keysAdded}`)
+
+//         await functionCall({
+//             signer: funder,
+//             receiver: nftContract,
+//             methodName: 'nft_transfer_call',
+//             args: {
+//                 receiver_id: keypomV3.accountId,
+//                 token_id: tokenId,
+//                 msg: dropId
+//             },
+//             attachedDeposit: "1"
+//         })
+
+//         tokenIds.push(tokenId)
 //     }
-    
 
-//     // Keys should not have changed from last time since drop creation has failed
-//     let keypomKeys2 = await keypomV3.viewAccessKeys(keypomV3.accountId);
-//     t.is(keypomKeys2.keys.length, numKeys + 1);
-// });
-
-// Empty
-// test('Empty', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
-
-//     const dropId = "drop-id";
-    
-//     const assets_per_use = {
-//         1: [null],
-//     }
-    
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             assets_per_use,
-//             public_keys: []
-//         },
-//         attachedDeposit: NEAR.parse("0.01").toString(),
+//     // Assert Assets
+//     await assertKeypomInternalAssets({
+//         keypom: keypomV3,
+//         dropId,
+//         expectedNftData: [{
+//             contract_id: nftContract.accountId,
+//             token_ids: tokenIds
+//         },],
 //     })
-    
-//     // Keys should not have changed from last time since drop creation has failed
-//     let keypomKeys2 = await keypomV3.viewAccessKeys(keypomV3.accountId);
-//     t.is(keypomKeys2.keys.length, 0);
-// });
 
+//     // Claim
+//     await claimWithRequiredGas({
+//         keypomV3,
+//         root,
+//         key: keyPairs.keys[0],
+//         publicKey: keyPairs.publicKeys[0]
+//     })
+
+//     // After a succesful claim, Keypom keys should be back to just the one FAK
+//     let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+//     t.is(keypomKeys.keys.length, 1);
+
+// });
