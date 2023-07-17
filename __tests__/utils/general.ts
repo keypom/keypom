@@ -285,6 +285,11 @@ export async function claimWithRequiredGas({
   root,
   key,
   publicKey
+}: {
+  keypomV3: NearAccount,
+  root: NearAccount,
+  key: KeyPair,
+  publicKey: string
 }){
   await keypomV3.setKey(key);
     let newAccountId = `new-account.${root.accountId}`;
