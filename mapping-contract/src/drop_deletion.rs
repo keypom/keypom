@@ -37,7 +37,7 @@ impl Keypom {
 
         // Get a list of all the public keys that should be deleted.
         // This is either what was passed in, or the first limit (or 100) keys in the drop
-        let public_keys = public_keys.unwrap_or_else(|| drop.key_info_by_pk.keys().take(limit.unwrap_or(100) as usize).collect());
+        let public_keys = public_keys.unwrap_or_else(|| drop.key_info_by_token_id.iter().take(limit.unwrap_or(100).into()).map(|k| k.1.pub_key).collect());
 
         // Create the batch promise for deleting the keys
         let key_deletion_promise = env::promise_batch_create(&env::current_account_id());
@@ -49,8 +49,8 @@ impl Keypom {
         // Loop through each public key and delete it
         for pk in &public_keys {
             // Get the key info for this public key (by removing - re-entrancy attack prevention)
-            let key_info = drop.key_info_by_pk.remove(pk).expect("Key not found");
-            self.drop_id_for_pk.remove(pk);
+            let token_id = self.token_id_by_pk.remove(pk).expect("Token ID not found for Public Key");
+            let key_info = drop.key_info_by_token_id.remove(&token_id).expect("Key Info not found for Token ID");
 
             // For every remaining use, we need to loop through all assets and refund
             get_total_costs_for_key(
@@ -66,7 +66,7 @@ impl Keypom {
             env::promise_batch_action_delete_key(key_deletion_promise, &pk);
         }
         
-        if drop.key_info_by_pk.is_empty() && !keep_empty_drop.unwrap_or(false) {
+        if drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(false) {
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
             internal_clear_drop_storage(&mut drop);

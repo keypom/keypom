@@ -255,7 +255,7 @@ test('Delete NFTs, some invalid using limit', async t => {
             token_ids: tokenIds
         }]
     })
-    
+
     // None of the tokens should have been transferred
     await assertNFTBalance({
         nftContract,

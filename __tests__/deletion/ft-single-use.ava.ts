@@ -98,7 +98,7 @@ test('Underpay, Withdraw, Delete', async t => {
             assets_per_use, 
             public_keys: keyPairs.publicKeys
         },
-        attachedDeposit: NEAR.parse("10").toString()
+        attachedDeposit: NEAR.parse("10").toString(),
     })
 
     await assertKeypomInternalAssets({

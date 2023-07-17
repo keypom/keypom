@@ -90,3 +90,12 @@ pub(crate) fn get_total_costs_for_key(
         *total_allowance_for_keys += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, false);
     }
 }
+
+/// Take a token ID and return the drop ID and key nonce based on the `:` delimiter.
+pub(crate) fn parse_token_id(token_id: &TokenId) -> (DropId, u64) {
+    let delimiter = ":";
+    let split: Vec<&str> = token_id.split(delimiter).collect();
+    let drop_id = split[0];
+    let key_nonce = split[1].parse::<u64>().expect("Key nonce is not a valid number");
+    return (drop_id.to_string(), key_nonce);
+}

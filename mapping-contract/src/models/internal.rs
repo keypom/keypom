@@ -8,8 +8,10 @@ pub enum StorageKeys {
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
     DropMetadata { drop_id_hash: CryptoHash },
+    TokensPerOwnerInner { account_id_hash: CryptoHash },
+    TokensPerOwner,
     DropById,
-    DropIdByPk,
+    TokenIdByPk,
     UserBalances
 }
 
@@ -30,7 +32,7 @@ pub struct InternalDrop {
     pub key_behavior_by_use: LookupMap<UseNumber, KeyBehavior>,
     
     /// Set of public keys associated with this drop mapped to their specific key information.
-    pub key_info_by_pk: UnorderedMap<PublicKey, InternalKeyInfo>,
+    pub key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo>,
     /// Keep track of the next nonce to give out to a key
     pub next_key_id: u64
 }
@@ -77,6 +79,9 @@ impl InternalDrop {
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InternalKeyInfo {
+    /// Current public key that is mapped to this key info
+    pub pub_key: PublicKey,
+
     /// How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: UseNumber,
 

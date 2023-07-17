@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Serialize, Deserialize, Serializer};
 use near_sdk::serde::ser::SerializeStruct;
@@ -17,6 +17,7 @@ mod claims;
 mod user_balances;
 mod drop_deletion;
 mod views;
+mod nft_keys;
 
 use ft_asset::*;
 use nft_asset::*;
@@ -29,12 +30,15 @@ use models::*;
 #[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
 pub struct Keypom {
     /// Map a drop ID to its internal drop data
-    drop_by_id: LookupMap<DropId, InternalDrop>,
-    /// Map of each key to its respective drop ID. This is much more efficient than repeating the
-    /// Drop data for every single key.
-    drop_id_for_pk: UnorderedMap<PublicKey, DropId>,
+    pub drop_by_id: LookupMap<DropId, InternalDrop>,
+
+    /// Get the token ID for any given public key
+    pub token_id_by_pk: UnorderedMap<PublicKey, TokenId>,
+    /// Keeps track of all the token IDs for a given account
+    pub tokens_per_owner: LookupMap<AccountId, UnorderedSet<TokenId>>,
+
     /// Keep track of the balances for each user. This is to prepay for drop creations
-    user_balances: LookupMap<AccountId, Balance>,
+    pub user_balances: LookupMap<AccountId, Balance>,
     /// Which account should all newly created accounts be sub-accounts of? (i.e `testnet` or `near`)
     pub root_account: AccountId,
 }
@@ -45,7 +49,8 @@ impl Keypom {
     pub fn new(root_account: AccountId) -> Self {
         Self {
             drop_by_id: LookupMap::new(StorageKeys::DropById),
-            drop_id_for_pk: UnorderedMap::new(StorageKeys::DropIdByPk),
+            token_id_by_pk: UnorderedMap::new(StorageKeys::TokenIdByPk),
+            tokens_per_owner: LookupMap::new(StorageKeys::TokensPerOwner),
             user_balances: LookupMap::new(StorageKeys::UserBalances),
             root_account
         }

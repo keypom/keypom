@@ -24,7 +24,7 @@ impl Keypom {
         let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
             drop_id_hash: hash_drop_id(&drop_id.to_string()),
         });
-        let mut key_info_by_pk: UnorderedMap<PublicKey, InternalKeyInfo> = UnorderedMap::new(StorageKeys::KeyInfoByPk {
+        let mut key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo> = UnorderedMap::new(StorageKeys::KeyInfoByPk {
             drop_id_hash: hash_drop_id(&drop_id.to_string()),
         });
 
@@ -57,7 +57,7 @@ impl Keypom {
         // Add the keys to the contract
         self.internal_add_keys_to_account(
             &mut next_key_id,
-            &mut key_info_by_pk,
+            &mut key_info_by_token_id,
             &drop_id,
             uses_per_key,
             &public_keys, 
@@ -70,7 +70,7 @@ impl Keypom {
             uses_per_key,
             key_behavior_by_use,
             asset_by_id,
-            key_info_by_pk,
+            key_info_by_token_id,
             next_key_id,
             funder_id: env::predecessor_account_id(),
             metadata: LazyOption::new(
@@ -132,7 +132,7 @@ impl Keypom {
         // Add the keys to the contract
         self.internal_add_keys_to_account(
             &mut drop.next_key_id,
-            &mut drop.key_info_by_pk,
+            &mut drop.key_info_by_token_id,
             &drop_id,
             uses_per_key,
             &public_keys, 
@@ -158,7 +158,7 @@ impl Keypom {
     pub(crate) fn internal_add_keys_to_account(
         &mut self,
         next_key_id: &mut u64,
-        key_info_by_pk: &mut UnorderedMap<PublicKey, InternalKeyInfo>,
+        key_info_by_token_id: &mut UnorderedMap<TokenId, InternalKeyInfo>,
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         public_keys: &Vec<PublicKey>, 
@@ -170,12 +170,13 @@ impl Keypom {
         // First loop through all the keys and add them to the drop_id_for_pk map
         // This will also ensure that no keys are already on the contract
         for pk in public_keys {
+            let token_id = format!("{}:{}", drop_id, next_key_id);
             require!(
-                self.drop_id_for_pk.insert(pk, drop_id).is_none(),
+                self.token_id_by_pk.insert(pk, &token_id).is_none(),
                 "Key already added to contract"
             );
 
-            key_info_by_pk.insert(pk, &InternalKeyInfo { remaining_uses: max_uses_per_key, key_id: *next_key_id });
+            key_info_by_token_id.insert(&token_id, &InternalKeyInfo { pub_key: pk.clone(), remaining_uses: max_uses_per_key, key_id: *next_key_id });
             *next_key_id += 1;
         }
 

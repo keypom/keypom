@@ -15,7 +15,13 @@ impl Keypom {
         
         // Remove the drop ID to prevent re-entrancy attack. Key deletion happens in another block but state
         // Is written in the same block.
-        let drop_id = self.drop_id_for_pk.remove(&signer_pk).expect("Drop not found");
+        let token_id = self
+            .token_id_by_pk
+            .get(&signer_pk)
+            .expect("No drop ID found for PK");
+
+        let (drop_id, key_id) = parse_token_id(&token_id);
+        let drop_id = self.drop_by_id.remove(&signer_pk).expect("Drop not found");
         
         self.internal_claim_assets(drop_id, account_id, signer_pk)
     }

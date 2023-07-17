@@ -249,6 +249,56 @@ test.afterEach(async t => {
 //     t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
 // });
 
+// test('Not enough $NEAR attached', async t => {
+//     const {funder, keypomV3, root} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+//     const nearAsset1 = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
+ 
+//     const nearAsset2 = {
+//         yoctonear: NEAR.parse("2").toString()
+//     }
+    
+//     const ftAsset1 = {
+//         contract_id: "foo.bar",
+//         registration_cost: NEAR.parse("1").toString(),
+//         amount: NEAR.parse("1").toString()
+//     }
+
+//     const dropId = "drop-id";
+//     const assets_per_use = {
+//         1: [nearAsset1, ftAsset1, null]
+//     }
+
+//     let keyPairs = await generateKeyPairs(1);
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             assets_per_use,
+//             public_keys: keyPairs.publicKeys
+//         },
+//         attachedDeposit: NEAR.parse("10").toString()
+//     })
+
+//     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+//     console.log('keysForDrop: ', keysForDrop)
+//     t.is(keysForDrop, 1)
+
+//     let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
+//     t.is(keypomKeys.keys.length, 2);
+
+//     let dropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
+//     console.log('dropInfo: ', dropInfo)
+
+//     let finalBal = await keypomV3.balance();
+//     displayBalances(initialBal, finalBal);
+// });
+
 test('Not enough $NEAR attached', async t => {
     const {funder, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
@@ -257,20 +307,26 @@ test('Not enough $NEAR attached', async t => {
         yoctonear: NEAR.parse("1").toString()
     }
  
-    const nearAsset2 = {
-        yoctonear: NEAR.parse("2").toString()
-    }
+    //const nearAsset2 = {
+    //     yoctonear: NEAR.parse("2").toString()
+    // }
     
-    const ftAsset1 = {
-        contract_id: "foo.bar",
-        registration_cost: NEAR.parse("1").toString(),
-        amount: NEAR.parse("1").toString()
-    }
+    // const ftAsset1 = {
+    //     contract_id: "foo.bar",
+    //     registration_cost: NEAR.parse("1").toString(),
+    //     amount: NEAR.parse("1").toString()
+    // }
 
     const dropId = "drop-id";
+    // Create an object with keys from 1 -> 1000 and every value is [nearAsset1]
     const assets_per_use = {
-        1: [nearAsset1, ftAsset1, null]
+        ...Array.from(Array(1000).keys()).reduce((acc, cur) => {
+            acc[cur + 1] = [nearAsset1]
+            return acc
+        }
+        , {})
     }
+    console.log('assets_per_use: ', assets_per_use)
 
     let keyPairs = await generateKeyPairs(1);
     await functionCall({
