@@ -1,6 +1,6 @@
 use std::fmt;
 
-use near_sdk::serde::{Deserialize, Serialize};
+use crate::*;
 
 /// Enum that represents the data type of the EventLog.
 /// The enum can either be an NftMint or an NftTransfer.

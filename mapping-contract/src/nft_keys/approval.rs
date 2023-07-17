@@ -1,5 +1,4 @@
 use crate::*;
-use near_sdk::{ext_contract};
 
 #[ext_contract(ext_non_fungible_approval_receiver)]
 trait NonFungibleTokenApprovalsReceiver {
@@ -27,17 +26,17 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).0;
         
         // Get drop in order to get key info
-        let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
+        let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
         if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
             require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * self.yocto_per_gas,
+                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
                 "Not enough allowance on the key."
             );
             
-            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
         } else {
             require!(
                 key_info.owner_id == sender_id,
@@ -52,7 +51,7 @@ impl Keypom {
 
         // Reinsert key info mapping to NFT and then add token ID mapping to public key
         drop.key_info_by_token_id.insert(&token_id, &key_info);
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_by_id.insert(&drop_id, &drop);
         
         //if some message was passed into the function, we initiate a cross contract call on the
         //account we're giving access to. 
@@ -79,7 +78,7 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).0;
     
         // Get drop in order to get key info
-        let drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
+        let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
         
 
@@ -113,17 +112,17 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).0;
         
         // Get drop in order to get key info
-        let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
+        let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
         if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
             require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * self.yocto_per_gas,
+                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
                 "Not enough allowance on the key."
             );
             
-            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
         } else {
             require!(
                 key_info.owner_id == sender_id,
@@ -139,7 +138,7 @@ impl Keypom {
         {
             // Reinsert key info mapping to NFT and then add token ID mapping to public key
             drop.key_info_by_token_id.insert(&token_id, &key_info);
-            self.drop_for_id.insert(&drop_id, &drop);
+            self.drop_by_id.insert(&drop_id, &drop);
         }
     }
 
@@ -154,17 +153,17 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).0;
         
         // Get drop in order to get key info
-        let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
+        let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
         if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
             require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * self.yocto_per_gas,
+                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
                 "Not enough allowance on the key."
             );
             
-            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * self.yocto_per_gas;
+            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
         } else {
             require!(
                 key_info.owner_id == sender_id,
@@ -179,6 +178,6 @@ impl Keypom {
 
         // Reinsert key info mapping to NFT and then add token ID mapping to public key
         drop.key_info_by_token_id.insert(&token_id, &key_info);
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_by_id.insert(&drop_id, &drop);
     }
 }

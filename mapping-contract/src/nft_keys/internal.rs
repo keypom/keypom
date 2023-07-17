@@ -12,9 +12,9 @@ impl Keypom {
         let mut tokens_set = self.tokens_per_owner.get(account_id).unwrap_or_else(|| {
             //if the account doesn't have any tokens, we create a new unordered set
             UnorderedSet::new(
-                StorageKey::TokenPerOwnerInner {
+                StorageKeys::TokensPerOwnerInner {
                     //we get a new unique prefix for the collection
-                    account_id_hash: hash_account_id(&account_id.to_string()),
+                    account_id_hash: hash_string(&account_id.to_string()),
                 }
                 .try_to_vec()
                 .unwrap(),
@@ -65,20 +65,20 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).0;
     
         // Get drop in order to get key info (and royalties if applicable)
-        let mut drop = self.drop_for_id.get(&drop_id).expect("Drop not found");
+        let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         // Decide what methods the new access key can call
-        let mut access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        if let Some(perms) = drop.config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()) {
-            match perms {
-                // If we have a config, use the config to determine what methods the access keys can call
-                ClaimPermissions::claim => {
-                    access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
-                }
-                ClaimPermissions::create_account_and_claim => {
-                    access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
-                }
-            }
-        }
+        let access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
+        // if let Some(perms) = drop.config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()) {
+        //     match perms {
+        //         // If we have a config, use the config to determine what methods the access keys can call
+        //         ClaimPermissions::claim => {
+        //             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
+        //         }
+        //         ClaimPermissions::create_account_and_claim => {
+        //             access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
+        //         }
+        //     }
+        // }
         
         // Get key info (remove token ID so we can re-insert later)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
@@ -86,11 +86,11 @@ impl Keypom {
         if sender_id == env::current_account_id() {
             // Ensure the key has enough allowance
             require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * self.yocto_per_gas,
+                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
                 "Not enough allowance on the key."
             );
             
-            allowance_to_decrement = (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0 + extra_gas.unwrap_or(Gas(0)).0) as u128 * self.yocto_per_gas;
+            allowance_to_decrement = (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0 + extra_gas.unwrap_or(Gas(0)).0) as u128 * YOCTO_PER_GAS;
         } else if sender_id != key_info.owner_id.clone() {
             //if the sender doesn't equal the owner, we check if the sender is in the approval list
             //if the token's approved account IDs doesn't contain the sender, we panic
@@ -127,21 +127,18 @@ impl Keypom {
         self.token_id_by_pk.remove(&pub_key);
 
         // Generate new key info struct
-        let new_key_info = KeyInfo {
+        let new_key_info = InternalKeyInfo {
             owner_id: receiver_id.clone(),
             pub_key: new_public_key.clone(),
             approved_account_ids: Default::default(),
             remaining_uses: key_info.remaining_uses,
-            last_used: key_info.last_used,
-            pw_per_key: key_info.pw_per_key,
-            pw_per_use: key_info.pw_per_use,
             allowance: key_info.allowance - allowance_to_decrement,
             next_approval_id: key_info.next_approval_id,
         };
 
         // Reinsert key info mapping to NFT and then add token ID mapping to public key
         drop.key_info_by_token_id.insert(&token_id, &new_key_info);
-        self.drop_for_id.insert(&drop_id, &drop);
+        self.drop_by_id.insert(&drop_id, &drop);
         
         let key_exists = self.token_id_by_pk.insert(&new_public_key, &token_id);
         assert!(key_exists.is_none(), "Key already exists");

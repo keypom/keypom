@@ -10,7 +10,8 @@ impl Keypom {
         drop_id: String, 
         public_keys: Option<Vec<PublicKey>>, 
         assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
-        drop_metadata: Option<DropMetadata>
+        drop_metadata: Option<DropMetadata>,
+        nft_config: Option<NFTKeyBehaviour>
     ) {
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
@@ -19,13 +20,13 @@ impl Keypom {
 
         // Instantiate the drop data structures
         let mut key_behavior_by_use: LookupMap<UseNumber, KeyBehavior> = LookupMap::new(StorageKeys::AssetIdsByUse {
-            drop_id_hash: hash_drop_id(&drop_id.to_string()),
+            drop_id_hash: hash_string(&drop_id.to_string()),
         });
         let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
-            drop_id_hash: hash_drop_id(&drop_id.to_string()),
+            drop_id_hash: hash_string(&drop_id.to_string()),
         });
         let mut key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo> = UnorderedMap::new(StorageKeys::KeyInfoByPk {
-            drop_id_hash: hash_drop_id(&drop_id.to_string()),
+            drop_id_hash: hash_string(&drop_id.to_string()),
         });
 
         // Parse the external assets and store them in the contract
@@ -72,11 +73,12 @@ impl Keypom {
             asset_by_id,
             key_info_by_token_id,
             next_key_id,
+            nft_config,
             funder_id: env::predecessor_account_id(),
             metadata: LazyOption::new(
                 StorageKeys::DropMetadata {
                     // We get a new unique prefix for the collection
-                    drop_id_hash: hash_drop_id(&drop_id.to_string()),
+                    drop_id_hash: hash_string(&drop_id.to_string()),
                 },
                 drop_metadata.as_ref(),
             ),
@@ -176,7 +178,15 @@ impl Keypom {
                 "Key already added to contract"
             );
 
-            key_info_by_token_id.insert(&token_id, &InternalKeyInfo { pub_key: pk.clone(), remaining_uses: max_uses_per_key, key_id: *next_key_id });
+            key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
+                allowance: 0, // TODO: change
+                pub_key: pk.clone(), 
+                remaining_uses: 
+                max_uses_per_key,
+                owner_id: env::current_account_id(), // TODO: change
+                next_approval_id: 0,
+                approved_account_ids: Default::default(),
+            });
             *next_key_id += 1;
         }
 

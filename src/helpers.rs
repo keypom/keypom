@@ -1,8 +1,8 @@
 use crate::*;
 
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
-pub(crate) fn hash_drop_id(drop_id: &String) -> CryptoHash {
-    env::sha256_array(drop_id.as_bytes())
+pub(crate) fn hash_string(string: &String) -> CryptoHash {
+    env::sha256_array(string.as_bytes())
 }
 
 /// Helper function to convert yoctoNEAR to $NEAR with 7 decimals of precision.

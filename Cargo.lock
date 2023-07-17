@@ -578,6 +578,23 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD:Cargo.lock
+=======
+name = "mapping-contract"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "memchr"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
+
+[[package]]
+>>>>>>> d0e1b22 (buildable contract):mapping-contract/Cargo.lock
 name = "memory_units"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

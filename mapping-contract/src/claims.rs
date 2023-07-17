@@ -26,7 +26,7 @@ impl Keypom {
             .get(&signer_pk)
             .expect("No drop ID found for PK");
         
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         key_info.remaining_uses -= 1;
@@ -64,7 +64,7 @@ impl Keypom {
             Self::ext(env::current_account_id())
                 .on_claim_account_created(
                     token_id,
-                    new_account_id
+                    new_account_id,
                 )
         )
         .as_return(); 
@@ -81,9 +81,9 @@ impl Keypom {
         }
 
         // Get the assets metadata, loop through, and refund the failed claims
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
@@ -111,9 +111,9 @@ impl Keypom {
         let num_promises = env::promise_results_count();
 
         let initial_storage = env::storage_usage();
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
@@ -194,7 +194,7 @@ impl Keypom {
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
     pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId) -> Promise {
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id);
 
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");

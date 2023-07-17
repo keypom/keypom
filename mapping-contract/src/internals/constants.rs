@@ -9,8 +9,15 @@ pub const ACCESS_KEY_CLAIM_METHOD_NAME: &str = "claim,nft_transfer,nft_approve,n
 /// Specifies only `create_account_and_claim` can be called with the access key
 pub const ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME: &str = "create_account_and_claim,nft_transfer,nft_approve,nft_revoke,nft_revoke_all";
 
+/// This spec can be treated like a version of the standard.
+pub const NFT_METADATA_SPEC: &str = "1.0.0";
+/// This is the name of the NFT standard we're using
+pub const NFT_STANDARD_NAME: &str = "nep171";
+
 /// How much yoctoNEAR is in 1 unit of Gas
 pub const YOCTO_PER_GAS: Balance = 100_000_000;
+/// How much to decrement the access key's allowance if there is a soft panic
+pub const GAS_FOR_PANIC_OFFSET: Gas = Gas(10_000_000_000_000); // 10 TGas
 
 /// For every cross contract call, there is a base 5 TGas cost on top of what is sent to the contract
 pub const MIN_BASE_GAS_FOR_ONE_CCC: Gas = Gas(5_000_000_000_000); // 5 TGas

@@ -17,7 +17,7 @@ impl Keypom {
             .token_id_by_pk
             .get(&key.expect("Must provide a key if no token ID is provided"))
             .expect("no token ID found for key"));
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id);
 
         let drop = self
             .drop_by_id

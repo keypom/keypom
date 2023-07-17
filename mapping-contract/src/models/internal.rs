@@ -30,7 +30,10 @@ pub struct InternalDrop {
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
     /// For every use number, keep track of what assets there are.
     pub key_behavior_by_use: LookupMap<UseNumber, KeyBehavior>,
-    
+
+    /// Information about the NFT keys and how they're rendered / payout options etc.
+    pub nft_config: Option<NFTKeyBehaviour>,
+
     /// Set of public keys associated with this drop mapped to their specific key information.
     pub key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo>,
     /// Keep track of the next nonce to give out to a key
@@ -85,8 +88,17 @@ pub struct InternalKeyInfo {
     /// How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: UseNumber,
 
-    /// Nonce for the current key.
-    pub key_id: u64,
+    /// How much allowance does the key have left.
+    pub allowance: Balance,
+
+    // Owner of the Key
+    pub owner_id: AccountId,
+
+    // List of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
+    pub approved_account_ids: HashMap<AccountId, u64>,
+
+    // The next approval ID to give out. 
+    pub next_approval_id: u64,
 }
 
 /// Outlines the different asset types that can be used in drops. This is the internal version of `ExtAsset`
@@ -161,7 +173,7 @@ impl InternalAsset {
                 } else {
                     near_sdk::log!("Failed claim NFT asset");
                 }
-                
+
                 0
             },
             InternalAsset::near => {
