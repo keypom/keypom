@@ -70,6 +70,10 @@ impl Keypom {
             nft_list,
             required_gas: u64::from(required_gas).to_string(),
             uses_remaining: key_info.remaining_uses,
+            drop_id,
+            token_id,
+            pub_key: key_info.pub_key,
+            owner_id: key_info.owner_id,
         }
     }
 

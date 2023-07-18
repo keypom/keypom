@@ -23,6 +23,11 @@ pub struct ExtKeyInfo {
    pub nft_list: Vec<NFTListData>, 
 
    /* CUSTOM */
+   pub drop_id: DropId,
+   pub pub_key: PublicKey,
+   pub token_id: TokenId,
+   pub owner_id: AccountId,
+   
    pub uses_remaining: UseNumber
 }
 
