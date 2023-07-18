@@ -1,19 +1,7 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-import { BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
-=======
-import { initKeypom } from "keypom-js";
-=======
-import { initKeypom, nearAPI } from "keypom-js";
->>>>>>> 766b198 (wip)
+import { initKeypom } from "@keypom/core";
 import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
-import { AccountBalance, BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
-<<<<<<< HEAD
->>>>>>> 2d98ca3 (started work on core architecture design)
-import { JsonDrop, JsonKeyInfo } from "./types";
-=======
->>>>>>> 08ba860 (refactored to decouple withdrawal from deletion to fix issues)
+import { AccountBalance, BN, KeyPair, NEAR, NearAccount, PublicKey, TransactionResult } from "near-workspaces";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
 import { ExtDrop, InternalFTData, InternalNFTData, PickOnly } from "./types";
 
@@ -28,10 +16,6 @@ export const CONTRACT_METADATA = {
   "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 export async function functionCall({
   signer,
   receiver,
@@ -63,7 +47,6 @@ export async function functionCall({
   }
 }
 
->>>>>>> e4f81fd (expanding tests and utility functions. Continued fixing refunds)
 export const displayBalances = (initialBalances: AccountBalance, finalBalances: AccountBalance) => {
   const initialBalancesNear = {
     available: formatNearAmount(initialBalances.available.toString()),
@@ -124,21 +107,15 @@ export async function initKeypomConnection(
     const funderKey = (await funder.getKey())?.toString()
     console.log(`funderKey: `, funderKey)
     await initKeypom({
-        near,
         network: "localnet",
         funder: {
             accountId: funder.accountId,
-            secretKey: funderKey
+            secretKey: funderKey!
         }
     })
 }
 
-<<<<<<< HEAD
->>>>>>> 2d98ca3 (started work on core architecture design)
-export function displayFailureLog(
-=======
 export function parseExecutionResults(
->>>>>>> e7cc628 (implemented custom serializer for internal structs and expanded ext drop data to include internal info. Started work on deletion tests)
   methodName: string,
   receiverId: string,
   transaction: TransactionResult,
@@ -331,9 +308,11 @@ export async function claimWithRequiredGas({
     }
 
     let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
-    newAccountId !== "" ? newAccountId : `${myString}.${root.accountId}`
+    if(newAccountId == ""){
+      newAccountId = `${myString}.${root.accountId}`
+    }
 
-  
+    console.log(`Claiming with ${newAccountId}`)
     let response = await functionCall({
         signer: keypomV3,
         receiver: keypomV3,
@@ -351,7 +330,8 @@ export async function claimWithRequiredGas({
   // Claim - use implicit account
   else{
     // Hex public key
-    let implicitAccountId = Buffer.from(nearAPI.utils.PublicKey.fromString(publicKey).data).toString('hex')
+    
+    let implicitAccountId = Buffer.from(PublicKey.fromString(publicKey).data).toString('hex')
 
     let response = await functionCall({
       signer: keypomV3,
@@ -396,132 +376,13 @@ export function defaultCallOptions(
   };
 }
 
-export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, precision: number) {
-  console.log('expected change: ', expected_change.toString())
+// export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, precision: number) {
+//   console.log('expected change: ', expected_change.toString())
 
-  let numToDivide = new BN(Math.ceil(1 / precision));
-  let range = expected_change.abs().div(numToDivide);
-  console.log('range addition: ', range.toString())
+//   let numToDivide = new BN(Math.ceil(1 / precision));
+//   let range = expected_change.abs().div(numToDivide);
+//   console.log('range addition: ', range.toString())
 
-<<<<<<< HEAD
-  let acceptableRange = {
-    upper: expected_change.abs().add(range), // 1 + .05 = 1.05
-    lower: expected_change.abs().sub(range) // 1 - .05  = .95
-  }
-  let diff = b2.sub(b1).abs();
-  console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
-  return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
-}
-
-export async function queryAllViewFunctions(
-  {
-  contract,
-  drop_id = null,
-  key = null,
-  from_index = '0',
-  limit = 50,
-  account_id = null
-  }: 
-  {
-    contract: NearAccount,
-    drop_id?: string | null,
-    key?: string | null,
-    from_index?: string | null,
-    limit?: number | null,
-    account_id?: string | null
-  }
-): Promise<{
-  keyBalance: string | null,
-  keyInformation: JsonKeyInfo | null,
-  dropInformation: JsonDrop | null,
-  keySupplyForDrop: number | null,
-  keysForDrop: JsonKeyInfo[] | null,
-  tokenIdsForDrop: string[] | null,
-  dropSupplyForOwner: number | null,
-  dropsForOwner: JsonDrop[] | null,
-  gasPrice: number,
-  rootAccount: string,
-  feesCollected: string,
-  nextDropId: number,
-  keyTotalSupply: number,
-  keys: JsonKeyInfo[],
-}> {
-  let getGasPrice: number = await contract.view('get_gas_price', {});
-  let getRootAccount: string = await contract.view('get_root_account', {});
-  let getFeesCollected: string = await contract.view('get_fees_collected', {});
-  let getNextDropId: number = await contract.view('get_next_drop_id', {});
-  let keyTotalSupply: number = await contract.view('get_key_total_supply', {});
-  let getKeys: JsonKeyInfo[] = await contract.view('get_keys', {from_index, limit});
-
-  let getKeyBalance: string | null = null;
-  let getKeyInformation: JsonKeyInfo | null = null;
-  if(key != null) {
-    getKeyBalance = await contract.view('get_key_balance', {key});
-    getKeyInformation = await contract.view('get_key_information', {key});
-  }
-
-  let getDropInformation: JsonDrop | null = null;
-  let getKeySupplyForDrop: number | null = null;
-  let getKeysForDrop: JsonKeyInfo[] | null = null;
-  let tokenIdsForDrop: string[] | null = null;
-  if(drop_id != null) {
-    getDropInformation = await contract.view('get_drop_information', {drop_id});
-    getKeySupplyForDrop = await contract.view('get_key_supply_for_drop', {drop_id});
-    getKeysForDrop = await contract.view('get_keys_for_drop', {drop_id, from_index, limit});
-    tokenIdsForDrop = await contract.view('get_nft_token_ids_for_drop', {drop_id, from_index, limit});
-  }
-
-  let dropSupplyForOwner: number | null = null;
-  let dropsForOwner: JsonDrop[] | null = null;
-  if(account_id != null) {
-    dropSupplyForOwner = await contract.view('get_drop_supply_for_owner', {account_id});
-    dropsForOwner = await contract.view('get_drops_for_owner', {account_id, from_index, limit});
-  }
-
-
-  return {
-    keyBalance: getKeyBalance,
-    keyInformation: getKeyInformation,
-    dropInformation: getDropInformation,
-    keySupplyForDrop: getKeySupplyForDrop,
-    keysForDrop: getKeysForDrop,
-    tokenIdsForDrop: tokenIdsForDrop,
-    dropSupplyForOwner: dropSupplyForOwner,
-    dropsForOwner: dropsForOwner,
-    gasPrice: getGasPrice,
-    rootAccount: getRootAccount,
-    feesCollected: getFeesCollected,
-    nextDropId: getNextDropId,
-    keyTotalSupply: keyTotalSupply,
-    keys: getKeys,
-  }
-}
-
-export async function createSeries(
-  {
-  account,
-  nftContract,
-  metadatas,
-  ids
-  }:
-  {
-    account: NearAccount,
-    nftContract: NearAccount,
-    metadatas: string[],
-    ids: string[]
-  }
-) {
-  for(let i = 0; i < metadatas.length; i++) {
-    let metadata = metadatas[i];
-    let id = ids[i];
-    
-    await account.call(nftContract, 'create_series', {
-      metadata,
-      mint_id: id,
-    }, {attachedDeposit: DEFAULT_DEPOSIT});
-  }
-}
-=======
 //   let acceptableRange = {
 //     upper: expected_change.abs().add(range), // 1 + .05 = 1.05
 //     lower: expected_change.abs().sub(range) // 1 - .05  = .95
@@ -530,4 +391,3 @@ export async function createSeries(
 //   console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
 //   return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
 // }
->>>>>>> 08ba860 (refactored to decouple withdrawal from deletion to fix issues)

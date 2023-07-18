@@ -1,5 +1,4 @@
 import anyTest, { TestFn } from "ava";
-import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
@@ -32,7 +31,7 @@ test.beforeEach(async (t) => {
     })
 
     
-    await keypomV3.deploy(`./out/mapping.wasm`);
+    await keypomV3.deploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
     const nftContract = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
     const nftContract2 = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
