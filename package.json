@@ -73,8 +73,13 @@
 >>>>>>> b19873e (failed creation tests added and wip)
 =======
 		"test:failed": "ava __tests__/creation/failed-creation.ava.ts",
+<<<<<<< HEAD
 		"test:edge": "ava __tests__/creation/edge-creation.ava.ts"
 >>>>>>> 5998ba1 (drop creation edge cases wip)
+=======
+		"test:edge": "ava __tests__/creation/edge-creation.ava.ts",
+		"test:caac": "ava __tests__/claims/create-account-and-claim.ava.ts"
+>>>>>>> dc644b9 (caac failure behaviour testing)
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",

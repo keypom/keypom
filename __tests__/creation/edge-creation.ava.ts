@@ -206,8 +206,8 @@ test('Ensuring drop creation gas limit is accurate', async t => {
         root,
         key: keyPairs.keys[0],
         publicKey: keyPairs.publicKeys[0],
-        // createAccount: true,
-        // newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1]
+        createAccount: true,
+        newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1]
     })
 
     // After a succesful claim, Keypom keys should be back to just the one FAK
@@ -215,42 +215,6 @@ test('Ensuring drop creation gas limit is accurate', async t => {
     t.is(keypomKeys.keys.length, 1);
 
 });
-
-// test('Hex ID', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
-
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
-
-//     const assets_per_use = {
-//         1: [null]
-//     }
-    
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             assets_per_use,
-//             public_keys: keyPairs.publicKeys
-//         },
-//         attachedDeposit: NEAR.parse("10").toString(),
-//     })
-
-//     // Claim
-//     let hexedAccount = await claimWithRequiredGas({
-//         keypomV3,
-//         root,
-//         key: keyPairs.keys[0],
-//         publicKey: keyPairs.publicKeys[0],
-//     })
-
-//     t.is(hexedAccount, "98793cd91a3f870fb126f66285808c7e094afcfc4eda8a970f6648cdf0dbd6de");
-
-// });
 
 // Lots of Keys
 // test('Bunch of Keys', async t => {

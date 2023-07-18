@@ -298,20 +298,29 @@ export async function claimWithRequiredGas({
   key,
   publicKey,
   createAccount=false,
-  newPublicKey=""
+  newPublicKey="",
+  newAccountId="",
+  shouldPanic=false
 }: {
   keypomV3: NearAccount,
   root: NearAccount,
   key: KeyPair,
   publicKey: string,
   createAccount?: Boolean,
-  newPublicKey?: string
+  newPublicKey?: string,
+  newAccountId?: string,
+  shouldPanic?: Boolean
 }){
   // Set key and get required gas
   await keypomV3.setKey(key);
   let keyPk = publicKey;
   const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
   console.log('keyInfo: ', keyInfo)
+
+  let panic = false
+  if(shouldPanic){
+    panic = true
+  }
 
   // CAAC - Use longest possible account ID
   if(createAccount){
@@ -322,7 +331,8 @@ export async function claimWithRequiredGas({
     }
 
     let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
-    let newAccountId = `${myString}.${root.accountId}`;
+    newAccountId !== "" ? newAccountId : `${myString}.${root.accountId}`
+
   
     let response = await functionCall({
         signer: keypomV3,
@@ -333,6 +343,7 @@ export async function claimWithRequiredGas({
           new_public_key: newPublicKey
         },
         gas: keyInfo.required_gas,
+        shouldPanic: panic
     })
     console.log(response)
     return response
@@ -350,6 +361,7 @@ export async function claimWithRequiredGas({
         account_id: implicitAccountId,
       },
       gas: keyInfo.required_gas,
+      shouldPanic: panic
     })
     console.log(response)
     return response

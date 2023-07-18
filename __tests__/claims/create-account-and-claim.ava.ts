@@ -147,7 +147,7 @@ test('Account Creation Fail in CAAC', async t => {
         args: {
             drop_id: dropId,
             assets_per_use,
-            public_keys: keyPairs.publicKeys[0]
+            public_keys: [keyPairs.publicKeys[0]]
         },
         attachedDeposit: NEAR.parse("1").toString(),
     })
@@ -198,28 +198,30 @@ test('Account Creation Fail in CAAC', async t => {
         },],
     })
 
-    await keypomV3.setKey(keyPairs.keys[0]);
-    let newAccountId = root.accountId;
-    let keyPk = keyPairs.publicKeys[0];
-    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    
-    let response = await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'create_account_and_claim',
-        args: {
-            new_account_id: newAccountId,
-            new_public_key: keyPairs.publicKeys[1]
-        },
-        gas: keyInfo.required_gas,
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 2)
+
+    let response = await claimWithRequiredGas({
+        keypomV3,
+        root,
+        key: keyPairs.keys[0],
+        publicKey: keyPairs.publicKeys[0],
+        createAccount: true,
+        newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
+        newAccountId: root.accountId,
         shouldPanic: true
     })
     t.is(response, "false")
 
-    // After a succesful claim, Keypom keys should be back to just the one FAK
-    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 1);
+    let token: {token_id: string, owner_id: string} = await nftContract.view('nft_token', {token_id: tokenIds[0]});
+    console.log(`${token.token_id} is owned by ${token.owner_id}`)
+
+    let keyInfo2: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo2.uses_remaining, 1)
+
+    // let nftTokens: Array<{owner_id: string, token_id: string}> = await nftContract.view('nft_tokens_for_owner', {account_id: funder.accountId});
+    // console.log(nftTokens)
+    // t.is(nftTokens.includes({owner_id: funder.accountId, token_id: tokenIds[0]}), true)
 
 });
 
