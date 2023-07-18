@@ -34,13 +34,13 @@ test.beforeEach(async (t) => {
     await keypomV3.deploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
     const nftContract = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
-    const nftContract2 = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
+    // const nftContract2 = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
 
     
     await root.call(root, 'new', {});
     await keypomV3.call(keypomV3, 'new', { root_account: root.accountId });
     await nftContract.call(nftContract, 'new_default_meta', { owner_id: nftContract });
-    await nftContract2.call(nftContract2, 'new_default_meta', { owner_id: nftContract2 });
+    // await nftContract2.call(nftContract2, 'new_default_meta', { owner_id: nftContract2 });
 
 
     // const ftContract1 = await root.createSubAccount('ft_contract_1');
@@ -67,35 +67,35 @@ test.beforeEach(async (t) => {
     // await functionCall({signer: ftContract2, receiver: ftContract2, methodName: 'ft_transfer', args: {receiver_id: funder.accountId, amount: NEAR.parse("1000").toString()},attachedDeposit: "1", shouldLog: false})
 
 
-    await functionCall({
-        signer: funder,
-        receiver: nftContract,
-        methodName: 'nft_mint',
-        args: {
-            token_id: "token1",
-            metadata: {
-                title: "my token"
-            },
-            receiver_id: funder.accountId
-        },
-        attachedDeposit: NEAR.parse("1").toString(),
-        shouldLog: false
-    })
+    // await functionCall({
+    //     signer: funder,
+    //     receiver: nftContract,
+    //     methodName: 'nft_mint',
+    //     args: {
+    //         token_id: "token1",
+    //         metadata: {
+    //             title: "my token"
+    //         },
+    //         receiver_id: funder.accountId
+    //     },
+    //     attachedDeposit: NEAR.parse("1").toString(),
+    //     shouldLog: false
+    // })
 
-    await functionCall({
-        signer: funder,
-        receiver: nftContract2,
-        methodName: 'nft_mint',
-        args: {
-            token_id: "token1",
-            metadata: {
-                title: "my token"
-            },
-            receiver_id: funder.accountId
-        },
-        attachedDeposit: NEAR.parse("1").toString(),
-        shouldLog: false
-    })
+    // await functionCall({
+    //     signer: funder,
+    //     receiver: nftContract2,
+    //     methodName: 'nft_mint',
+    //     args: {
+    //         token_id: "token1",
+    //         metadata: {
+    //             title: "my token"
+    //         },
+    //         receiver_id: funder.accountId
+    //     },
+    //     attachedDeposit: NEAR.parse("1").toString(),
+    //     shouldLog: false
+    // })
 
     await functionCall({
         signer: funder,
@@ -108,7 +108,7 @@ test.beforeEach(async (t) => {
     
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, funder, keypomV3, nftContract, nftContract2,  };
+    t.context.accounts = { root, funder, keypomV3, nftContract,  };
     // ftContract1, ftContract2
     t.context.rpcPort = rpcPort;
 });
@@ -120,9 +120,16 @@ test.afterEach(async t => {
     });
 });
 
-// Multi-assets 
+// EXPECTED CAAC FAILIURE BEHAVIOUR
+// Failed CAAC:
+// - no assets transferred
+// - Check if key is properly deleted in the case that it’s 0 remaining uses and check if it isn’t deleted in other case
+// - Make sure drop is deleted ONLY if it’s empty of keys and has no funded assets in it (i.e FTs & NFTs)
+// - If drop is deleted, only NEAR assets and FT registration cost should be refunded back to user balance
+
+
 // account creation failed -> should refund ALL assets & key is decremented
-test('Account Creation Fail in CAAC', async t => {
+test('Account Creation Fail in CAAC and drop still contains assets', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
@@ -197,9 +204,10 @@ test('Account Creation Fail in CAAC', async t => {
         },],
     })
 
-    // let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-    // t.is(keyInfo.uses_remaining, 2)
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 2)
 
+    // First failed claim
     let response = await claimWithRequiredGas({
         keypomV3,
         root,
@@ -212,12 +220,31 @@ test('Account Creation Fail in CAAC', async t => {
     })
     t.is(response, "false")
 
+    // Should have decremented
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 1)
+
+    // Second failed claim
+    response = await claimWithRequiredGas({
+        keypomV3,
+        root,
+        key: keyPairs.keys[0],
+        publicKey: keyPairs.publicKeys[0],
+        createAccount: true,
+        newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
+        newAccountId: root.accountId,
+        shouldPanic: true
+    })
+    t.is(response, "false")
+
+    // Token should still be owned by Keypom
     let token: {token_id: string, owner_id: string} = await nftContract.view('nft_token', {token_id: tokenIds[0]});
     console.log(`${token.token_id} is owned by ${token.owner_id}`)
+    t.is(token.owner_id, keypomV3.accountId)
 
     // Should have decremented
-    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-    t.is(keyInfo.uses_remaining, 1)
+    keyInfo = await keypomV3.view('get_drop_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 0)
     // let keyInfo2: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
     // t.is(keyInfo2.uses_remaining, 1)
 

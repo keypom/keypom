@@ -330,7 +330,6 @@ export async function claimWithRequiredGas({
   // Claim - use implicit account
   else{
     // Hex public key
-    
     let implicitAccountId = Buffer.from(PublicKey.fromString(publicKey).data).toString('hex')
 
     let response = await functionCall({
@@ -345,6 +344,31 @@ export async function claimWithRequiredGas({
     })
     console.log(response)
     return response
+  }
+}
+
+export async function doesKeyExist(
+  keypomV3: NearAccount,
+  publicKey: String
+){
+  try{
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: publicKey});
+    console.log(`Key Exists and has ${keyInfo.uses_remaining} uses remaining`)
+    true
+  }catch{
+    false
+  }
+}
+
+export async function doesDropExist(
+  keypomV3: NearAccount,
+  dropId: String
+){
+  try{
+    await keypomV3.view('get_drop_information', {drop_id: dropId});
+    true
+  }catch{
+    false
   }
 }
 
