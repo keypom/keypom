@@ -5,7 +5,9 @@ use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Serialize, Deserialize, Serializer};
 use near_sdk::serde::ser::SerializeStruct;
-use near_sdk::{env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash, Gas, Balance, ext_contract};
+use near_sdk::serde_json::json;
+use near_sdk::{env, GasWeight, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash, Gas, Balance};
+
 
 mod ft_asset;
 mod nft_asset;

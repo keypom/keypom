@@ -80,7 +80,7 @@ impl Keypom {
         //     }
         // }
         
-        // Get key info (remove token ID so we can re-insert later)
+        // Get key info (will overwrite mapping to new key info after)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
         let mut allowance_to_decrement = 0;
         if sender_id == env::current_account_id() {

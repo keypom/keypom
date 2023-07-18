@@ -1,5 +1,3 @@
-use near_sdk::{Gas, GasWeight, serde_json::json};
-
 use crate::*;
 
 /// Gas needed to execute any logic in the nft claim function

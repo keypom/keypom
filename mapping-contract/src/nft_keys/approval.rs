@@ -1,20 +1,7 @@
 use crate::*;
 
-#[ext_contract(ext_non_fungible_approval_receiver)]
-trait NonFungibleTokenApprovalsReceiver {
-    //cross contract call to an external contract that is initiated during nft_approve
-    fn nft_on_approve(
-        &mut self,
-        token_id: TokenId,
-        owner_id: AccountId,
-        approval_id: u64,
-        msg: String,
-    );
-}
-
 #[near_bindgen]
 impl Keypom {
-
     /// Allow a specific account ID to transfer a token on your behalf
     #[payable]
     pub fn nft_approve(&mut self, token_id: Option<TokenId>, account_id: AccountId, msg: Option<String>) {
@@ -29,20 +16,9 @@ impl Keypom {
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
-        if sender_id == env::current_account_id() {
-            // Ensure the key has enough allowance
-            require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
-                "Not enough allowance on the key."
-            );
-            
-            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
-        } else {
-            require!(
-                key_info.owner_id == sender_id,
-                "Sender does not own this token"
-            );
-        }
+        // Check that the sender is the owner of the token.
+        // If the token is owned by keypom, decrement the key's allowance
+        check_key_owner(sender_id, &mut key_info);
 
         //get the next approval ID if we need a new approval
         let approval_id: u64 = key_info.next_approval_id;
@@ -57,12 +33,13 @@ impl Keypom {
         //account we're giving access to. 
         if let Some(msg) = msg {
             // Defaulting GAS weight to 1, no attached deposit, and no static GAS to attach.
-            ext_non_fungible_approval_receiver::ext(account_id)
-                .nft_on_approve(
-                    token_id, 
-                    key_info.owner_id, 
-                    approval_id, 
-                    msg
+            Promise::new(account_id)
+                .function_call_weight(
+                    "nft_on_approve".to_string(),
+                    json!({ "token_id": token_id, "owner_id": key_info.owner_id, "approval_id": approval_id, "msg": msg }).to_string().into(),
+                    0,
+                    Gas(0),
+                    GasWeight(1),
                 ).as_return();
         }
     }
@@ -81,7 +58,6 @@ impl Keypom {
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
         
-
         //get the approval number for the passed in account ID
 		let approval = key_info.approved_account_ids.get(&approved_account_id);
 
@@ -115,20 +91,9 @@ impl Keypom {
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
-        if sender_id == env::current_account_id() {
-            // Ensure the key has enough allowance
-            require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
-                "Not enough allowance on the key."
-            );
-            
-            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
-        } else {
-            require!(
-                key_info.owner_id == sender_id,
-                "Sender does not own this token"
-            );
-        }
+        // Check that the sender is the owner of the token.
+        // If the token is owned by keypom, decrement the key's allowance
+        check_key_owner(sender_id, &mut key_info);
 
         //if the account ID was in the token's approval, we remove it and the if statement logic executes
         if key_info
@@ -142,42 +107,23 @@ impl Keypom {
         }
     }
 
-    //revoke all accounts from transferring the token on your behalf
-    #[payable]
-    pub fn nft_revoke_all(&mut self, token_id: Option<TokenId>) {
-        let sender_id = env::predecessor_account_id();
-        let sender_pk = env::signer_account_pk();
+}
 
-        // Token ID is either from sender PK or passed in
-        let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
-        let drop_id = parse_token_id(&token_id).0;
+/// Check that the sender is the owner of the token.
+/// If the token is owned by keypom, decrement the key's allowance
+pub(crate) fn check_key_owner (sender_id: AccountId, key_info: &mut InternalKeyInfo) {
+    if sender_id == env::current_account_id() {
+        // Ensure the key has enough allowance
+        require!(
+            key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
+            "Not enough allowance on the key."
+        );
         
-        // Get drop in order to get key info
-        let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
-
-        if sender_id == env::current_account_id() {
-            // Ensure the key has enough allowance
-            require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
-                "Not enough allowance on the key."
-            );
-            
-            key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
-        } else {
-            require!(
-                key_info.owner_id == sender_id,
-                "Sender does not own this token"
-            );
-        }
-
-        //if the account ID was in the token's approval, we remove it and the if statement logic executes
-        key_info
-            .approved_account_ids
-            .clear();
-
-        // Reinsert key info mapping to NFT and then add token ID mapping to public key
-        drop.key_info_by_token_id.insert(&token_id, &key_info);
-        self.drop_by_id.insert(&drop_id, &drop);
+        key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
+    } else {
+        require!(
+            key_info.owner_id == sender_id,
+            "Sender does not own this token"
+        );
     }
 }
