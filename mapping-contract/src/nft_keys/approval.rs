@@ -111,7 +111,7 @@ impl Keypom {
 
 /// Check that the sender is the owner of the token.
 /// If the token is owned by keypom, decrement the key's allowance
-pub(crate) fn check_key_owner (sender_id: AccountId, key_info: &mut InternalKeyInfo) {
+pub(crate) fn check_key_owner(sender_id: AccountId, key_info: &mut InternalKeyInfo) {
     if sender_id == env::current_account_id() {
         // Ensure the key has enough allowance
         require!(

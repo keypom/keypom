@@ -54,11 +54,13 @@ impl Keypom {
 
         // Keep track of all the key IDs 
         let mut next_key_id = 0;
-
+        // Keep track of all the events
+        let mut event_logs = Vec::new();
         // Add the keys to the contract
         self.internal_add_keys_to_account(
             &mut next_key_id,
             &mut key_info_by_token_id,
+            &mut event_logs,
             &drop_id,
             uses_per_key,
             &public_keys, 
@@ -93,6 +95,9 @@ impl Keypom {
             total_allowance_per_key,
             net_storage,
         );
+
+        // Now that everything is done (no more potential for panics), we can log the events
+        log_events(event_logs);
     }
 
     #[payable]
@@ -131,10 +136,13 @@ impl Keypom {
             &drop.key_behavior_by_use
         );
 
+        // Keep track of all the events
+        let mut event_logs = Vec::new();
         // Add the keys to the contract
         self.internal_add_keys_to_account(
             &mut drop.next_key_id,
             &mut drop.key_info_by_token_id,
+            &mut event_logs,
             &drop_id,
             uses_per_key,
             &public_keys, 
@@ -153,6 +161,9 @@ impl Keypom {
             total_allowance_per_key,
             net_storage,
         );
+
+        // Now that everything is done (no more potential for panics), we can log the events
+        log_events(event_logs);
     }
 
     /// Loops through public keys and adds them to the current contract account
@@ -161,18 +172,24 @@ impl Keypom {
         &mut self,
         next_key_id: &mut u64,
         key_info_by_token_id: &mut UnorderedMap<TokenId, InternalKeyInfo>,
+        event_logs: &mut Vec<EventLog>,
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
-        public_keys: &Vec<PublicKey>, 
+        public_keys: &Vec<PublicKey>,
         method_names: &str, 
         allowance: Balance
     ) {
         let current_account_id = &env::current_account_id();
 
-        // First loop through all the keys and add them to the drop_id_for_pk map
-        // This will also ensure that no keys are already on the contract
+        // Create a new promise batch to create all the access keys
+        let promise = env::promise_batch_create(current_account_id);
+
+        // Loop through the public keys and add them to the contract.
+        // None of these promises will fire if there's a panic so it's
+        // Fine to add them in the loop
         for pk in public_keys {
             let token_id = format!("{}:{}", drop_id, next_key_id);
+            let token_owner = env::current_account_id(); // TODO: change
             require!(
                 self.token_id_by_pk.insert(pk, &token_id).is_none(),
                 "Key already added to contract"
@@ -181,29 +198,42 @@ impl Keypom {
             key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
                 allowance: 0, // TODO: change
                 pub_key: pk.clone(), 
-                remaining_uses: 
-                max_uses_per_key,
-                owner_id: env::current_account_id(), // TODO: change
+                remaining_uses: max_uses_per_key,
+                owner_id: token_owner.clone(), 
                 next_approval_id: 0,
                 approved_account_ids: Default::default(),
             });
-            *next_key_id += 1;
-        }
-
-        // Create a new promise batch to create all the access keys
-        let promise = env::promise_batch_create(current_account_id);
-
-        // Loop through each public key and create the access keys
-        for pk in public_keys {
-            // Must assert in the loop so no access keys are made?
+            
+            // Add this key to the batch
             env::promise_batch_action_add_key_with_function_call(
                 promise,
                 pk,
-                0,
+                0, // Nonce
                 allowance,
                 current_account_id,
                 method_names,
             );
+
+            // Construct the mint log as per the events standard and add it to the list of logs
+            let nft_mint_log: EventLog = EventLog {
+                // Standard name ("nep171").
+                standard: NFT_STANDARD_NAME.to_string(),
+                // Version of the standard ("nft-1.0.0").
+                version: NFT_METADATA_SPEC.to_string(),
+                // The data related with the event stored in a vector.
+                event: EventLogVariant::NftMint(vec![NftMintLog {
+                    // Owner of the token.
+                    owner_id: token_owner.to_string(),
+                    // Vector of token IDs that were minted.
+                    token_ids: vec![token_id.to_string()],
+                    // An optional memo to include.
+                    memo: None,
+                }]),
+            };
+
+            event_logs.push(nft_mint_log);
+
+            *next_key_id += 1;
         }
 
         env::promise_return(promise);
