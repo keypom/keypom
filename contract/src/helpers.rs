@@ -116,3 +116,12 @@ pub(crate) fn parse_token_id(token_id: &TokenId) -> (DropId, u64) {
     let key_nonce = split[1].parse::<u64>().expect("Key nonce is not a valid number");
     return (drop_id.to_string(), key_nonce);
 }
+
+/// Helper function to convert an external asset to an internal asset
+pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAsset {
+    if let Some(asset) = ext_asset {
+        return asset.to_internal_asset();
+    }
+
+    return InternalAsset::none;
+}
