@@ -216,8 +216,9 @@ test('Account Creation Fail in CAAC', async t => {
     let token: {token_id: string, owner_id: string} = await nftContract.view('nft_token', {token_id: tokenIds[0]});
     console.log(`${token.token_id} is owned by ${token.owner_id}`)
 
+    // Should have decremented
     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-    t.is(keyInfo.uses_remaining, 2)
+    t.is(keyInfo.uses_remaining, 1)
     // let keyInfo2: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
     // t.is(keyInfo2.uses_remaining, 1)
 
