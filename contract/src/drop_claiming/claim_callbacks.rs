@@ -18,41 +18,33 @@ impl Keypom {
         let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        let cur_key_use = get_key_cur_use(&drop, &key_info);
+        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
-        // Now that the callback is finished, we can remove the key info from the drop
-        // Since no other functions need the key information
-        if key_info.remaining_uses == 0 {
-            drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
-            let mut is_drop_empty = false;
+        for metadata in assets_metadata {
+            let amount_to_increment = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").refund_amount(&metadata.tokens_per_use.map(|t| t.into()));
+            self.internal_modify_user_balance(&drop.funder_id, amount_to_increment, false);
+        }
 
-            // Loop through all the assets in the drop and ensure they're empty
-            for asset in drop.asset_by_id.values() {
-                if !asset.is_empty() {
-                    is_drop_empty = true;
-                    break;
-                }
-            }
-
-            // Now that we've removed the key info, check if the drop is empty
-            // Otherwise, re-insert the drop into state
-            if drop.key_info_by_token_id.is_empty() && is_drop_empty {
-                near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
-                // Remove the drop from storage and clear the maps inside of it
-                self.drop_by_id.remove(&drop_id);
-                internal_clear_drop_storage(&mut drop);
-            } else {
-                near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, !is_drop_empty);
-                // Put the modified drop back in storage
-                self.drop_by_id.insert(&drop_id, &drop);
+        // Loop through all the assets in the drop and ensure they're empty
+        let mut is_drop_empty = false;
+        for asset in drop.asset_by_id.values() {
+            if !asset.is_empty() {
+                is_drop_empty = true;
+                break;
             }
         }
 
-        let final_storage = env::storage_usage();
-        // Some storage was freed so we should refund the user's balance
-        if final_storage < initial_storage {
-            let storage_cost = (initial_storage - final_storage) as u128 * env::storage_byte_cost();
-            self.internal_modify_user_balance(&drop.funder_id, storage_cost, false);
-        }
+        // If the key no longer has uses, it should be removed from the drop.
+        // In addition, if the drop has no keys and no more refundable assets, it should be removed from storage
+        self.handle_key_cleanup(
+            &mut drop,
+            &key_info,
+            &token_id,
+            &drop_id,
+            is_drop_empty,
+            initial_storage
+        );
         
         PromiseOrValue::Value(false)
     }
@@ -116,31 +108,16 @@ impl Keypom {
         // If the promise result is not ready? Do we lose all the modifications that we made to the drop?
         self.drop_by_id.insert(&drop_id, &drop);
 
-        // Now that the callback is finished, we can remove the key info from the drop
-        // Since no other functions need the key information
-        if key_info.remaining_uses == 0 {
-            drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
-
-            // Now that we've removed the key info, check if the drop is empty
-            // Otherwise, re-insert the drop into state
-            if drop.key_info_by_token_id.is_empty() && drop_assets_empty {
-                near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
-                // Remove the drop from storage and clear the maps inside of it
-                self.drop_by_id.remove(&drop_id);
-                internal_clear_drop_storage(&mut drop);
-            } else {
-                near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, !drop_assets_empty);
-                // Put the modified drop back in storage
-                self.drop_by_id.insert(&drop_id, &drop);
-            }
-        }
-
-        let final_storage = env::storage_usage();
-        // Some storage was freed so we should refund the user's balance
-        if final_storage < initial_storage {
-            let storage_cost = (initial_storage - final_storage) as u128 * env::storage_byte_cost();
-            self.internal_modify_user_balance(&drop.funder_id, storage_cost, false);
-        }
+        // If the key no longer has uses, it should be removed from the drop.
+        // In addition, if the drop has no keys and no more refundable assets, it should be removed from storage
+        self.handle_key_cleanup(
+            &mut drop,
+            &key_info,
+            &token_id,
+            &drop_id,
+            drop_assets_empty,
+            initial_storage
+        );
 
         PromiseOrValue::Value(was_successful)
     }

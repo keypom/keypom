@@ -87,6 +87,44 @@ impl Keypom {
                 )
         )
     }
+
+    /// Check if key is empty and perform cleanup if it is
+    /// This includes removing the drop if it now has 0 keys and no refundable assets
+    pub(crate) fn handle_key_cleanup(
+        &mut self,
+        drop: &mut InternalDrop,
+        key_info: &InternalKeyInfo,
+        token_id: &TokenId,
+        drop_id: &DropId,
+        is_drop_empty: bool,
+        initial_storage: u64
+    ) {
+        // Now that the callback is finished, we can remove the key info from the drop
+        // Since no other functions need the key information
+        if key_info.remaining_uses == 0 {
+            drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
+    
+            // Now that we've removed the key info, check if the drop is empty
+            // Otherwise, re-insert the drop into state
+            if drop.key_info_by_token_id.is_empty() && is_drop_empty {
+                near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
+                // Remove the drop from storage and clear the maps inside of it
+                self.drop_by_id.remove(&drop_id);
+                internal_clear_drop_storage(drop);
+            } else {
+                near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, !is_drop_empty);
+                // Put the modified drop back in storage
+                self.drop_by_id.insert(&drop_id, &drop);
+            }
+        }
+    
+        let final_storage = env::storage_usage();
+        // Some storage was freed so we should refund the user's balance
+        if final_storage < initial_storage {
+            let storage_cost = (initial_storage - final_storage) as u128 * env::storage_byte_cost();
+            self.internal_modify_user_balance(&drop.funder_id, storage_cost, false);
+        }
+    }
 }
 
 /// Returns whether or not the account was successfully created when firing the cross contract call to `create_account`
