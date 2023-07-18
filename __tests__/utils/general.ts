@@ -1,21 +1,9 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-import { BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
-=======
-import { initKeypom } from "keypom-js";
-=======
 import { initKeypom, nearAPI } from "keypom-js";
->>>>>>> 766b198 (wip)
 import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
-import { AccountBalance, BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
-<<<<<<< HEAD
->>>>>>> 2d98ca3 (started work on core architecture design)
-import { JsonDrop, JsonKeyInfo } from "./types";
-=======
->>>>>>> 08ba860 (refactored to decouple withdrawal from deletion to fix issues)
 import { formatNearAmount } from "near-api-js/lib/utils/format";
-import { ExtDrop, InternalFTData, InternalNFTData, PickOnly } from "./types";
+import { AccountBalance, BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
+import { ExtDrop, InternalFTData, InternalNFTData, JsonDrop, JsonKeyInfo, PickOnly } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -28,10 +16,6 @@ export const CONTRACT_METADATA = {
   "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 export async function functionCall({
   signer,
   receiver,
@@ -63,7 +47,6 @@ export async function functionCall({
   }
 }
 
->>>>>>> e4f81fd (expanding tests and utility functions. Continued fixing refunds)
 export const displayBalances = (initialBalances: AccountBalance, finalBalances: AccountBalance) => {
   const initialBalancesNear = {
     available: formatNearAmount(initialBalances.available.toString()),

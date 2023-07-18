@@ -9,22 +9,22 @@ use near_sdk::serde_json::json;
 use near_sdk::{env, GasWeight, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, PublicKey, Promise, PromiseOrValue, require, CryptoHash, Gas, Balance};
 
 
-mod ft_asset;
-mod nft_asset;
+mod assets;
 mod drop_creation;
 mod internals;
 mod helpers;
 mod models;
-mod claims;
+mod drop_claiming;
 mod user_balances;
 mod drop_deletion;
 mod views;
 mod nft_keys;
 
-use ft_asset::*;
-use nft_asset::*;
+use assets::*;
 use nft_keys::*;
 use drop_deletion::*;
+use drop_creation::*;
+use drop_claiming::*;
 use internals::*;
 use helpers::*;
 use models::*;
