@@ -11,7 +11,10 @@ impl Keypom {
         public_keys: Option<Vec<PublicKey>>, 
         assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
         drop_metadata: Option<DropMetadata>,
-        nft_config: Option<NFTKeyBehaviour>
+        nft_config: Option<NFTKeyBehaviour>,
+        
+        // What will the owners of the keys be? Must match length of public keys
+        key_owners: Option<Vec<Option<AccountId>>>
     ) {
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
@@ -64,6 +67,7 @@ impl Keypom {
             &drop_id,
             uses_per_key,
             &public_keys, 
+            key_owners,
             ACCESS_KEY_BOTH_METHOD_NAMES, 
             total_allowance_per_key
         );
@@ -104,7 +108,10 @@ impl Keypom {
     pub fn add_keys(
         &mut self, 
         drop_id: String, 
-        public_keys: Vec<PublicKey>
+        public_keys: Vec<PublicKey>,
+
+        // What will the owners of the keys be? Must match length of public keys
+        key_owners: Option<Vec<Option<AccountId>>>
     ) {
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
@@ -146,6 +153,7 @@ impl Keypom {
             &drop_id,
             uses_per_key,
             &public_keys, 
+            key_owners,
             ACCESS_KEY_BOTH_METHOD_NAMES, 
             total_allowance_per_key
         );
@@ -176,10 +184,16 @@ impl Keypom {
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         public_keys: &Vec<PublicKey>,
+        key_owners: Option<Vec<Option<AccountId>>>,
         method_names: &str, 
         allowance: Balance
     ) {
         let current_account_id = &env::current_account_id();
+
+        
+        // Ensure that a key owner is specified for each key
+        let num_pks = public_keys.len();
+        require!(key_owners.clone().map(|o| o.len()).unwrap_or(num_pks) == num_pks, "Must specify an owner for each key");
 
         // Create a new promise batch to create all the access keys
         let promise = env::promise_batch_create(current_account_id);
@@ -187,9 +201,10 @@ impl Keypom {
         // Loop through the public keys and add them to the contract.
         // None of these promises will fire if there's a panic so it's
         // Fine to add them in the loop
-        for pk in public_keys {
+        for (i, pk) in public_keys.iter().enumerate() {
             let token_id = format!("{}:{}", drop_id, next_key_id);
-            let token_owner = env::current_account_id(); // TODO: change
+            let token_owner = key_owners.as_ref().and_then(|o| o[i].clone()).unwrap_or(env::current_account_id());
+            
             require!(
                 self.token_id_by_pk.insert(pk, &token_id).is_none(),
                 "Key already added to contract"
