@@ -59,8 +59,7 @@ impl Keypom {
         receiver_id: AccountId,
         token_id: String,
         approval_id: Option<u64>,
-        new_public_key: PublicKey,
-        extra_gas: Option<Gas>
+        new_public_key: PublicKey
     ) -> AccountId {
         let drop_id = parse_token_id(&token_id).0;
     
@@ -82,16 +81,7 @@ impl Keypom {
         
         // Get key info (will overwrite mapping to new key info after)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
-        let mut allowance_to_decrement = 0;
-        if sender_id == env::current_account_id() {
-            // Ensure the key has enough allowance
-            require!(
-                key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
-                "Not enough allowance on the key."
-            );
-            
-            allowance_to_decrement = (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0 + extra_gas.unwrap_or(Gas(0)).0) as u128 * YOCTO_PER_GAS;
-        } else if sender_id != key_info.owner_id.clone() {
+        if sender_id != key_info.owner_id.clone() {
             //if the sender doesn't equal the owner, we check if the sender is in the approval list
             //if the token's approved account IDs doesn't contain the sender, we panic
             if !key_info.approved_account_ids.contains_key(&sender_id) {
@@ -132,7 +122,6 @@ impl Keypom {
             pub_key: new_public_key.clone(),
             approved_account_ids: Default::default(),
             remaining_uses: key_info.remaining_uses,
-            allowance: key_info.allowance - allowance_to_decrement,
             next_approval_id: key_info.next_approval_id,
         };
 
@@ -176,10 +165,22 @@ impl Keypom {
         // Delete the original key
         Promise::new(env::current_account_id()).delete_key(pub_key);
 
+        // Get the allowance that should be transferred to the new key
+        let mut total_cost_for_key: Balance = 0;
+        let mut total_allowance_for_key: Balance = 0;
+        get_total_costs_for_key(
+            &mut total_cost_for_key,
+            &mut total_allowance_for_key,
+            key_info.remaining_uses,
+            drop.uses_per_key,
+            &drop.asset_by_id,
+            &drop.key_behavior_by_use
+        );
+
         // Add the new key with the corresponding allowance
         Promise::new(env::current_account_id()).add_access_key(
             new_public_key.clone(),
-            new_key_info.allowance,
+            total_allowance_for_key,
             env::current_account_id(),
             access_key_method_names.to_string(),
         );

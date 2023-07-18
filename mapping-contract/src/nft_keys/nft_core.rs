@@ -21,7 +21,7 @@ impl Keypom {
 
         // Token ID is either from sender PK or passed in
         let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
-        self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo, None);
+        self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo);
     }
 
     /// Get the token object info for a specific token ID

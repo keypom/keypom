@@ -38,7 +38,7 @@ impl Keypom {
         let nft_royalty = drop.nft_config.as_ref().and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
 
         // Perform the transfer and then calculate payouts
-        let old_owner_id = self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo, None);
+        let old_owner_id = self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo);
         
         calculate_payouts(old_owner_id, nft_royalty.clone(), u128::from(balance), max_len_payout.unwrap_or(MAX_LEN_PAYOUT))
     }

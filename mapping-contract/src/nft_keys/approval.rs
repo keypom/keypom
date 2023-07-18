@@ -18,7 +18,7 @@ impl Keypom {
 
         // Check that the sender is the owner of the token.
         // If the token is owned by keypom, decrement the key's allowance
-        check_key_owner(sender_id, &mut key_info);
+        check_key_owner(sender_id, &key_info);
 
         //get the next approval ID if we need a new approval
         let approval_id: u64 = key_info.next_approval_id;
@@ -93,7 +93,7 @@ impl Keypom {
 
         // Check that the sender is the owner of the token.
         // If the token is owned by keypom, decrement the key's allowance
-        check_key_owner(sender_id, &mut key_info);
+        check_key_owner(sender_id, &key_info);
 
         //if the account ID was in the token's approval, we remove it and the if statement logic executes
         if key_info
@@ -109,18 +109,9 @@ impl Keypom {
 
 }
 
-/// Check that the sender is the owner of the token.
-/// If the token is owned by keypom, decrement the key's allowance
-pub(crate) fn check_key_owner(sender_id: AccountId, key_info: &mut InternalKeyInfo) {
-    if sender_id == env::current_account_id() {
-        // Ensure the key has enough allowance
-        require!(
-            key_info.allowance >= env::prepaid_gas().0 as u128 * YOCTO_PER_GAS,
-            "Not enough allowance on the key."
-        );
-        
-        key_info.allowance -= (env::used_gas().0 + GAS_FOR_PANIC_OFFSET.0) as u128 * YOCTO_PER_GAS;
-    } else {
+/// Check that the sender is either the owner of the token or the current account (meaning they signed with the key).
+pub(crate) fn check_key_owner(sender_id: AccountId, key_info: &InternalKeyInfo) {
+    if sender_id != env::current_account_id() {
         require!(
             key_info.owner_id == sender_id,
             "Sender does not own this token"

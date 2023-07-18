@@ -88,9 +88,6 @@ pub struct InternalKeyInfo {
     /// How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: UseNumber,
 
-    /// How much allowance does the key have left.
-    pub allowance: Balance,
-
     // Owner of the Key
     pub owner_id: AccountId,
 

@@ -211,7 +211,6 @@ impl Keypom {
             );
 
             key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
-                allowance: 0, // TODO: change
                 pub_key: pk.clone(), 
                 remaining_uses: max_uses_per_key,
                 owner_id: token_owner.clone(), 
