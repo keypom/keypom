@@ -206,8 +206,8 @@ test('Ensuring drop creation gas limit is accurate', async t => {
         root,
         key: keyPairs.keys[0],
         publicKey: keyPairs.publicKeys[0],
-        createAccount: true,
-        newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1]
+        // createAccount: true,
+        // newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1]
     })
 
     // After a succesful claim, Keypom keys should be back to just the one FAK
@@ -246,8 +246,6 @@ test('Ensuring drop creation gas limit is accurate', async t => {
 //         root,
 //         key: keyPairs.keys[0],
 //         publicKey: keyPairs.publicKeys[0],
-//         createAccount: true,
-//         newPublicKey: "abc"
 //     })
 
 //     t.is(hexedAccount, "98793cd91a3f870fb126f66285808c7e094afcfc4eda8a970f6648cdf0dbd6de");

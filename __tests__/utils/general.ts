@@ -226,12 +226,8 @@ export async function assertKeypomInternalAssets({
     for (let expectedAsset of expectedNftData) {
       // Check if the NFT data matches one from the list
       let matches = dropInfo.nft_asset_data.find((foundAsset) => {
-        console.log(`Expected Tokens: ${expectedAsset.token_ids.sort().join(',')}`)
-        console.log(`Found Tokens: ${foundAsset.token_ids.sort().join(',')}`)
         let sameTokens = expectedAsset.token_ids.sort().join(',') === foundAsset.token_ids.sort().join(',')
         console.log('sameTokens: ', sameTokens)
-        console.log(`Expected Contract ID: ${expectedAsset.contract_id}`)
-        console.log(`Found Contract: ${foundAsset.contract_id}`)
         return foundAsset.contract_id == expectedAsset.contract_id && sameTokens
       });
 
@@ -343,35 +339,20 @@ export async function claimWithRequiredGas({
   }
   // Claim - use implicit account
   else{
-    const stringToHex = (str: string) => {
-      let hex = '';
-      for (let i = 0; i < str.length; i++) {
-        const charCode = str.charCodeAt(i);
-        const hexValue = charCode.toString(16);
-    
-        // Pad with zeros to ensure two-digit representation
-        hex += hexValue.padStart(2, '0');
-      }
-      return hex;
-    };
-
     // Hex public key
-    let implicitAccountId = stringToHex(nearAPI.utils.PublicKey.fromString("ed25519:BGCCDDHfysuuVnaNVtEhhqeT4k9Muyem3Kpgq2U1m9HX").data.toString())
-    console.log(implicitAccountId)
-    return implicitAccountId
+    let implicitAccountId = Buffer.from(nearAPI.utils.PublicKey.fromString(publicKey).data).toString('hex')
 
-    // let response = await functionCall({
-    //   signer: keypomV3,
-    //   receiver: keypomV3,
-    //   methodName: 'create_account_and_claim',
-    //   args: {
-    //     new_account_id: newAccountId,
-    //     new_public_key: newPublicKey
-    // },
-    //   gas: keyInfo.required_gas,
-    // })
-    // console.log(response)
-    // return response
+    let response = await functionCall({
+      signer: keypomV3,
+      receiver: keypomV3,
+      methodName: 'claim',
+      args: {
+        account_id: implicitAccountId,
+      },
+      gas: keyInfo.required_gas,
+    })
+    console.log(response)
+    return response
   }
 }
 
