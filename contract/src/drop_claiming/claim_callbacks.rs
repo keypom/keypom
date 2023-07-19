@@ -23,7 +23,7 @@ impl Keypom {
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
         for metadata in assets_metadata {
-            let amount_to_increment = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").refund_amount(&metadata.tokens_per_use.map(|t| t.into()));
+            let amount_to_increment = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").get_yocto_refund_amount(&metadata.tokens_per_use.map(|t| t.into()));
             self.internal_modify_user_balance(&drop.funder_id, amount_to_increment, false);
         }
 

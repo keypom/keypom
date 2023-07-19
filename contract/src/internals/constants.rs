@@ -47,8 +47,12 @@ pub const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
 pub const NONE_ASSET_ID: &str = "none-asset";
 pub const GAS_FOR_NONE_ASSET: Gas = Gas(450_000_000_000); // 0.45 TGas
 
+/// Asset ID for the near asset
 pub const NEAR_ASSET_ID: &str = "near";
 pub const GAS_FOR_NEAR_TRANSFER: Gas = Gas(3_000_000_000_000); // 3 TGas
+
+/// Asset ID for the fc assets (this should never be used though and is just a fallback)
+pub const FALLBACK_FC_ASSET_ID: &str = "fc";
 
 /// Which specific use is something being acted on. This is not zero indexed (i.e the first use is 1)
 pub type UseNumber = u16;

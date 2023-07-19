@@ -100,7 +100,7 @@ pub(crate) fn get_total_costs_for_use(
         total_gas_for_use += gas_for_asset;
 
         // Get the refund amount for the asset
-        *total_cost_for_use += internal_asset.refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
+        *total_cost_for_use += internal_asset.get_yocto_refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
     }
     require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, format!("Cannot exceed 300 TGas for any given key use. Found {}", total_gas_for_use.0));
 

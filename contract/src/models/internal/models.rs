@@ -58,11 +58,12 @@ pub struct KeyBehavior {
 /// Outlines the different asset types that can be used in drops. This is the internal version of `ExtAsset`
 /// And represents the data that is stored inside the Keypom contract to keep track of assets
 #[allow(non_camel_case_types)]
-#[derive(BorshSerialize, BorshDeserialize, Debug, Serialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub enum InternalAsset {
     ft(InternalFTData),
     nft(InternalNFTData),
+    fc(FCData),
     near,
     none
 }

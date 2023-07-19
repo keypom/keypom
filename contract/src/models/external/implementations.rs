@@ -11,7 +11,10 @@ impl ExtAsset {
             ExtAsset::NFTAsset(nft_data) => InternalAsset::nft(InternalNFTData::new(
                 nft_data.nft_contract_id.clone(),
             )),
-            ExtAsset::NearAsset(_) => InternalAsset::near,
+            ExtAsset::FCAsset(fc_data) => InternalAsset::fc(FCData::new(
+                fc_data.methods.clone()
+            )),
+            ExtAsset::NearAsset(_) => InternalAsset::near
         }
     }
 
@@ -20,7 +23,8 @@ impl ExtAsset {
         match self {
             ExtAsset::FTAsset(ft_data) => ft_data.ft_amount.into(),
             ExtAsset::NFTAsset(_) => U128(0),
-            ExtAsset::NearAsset(near_data) => near_data.yoctonear.into()
+            ExtAsset::NearAsset(near_data) => near_data.yoctonear.into(),
+            ExtAsset::FCAsset(_) => U128(0)
         }
     }
 
@@ -30,6 +34,10 @@ impl ExtAsset {
             ExtAsset::FTAsset(ft_data) => ft_data.ft_contract_id.to_string(),
             ExtAsset::NFTAsset(nft_data) => nft_data.nft_contract_id.to_string(),
             ExtAsset::NearAsset(_) => NEAR_ASSET_ID.to_string(),
+            ExtAsset::FCAsset(_) => {
+                near_sdk::log!("FC Asset does not have an asset ID. THIS SHOULD NEVER HAPPEN");
+                FALLBACK_FC_ASSET_ID.to_string()
+            }
         }
     }
 }

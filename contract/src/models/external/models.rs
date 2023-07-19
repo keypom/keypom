@@ -9,6 +9,7 @@ pub enum ExtAsset {
     FTAsset(ExtFTData),
     NearAsset(ExtNEARData),
     NFTAsset(ExtNFTData),
+    FCAsset(FCData)
 }
 
 /// Data going into or out of the Keypom contract representing the presence of fungible tokens as an asset for a drop
@@ -47,6 +48,7 @@ pub struct ExtDrop {
 
     pub nft_asset_data: Vec<InternalNFTData>,
     pub ft_asset_data: Vec<InternalFTData>,
+    pub fc_asset_data: Vec<FCData>,
 
     pub metadata: Option<DropMetadata>
 }

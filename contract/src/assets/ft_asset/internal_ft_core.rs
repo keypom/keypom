@@ -1,7 +1,7 @@
 use crate::*;
 
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
 pub struct InternalFTData {
     /// Account ID of the token contract
     pub contract_id: AccountId,
@@ -34,13 +34,6 @@ impl InternalFTData {
             balance_avail: 0,
             registration_cost
         }
-    }
-
-    /// Return the amount of NEAR required to have been deposited for 1 claim
-    /// This is a standard method that should be implemented by each struct and should
-    /// Be called by each data type before each claim
-    pub fn required_near_for_claim(&self) -> Balance {
-        self.registration_cost
     }
 
     /// Query whether or not enough fungible tokens have been deposited to cover the claim
