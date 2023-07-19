@@ -354,9 +354,9 @@ export async function doesKeyExist(
   try{
     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: publicKey});
     console.log(`Key Exists and has ${keyInfo.uses_remaining} uses remaining`)
-    true
+    return true
   }catch{
-    false
+    return false
   }
 }
 
@@ -364,12 +364,11 @@ export async function doesDropExist(
   keypomV3: NearAccount,
   dropId: String
 ){
-  try{
-    await keypomV3.view('get_drop_information', {drop_id: dropId});
-    true
-  }catch{
-    false
-  }
+    let response = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    if(response !== null){
+      return true
+    }
+    return false
 }
 
 

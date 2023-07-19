@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection, doesKeyExist, doesDropExist } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop, ExtFTData, InternalNFTData } from "../utils/types";
@@ -204,6 +204,7 @@ test('Account Creation Fail in CAAC and drop still contains assets', async t => 
         },],
     })
 
+    // 2 uses at the start
     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
     t.is(keyInfo.uses_remaining, 2)
 
@@ -220,7 +221,7 @@ test('Account Creation Fail in CAAC and drop still contains assets', async t => 
     })
     t.is(response, "false")
 
-    // Should have decremented
+    // Key uses should have decremented
     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
     t.is(keyInfo.uses_remaining, 1)
 
@@ -242,15 +243,25 @@ test('Account Creation Fail in CAAC and drop still contains assets', async t => 
     console.log(`${token.token_id} is owned by ${token.owner_id}`)
     t.is(token.owner_id, keypomV3.accountId)
 
-    // Should have decremented
-    keyInfo = await keypomV3.view('get_drop_information', {key: keyPairs.publicKeys[0]});
-    t.is(keyInfo.uses_remaining, 0)
-    // let keyInfo2: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-    // t.is(keyInfo2.uses_remaining, 1)
+    // Key should be deleted but drop should still exist
+    t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-    // let nftTokens: Array<{owner_id: string, token_id: string}> = await nftContract.view('nft_tokens_for_owner', {account_id: funder.accountId});
-    // console.log(nftTokens)
-    // t.is(nftTokens.includes({owner_id: funder.accountId, token_id: tokenIds[0]}), true)
+    // Drop should still have assets
+    // let dropInformation: {nft_asset_data: [{contract_id: string, token_ids: string[]}]} = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    // let tokensInDrop: Boolean = dropInformation.nft_asset_data.includes({contract_id: nftContract.accountId, token_ids: tokenIds});
+    // t.is(tokensInDrop, true)
+    // let dropInfo = await keypomV3.view(`get_drop_information`, {drop_id: dropId})
+    // console.log(dropInfo)
+    // Assert Assets
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids: tokenIds
+        },],
+    })
 
 });
 

@@ -28,10 +28,10 @@ impl Keypom {
         }
 
         // Loop through all the assets in the drop and ensure they're empty
-        let mut is_drop_empty = false;
+        let mut is_drop_empty = true;
         for asset in drop.asset_by_id.values() {
             if !asset.is_empty() {
-                is_drop_empty = true;
+                is_drop_empty = false;
                 break;
             }
         }

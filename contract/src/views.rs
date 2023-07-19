@@ -7,6 +7,7 @@ impl Keypom {
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
             return Some(drop.to_external_drop());
         } else {
+            near_sdk::log!("Drop {} not found!", drop_id);
             None
         }
     }
