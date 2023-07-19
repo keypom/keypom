@@ -200,6 +200,7 @@ export async function assertKeypomInternalAssets({
   if (expectedNftData.length != dropInfo.nft_asset_data.length) {
     throw new Error(`Expected ${expectedNftData.length} NFTs but found ${dropInfo.nft_asset_data.length}`);
   } else {
+    let count = 0;
     for (let expectedAsset of expectedNftData) {
       // Check if the NFT data matches one from the list
       let matches = dropInfo.nft_asset_data.find((foundAsset) => {
@@ -212,16 +213,19 @@ export async function assertKeypomInternalAssets({
         console.log(`Expected Contract ID: ${expectedAsset.contract_id}`)
         console.log(`Expected Tokens: ${expectedAsset.token_ids.sort().join(',')}`)
 
-        console.log(`Found Contract ID: ${dropInfo.nft_asset_data[0].contract_id}`)
-        console.log(`Found Tokens: ${dropInfo.nft_asset_data[0].token_ids.sort().join(',')}`)
+        console.log(`Found Contract ID: ${dropInfo.nft_asset_data[count].contract_id}`)
+        console.log(`Found Tokens: ${dropInfo.nft_asset_data[count].token_ids.sort().join(',')}`)
         throw new Error(`Expected NFT Data ${expectedAsset} not found`);
       }
+
+      count += 1;
     }
   }
 
   if (expectedFtData.length != dropInfo.ft_asset_data.length) {
     throw new Error(`Expected ${expectedFtData.length} FTs but found ${dropInfo.ft_asset_data.length}`);
   } else {
+    let count = 0;
     for (let expectedAsset of expectedFtData) {
       // Check if the NFT data matches one from the list
       let matches = dropInfo.ft_asset_data.find((foundAsset) => {
@@ -229,8 +233,15 @@ export async function assertKeypomInternalAssets({
       });
 
       if (!matches) {
+        console.log(`Expected Contract ID: ${expectedAsset.contract_id}`);
+        console.log(`Found Contract ID: ${dropInfo.ft_asset_data[count].contract_id}`);
+        console.log(`Expected Balance: ${expectedAsset.balance_avail}`);
+        console.log(`Found Balance: ${dropInfo.ft_asset_data[count].balance_avail}`);
+
+
         throw new Error(`Expected NFT Data ${expectedAsset} not found`);
       }
+      count += 1;
     }
   }
 }

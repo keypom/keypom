@@ -58,6 +58,8 @@ impl Keypom {
     ) -> PromiseOrValue<bool> {
         let num_promises = env::promise_results_count();
 
+        near_sdk::log!("On assets claimed");
+
         let initial_storage = env::storage_usage();
         let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
@@ -82,8 +84,11 @@ impl Keypom {
                             token_ids_transferred
                         )
                 ),
-                PromiseResult::Successful(_) => {},
+                PromiseResult::Successful(_) => {
+                    near_sdk::log!("Asset claim succeeded");
+                },
                 PromiseResult::Failed => {
+                    near_sdk::log!("Asset claim failed");
                     let mut tokens_per_use = metadata.tokens_per_use.map(|x| x.0.to_string());
                     
                     // If it's a NFT, we need to get the token ID

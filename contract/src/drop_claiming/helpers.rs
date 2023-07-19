@@ -69,7 +69,6 @@ impl Keypom {
 
             // Some cases may result in no promise index (i.e not enough balance)
             promises.push(asset.claim_asset(&receiver_id, &metadata.tokens_per_use.map(|x| x.into())));
-
             
             drop.asset_by_id.insert(&metadata.asset_id, &asset);
         }
@@ -78,7 +77,6 @@ impl Keypom {
         self.drop_by_id.insert(&drop_id, &drop);
 
         let resolve = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises");
-
         resolve.then(
             Self::ext(env::current_account_id())
                 .with_static_gas(GAS_FOR_RESOLVE_ASSET_CLAIM)

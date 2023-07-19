@@ -66,18 +66,23 @@ impl InternalAsset {
     pub fn claim_asset(&mut self, receiver_id: &AccountId, tokens_per_use: &Option<Balance>) -> Promise {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
+                near_sdk::log!("Matched to FT");
                 return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
             },
             InternalAsset::nft(ref mut nft_data) => {
+                near_sdk::log!("Matched to NFT");
                 return nft_data.claim_nft_asset(receiver_id)
             },
             InternalAsset::fc(ref mut fc_data) => {
+                near_sdk::log!("Matched to FC");
                 return fc_data.claim_fc_asset()
             },
             InternalAsset::near => {
+                near_sdk::log!("Matched to NEAR");
                 return Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
             },
             InternalAsset::none => {
+                near_sdk::log!("Matched to nothing :(");
                 return Promise::new(env::current_account_id());
             }
         }
