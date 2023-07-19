@@ -7,12 +7,14 @@ impl InternalDrop {
 
         let mut nft_list = vec![];
         let mut ft_list = vec![];
+        let mut fc_list = vec![];
 
-        // Loop through all the valus in the asset_by_id hashmap and add them to the corresponding vectors
+        // Loop through all the values in the asset_by_id hashmap and add them to the corresponding vectors
         self.asset_by_id.values().for_each(|asset| {
             match asset {
                 InternalAsset::nft(nft_asset) => nft_list.push(nft_asset),
                 InternalAsset::ft(ft_asset) => ft_list.push(ft_asset),
+                InternalAsset::fc(fc_asset) => fc_list.push(fc_asset),
                 _ => {}
             }
         });
@@ -34,6 +36,7 @@ impl InternalDrop {
             assets_per_use,
             nft_asset_data: nft_list,
             ft_asset_data: ft_list,
+            fc_asset_data: fc_list,
             metadata: self.metadata.get()
         }
     }
@@ -52,6 +55,7 @@ impl InternalAsset {
             InternalAsset::nft(nft_data) => Some(ExtAsset::NFTAsset(ExtNFTData {
                 nft_contract_id: nft_data.contract_id.clone()
             })),
+            InternalAsset::fc(fc_data) => Some(ExtAsset::FCAsset(FCData::new(fc_data.methods))),
             InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: asset_metadata.tokens_per_use.unwrap().into() })),
             InternalAsset::none => None
         }
@@ -66,6 +70,9 @@ impl InternalAsset {
             },
             InternalAsset::nft(ref mut nft_data) => {
                 return nft_data.claim_nft_asset(receiver_id)
+            },
+            InternalAsset::fc(ref mut fc_data) => {
+                return fc_data.claim_fc_asset()
             },
             InternalAsset::near => {
                 return Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
@@ -98,6 +105,10 @@ impl InternalAsset {
                 near_sdk::log!("Failed claim for NEAR asset. Refunding {} to the user's balance", near_tokens);
                 near_tokens
             },
+            InternalAsset::fc(_) => {
+                near_sdk::log!("Failed claim for FC asset. Cannot refund.");
+                0
+            },
             InternalAsset::none => {
                 near_sdk::log!("Failed claim for null asset. SHOULD NEVER HAPPEN");
                 0
@@ -110,6 +121,7 @@ impl InternalAsset {
         match self {
             InternalAsset::ft(ft) => ft.enough_balance(&1),
             InternalAsset::nft(nft) => nft.is_empty(),
+            InternalAsset::fc(_) => true,
             InternalAsset::near => true,
             InternalAsset::none => true
         }
@@ -118,7 +130,7 @@ impl InternalAsset {
     /// Standard function for refunding assets
     /// This does not include any ext assets such as FTs or NFTs.
     /// This simply refunds the funder for the $NEAR cost associated with 1 key use for the given asset
-    pub fn refund_amount(&self, tokens_per_use: &Option<Balance>) -> Balance {
+    pub fn get_yocto_refund_amount(&self, tokens_per_use: &Option<Balance>) -> Balance {
         match self {
             InternalAsset::ft(ft_data) => {
                 return ft_data.registration_cost;
@@ -127,6 +139,7 @@ impl InternalAsset {
             InternalAsset::near => {
                 return tokens_per_use.unwrap();
             },
+            InternalAsset::fc(fc_data) => fc_data.get_yocto_refund_amount(),
             InternalAsset::none => 0
         }
     }
@@ -136,6 +149,7 @@ impl InternalAsset {
         match self {
             InternalAsset::ft(ft_data) => ft_data.get_required_gas_for_claim(),
             InternalAsset::nft(nft_data) => nft_data.get_required_gas_for_claim(),
+            InternalAsset::fc(fc_data) => fc_data.get_required_gas_for_claim(),
             InternalAsset::near => GAS_FOR_NEAR_TRANSFER,
             InternalAsset::none => GAS_FOR_NONE_ASSET
         }

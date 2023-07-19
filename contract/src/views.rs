@@ -31,6 +31,8 @@ impl Keypom {
 
         let mut ft_list: Vec<FTListData> = Vec::new();
         let mut nft_list: Vec<NFTListData> = Vec::new();
+        let mut fc_list: Vec<FCData> = Vec::new();
+
         let mut yoctonear = 0;
         let mut num_nfts = 0;
         for metadata in assets_metadata {
@@ -57,6 +59,9 @@ impl Keypom {
                     
                     num_nfts += 1;
                 },
+                InternalAsset::fc(fc) => {
+                    fc_list.push(fc);
+                },
                 InternalAsset::near => {
                     yoctonear += metadata.tokens_per_use.unwrap().0;
                 },
@@ -68,6 +73,7 @@ impl Keypom {
             yoctonear: U128(yoctonear),
             ft_list,
             nft_list,
+            fc_list,
             required_gas: u64::from(required_gas).to_string(),
             uses_remaining: key_info.remaining_uses,
             drop_id,

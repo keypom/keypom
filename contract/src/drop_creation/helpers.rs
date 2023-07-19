@@ -121,7 +121,13 @@ pub(crate) fn parse_ext_assets_per_use (
         // adding them to the asset_by_id lookup map if they weren't already present
         // If there aren't any assets, the vector will be of length 1
         for ext_asset in ext_assets {
-            let asset_id = ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string());
+            // If the external asset is of type FCData, the asset ID will be the length of the vector
+            // Otherwise, it will be the asset ID specified
+            let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
+                asset_by_id.len().to_string()
+            } else {
+                ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
+            };
             let tokens_per_use = ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use())).unwrap_or(U128(0));
 
             assets_metadata.push(AssetMetadata {
