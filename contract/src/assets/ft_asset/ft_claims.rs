@@ -12,6 +12,9 @@ pub const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
 /// Minimum Gas required to register a user on the FT contract
 /// 5 TGas
 pub const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000);
+/// Minimum Gas required to execute any callback logic after the claim is complete
+/// 2 TGas
+pub const MIN_GAS_FOR_FT_CALLBACK_LOGIC: Gas = Gas(2_000_000_000_000);
 
 impl InternalFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).

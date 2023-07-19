@@ -62,7 +62,8 @@ impl Keypom {
         let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
-        let cur_key_use = get_key_cur_use(&drop, &key_info);
+        // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
+        let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
         // Iterate through all the promises and get the results
