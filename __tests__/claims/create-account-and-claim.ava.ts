@@ -387,7 +387,7 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
     // FT claim to work: no more assets and thus drop deleted
     // Dont let near asset claim to fail - expect a refund here as well
     const assets_per_use = {
-        1: [nftAsset1],
+        1: [ftAsset1],
         2: [nearAsset1]
     }
     
@@ -403,61 +403,52 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
         attachedDeposit: NEAR.parse("3").toString(),
     })
 
-    let tokenIds: string[]= [];
-    let numTokens = 1;
-    for (let i = 1; i < numTokens+1; i++) {
-        let tokenId = `token-1-${i}`
+    // let tokenIds: string[]= [];
+    // let numTokens = 1;
+    // for (let i = 1; i < numTokens+1; i++) {
+    //     let tokenId = `token-1-${i}`
 
-        await functionCall({
-            signer: funder,
-            receiver: nftContract,
-            methodName: 'nft_mint',
-            args: {
-                token_id: tokenId,
-                metadata: {
-                    title: "my token"
-                },
-                receiver_id: funder.accountId
-            },
-            attachedDeposit: NEAR.parse("0.01").toString(),
-            shouldLog: true
-        })
+    //     await functionCall({
+    //         signer: funder,
+    //         receiver: nftContract,
+    //         methodName: 'nft_mint',
+    //         args: {
+    //             token_id: tokenId,
+    //             metadata: {
+    //                 title: "my token"
+    //             },
+    //             receiver_id: funder.accountId
+    //         },
+    //         attachedDeposit: NEAR.parse("0.01").toString(),
+    //         shouldLog: true
+    //     })
 
-        await functionCall({
-            signer: funder,
-            receiver: nftContract,
-            methodName: 'nft_transfer_call',
-            args: {
-                receiver_id: keypomV3.accountId,
-                token_id: tokenId,
-                msg: dropId
-            },
-            attachedDeposit: "1"
-        })
+    //     await functionCall({
+    //         signer: funder,
+    //         receiver: nftContract,
+    //         methodName: 'nft_transfer_call',
+    //         args: {
+    //             receiver_id: keypomV3.accountId,
+    //             token_id: tokenId,
+    //             msg: dropId
+    //         },
+    //         attachedDeposit: "1"
+    //     })
 
-        tokenIds.push(tokenId)
-    }
+    //     tokenIds.push(tokenId)
+    // }
 
-    // await sendFTs(funder, "1", keypomV3, ftContract1, dropId)
+    await sendFTs(funder, "1", keypomV3, ftContract1, dropId)
     
 
     // Assert Assets
-    // await assertKeypomInternalAssets({
-    //     keypom: keypomV3,
-    //     dropId,
-    //     expectedFtData: [{
-    //         contract_id: ftContract1.accountId,
-    //         balance_avail: '1',
-    //     }]
-    // })
-
     await assertKeypomInternalAssets({
         keypom: keypomV3,
         dropId,
-        expectedNftData: [{
-            contract_id: nftContract.accountId,
-            token_ids: tokenIds
-        },],
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: '1',
+        }]
     })
 
     // 2 uses at the start
@@ -476,30 +467,18 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
         newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
     })
 
-    let token: {token_id: string, owner_id: string} = await nftContract.view('nft_token', {token_id: tokenIds[0]});
-    console.log(`${token.token_id} is owned by ${token.owner_id}`)
-
     // Key uses should have decremented
     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
     t.is(keyInfo.uses_remaining, 1)
 
     // Assert Assets
-    // await assertKeypomInternalAssets({
-    //     keypom: keypomV3,
-    //     dropId,
-    //     expectedFtData: [{
-    //         contract_id: ftContract1.accountId,
-    //         balance_avail: '1',
-    //     }]
-    // })
-
     await assertKeypomInternalAssets({
         keypom: keypomV3,
         dropId,
-        expectedNftData: [{
-            contract_id: nftContract.accountId,
-            token_ids: tokenIds
-        },],
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: '1',
+        }]
     })
 
     // Second failed claim
@@ -521,7 +500,7 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
 
     let endingFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
     let refund: number = endingFunderBal - startingFunderBal;
-    t.is(refund.toString() == NEAR.parse("2").toString(), true)
+    t.is(refund.toString() == NEAR.parse("1").toString(), true)
 });
 
 // account creation succeeded but asset claims failed -> should refund assets that failed and do nothing for ones that weren’t

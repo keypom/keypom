@@ -50,7 +50,7 @@ impl Keypom {
 
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
-        let cur_key_use = get_key_cur_use(&drop, &key_info);
+        let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
         let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
         //let promises;
@@ -76,7 +76,6 @@ impl Keypom {
         self.drop_by_id.insert(&drop_id, &drop);
 
         let resolve = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises");
-        near_sdk::log!("Right before .then");
         resolve.then(
             Self::ext(env::current_account_id())
                 .with_static_gas(GAS_FOR_RESOLVE_ASSET_CLAIM)

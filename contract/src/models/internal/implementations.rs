@@ -64,7 +64,6 @@ impl InternalAsset {
     /// Standard function for claiming an asset regardless of its type
     /// This will return a promise for every asset that will be resolved in a standard callback
     pub fn claim_asset(&mut self, receiver_id: &AccountId, tokens_per_use: &Option<Balance>) -> Promise {
-        near_sdk::log!("claim_asset match statement");
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 near_sdk::log!("Matched to FT");
@@ -84,10 +83,6 @@ impl InternalAsset {
             },
             InternalAsset::none => {
                 near_sdk::log!("Matched to nothing :(");
-                return Promise::new(env::current_account_id());
-            },
-            _ => {
-                near_sdk::log!("Unable to Match Asset");
                 return Promise::new(env::current_account_id());
             }
         }
