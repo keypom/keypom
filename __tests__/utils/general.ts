@@ -286,7 +286,6 @@ export async function claimWithRequiredGas({
   key,
   publicKey,
   createAccount=false,
-  newPublicKey="",
   newAccountId="",
   shouldPanic=false
 }: {
@@ -295,7 +294,6 @@ export async function claimWithRequiredGas({
   key: KeyPair,
   publicKey: string,
   createAccount?: Boolean,
-  newPublicKey?: string,
   newAccountId?: string,
   shouldPanic?: Boolean
 }){
@@ -312,12 +310,11 @@ export async function claimWithRequiredGas({
 
   // CAAC - Use longest possible account ID
   if(createAccount){
-    // Invalid CAAC
-    if(newPublicKey == "" ){
-      console.log("CREATING ACCOUNT NEEDS A NEW PUBLIC KEY")
-      return("false")
-    }
+    // Generate new keypair
+    let keyPairs = await generateKeyPairs(1);
+    let newPublicKey = keyPairs.publicKeys[0];
 
+    // Account name
     let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
     if(newAccountId == ""){
       newAccountId = `${myString}.${root.accountId}`

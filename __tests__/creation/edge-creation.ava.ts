@@ -207,7 +207,6 @@ test('Ensuring drop creation gas limit is accurate', async t => {
         key: keyPairs.keys[0],
         publicKey: keyPairs.publicKeys[0],
         createAccount: true,
-        newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1]
     })
 
     // After a succesful claim, Keypom keys should be back to just the one FAK
