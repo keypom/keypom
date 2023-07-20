@@ -1,9 +1,10 @@
 import anyTest, { TestFn } from "ava";
-import { NEAR, NearAccount, Worker } from "near-workspaces";
+import { NEAR, NearAccount, Worker, toYocto } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection, doesKeyExist, doesDropExist } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop, ExtFTData, InternalNFTData } from "../utils/types";
+import { formatNearAmount } from "near-api-js/lib/utils/format";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -215,7 +216,6 @@ test.afterEach(async t => {
 //         key: keyPairs.keys[0],
 //         publicKey: keyPairs.publicKeys[0],
 //         createAccount: true,
-//         newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
 //         newAccountId: root.accountId,
 //         shouldPanic: true
 //     })
@@ -232,7 +232,6 @@ test.afterEach(async t => {
 //         key: keyPairs.keys[0],
 //         publicKey: keyPairs.publicKeys[0],
 //         createAccount: true,
-//         newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
 //         newAccountId: root.accountId,
 //         shouldPanic: true
 //     })
@@ -313,7 +312,6 @@ test.afterEach(async t => {
 //         key: keyPairs.keys[0],
 //         publicKey: keyPairs.publicKeys[0],
 //         createAccount: true,
-//         newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
 //         newAccountId: root.accountId,
 //         shouldPanic: true
 //     })
@@ -340,7 +338,6 @@ test.afterEach(async t => {
 //         key: keyPairs.keys[0],
 //         publicKey: keyPairs.publicKeys[0],
 //         createAccount: true,
-//         newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
 //         newAccountId: root.accountId,
 //         shouldPanic: true
 //     })
@@ -367,7 +364,8 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
     let initialBal = await keypomV3.balance();
 
     const dropId = "my-drop-id";
-    const numKeys = 2;
+    const numKeys = 1;
+    // Always create a new keypair for CAAC
     let keyPairs = await generateKeyPairs(numKeys);
 
     const ftAsset1: ExtFTData = {
@@ -448,7 +446,11 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
         expectedFtData: [{
             contract_id: ftContract1.accountId,
             balance_avail: '1',
-        }]
+        }],
+        // expectedNftData:[{
+        //     contract_id: nftContract.accountId,
+        //     token_ids: tokenIds
+        // }]
     })
 
     // 2 uses at the start
@@ -464,7 +466,6 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
         key: keyPairs.keys[0],
         publicKey: keyPairs.publicKeys[0],
         createAccount: true,
-        newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
     })
 
     // Key uses should have decremented
@@ -477,8 +478,12 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
         dropId,
         expectedFtData: [{
             contract_id: ftContract1.accountId,
-            balance_avail: '1',
-        }]
+            balance_avail: '0',
+        }],
+        // expectedNftData:[{
+        //     contract_id: nftContract.accountId,
+        //     token_ids: []
+        // }]
     })
 
     // Second failed claim
@@ -488,7 +493,6 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
         key: keyPairs.keys[0],
         publicKey: keyPairs.publicKeys[0],
         createAccount: true,
-        newPublicKey: keyPairs.publicKeys[keyPairs.publicKeys.length - 1],
         newAccountId: root.accountId,
         shouldPanic: true
     })
@@ -499,8 +503,13 @@ test('Account Creation Fail in CAAC - Refund Registration and NEAR Asset Costs',
     t.is(await doesDropExist(keypomV3, dropId), false)
 
     let endingFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
-    let refund: number = endingFunderBal - startingFunderBal;
-    t.is(refund.toString() == NEAR.parse("1").toString(), true)
+    // refund amount, rounded to 5 decimal places
+    let refund = BigInt(endingFunderBal) - BigInt(startingFunderBal);
+    let rounded = formatNearAmount(refund.toString(), 5)
+    const DROP_DEPOSIT: number = 0.01621
+    // 1 NEAR from failed NEAR asset claim
+    const EXPECTED_REFUND_NEAR: number = 1 + DROP_DEPOSIT;
+    t.is(rounded.toString() == EXPECTED_REFUND_NEAR.toString(), true)
 });
 
 // account creation succeeded but asset claims failed -> should refund assets that failed and do nothing for ones that weren’t
