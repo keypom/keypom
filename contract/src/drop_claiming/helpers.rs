@@ -45,8 +45,8 @@ impl Keypom {
     /// Internal function that loops through all assets for the given use and claims them.
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
-    pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId) -> Promise {
-        let (drop_id, _) = parse_token_id(&token_id);
+    pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> Promise {
+        let (drop_id, key_id) = parse_token_id(&token_id);
 
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
@@ -57,6 +57,7 @@ impl Keypom {
         //let promises;
         let mut promises = Vec::new();
         let mut token_ids_transferred = Vec::new();
+        let mut fc_arg_idx = 0;
         for metadata in assets_metadata {
             let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             
@@ -67,8 +68,24 @@ impl Keypom {
                 token_ids_transferred.push(None);
             }
 
+            // Try to get the fc args for the asset. If the length of the fc_args outer vector is not the same as the number of FC assets
+            // Meaning that the user didn't specify fc args (even as none) for each asset, just default it to None once it gets out of range
+            let fc_args_for_asset = fc_args.as_ref().and_then(|a| a.get(fc_arg_idx).cloned()).unwrap_or(None);
+            
             // Some cases may result in no promise index (i.e not enough balance)
-            promises.push(asset.claim_asset(&receiver_id, &metadata.tokens_per_use.map(|x| x.into())));
+            promises.push(asset.claim_asset(
+                &receiver_id, 
+                &metadata.tokens_per_use.map(|x| x.into()),
+                fc_args_for_asset,
+                drop_id.clone(),
+                key_id.to_string(),
+                drop.funder_id.clone()
+            ));
+
+            // Increment the number of fc args we've seen
+            if let InternalAsset::fc(_) = &asset {
+                fc_arg_idx += 1;
+            }
             
             drop.asset_by_id.insert(&metadata.asset_id, &asset);
         }

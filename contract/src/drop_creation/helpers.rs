@@ -100,7 +100,7 @@ impl Keypom {
 }
 
 /// Parses the external assets and stores them in the drop's internal maps
-pub(crate) fn parse_ext_assets_per_use (
+pub fn parse_ext_assets_per_use (
     uses_per_key: UseNumber,
     assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>, 
     key_behavior_by_use: &mut LookupMap<UseNumber, KeyBehavior>,

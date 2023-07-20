@@ -5,13 +5,13 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     #[private]
-    pub fn on_new_account_created(&mut self, token_id: TokenId, receiver_id: AccountId) -> PromiseOrValue<bool> {
+    pub fn on_new_account_created(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> PromiseOrValue<bool> {
         let successful_creation = was_account_created();
 
         // If the account was successfully created, we should claim the assets
         // Otherwise, we should loop through all the assets in the current use and refund the tokens
         if successful_creation {
-            return PromiseOrValue::Promise(self.internal_claim_assets(token_id, receiver_id));
+            return PromiseOrValue::Promise(self.internal_claim_assets(token_id, receiver_id, fc_args));
         }
 
         let initial_storage = env::storage_usage();
