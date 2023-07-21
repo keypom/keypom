@@ -280,23 +280,29 @@ export async function assertFTBalance({
   }
 }
 
+// To CAAC, only pass in createAccount = true
+// In order to force a CAAC claim failure, pass in receiverId and createAccount = true
+// To claim with implicit, pass in useImplicitAccount = true
+// To claim, only pass in receiverId
 export async function claimWithRequiredGas({
   keypom,
   keyPair,
-  receiverId,
   root,
   fcArgs,
+  receiverId,
   createAccount=false,
-  useLongAccount=false,
+  useLongAccount=true,
+  useImplicitAccount=false,
   shouldPanic=false
 }: {
   keypom: NearAccount,
   keyPair: KeyPair,
   root: NearAccount,
-  receiverId: string,
   fcArgs?: UserProvidedFCArgs,
+  receiverId?: string,
   createAccount?: boolean,
   useLongAccount?: boolean,
+  useImplicitAccount?: boolean,
   shouldPanic?: boolean
 }) {
   // Set key and get required gas
@@ -306,16 +312,34 @@ export async function claimWithRequiredGas({
   const keyInfo: {required_gas: string} = await keypom.view('get_key_information', {key: keyPk});
   console.log('keyInfo: ', keyInfo)
 
+  // To allow custom receiver ID without needing to specify useLongAccount
+  if(receiverId != undefined && !createAccount){
+    useLongAccount = false;
+  }
+
+  // customized error message to reduce chances of accidentally passing in this receiverid and throwing an error
+  let errorMsg = "Error-" + Date.now();
+
+  // actualReceiverId for non-forced-failure case
   let actualReceiverId = useLongAccount ? 
-    createAccount ? `ac${Date.now().toString().repeat(4)}.${root.accountId}` : Buffer.from(PublicKey.fromString(keyPk).data).toString('hex')
+    createAccount ? `ac${Date.now().toString().repeat(4)}.${root.accountId}` 
+    : useImplicitAccount ?  Buffer.from(PublicKey.fromString(keyPk).data).toString('hex') : errorMsg
     :
     receiverId
   ;
+  
+  if(actualReceiverId == errorMsg){
+    throw new Error("Must specify desired usage, see claimWithRequiredGas function for more information")
+  }
 
   if (createAccount) {
     // Generate new keypair
     let keyPairs = await generateKeyPairs(1);
     let newPublicKey = keyPairs.publicKeys[0];
+
+    if(receiverId != undefined){
+      actualReceiverId = receiverId
+    }
 
     console.log(`create_account_and_claim with ${actualReceiverId}`)
     let response = await functionCall({
