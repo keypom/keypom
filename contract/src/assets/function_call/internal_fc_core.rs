@@ -11,6 +11,8 @@ impl FCData {
     /// Initialize a new instance of function call data.
     /// All checks such as prohibited methods and valid receivers are done here.
     pub fn new(methods: Vec<MethodData>) -> Self {
+        require!(methods.len() > 0, "Must have at least 1 method in FC assets");
+        
         for method in methods.iter() {
             // Check if the method is prohibited
             require!(!DEFAULT_PROHIBITED_FC_METHODS.contains(&method.method_name.as_str()), format!("Method {} is prohibited from being called in an FC drop", method.method_name));

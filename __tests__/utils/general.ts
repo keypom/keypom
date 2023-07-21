@@ -3,7 +3,7 @@ import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
 import { AccountBalance, BN, KeyPair, NEAR, NearAccount, PublicKey, TransactionResult } from "near-workspaces";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
-import { ExtDrop, InternalFTData, InternalNFTData, PickOnly } from "./types";
+import { ExtDrop, InternalFTData, InternalNFTData, PickOnly, UserProvidedFCArgs } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -281,78 +281,72 @@ export async function assertFTBalance({
 }
 
 export async function claimWithRequiredGas({
-  keypomV3,
+  keypom,
+  keyPair,
+  receiverId,
   root,
-  key,
-  publicKey,
+  fcArgs,
   createAccount=false,
-  newAccountId="",
+  useLongAccount=false,
   shouldPanic=false
 }: {
-  keypomV3: NearAccount,
+  keypom: NearAccount,
+  keyPair: KeyPair,
   root: NearAccount,
-  key: KeyPair,
-  publicKey: string,
-  createAccount?: Boolean,
-  newAccountId?: string,
-  shouldPanic?: Boolean
-}){
+  receiverId: string,
+  fcArgs?: UserProvidedFCArgs,
+  createAccount?: boolean,
+  useLongAccount?: boolean,
+  shouldPanic?: boolean
+}) {
   // Set key and get required gas
-  await keypomV3.setKey(key);
-  let keyPk = publicKey;
-  const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+  await keypom.setKey(keyPair);
+  let keyPk = keyPair.getPublicKey().toString();
+
+  const keyInfo: {required_gas: string} = await keypom.view('get_key_information', {key: keyPk});
   console.log('keyInfo: ', keyInfo)
 
-  let panic = false
-  if(shouldPanic){
-    panic = true
-  }
+  let actualReceiverId = useLongAccount ? 
+    createAccount ? `ac${Date.now().toString().repeat(4)}.${root.accountId}` : Buffer.from(PublicKey.fromString(keyPk).data).toString('hex')
+    :
+    receiverId
+  ;
 
-  // CAAC - Use longest possible account ID
-  if(createAccount){
+  if (createAccount) {
     // Generate new keypair
     let keyPairs = await generateKeyPairs(1);
     let newPublicKey = keyPairs.publicKeys[0];
 
-    // Account name
-    let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
-    if(newAccountId == ""){
-      newAccountId = `${myString}.${root.accountId}`
-    }
-
-    console.log(`Claiming with ${newAccountId}`)
+    console.log(`create_account_and_claim with ${actualReceiverId}`)
     let response = await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
+        signer: keypom,
+        receiver: keypom,
         methodName: 'create_account_and_claim',
         args: {
-          new_account_id: newAccountId,
-          new_public_key: newPublicKey
+          new_account_id: actualReceiverId,
+          new_public_key: newPublicKey,
+          fc_args: fcArgs
         },
         gas: keyInfo.required_gas,
-        shouldPanic: panic
+        shouldPanic
     })
-    console.log(response)
+    console.log(`Response from create_account_and_claim: ${response}`)
     return response
   }
-  // Claim - use implicit account
-  else{
-    // Hex public key
-    let implicitAccountId = Buffer.from(PublicKey.fromString(publicKey).data).toString('hex')
 
-    let response = await functionCall({
-      signer: keypomV3,
-      receiver: keypomV3,
-      methodName: 'claim',
-      args: {
-        account_id: implicitAccountId,
-      },
-      gas: keyInfo.required_gas,
-      shouldPanic: panic
-    })
-    console.log(response)
-    return response
-  }
+  let response = await functionCall({
+    signer: keypom,
+    receiver: keypom,
+    methodName: 'claim',
+    args: {
+      account_id: actualReceiverId,
+      fc_args: fcArgs
+    },
+    gas: keyInfo.required_gas,
+    shouldPanic
+  })
+  console.log(response)
+  return response
 }
 
 export async function doesKeyExist(

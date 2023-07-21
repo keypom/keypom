@@ -49,10 +49,16 @@ impl FCData {
                 }
             }
 
+            near_sdk::log!("Final Receiver ID: {}", method.receiver_id);
+            near_sdk::log!("Final Method Name: {}", method.method_name);
+            near_sdk::log!("Final Args: {}", actual_args);
+            near_sdk::log!("Final Attached Deposit: {}", method.attached_deposit.0);
+            near_sdk::log!("Final Attached Gas: {}", method.attached_gas.0);
+            
             let promise = Promise::new(method.receiver_id.clone())
                 .function_call_weight(
                     method.method_name.clone(), 
-                    method.args.clone().into(), 
+                    actual_args.into(), 
                     method.attached_deposit.0,
                     method.attached_gas,
                     GasWeight(1)
@@ -60,6 +66,6 @@ impl FCData {
             promises.push(promise);
         }
 
-        promises.into_iter().reduce(|a, b| a.then(b)).expect("empty promises")
+        promises.into_iter().reduce(|a, b| a.then(b)).unwrap_or(Promise::new(env::current_account_id()))
     }
 }

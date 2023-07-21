@@ -66,6 +66,13 @@ pub(crate) fn insert_keypom_arg(
 ) -> Result<(), String> {
     // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
     if let Some(field) = optional_field {
+        near_sdk::log!(
+            "Attempting to add Value {} into {} For Keypom Args.",
+            value,
+            field
+        );
+        near_sdk::log!("Args before: {}", output_args);
+
         if output_args.contains(field) {
             return Err(format!("Keypom field {} present in args already. Skipping method.", field));
         }
@@ -74,13 +81,56 @@ pub(crate) fn insert_keypom_arg(
             output_args.len() - 1,
             &format!(",\"{}\":\"{}\"", field, value),
         );
-        near_sdk::log!(
-            "Added Value {} into {} For Keypom Args.",
-            value,
-            field
-        );
+
+        near_sdk::log!("Args after: {}", output_args);
     }
 
+    Ok(())
+}
+
+pub(crate) fn handle_user_args_rules (
+    output_args: &mut String, 
+    user_args_rule: &Option<UserArgsRule>,
+    user_args: &Option<Vec<Option<String>>>, 
+    idx: usize
+) -> Result<(), String> {
+    let try_json: Result<Value, _> = from_str(&output_args);
+    if try_json.is_err() {
+        return Err("Cannot cast args to JSON. Returning and decrementing keys".to_string());
+    }
+
+    let mut output_args_json = try_json.unwrap();
+
+    // Check if user provided args is present and fc_args is some
+    if let (Some(rule), Some(user_args_str)) = (user_args_rule, user_args.as_ref().and_then(|a| a[idx].clone())) {
+        let try_user_json: Result<Value, _> = from_str(&user_args_str);
+        if try_user_json.is_ok() {
+            let mut user_args_json = try_user_json.unwrap();
+            
+            match rule {
+                UserArgsRule::AllUser => {
+                    output_args_json = user_args_json;
+                }
+                UserArgsRule::FunderPreferred => {
+                    // Take the final args string and merge the user args into it and overwrite any duplicate keys
+                    merge_json(&mut user_args_json, &output_args_json);
+                    output_args_json = user_args_json;
+                }
+                UserArgsRule::UserPreferred => {
+                    // Take the final args string and merge the user args into it and overwrite any duplicate keys
+                    merge_json(&mut output_args_json, &user_args_json);
+                }
+            }
+        } else {
+            return Err("Cannot cast user provided args to JSON. Returning and decrementing keys".to_string());
+        }
+    }
+
+    if to_string(&output_args_json).is_err() {
+        return Err("Cannot cast final args to JSON. Returning and decrementing keys".to_string());
+    }
+
+    *output_args = to_string(&output_args_json).unwrap();
     Ok(())
 }
 
@@ -103,8 +153,13 @@ pub(crate) fn handle_fc_args(
         funder_id_field: None
     });
     
-    if output_args.contains("\"keypom_args\"") {
-        return Err("Keypom Args detected in client args. Returning and decrementing keys".to_string());
+    if output_args.len() <= 4096 {
+        handle_user_args_rules(
+            output_args, 
+            user_args_rule, 
+            user_args, 
+            i
+        )?;
     }
 
     // Check if user provided args is present and fc_args is some
@@ -118,14 +173,6 @@ pub(crate) fn handle_fc_args(
             }
         }
     }
-
-    output_args.insert_str(
-        output_args.len() - 1,
-        &format!(
-            ",\"keypom_args\":{}",
-            near_sdk::serde_json::to_string(&keypom_args).unwrap()
-        ),
-    );
 
     insert_keypom_arg(
         output_args,
@@ -148,45 +195,17 @@ pub(crate) fn handle_fc_args(
         funder_id.to_string()
     )?;
 
-    if output_args.len() <= 4096 {
-        let try_json: Result<Value, _> = from_str(&output_args);
-        if try_json.is_err() {
-            return Err("Cannot cast args to JSON. Returning and decrementing keys".to_string());
-        }
-    
-        let mut output_args_json = try_json.unwrap();
-    
-        // Check if user provided args is present and fc_args is some
-        if let (Some(rule), Some(user_args_str)) = (user_args_rule, user_args.as_ref().and_then(|a| a[i].clone())) {
-            let try_user_json: Result<Value, _> = from_str(&user_args_str);
-            if try_user_json.is_ok() {
-                let mut user_args_json = try_user_json.unwrap();
-                
-                match rule {
-                    UserArgsRule::AllUser => {
-                        output_args_json = user_args_json;
-                    }
-                    UserArgsRule::FunderPreferred => {
-                        // Take the final args string and merge the user args into it and overwrite any duplicate keys
-                        merge_json(&mut user_args_json, &output_args_json);
-                        output_args_json = user_args_json;
-                    }
-                    UserArgsRule::UserPreferred => {
-                        // Take the final args string and merge the user args into it and overwrite any duplicate keys
-                        merge_json(&mut output_args_json, &user_args_json);
-                    }
-                }
-            } else {
-                return Err("Cannot cast user provided args to JSON. Returning and decrementing keys".to_string());
-            }
-        }
-
-        if to_string(&output_args_json).is_err() {
-            return Err("Cannot cast final args to JSON. Returning and decrementing keys".to_string());
-        }
-
-        *output_args = to_string(&output_args_json).unwrap();
+    if output_args.contains("\"keypom_args\"") {
+        return Err("Keypom Args detected in client args. Returning and decrementing keys".to_string());
     }
+
+    output_args.insert_str(
+        output_args.len() - 1,
+        &format!(
+            ",\"keypom_args\":{}",
+            near_sdk::serde_json::to_string(&keypom_args).unwrap()
+        ),
+    );
 
     return Ok(());
 }
