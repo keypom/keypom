@@ -4,15 +4,17 @@ use crate::*;
 impl Keypom {
     /// Allows users to add to their balance. This is to prepay and cover drop costs
     #[payable]
-    pub fn add_to_balance(&mut self) {
+    pub fn add_to_balance(&mut self) -> bool  {
         // Get the attached_deposit value which is how much the user wants to add to their storage
         let attached_deposit = env::attached_deposit();
 
         self.internal_modify_user_balance(&env::predecessor_account_id(), attached_deposit, false);
+
+        true
     }
 
     /// Allows users to withdraw their balance
-    pub fn withdraw_from_balance(&mut self, amount_to_withdraw: Option<U128>) {
+    pub fn withdraw_from_balance(&mut self, amount_to_withdraw: Option<U128>) -> bool  {
         // The account to withdraw storage to is always the predecessor
         let owner_id = env::predecessor_account_id();
         // Get the amount that the user has by removing them from the map. If they're not in the map, default to 0
@@ -25,13 +27,15 @@ impl Keypom {
             // decrement the balance by the amount withdrawn
             cur_balance -= amount;
 
-            Promise::new(owner_id.clone()).transfer(amount);
+            Promise::new(owner_id.clone()).transfer(amount).as_return();
         }
 
         // re-insert the balance into the map if it's greater than 0
         if cur_balance > 0 {
             self.user_balances.insert(&owner_id, &cur_balance);
         }
+
+        true
     }
 
     /// Return the current balance for a given account

@@ -8,13 +8,17 @@ impl Keypom {
         &mut self, 
         drop_id: String, 
         public_keys: Option<Vec<PublicKey>>, 
-        assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
+        
+        assets_per_use: Option<HashMap<UseNumber, Vec<Option<ExtAsset>>>>,
+        assets_for_each_use: Option<Vec<Option<ExtAsset>>>,
+        num_uses: Option<UseNumber>,
+
         drop_metadata: Option<DropMetadata>,
         nft_config: Option<NFTKeyBehaviour>,
         
         // What will the owners of the keys be? Must match length of public keys
         key_owners: Option<Vec<Option<AccountId>>>
-    ) {
+    ) -> bool {
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);
@@ -31,14 +35,29 @@ impl Keypom {
             drop_id_hash: hash_string(&drop_id.to_string()),
         });
 
+        // If there were assets for each use, convert them to assets per use hash map
+        let actual_assets_per_use = assets_per_use.unwrap_or_else(|| {
+            let num_uses = num_uses.expect("Must provide num_uses if assets_per_use is not provided");
+            let assets_for_each_use = assets_for_each_use.expect("Must provide assets_for_each_use if assets_per_use is not provided");
+            
+            let mut tmp_assets_per_use = HashMap::new();
+            // Loop from 1 -> num_uses and add the assets to the hashmap
+            for use_number in 1..=num_uses {
+                tmp_assets_per_use.insert(use_number, assets_for_each_use.clone());
+            }
+
+            tmp_assets_per_use
+        });
+
         // Parse the external assets and store them in the contract
-        let uses_per_key = assets_per_use.len() as UseNumber;
+        let uses_per_key = actual_assets_per_use.len() as UseNumber;
         parse_ext_assets_per_use(
             uses_per_key, 
-            assets_per_use,
+            actual_assets_per_use,
             &mut key_behavior_by_use, 
             &mut asset_by_id 
         );
+
 
         let mut total_cost_per_key = 0;
         let mut total_allowance_per_key = 0;
@@ -101,5 +120,7 @@ impl Keypom {
 
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);
+
+        true
     }
 }

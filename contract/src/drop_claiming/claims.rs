@@ -15,7 +15,7 @@ impl Keypom {
         self.internal_claim_assets(token_id, account_id, fc_args)
     }
 
-    pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs) {
+    pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs) -> Promise {
         let token_id = self.before_claim_logic();
 
         // First, create the zero-balance account and then, claim the assets
@@ -35,6 +35,5 @@ impl Keypom {
                     fc_args
                 )
         )
-        .as_return(); 
     }
 }

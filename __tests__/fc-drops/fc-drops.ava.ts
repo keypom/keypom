@@ -87,11 +87,7 @@ test('All Funder Tests', async t => {
     }
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [fcAsset1],
-        2: [fcAsset1],
-        3: [fcAsset1]
-    }
+    let assets = [fcAsset1];
 
     let {keys, publicKeys} = await generateKeyPairs(1);
     await functionCall({
@@ -100,7 +96,8 @@ test('All Funder Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
+            assets_for_each_use: assets,
+            num_uses: 3,
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("21").toString()
@@ -142,13 +139,6 @@ test('User Preferred Tests', async t => {
     }
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [fcAsset1],
-        2: [fcAsset1],
-        3: [fcAsset1],
-        4: [fcAsset1],
-    }
-
     let {keys, publicKeys} = await generateKeyPairs(1);
     await functionCall({
         signer: funder,
@@ -156,7 +146,8 @@ test('User Preferred Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
+            assets_for_each_use: [fcAsset1],
+            num_uses: 4,
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("21").toString()
@@ -239,13 +230,6 @@ test('Funder Preferred Tests', async t => {
     }
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [fcAsset1],
-        2: [fcAsset1],
-        3: [fcAsset1],
-        4: [fcAsset1],
-    }
-
     let {keys, publicKeys} = await generateKeyPairs(1);
     await functionCall({
         signer: funder,
@@ -253,7 +237,8 @@ test('Funder Preferred Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
+            assets_for_each_use: [fcAsset1],
+            num_uses: 4,
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("21").toString()
