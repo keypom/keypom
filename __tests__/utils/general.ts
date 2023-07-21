@@ -331,7 +331,7 @@ export async function claimWithRequiredGas({
         shouldPanic
     })
     console.log(`Response from create_account_and_claim: ${response}`)
-    return response
+    return {response, actualReceiverId}
   }
 
   let response = await functionCall({
@@ -346,7 +346,7 @@ export async function claimWithRequiredGas({
     shouldPanic
   })
   console.log(response)
-  return response
+  return {response, actualReceiverId}
 }
 
 export async function doesKeyExist(
