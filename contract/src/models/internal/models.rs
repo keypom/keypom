@@ -16,7 +16,7 @@ pub struct InternalDrop {
     /// Map an asset ID to a specific asset. This is a hyper optimization so the asset data isn't repeated in the contract
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
     /// For every use number, keep track of what assets there are.
-    pub key_behavior_by_use: LookupMap<UseNumber, KeyBehavior>,
+    pub key_behavior_by_use: LookupMap<UseNumber, InternalKeyBehavior>,
 
     /// Information about the NFT keys and how they're rendered / payout options etc.
     pub nft_config: Option<NFTKeyBehaviour>,
@@ -48,9 +48,9 @@ pub struct InternalKeyInfo {
 
 /// Every use number has corresponding behavior data which includes information about all the assets in that use
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct KeyBehavior {
+pub struct InternalKeyBehavior {
     /// Configurations for this specific use
-    pub config: Option<bool>, // TODO
+    pub config: ExtConfig, // TODO
     /// Metadata for each asset in this use
     pub assets_metadata: Vec<AssetMetadata>
 }

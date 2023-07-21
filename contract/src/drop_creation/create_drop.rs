@@ -9,9 +9,8 @@ impl Keypom {
         drop_id: String, 
         public_keys: Option<Vec<PublicKey>>, 
         
-        assets_per_use: Option<HashMap<UseNumber, Vec<Option<ExtAsset>>>>,
-        assets_for_each_use: Option<Vec<Option<ExtAsset>>>,
-        num_uses: Option<UseNumber>,
+        asset_data_per_use: Option<ExtAssetDataPerUse>,
+        asset_data_for_all_uses: Option<ExtAssetDataForAllUses>,
 
         drop_metadata: Option<DropMetadata>,
         nft_config: Option<NFTKeyBehaviour>,
@@ -25,7 +24,7 @@ impl Keypom {
         let public_keys = public_keys.unwrap_or(Vec::new());
 
         // Instantiate the drop data structures
-        let mut key_behavior_by_use: LookupMap<UseNumber, KeyBehavior> = LookupMap::new(StorageKeys::AssetIdsByUse {
+        let mut key_behavior_by_use: LookupMap<UseNumber, InternalKeyBehavior> = LookupMap::new(StorageKeys::AssetIdsByUse {
             drop_id_hash: hash_string(&drop_id.to_string()),
         });
         let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
@@ -36,24 +35,28 @@ impl Keypom {
         });
 
         // If there were assets for each use, convert them to assets per use hash map
-        let actual_assets_per_use = assets_per_use.unwrap_or_else(|| {
-            let num_uses = num_uses.expect("Must provide num_uses if assets_per_use is not provided");
-            let assets_for_each_use = assets_for_each_use.expect("Must provide assets_for_each_use if assets_per_use is not provided");
+        let actual_asset_data_per_use = asset_data_per_use.unwrap_or_else(|| {
+            let ExtAssetDataForAllUses {num_uses, assets , config} = asset_data_for_all_uses.expect("Must provide asset_data_for_all_uses if asset_data_per_use is not provided");
             
-            let mut tmp_assets_per_use = HashMap::new();
+            let asset_data_for_use = AssetDataForGivenUse {
+                assets,
+                config
+            };
+
             // Loop from 1 -> num_uses and add the assets to the hashmap
+            let mut tmp_assets_per_use = HashMap::new();
             for use_number in 1..=num_uses {
-                tmp_assets_per_use.insert(use_number, assets_for_each_use.clone());
+                tmp_assets_per_use.insert(use_number, asset_data_for_use.clone());
             }
 
             tmp_assets_per_use
         });
 
         // Parse the external assets and store them in the contract
-        let uses_per_key = actual_assets_per_use.len() as UseNumber;
+        let uses_per_key = actual_asset_data_per_use.len() as UseNumber;
         parse_ext_assets_per_use(
             uses_per_key, 
-            actual_assets_per_use,
+            actual_asset_data_per_use,
             &mut key_behavior_by_use, 
             &mut asset_by_id 
         );

@@ -52,3 +52,30 @@ pub struct ExtDrop {
 
     pub metadata: Option<DropMetadata>
 }
+
+/// If the user wishes to specify a set of assets that is repeated across many uses, they can use
+/// This struct rather than pasting duplicate data when calling `create_drop`
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ExtAssetDataForAllUses {
+    /// Which assets should be present for each use
+    pub assets: Vec<Option<ExtAsset>>,
+    /// How many uses are there for this drop?
+    pub num_uses: UseNumber,
+    /// What config should be used for each use?
+    pub config: ExtConfig
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct AssetDataForGivenUse {
+    /// Which assets should be present for this use
+    pub assets: Vec<Option<ExtAsset>>,
+    /// What config should be used for this use
+    pub config: ExtConfig
+}
+
+/// Specifies exactly what assets are contained in every given use for a drop
+pub type ExtAssetDataPerUse = HashMap<UseNumber, AssetDataForGivenUse>;
+
+pub type ExtConfig = Option<bool>;

@@ -56,7 +56,7 @@ pub(crate) fn get_total_costs_for_key(
     remaining_uses: UseNumber, 
     max_uses_per_key: UseNumber, 
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_behavior_by_use: &LookupMap<UseNumber, KeyBehavior>
+    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>
 ) {
     // For every remaining use, we need to loop through all assets and refund
     for cur_use in 1..=remaining_uses {
@@ -78,10 +78,10 @@ pub(crate) fn get_total_costs_for_use(
     total_allowance_for_use: &mut Balance,
     use_number: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_behavior_by_use: &LookupMap<UseNumber, KeyBehavior>
+    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>
 ) {
     // Get the assets metadata for this use number
-    let KeyBehavior {assets_metadata, config: _} = key_behavior_by_use
+    let InternalKeyBehavior {assets_metadata, config: _} = key_behavior_by_use
         .get(&use_number)
         .expect("Use number not found");
 

@@ -21,7 +21,7 @@ impl InternalDrop {
 
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=self.uses_per_key {
-            let KeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
+            let InternalKeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
 
             let mut assets: Vec<Option<ExtAsset>> = Vec::new();
             

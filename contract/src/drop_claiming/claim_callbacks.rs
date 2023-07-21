@@ -20,7 +20,7 @@ impl Keypom {
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the account creation, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
         for metadata in assets_metadata {
             let amount_to_increment = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").get_yocto_refund_amount(&metadata.tokens_per_use.map(|t| t.into()));
@@ -64,7 +64,7 @@ impl Keypom {
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
         // Iterate through all the promises and get the results
         let mut was_successful = true;
