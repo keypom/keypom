@@ -87,7 +87,6 @@ test('All Funder Tests', async t => {
     }
 
     const dropId = "drop-id";
-    let assets = [fcAsset1];
 
     let {keys, publicKeys} = await generateKeyPairs(1);
     await functionCall({
@@ -96,8 +95,10 @@ test('All Funder Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_for_each_use: assets,
-            num_uses: 3,
+            asset_data_for_all_uses: {
+                assets: [fcAsset1],
+                num_uses: 3
+            },
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("21").toString()
@@ -146,8 +147,10 @@ test('User Preferred Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_for_each_use: [fcAsset1],
-            num_uses: 4,
+            asset_data_for_all_uses: {
+                assets: [fcAsset1],
+                num_uses: 4
+            },
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("21").toString()
@@ -237,8 +240,10 @@ test('Funder Preferred Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_for_each_use: [fcAsset1],
-            num_uses: 4,
+            asset_data_for_all_uses: {
+                assets: [fcAsset1],
+                num_uses: 4
+            },
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("21").toString()
@@ -313,8 +318,10 @@ test('User Marker Tests', async t => {
     }
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [fcAsset1]
+    const asset_data_per_use = {
+        1: {
+            assets: [fcAsset1]
+        }
     }
 
     let {keys, publicKeys} = await generateKeyPairs(1);
@@ -324,7 +331,7 @@ test('User Marker Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
+            asset_data_per_use,
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("21").toString()

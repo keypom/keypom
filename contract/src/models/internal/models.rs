@@ -21,6 +21,9 @@ pub struct InternalDrop {
     /// Information about the NFT keys and how they're rendered / payout options etc.
     pub nft_config: Option<NFTKeyBehaviour>,
 
+    /// Keep track of different configuration options for all the uses of a key in a given drop
+    pub drop_config: Option<ConfigForAllUses>,
+
     /// Set of public keys associated with this drop mapped to their specific key information.
     pub key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo>,
     /// Keep track of the next nonce to give out to a key
@@ -50,7 +53,7 @@ pub struct InternalKeyInfo {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InternalKeyBehavior {
     /// Configurations for this specific use
-    pub config: ExtConfig, // TODO
+    pub config: Option<ConfigForGivenUse>,
     /// Metadata for each asset in this use
     pub assets_metadata: Vec<AssetMetadata>
 }

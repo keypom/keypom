@@ -12,6 +12,8 @@ impl Keypom {
         asset_data_per_use: Option<ExtAssetDataPerUse>,
         asset_data_for_all_uses: Option<ExtAssetDataForAllUses>,
 
+        config_for_all_uses: Option<ConfigForAllUses>,
+
         drop_metadata: Option<DropMetadata>,
         nft_config: Option<NFTKeyBehaviour>,
         
@@ -36,11 +38,12 @@ impl Keypom {
 
         // If there were assets for each use, convert them to assets per use hash map
         let actual_asset_data_per_use = asset_data_per_use.unwrap_or_else(|| {
-            let ExtAssetDataForAllUses {num_uses, assets , config} = asset_data_for_all_uses.expect("Must provide asset_data_for_all_uses if asset_data_per_use is not provided");
+            let ExtAssetDataForAllUses {num_uses, assets } = asset_data_for_all_uses.expect("Must provide asset_data_for_all_uses if asset_data_per_use is not provided");
             
+            // If the funder specified assets for all the users
             let asset_data_for_use = AssetDataForGivenUse {
                 assets,
-                config
+                config: None
             };
 
             // Loop from 1 -> num_uses and add the assets to the hashmap
@@ -101,6 +104,7 @@ impl Keypom {
             key_info_by_token_id,
             next_key_id,
             nft_config,
+            drop_config: config_for_all_uses,
             funder_id: env::predecessor_account_id(),
             metadata: LazyOption::new(
                 StorageKeys::DropMetadata {

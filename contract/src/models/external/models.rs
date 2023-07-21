@@ -62,8 +62,6 @@ pub struct ExtAssetDataForAllUses {
     pub assets: Vec<Option<ExtAsset>>,
     /// How many uses are there for this drop?
     pub num_uses: UseNumber,
-    /// What config should be used for each use?
-    pub config: ExtConfig
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
@@ -72,7 +70,7 @@ pub struct AssetDataForGivenUse {
     /// Which assets should be present for this use
     pub assets: Vec<Option<ExtAsset>>,
     /// What config should be used for this use
-    pub config: ExtConfig
+    pub config: Option<ConfigForGivenUse>
 }
 
 /// Specifies exactly what assets are contained in every given use for a drop
