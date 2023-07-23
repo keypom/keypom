@@ -215,7 +215,7 @@ test('Account Creation Fail in CAAC - drop still contains NFTs', async t => {
     t.is(keyInfo.uses_remaining, 2)
 
     // First failed claim
-    let result: {response: string|undefined, actualReceiverId: string} = await claimWithRequiredGas({
+    let result: {response: string|undefined, actualReceiverId: string | undefined} = await claimWithRequiredGas({
         keypom: keypomV3,
         root,
         keyPair: keyPairs.keys[0],

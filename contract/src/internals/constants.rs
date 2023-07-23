@@ -31,7 +31,7 @@ pub const BASE_GAS_FOR_CLAIM: Gas = Gas(15_000_000_000_000); // 7.5 TGas
 
 /// Actual amount of GAS to attach for creating a new account.
 /// This value is equal to 28 TGas
-pub const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000);
+pub const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); 
 
 /// Gas required for the callback to resolve the asset claim
 /// This value is equal to 20 TGas

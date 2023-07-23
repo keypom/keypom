@@ -341,7 +341,7 @@ export async function claimWithRequiredGas({
       actualReceiverId = receiverId
     }
 
-    console.log(`create_account_and_claim with ${actualReceiverId}`)
+    console.log(`create_account_and_claim with ${actualReceiverId} with ${keyInfo.required_gas} Gas`)
     let response = await functionCall({
         signer: keypom,
         receiver: keypom,
@@ -357,6 +357,8 @@ export async function claimWithRequiredGas({
     console.log(`Response from create_account_and_claim: ${response}`)
     return {response, actualReceiverId}
   }
+
+  console.log(`claim with ${actualReceiverId} with ${keyInfo.required_gas} Gas`)
 
   let response = await functionCall({
     signer: keypom,
