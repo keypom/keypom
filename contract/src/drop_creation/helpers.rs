@@ -100,19 +100,21 @@ impl Keypom {
 }
 
 /// Parses the external assets and stores them in the drop's internal maps
-pub(crate) fn parse_ext_assets_per_use (
+pub fn parse_ext_assets_per_use (
     uses_per_key: UseNumber,
-    assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>, 
-    key_behavior_by_use: &mut LookupMap<UseNumber, KeyBehavior>,
+    asset_data_per_use: ExtAssetDataPerUse, 
+    key_behavior_by_use: &mut LookupMap<UseNumber, InternalKeyBehavior>,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) {
-    require!(uses_per_key == assets_per_use.len() as UseNumber, "Must specify behavior for all uses");
+    require!(uses_per_key == asset_data_per_use.len() as UseNumber, "Must specify behavior for all uses");
 
     // Iterate through the external assets, convert them to internal assets and add them to both lookup maps
-    for (use_number, ext_assets) in assets_per_use {
+    for (use_number, ext_asset_data) in asset_data_per_use {
+        let AssetDataForGivenUse {assets, config} = ext_asset_data;
+
         // Quick sanity check to make sure the use number is valid
         require!(use_number <= uses_per_key, "Invalid use number");
-        require!(ext_assets.len() > 0, "Must specify at least one asset per use");
+        require!(assets.len() > 0, "Must specify at least one asset per use");
 
         // Keep track of the metadata for all the assets across each use
         let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
@@ -120,7 +122,7 @@ pub(crate) fn parse_ext_assets_per_use (
         // If there's assets, loop through and get all the asset IDs while also
         // adding them to the asset_by_id lookup map if they weren't already present
         // If there aren't any assets, the vector will be of length 1
-        for ext_asset in ext_assets {
+        for ext_asset in assets {
             // If the external asset is of type FCData, the asset ID will be the length of the vector
             // Otherwise, it will be the asset ID specified
             let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
@@ -143,9 +145,9 @@ pub(crate) fn parse_ext_assets_per_use (
                 asset_by_id.insert(&asset_id, &internal_asset);
             }
         }
-        key_behavior_by_use.insert(&use_number, &KeyBehavior {
+        key_behavior_by_use.insert(&use_number, &InternalKeyBehavior {
             assets_metadata,
-            config: None
+            config
         });
     }
 }

@@ -10,7 +10,7 @@ impl Keypom {
 
         // What will the owners of the keys be? Must match length of public keys
         key_owners: Option<Vec<Option<AccountId>>>
-    ) {
+    ) -> bool {
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);
@@ -70,5 +70,7 @@ impl Keypom {
 
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);
+
+        true
     }
 }

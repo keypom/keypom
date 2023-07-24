@@ -2,7 +2,7 @@ use crate::*;
 
 /// Outlines the different asset types that can be used in drops. This is the external version of `InternalAsset`
 /// And represents the data that is passed into and out of the Keypom contract
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 #[serde(untagged)]
 pub enum ExtAsset {
@@ -13,7 +13,7 @@ pub enum ExtAsset {
 }
 
 /// Data going into or out of the Keypom contract representing the presence of fungible tokens as an asset for a drop
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtNEARData {
     /// How much $NEAR should be transferred as part of the asset claim
@@ -21,7 +21,7 @@ pub struct ExtNEARData {
 }
 
 /// Data going into or out of the Keypom contract representing the presence of fungible tokens as an asset for a drop
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtFTData {
     /// The contract that the fungible tokens originate from
@@ -33,7 +33,7 @@ pub struct ExtFTData {
 }
 
 /// Data going into or out of the Keypom contract representing the presence of non-fungible tokens as an asset for a drop
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtNFTData {
     /// The contract that the non fungible tokens originate from
@@ -52,3 +52,26 @@ pub struct ExtDrop {
 
     pub metadata: Option<DropMetadata>
 }
+
+/// If the user wishes to specify a set of assets that is repeated across many uses, they can use
+/// This struct rather than pasting duplicate data when calling `create_drop`
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ExtAssetDataForAllUses {
+    /// Which assets should be present for each use
+    pub assets: Vec<Option<ExtAsset>>,
+    /// How many uses are there for this drop?
+    pub num_uses: UseNumber,
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct AssetDataForGivenUse {
+    /// Which assets should be present for this use
+    pub assets: Vec<Option<ExtAsset>>,
+    /// What config should be used for this use
+    pub config: Option<ConfigForGivenUse>
+}
+
+/// Specifies exactly what assets are contained in every given use for a drop
+pub type ExtAssetDataPerUse = HashMap<UseNumber, AssetDataForGivenUse>;

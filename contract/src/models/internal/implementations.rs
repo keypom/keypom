@@ -21,7 +21,7 @@ impl InternalDrop {
 
         // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
         for use_number in 1..=self.uses_per_key {
-            let KeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
+            let InternalKeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
 
             let mut assets: Vec<Option<ExtAsset>> = Vec::new();
             
@@ -63,7 +63,15 @@ impl InternalAsset {
 
     /// Standard function for claiming an asset regardless of its type
     /// This will return a promise for every asset that will be resolved in a standard callback
-    pub fn claim_asset(&mut self, receiver_id: &AccountId, tokens_per_use: &Option<Balance>) -> Promise {
+    pub fn claim_asset(
+        &mut self, 
+        receiver_id: &AccountId, 
+        tokens_per_use: &Option<Balance>,
+        fc_args: AssetSpecificFCArgs,
+        drop_id: DropId,
+        key_id: String,
+        funder_id: AccountId
+    ) -> Promise {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
@@ -72,7 +80,7 @@ impl InternalAsset {
                 return nft_data.claim_nft_asset(receiver_id)
             },
             InternalAsset::fc(ref mut fc_data) => {
-                return fc_data.claim_fc_asset()
+                return fc_data.claim_fc_asset(fc_args, receiver_id.clone(), drop_id, key_id, funder_id)
             },
             InternalAsset::near => {
                 return Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
@@ -119,7 +127,7 @@ impl InternalAsset {
     /// Standard function to check whether an asset is empty or not
     pub fn is_empty(&self) -> bool {
         match self {
-            InternalAsset::ft(ft) => ft.enough_balance(&1),
+            InternalAsset::ft(ft) => !ft.enough_balance(&1),
             InternalAsset::nft(nft) => nft.is_empty(),
             InternalAsset::fc(_) => true,
             InternalAsset::near => true,

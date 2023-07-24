@@ -4,6 +4,9 @@ export type ExtDrop = {
     ft_asset_data: Array<InternalFTData>;
 }
 
+export type UserProvidedFCArgs = Array<AssetSpecificFCArgs>;
+export type AssetSpecificFCArgs = Array<string | undefined> | undefined;
+
 export type PickOnly<T, K extends keyof T> =
     Pick<T, K> & { [P in Exclude<keyof T, K>]?: never };
     

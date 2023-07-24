@@ -56,7 +56,7 @@ pub(crate) fn get_total_costs_for_key(
     remaining_uses: UseNumber, 
     max_uses_per_key: UseNumber, 
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_behavior_by_use: &LookupMap<UseNumber, KeyBehavior>
+    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>
 ) {
     // For every remaining use, we need to loop through all assets and refund
     for cur_use in 1..=remaining_uses {
@@ -78,15 +78,15 @@ pub(crate) fn get_total_costs_for_use(
     total_allowance_for_use: &mut Balance,
     use_number: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_behavior_by_use: &LookupMap<UseNumber, KeyBehavior>
+    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>
 ) {
     // Get the assets metadata for this use number
-    let KeyBehavior {assets_metadata, config: _} = key_behavior_by_use
+    let InternalKeyBehavior {assets_metadata, config: _} = key_behavior_by_use
         .get(&use_number)
         .expect("Use number not found");
 
     // Keep track of the total gas across all assets in the current use
-    let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT + GAS_FOR_RESOLVE_ASSET_CLAIM;
+    let mut total_gas_for_use: Gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM;
 
     // Loop through each asset metadata and tally the costs
     for metadata in assets_metadata {

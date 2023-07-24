@@ -96,7 +96,7 @@ pub(crate) fn internal_clear_drop_storage(drop: &mut InternalDrop) {
 /// Loop through each use number and remove the assets metadata for that use number
 pub(crate) fn clear_key_behaviors (
     uses_per_key: UseNumber,
-    key_behavior_by_use: &mut LookupMap<UseNumber, KeyBehavior>,
+    key_behavior_by_use: &mut LookupMap<UseNumber, InternalKeyBehavior>,
 ) {
     for use_number in 1..=uses_per_key {
         key_behavior_by_use.remove(&use_number);

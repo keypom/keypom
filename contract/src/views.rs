@@ -7,6 +7,7 @@ impl Keypom {
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
             return Some(drop.to_external_drop());
         } else {
+            near_sdk::log!("Drop {} not found!", drop_id);
             None
         }
     }
@@ -25,9 +26,9 @@ impl Keypom {
             .expect("no drop found for drop ID");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
-        let mut required_gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT + GAS_FOR_RESOLVE_ASSET_CLAIM;
+        let mut required_gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM;
 
         let mut ft_list: Vec<FTListData> = Vec::new();
         let mut nft_list: Vec<NFTListData> = Vec::new();

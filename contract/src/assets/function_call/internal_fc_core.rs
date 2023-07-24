@@ -1,32 +1,26 @@
 use crate::*;
 
-/// Keep track of info for the method_name to be called
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct MethodData {
-    /// Contract that will be called
-    pub receiver_id: AccountId,
-    /// Method to call on receiver_id contract
-    pub method_name: String,
-    /// Arguments to pass in (stringified JSON)
-    pub args: String,
-    /// Amount of yoctoNEAR to attach along with the call
-    pub attached_deposit: U128,
-    /// How much gas to attach to this method call. If none, all the gas is split between the parallel method calls in a given claim.
-    /// If this is specified, the key can ONLY be used to call `claim` and no `deposit_per_use` can be specified. This leads the key to act like a method calling proxy instead of a linkrop.
-    pub attached_gas: Gas,
-}
-
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, PanicOnDefault)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, PanicOnDefault, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FCData {
     pub methods: Vec<MethodData>
 }
 
 impl FCData {
-    /// Initialize a new set of FT data. The available balance is initialize to 0 at the start
+    /// Initialize a new instance of function call data.
+    /// All checks such as prohibited methods and valid receivers are done here.
     pub fn new(methods: Vec<MethodData>) -> Self {
+        require!(methods.len() > 0, "Must have at least 1 method in FC assets");
+
+        for method in methods.iter() {
+            // Check if the method is prohibited
+            require!(!DEFAULT_PROHIBITED_FC_METHODS.contains(&method.method_name.as_str()), format!("Method {} is prohibited from being called in an FC drop", method.method_name));
+
+            // Check if the receiver is valid
+            require!(method.receiver_id != env::current_account_id(), "Receiver ID cannot be current Keypom contract.");
+        }
+        
         Self {
             methods
         }
@@ -51,7 +45,7 @@ impl FCData {
         for method in self.methods.iter() {
             total_gas += method.attached_gas;
         }
-        total_gas += MIN_BASE_GAS_FOR_ONE_CCC * self.methods.len() as u64;
+        total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP * self.methods.len() as u64;
         total_gas += GAS_FOR_FC_CLAIM_LOGIC;
 
         total_gas

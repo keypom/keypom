@@ -1,9 +1,9 @@
-import { initKeypom, nearAPI } from "keypom-js";
+import { initKeypom } from "@keypom/core";
 import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
+import { AccountBalance, BN, KeyPair, NEAR, NearAccount, PublicKey, TransactionResult } from "near-workspaces";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
-import { AccountBalance, BN, KeyPair, NEAR, NearAccount, TransactionResult } from "near-workspaces";
-import { ExtDrop, InternalFTData, InternalNFTData, JsonDrop, JsonKeyInfo, PickOnly } from "./types";
+import { ExtDrop, InternalFTData, InternalNFTData, PickOnly, UserProvidedFCArgs } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -107,21 +107,15 @@ export async function initKeypomConnection(
     const funderKey = (await funder.getKey())?.toString()
     console.log(`funderKey: `, funderKey)
     await initKeypom({
-        near,
         network: "localnet",
         funder: {
             accountId: funder.accountId,
-            secretKey: funderKey
+            secretKey: funderKey!
         }
     })
 }
 
-<<<<<<< HEAD
->>>>>>> 2d98ca3 (started work on core architecture design)
-export function displayFailureLog(
-=======
 export function parseExecutionResults(
->>>>>>> e7cc628 (implemented custom serializer for internal structs and expanded ext drop data to include internal info. Started work on deletion tests)
   methodName: string,
   receiverId: string,
   transaction: TransactionResult,
@@ -206,6 +200,7 @@ export async function assertKeypomInternalAssets({
   if (expectedNftData.length != dropInfo.nft_asset_data.length) {
     throw new Error(`Expected ${expectedNftData.length} NFTs but found ${dropInfo.nft_asset_data.length}`);
   } else {
+    let count = 0;
     for (let expectedAsset of expectedNftData) {
       // Check if the NFT data matches one from the list
       let matches = dropInfo.nft_asset_data.find((foundAsset) => {
@@ -218,16 +213,19 @@ export async function assertKeypomInternalAssets({
         console.log(`Expected Contract ID: ${expectedAsset.contract_id}`)
         console.log(`Expected Tokens: ${expectedAsset.token_ids.sort().join(',')}`)
 
-        console.log(`Found Contract ID: ${dropInfo.nft_asset_data[0].contract_id}`)
-        console.log(`Found Tokens: ${dropInfo.nft_asset_data[0].token_ids.sort().join(',')}`)
+        console.log(`Found Contract ID: ${dropInfo.nft_asset_data[count].contract_id}`)
+        console.log(`Found Tokens: ${dropInfo.nft_asset_data[count].token_ids.sort().join(',')}`)
         throw new Error(`Expected NFT Data ${expectedAsset} not found`);
       }
+
+      count += 1;
     }
   }
 
   if (expectedFtData.length != dropInfo.ft_asset_data.length) {
     throw new Error(`Expected ${expectedFtData.length} FTs but found ${dropInfo.ft_asset_data.length}`);
   } else {
+    let count = 0;
     for (let expectedAsset of expectedFtData) {
       // Check if the NFT data matches one from the list
       let matches = dropInfo.ft_asset_data.find((foundAsset) => {
@@ -235,8 +233,15 @@ export async function assertKeypomInternalAssets({
       });
 
       if (!matches) {
+        console.log(`Expected Contract ID: ${expectedAsset.contract_id}`);
+        console.log(`Found Contract ID: ${dropInfo.ft_asset_data[count].contract_id}`);
+        console.log(`Expected Balance: ${expectedAsset.balance_avail}`);
+        console.log(`Found Balance: ${dropInfo.ft_asset_data[count].balance_avail}`);
+
+
         throw new Error(`Expected NFT Data ${expectedAsset} not found`);
       }
+      count += 1;
     }
   }
 }
@@ -275,80 +280,123 @@ export async function assertFTBalance({
   }
 }
 
+// To CAAC, only pass in createAccount = true
+// In order to force a CAAC claim failure, pass in receiverId and createAccount = true
+// To claim with implicit, pass in useImplicitAccount = true
+// To claim, only pass in receiverId
 export async function claimWithRequiredGas({
-  keypomV3,
+  keypom,
+  keyPair,
   root,
-  key,
-  publicKey,
+  fcArgs,
+  receiverId,
   createAccount=false,
-  newPublicKey="",
-  newAccountId="",
+  useLongAccount=true,
+  useImplicitAccount=false,
   shouldPanic=false
 }: {
-  keypomV3: NearAccount,
+  keypom: NearAccount,
+  keyPair: KeyPair,
   root: NearAccount,
-  key: KeyPair,
-  publicKey: string,
-  createAccount?: Boolean,
-  newPublicKey?: string,
-  newAccountId?: string,
-  shouldPanic?: Boolean
-}){
+  fcArgs?: UserProvidedFCArgs,
+  receiverId?: string,
+  createAccount?: boolean,
+  useLongAccount?: boolean,
+  useImplicitAccount?: boolean,
+  shouldPanic?: boolean
+}) {
   // Set key and get required gas
-  await keypomV3.setKey(key);
-  let keyPk = publicKey;
-  const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
+  await keypom.setKey(keyPair);
+  let keyPk = keyPair.getPublicKey().toString();
+
+  const keyInfo: {required_gas: string} = await keypom.view('get_key_information', {key: keyPk});
   console.log('keyInfo: ', keyInfo)
 
-  let panic = false
-  if(shouldPanic){
-    panic = true
+  // To allow custom receiver ID without needing to specify useLongAccount
+  if(receiverId != undefined && !createAccount){
+    useLongAccount = false;
   }
 
-  // CAAC - Use longest possible account ID
-  if(createAccount){
-    // Invalid CAAC
-    if(newPublicKey == "" ){
-      console.log("CREATING ACCOUNT NEEDS A NEW PUBLIC KEY")
-      return("false")
+  // customized error message to reduce chances of accidentally passing in this receiverid and throwing an error
+  let errorMsg = "Error-" + Date.now();
+
+  // actualReceiverId for non-forced-failure case
+  let actualReceiverId = useLongAccount ? 
+    createAccount ? `ac${Date.now().toString().repeat(4)}.${root.accountId}` 
+    : useImplicitAccount ?  Buffer.from(PublicKey.fromString(keyPk).data).toString('hex') : errorMsg
+    :
+    receiverId
+  ;
+  
+  if(actualReceiverId == errorMsg){
+    throw new Error("Must specify desired usage, see claimWithRequiredGas function for more information")
+  }
+
+  if (createAccount) {
+    // Generate new keypair
+    let keyPairs = await generateKeyPairs(1);
+    let newPublicKey = keyPairs.publicKeys[0];
+
+    if(receiverId != undefined){
+      actualReceiverId = receiverId
     }
 
-    let myString = "ac" + Date.now().toString() + Date.now().toString() + Date.now().toString() + Date.now().toString()
-    newAccountId !== "" ? newAccountId : `${myString}.${root.accountId}`
-
-  
+    console.log(`create_account_and_claim with ${actualReceiverId} with ${keyInfo.required_gas} Gas`)
     let response = await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
+        signer: keypom,
+        receiver: keypom,
         methodName: 'create_account_and_claim',
         args: {
-          new_account_id: newAccountId,
-          new_public_key: newPublicKey
+          new_account_id: actualReceiverId,
+          new_public_key: newPublicKey,
+          fc_args: fcArgs
         },
         gas: keyInfo.required_gas,
-        shouldPanic: panic
+        shouldPanic
     })
-    console.log(response)
-    return response
+    console.log(`Response from create_account_and_claim: ${response}`)
+    return {response, actualReceiverId}
   }
-  // Claim - use implicit account
-  else{
-    // Hex public key
-    let implicitAccountId = Buffer.from(nearAPI.utils.PublicKey.fromString(publicKey).data).toString('hex')
 
-    let response = await functionCall({
-      signer: keypomV3,
-      receiver: keypomV3,
-      methodName: 'claim',
-      args: {
-        account_id: implicitAccountId,
-      },
-      gas: keyInfo.required_gas,
-      shouldPanic: panic
-    })
-    console.log(response)
-    return response
+  console.log(`claim with ${actualReceiverId} with ${keyInfo.required_gas} Gas`)
+
+  let response = await functionCall({
+    signer: keypom,
+    receiver: keypom,
+    methodName: 'claim',
+    args: {
+      account_id: actualReceiverId,
+      fc_args: fcArgs
+    },
+    gas: keyInfo.required_gas,
+    shouldPanic
+  })
+  console.log(response)
+  return {response, actualReceiverId}
+}
+
+export async function doesKeyExist(
+  keypomV3: NearAccount,
+  publicKey: String
+){
+  try{
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: publicKey});
+    console.log(`Key Exists and has ${keyInfo.uses_remaining} uses remaining`)
+    return true
+  }catch{
+    return false
   }
+}
+
+export async function doesDropExist(
+  keypomV3: NearAccount,
+  dropId: String
+){
+    let response = await keypomV3.view('get_drop_information', {drop_id: dropId});
+    if(response !== null){
+      return true
+    }
+    return false
 }
 
 
@@ -379,132 +427,13 @@ export function defaultCallOptions(
   };
 }
 
-export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, precision: number) {
-  console.log('expected change: ', expected_change.toString())
+// export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, precision: number) {
+//   console.log('expected change: ', expected_change.toString())
 
-  let numToDivide = new BN(Math.ceil(1 / precision));
-  let range = expected_change.abs().div(numToDivide);
-  console.log('range addition: ', range.toString())
+//   let numToDivide = new BN(Math.ceil(1 / precision));
+//   let range = expected_change.abs().div(numToDivide);
+//   console.log('range addition: ', range.toString())
 
-<<<<<<< HEAD
-  let acceptableRange = {
-    upper: expected_change.abs().add(range), // 1 + .05 = 1.05
-    lower: expected_change.abs().sub(range) // 1 - .05  = .95
-  }
-  let diff = b2.sub(b1).abs();
-  console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
-  return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
-}
-
-export async function queryAllViewFunctions(
-  {
-  contract,
-  drop_id = null,
-  key = null,
-  from_index = '0',
-  limit = 50,
-  account_id = null
-  }: 
-  {
-    contract: NearAccount,
-    drop_id?: string | null,
-    key?: string | null,
-    from_index?: string | null,
-    limit?: number | null,
-    account_id?: string | null
-  }
-): Promise<{
-  keyBalance: string | null,
-  keyInformation: JsonKeyInfo | null,
-  dropInformation: JsonDrop | null,
-  keySupplyForDrop: number | null,
-  keysForDrop: JsonKeyInfo[] | null,
-  tokenIdsForDrop: string[] | null,
-  dropSupplyForOwner: number | null,
-  dropsForOwner: JsonDrop[] | null,
-  gasPrice: number,
-  rootAccount: string,
-  feesCollected: string,
-  nextDropId: number,
-  keyTotalSupply: number,
-  keys: JsonKeyInfo[],
-}> {
-  let getGasPrice: number = await contract.view('get_gas_price', {});
-  let getRootAccount: string = await contract.view('get_root_account', {});
-  let getFeesCollected: string = await contract.view('get_fees_collected', {});
-  let getNextDropId: number = await contract.view('get_next_drop_id', {});
-  let keyTotalSupply: number = await contract.view('get_key_total_supply', {});
-  let getKeys: JsonKeyInfo[] = await contract.view('get_keys', {from_index, limit});
-
-  let getKeyBalance: string | null = null;
-  let getKeyInformation: JsonKeyInfo | null = null;
-  if(key != null) {
-    getKeyBalance = await contract.view('get_key_balance', {key});
-    getKeyInformation = await contract.view('get_key_information', {key});
-  }
-
-  let getDropInformation: JsonDrop | null = null;
-  let getKeySupplyForDrop: number | null = null;
-  let getKeysForDrop: JsonKeyInfo[] | null = null;
-  let tokenIdsForDrop: string[] | null = null;
-  if(drop_id != null) {
-    getDropInformation = await contract.view('get_drop_information', {drop_id});
-    getKeySupplyForDrop = await contract.view('get_key_supply_for_drop', {drop_id});
-    getKeysForDrop = await contract.view('get_keys_for_drop', {drop_id, from_index, limit});
-    tokenIdsForDrop = await contract.view('get_nft_token_ids_for_drop', {drop_id, from_index, limit});
-  }
-
-  let dropSupplyForOwner: number | null = null;
-  let dropsForOwner: JsonDrop[] | null = null;
-  if(account_id != null) {
-    dropSupplyForOwner = await contract.view('get_drop_supply_for_owner', {account_id});
-    dropsForOwner = await contract.view('get_drops_for_owner', {account_id, from_index, limit});
-  }
-
-
-  return {
-    keyBalance: getKeyBalance,
-    keyInformation: getKeyInformation,
-    dropInformation: getDropInformation,
-    keySupplyForDrop: getKeySupplyForDrop,
-    keysForDrop: getKeysForDrop,
-    tokenIdsForDrop: tokenIdsForDrop,
-    dropSupplyForOwner: dropSupplyForOwner,
-    dropsForOwner: dropsForOwner,
-    gasPrice: getGasPrice,
-    rootAccount: getRootAccount,
-    feesCollected: getFeesCollected,
-    nextDropId: getNextDropId,
-    keyTotalSupply: keyTotalSupply,
-    keys: getKeys,
-  }
-}
-
-export async function createSeries(
-  {
-  account,
-  nftContract,
-  metadatas,
-  ids
-  }:
-  {
-    account: NearAccount,
-    nftContract: NearAccount,
-    metadatas: string[],
-    ids: string[]
-  }
-) {
-  for(let i = 0; i < metadatas.length; i++) {
-    let metadata = metadatas[i];
-    let id = ids[i];
-    
-    await account.call(nftContract, 'create_series', {
-      metadata,
-      mint_id: id,
-    }, {attachedDeposit: DEFAULT_DEPOSIT});
-  }
-}
-=======
 //   let acceptableRange = {
 //     upper: expected_change.abs().add(range), // 1 + .05 = 1.05
 //     lower: expected_change.abs().sub(range) // 1 - .05  = .95
@@ -513,4 +442,3 @@ export async function createSeries(
 //   console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
 //   return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
 // }
->>>>>>> 08ba860 (refactored to decouple withdrawal from deletion to fix issues)

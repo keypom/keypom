@@ -5,13 +5,13 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     #[private]
-    pub fn on_new_account_created(&mut self, token_id: TokenId, receiver_id: AccountId) -> PromiseOrValue<bool> {
+    pub fn on_new_account_created(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> PromiseOrValue<bool> {
         let successful_creation = was_account_created();
 
         // If the account was successfully created, we should claim the assets
         // Otherwise, we should loop through all the assets in the current use and refund the tokens
         if successful_creation {
-            return PromiseOrValue::Promise(self.internal_claim_assets(token_id, receiver_id));
+            return PromiseOrValue::Promise(self.internal_claim_assets(token_id, receiver_id, fc_args));
         }
 
         let initial_storage = env::storage_usage();
@@ -20,7 +20,7 @@ impl Keypom {
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the account creation, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
         for metadata in assets_metadata {
             let amount_to_increment = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").get_yocto_refund_amount(&metadata.tokens_per_use.map(|t| t.into()));
@@ -28,10 +28,10 @@ impl Keypom {
         }
 
         // Loop through all the assets in the drop and ensure they're empty
-        let mut is_drop_empty = false;
+        let mut is_drop_empty = true;
         for asset in drop.asset_by_id.values() {
             if !asset.is_empty() {
-                is_drop_empty = true;
+                is_drop_empty = false;
                 break;
             }
         }
@@ -62,8 +62,9 @@ impl Keypom {
         let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
-        let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let KeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
+        let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
+        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         
         // Iterate through all the promises and get the results
         let mut was_successful = true;
@@ -83,6 +84,7 @@ impl Keypom {
                 ),
                 PromiseResult::Successful(_) => {},
                 PromiseResult::Failed => {
+                    near_sdk::log!("Asset claim failed");
                     let mut tokens_per_use = metadata.tokens_per_use.map(|x| x.0.to_string());
                     
                     // If it's a NFT, we need to get the token ID

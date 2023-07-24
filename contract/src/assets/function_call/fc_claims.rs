@@ -1,22 +1,64 @@
 use crate::*;
 
-/// Gas needed to execute any logic in the ft claim function
-/// 2 TGas + 2 * CCC gas (since there are 2 CCCs)
-/// 12 TGas
-pub const GAS_FOR_FC_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + 2 * MIN_BASE_GAS_FOR_ONE_CCC.0);
+/// Which methods are prohibited from being called by an FC drop
+pub const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
+    "nft_transfer",
+    "nft_transfer_call",
+    "nft_approve",
+    "nft_transfer_payout",
+    "ft_transfer",
+    "ft_transfer_call",
+];
+
+/// Gas needed to execute any logic in the fc claim function
+/// 2 TGas
+pub const GAS_FOR_FC_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000);
 
 impl FCData {
-    /// Attempt to transfer FTs to a given address (will cover registration automatically).
-    /// If the transfer fails, the FTs will be returned to the available balance
-    /// Should *only* be invoked if the available balance is greater than or equal to the transfer amount.
-    pub fn claim_fc_asset(&mut self) -> Promise {  
+    /// Loop through each method and create a promise to call the method
+    /// Each of these methods will be executed 1 after the next.
+    /// If anything goes wrong, there's nothing the contract will do to refund.
+    pub fn claim_fc_asset(
+        &mut self,
+        fc_args: AssetSpecificFCArgs,
+        account_id: AccountId,
+        drop_id: DropId,
+        key_id: String,
+        funder_id: AccountId
+    ) -> Promise {  
         let mut promises = Vec::new();
 
-        for method in self.methods.iter() {
+        for (idx, method) in self.methods.iter().enumerate() {
+            let mut actual_args = method.args.clone();
+            
+            match handle_fc_args(
+                &mut actual_args, 
+                method.keypom_args.clone(), 
+                &method.user_args_rule, 
+                &fc_args, 
+                &account_id, 
+                &drop_id, 
+                &key_id, 
+                &funder_id, 
+                idx
+            ) {
+                Ok(_) => {},
+                Err(e) => {
+                    near_sdk::log!("Error handling FC args: {:?}", e);
+                    continue;
+                }
+            }
+
+            near_sdk::log!("Final Receiver ID: {}", method.receiver_id);
+            near_sdk::log!("Final Method Name: {}", method.method_name);
+            near_sdk::log!("Final Args: {}", actual_args);
+            near_sdk::log!("Final Attached Deposit: {}", method.attached_deposit.0);
+            near_sdk::log!("Final Attached Gas: {}", method.attached_gas.0);
+            
             let promise = Promise::new(method.receiver_id.clone())
                 .function_call_weight(
                     method.method_name.clone(), 
-                    method.args.clone().into(), 
+                    actual_args.into(), 
                     method.attached_deposit.0,
                     method.attached_gas,
                     GasWeight(1)
@@ -24,6 +66,6 @@ impl FCData {
             promises.push(promise);
         }
 
-        promises.into_iter().reduce(|a, b| a.then(b)).expect("empty promises")
+        promises.into_iter().reduce(|a, b| a.then(b)).unwrap_or(Promise::new(env::current_account_id()))
     }
 }
