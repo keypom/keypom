@@ -12,16 +12,19 @@ impl Keypom {
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         public_keys: &Vec<PublicKey>,
+        metadata_for_keys: Option<Vec<Option<String>>>,
         key_owners: Option<Vec<Option<AccountId>>>,
         method_names: &str, 
         allowance: Balance
     ) {
         let current_account_id = &env::current_account_id();
 
-        
         // Ensure that a key owner is specified for each key
         let num_pks = public_keys.len();
         require!(key_owners.clone().map(|o| o.len()).unwrap_or(num_pks) == num_pks, "Must specify an owner for each key");
+        require!(metadata_for_keys.clone().map(|m| m.len()).unwrap_or(num_pks) == num_pks, "Must specify metadata for each key");
+
+        let mut add_key_logs = Vec::new();
 
         // Create a new promise batch to create all the access keys
         let promise = env::promise_batch_create(current_account_id);
@@ -32,6 +35,7 @@ impl Keypom {
         for (i, pk) in public_keys.iter().enumerate() {
             let token_id = format!("{}:{}", drop_id, next_key_id);
             let token_owner = key_owners.as_ref().and_then(|o| o[i].clone()).unwrap_or(env::current_account_id());
+            let key_metadata: Option<String> = metadata_for_keys.as_ref().and_then(|m| m[i].clone());
             
             require!(
                 self.token_id_by_pk.insert(pk, &token_id).is_none(),
@@ -44,6 +48,7 @@ impl Keypom {
                 owner_id: token_owner.clone(), 
                 next_approval_id: 0,
                 approved_account_ids: Default::default(),
+                metadata: key_metadata.clone()
             });
             
             // Add this key to the batch
@@ -58,25 +63,34 @@ impl Keypom {
 
             // Construct the mint log as per the events standard and add it to the list of logs
             let nft_mint_log: EventLog = EventLog {
-                // Standard name ("nep171").
                 standard: NFT_STANDARD_NAME.to_string(),
-                // Version of the standard ("nft-1.0.0").
                 version: NFT_METADATA_SPEC.to_string(),
-                // The data related with the event stored in a vector.
                 event: EventLogVariant::NftMint(vec![NftMintLog {
-                    // Owner of the token.
                     owner_id: token_owner.to_string(),
-                    // Vector of token IDs that were minted.
                     token_ids: vec![token_id.to_string()],
-                    // An optional memo to include.
                     memo: None,
                 }]),
             };
+
+            add_key_logs.push(AddOrDeleteKeyLog {
+                owner_id: token_owner.to_string(),
+                drop_id: drop_id.to_string(),
+                public_key: pk.into(),
+                metadata: key_metadata // TODO
+            });
 
             event_logs.push(nft_mint_log);
 
             *next_key_id += 1;
         }
+
+        // Construct the add key event push it to the event logs
+        let add_key_event: EventLog = EventLog {
+            standard: KEYPOM_STANDARD_NAME.to_string(),
+            version: KEYPOM_STANDARD_VERSION.to_string(),
+            event: EventLogVariant::AddKey(add_key_logs),
+        };
+        event_logs.push(add_key_event);
 
         env::promise_return(promise);
     }

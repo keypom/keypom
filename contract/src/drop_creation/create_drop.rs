@@ -7,7 +7,9 @@ impl Keypom {
     pub fn create_drop(
         &mut self, 
         drop_id: String, 
+
         public_keys: Option<Vec<PublicKey>>, 
+        metadata_for_keys: Option<Vec<Option<String>>>,
         
         asset_data_per_use: Option<ExtAssetDataPerUse>,
         asset_data_for_all_uses: Option<ExtAssetDataForAllUses>,
@@ -91,12 +93,14 @@ impl Keypom {
             &drop_id,
             uses_per_key,
             &public_keys, 
+            metadata_for_keys,
             key_owners,
             ACCESS_KEY_BOTH_METHOD_NAMES, 
             total_allowance_per_key
         );
 
         // Write the drop data to storage
+        let funder_id = env::predecessor_account_id();
         let drop = InternalDrop {
             uses_per_key,
             key_behavior_by_use,
@@ -105,7 +109,7 @@ impl Keypom {
             next_key_id,
             nft_config,
             drop_config: config_for_all_uses,
-            funder_id: env::predecessor_account_id(),
+            funder_id: funder_id.clone(),
             metadata: LazyOption::new(
                 StorageKeys::DropMetadata {
                     // We get a new unique prefix for the collection
@@ -124,6 +128,19 @@ impl Keypom {
             total_allowance_per_key,
             net_storage,
         );
+
+        // Construct the drop creation log and push it to the event logs
+        let drop_creation_event: EventLog = EventLog {
+            standard: KEYPOM_STANDARD_NAME.to_string(),
+            version: KEYPOM_STANDARD_VERSION.to_string(),
+            event: EventLogVariant::DropCreation(DropCreationLog {
+                funder_id: funder_id.to_string(),
+                drop_id,
+                uses_per_key,
+                metadata: drop_metadata
+            }),
+        };
+        event_logs.push(drop_creation_event);
 
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);

@@ -6,7 +6,9 @@ impl Keypom {
     pub fn add_keys(
         &mut self, 
         drop_id: String, 
+
         public_keys: Vec<PublicKey>,
+        metadata_for_keys: Option<Vec<Option<String>>>,
 
         // What will the owners of the keys be? Must match length of public keys
         key_owners: Option<Vec<Option<AccountId>>>
@@ -50,7 +52,8 @@ impl Keypom {
             &mut event_logs,
             &drop_id,
             uses_per_key,
-            &public_keys, 
+            &public_keys,
+            metadata_for_keys,
             key_owners,
             ACCESS_KEY_BOTH_METHOD_NAMES, 
             total_allowance_per_key

@@ -125,3 +125,11 @@ pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAss
 
     return InternalAsset::none;
 }
+
+/// Helper function to loop through events and log them.
+pub(crate) fn log_events(events: Vec<EventLog>) {
+    for event in events {
+        // Log the serialized json.
+        env::log_str(&event.to_string());
+    }
+}
