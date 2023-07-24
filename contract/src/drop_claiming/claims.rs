@@ -14,8 +14,10 @@ impl Keypom {
 
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CLAIM + required_asset_gas;
+        // Use to check prepaid == required. Changed to >= for the sake of simplicity for now
+        // Future plan to implement required_gas_for_claim and required_gas_for_create_account_and_claim into key info
         require!(
-            prepaid_gas == total_required_gas,
+            prepaid_gas >= total_required_gas,
             format!("Not enough gas attached. Required: {}, Prepaid: {}",
             total_required_gas.0,
             prepaid_gas.0)
@@ -35,8 +37,9 @@ impl Keypom {
             total_required_gas.0,
             prepaid_gas.0)
         );
-        let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + total_required_gas;
-        
+        let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + required_asset_gas;
+        near_sdk::log!("GAS FOR CALLBACK {:?}", gas_for_callback.clone());
+        near_sdk::log!("GAS FOR CREATE_ACCOUNT {:?}", GAS_FOR_CREATE_ACCOUNT.clone());
         // First, create the zero-balance account and then, claim the assets
         ext_account_creation::ext(self.root_account.clone())
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)

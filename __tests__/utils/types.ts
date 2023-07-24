@@ -49,6 +49,10 @@ export type ExtFTData = {
     ft_amount: string
 }
 
+export type ExtNFTData = {
+    nft_contract_id: string
+}
+
 export type ExtNearData = {
     yoctonear: string
 }
