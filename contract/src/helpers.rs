@@ -86,7 +86,7 @@ pub(crate) fn get_total_costs_for_use(
         .expect("Use number not found");
 
     // Keep track of the total gas across all assets in the current use
-    let mut total_gas_for_use: Gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT + GAS_FOR_RESOLVE_ASSET_CLAIM;
+    let mut total_gas_for_use: Gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM;
 
     // Loop through each asset metadata and tally the costs
     for metadata in assets_metadata {

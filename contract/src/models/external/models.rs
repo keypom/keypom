@@ -75,5 +75,3 @@ pub struct AssetDataForGivenUse {
 
 /// Specifies exactly what assets are contained in every given use for a drop
 pub type ExtAssetDataPerUse = HashMap<UseNumber, AssetDataForGivenUse>;
-
-pub type ExtConfig = Option<bool>;

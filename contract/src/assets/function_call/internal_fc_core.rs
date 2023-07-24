@@ -45,7 +45,7 @@ impl FCData {
         for method in self.methods.iter() {
             total_gas += method.attached_gas;
         }
-        total_gas += MIN_BASE_GAS_FOR_ONE_CCC * self.methods.len() as u64;
+        total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP * self.methods.len() as u64;
         total_gas += GAS_FOR_FC_CLAIM_LOGIC;
 
         total_gas

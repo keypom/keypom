@@ -28,7 +28,7 @@ impl Keypom {
         let cur_key_use = get_key_cur_use(&drop, &key_info);
         let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
-        let mut required_gas = BASE_GAS_FOR_CLAIM + GAS_FOR_CREATE_ACCOUNT + GAS_FOR_RESOLVE_ASSET_CLAIM;
+        let mut required_gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM;
 
         let mut ft_list: Vec<FTListData> = Vec::new();
         let mut nft_list: Vec<NFTListData> = Vec::new();
