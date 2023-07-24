@@ -4,5 +4,8 @@
         "nearcon",
         "POAP",
         "unscalable"
+    ],
+    "rust-analyzer.linkedProjects": [
+        "./contract/Cargo.toml"
     ]
 }
