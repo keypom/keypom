@@ -24,7 +24,9 @@ impl Keypom {
         require!(key_owners.clone().map(|o| o.len()).unwrap_or(num_pks) == num_pks, "Must specify an owner for each key");
         require!(metadata_for_keys.clone().map(|m| m.len()).unwrap_or(num_pks) == num_pks, "Must specify metadata for each key");
 
+        // Logs for add key and NFT mint events
         let mut add_key_logs = Vec::new();
+        let mut nft_mint_logs = Vec::new();
 
         // Create a new promise batch to create all the access keys
         let promise = env::promise_batch_create(current_account_id);
@@ -61,36 +63,33 @@ impl Keypom {
                 method_names,
             );
 
-            // Construct the mint log as per the events standard and add it to the list of logs
-            let nft_mint_log: EventLog = EventLog {
-                standard: NFT_STANDARD_NAME.to_string(),
-                version: NFT_METADATA_SPEC.to_string(),
-                event: EventLogVariant::NftMint(vec![NftMintLog {
-                    owner_id: token_owner.to_string(),
-                    token_ids: vec![token_id.to_string()],
-                    memo: None,
-                }]),
-            };
-
+            // Construct the nft mint and add key logs to be added as events later
+            nft_mint_logs.push(NftMintLog {
+                owner_id: token_owner.to_string(),
+                token_ids: vec![token_id.to_string()],
+                memo: None,
+            });
             add_key_logs.push(AddOrDeleteKeyLog {
                 owner_id: token_owner.to_string(),
                 drop_id: drop_id.to_string(),
                 public_key: pk.into(),
-                metadata: key_metadata // TODO
+                metadata: key_metadata
             });
-
-            event_logs.push(nft_mint_log);
 
             *next_key_id += 1;
         }
 
-        // Construct the add key event push it to the event logs
-        let add_key_event: EventLog = EventLog {
+        // Construct the events themselves
+        event_logs.push(EventLog {
+            standard: NFT_STANDARD_NAME.to_string(),
+            version: NFT_METADATA_SPEC.to_string(),
+            event: EventLogVariant::NftMint(nft_mint_logs),
+        });
+        event_logs.push(EventLog {
             standard: KEYPOM_STANDARD_NAME.to_string(),
             version: KEYPOM_STANDARD_VERSION.to_string(),
             event: EventLogVariant::AddKey(add_key_logs),
-        };
-        event_logs.push(add_key_event);
+        });
 
         env::promise_return(promise);
     }
