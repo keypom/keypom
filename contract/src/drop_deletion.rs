@@ -38,13 +38,17 @@ impl Keypom {
         // Get a list of all the public keys that should be deleted.
         // This is either what was passed in, or the first limit (or 100) keys in the drop
         let public_keys = public_keys.unwrap_or_else(|| drop.key_info_by_token_id.iter().take(limit.unwrap_or(100).into()).map(|k| k.1.pub_key).collect());
-
+        
+        
         // Create the batch promise for deleting the keys
         let key_deletion_promise = env::promise_batch_create(&env::current_account_id());
         
         // Keep track of the total cost for the key & the required allowance to be refunded
         let mut total_cost_for_keys: Balance = 0;
         let mut total_allowance_for_keys: Balance = 0;
+
+        let mut delete_key_logs = Vec::new();
+        let mut nft_burn_logs = Vec::new();
 
         // Loop through each public key and delete it
         for pk in &public_keys {
@@ -62,14 +66,49 @@ impl Keypom {
                 &drop.key_behavior_by_use
             );
 
+            add_delete_key_logs(
+                &mut nft_burn_logs,
+                &mut delete_key_logs,
+                &key_info.owner_id,
+                &drop_id,
+                &pk,
+                &token_id,
+                &key_info.metadata
+            );
+
             // Add the delete key action to the batch promise
             env::promise_batch_action_delete_key(key_deletion_promise, &pk);
         }
+
+        // Keep track of all the events starting with the NFT burn and key deletion logs
+        let mut event_logs = vec![
+            EventLog {
+                standard: NFT_STANDARD_NAME.to_string(),
+                version: NFT_METADATA_SPEC.to_string(),
+                event: EventLogVariant::NftBurn(nft_burn_logs),
+            },
+            EventLog {
+                standard: KEYPOM_STANDARD_NAME.to_string(),
+                version: KEYPOM_STANDARD_VERSION.to_string(),
+                event: EventLogVariant::DeleteKey(delete_key_logs),
+            }
+        ];
         
         if drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(false) {
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
             internal_clear_drop_storage(&mut drop);
+
+            // Add the drop deletion log to the event logs
+            event_logs.push(EventLog {
+                standard: KEYPOM_STANDARD_NAME.to_string(),
+                version: KEYPOM_STANDARD_VERSION.to_string(),
+                event: EventLogVariant::DropDeletion(DropDeletionLog {
+                    funder_id: funder_id.to_string(),
+                    drop_id,
+                    metadata: drop.metadata.get()
+                })
+            });
         } else {
             // Put the modified drop back in storage
             self.drop_by_id.insert(&drop_id, &drop);
@@ -82,6 +121,9 @@ impl Keypom {
         let total_refund_for_use = total_cost_for_keys + total_allowance_for_keys + storage_refund;
         near_sdk::log!("Allowance Refund: {} Cost Refund: {} Storage Refund: {}", total_allowance_for_keys, total_cost_for_keys, storage_refund);
         self.internal_modify_user_balance(&funder_id, total_refund_for_use, false);
+
+        // Now that everything is done (no more potential for panics), we can log the events
+        log_events(event_logs);
 
         env::promise_return(key_deletion_promise);
     }

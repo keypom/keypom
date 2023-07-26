@@ -64,17 +64,15 @@ impl Keypom {
             );
 
             // Construct the nft mint and add key logs to be added as events later
-            nft_mint_logs.push(NftMintLog {
-                owner_id: token_owner.to_string(),
-                token_ids: vec![token_id.to_string()],
-                memo: None,
-            });
-            add_key_logs.push(AddOrDeleteKeyLog {
-                owner_id: token_owner.to_string(),
-                drop_id: drop_id.to_string(),
-                public_key: pk.into(),
-                metadata: key_metadata
-            });
+            add_new_key_logs(
+                &mut nft_mint_logs,
+                &mut add_key_logs,
+                &token_owner,
+                &drop_id,
+                &pk,
+                &token_id,
+                &key_metadata
+            );
 
             *next_key_id += 1;
         }

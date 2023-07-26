@@ -19,8 +19,8 @@ pub enum EventLogVariant {
 
     // NFT specific events
     NftMint(Vec<NftMintLog>),
+    NftBurn(Vec<NftBurnLog>),
     NftTransfer(Vec<NftTransferLog>),
-    
 }
 
 /// Interface to capture data about an event
