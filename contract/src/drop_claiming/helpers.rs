@@ -13,7 +13,10 @@ impl Keypom {
     /// Ensure re-entry protection and decrement remaining uses on a key
     /// Returns the drop ID that the key is associated with
     pub(crate) fn before_claim_logic(&mut self) -> (TokenId, Gas) {
+        near_sdk::log!("Gas at start of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
+
         let signer_pk = env::signer_account_pk();
+        
 
         // Get the key info and decrement its remaining uses.
         // If there are zero remaining uses, break the connection between
@@ -35,10 +38,12 @@ impl Keypom {
         let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         let mut required_asset_gas = Gas(0);
 
+        near_sdk::log!("Gas before gets: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             required_asset_gas += internal_asset.get_required_gas();
         }
+        near_sdk::log!("Gas after gets: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
         
         key_info.remaining_uses -= 1;
         if key_info.remaining_uses == 0 {
@@ -50,6 +55,7 @@ impl Keypom {
         drop.key_info_by_token_id.insert(&token_id, &key_info);
         self.drop_by_id.insert(&drop_id, &drop);
 
+        near_sdk::log!("Gas at end of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
         (token_id, required_asset_gas)
     }
 

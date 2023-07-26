@@ -157,141 +157,141 @@ test('CAAC', async t => {
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
 
-// test('Force CAAC Failure', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
+test('Force CAAC Failure', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    const dropId = "my-drop-id";
+    const numKeys = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-//     const nearAsset1 = {
-//         yoctonear: NEAR.parse("1").toString()
-//     }
+    const nearAsset1 = {
+        yoctonear: NEAR.parse("1").toString()
+    }
 
-//     const assets_per_use = {
-//         1: [null]
-//     }
+    const assets_per_use = {
+        1: [null]
+    }
 
-//     const asset_data_for_all_uses = {
-//         assets: [null],
-//         num_uses: 1
-//     }
+    const asset_data_for_all_uses = {
+        assets: [null],
+        num_uses: 1
+    }
     
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data_for_all_uses,
-//             public_keys: [keyPairs.publicKeys[0]]
-//         },
-//     })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data_for_all_uses,
+            public_keys: [keyPairs.publicKeys[0]]
+        },
+    })
 
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-//     // CAAC using just createAccount flag
-//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         createAccount: true,
-//         receiverId: ali.accountId,
-//         shouldPanic: true
-//     })
+    // CAAC using just createAccount flag
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        createAccount: true,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
 
-//     // Key should be deleted but drop should still exist
-//     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
-// });
+    // Key should be deleted but drop should still exist
+    t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+});
 
-// test('Claim Normal', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
+test('Claim Normal', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    const dropId = "my-drop-id";
+    const numKeys = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-//     const nearAsset1 = {
-//         yoctonear: NEAR.parse("1").toString()
-//     }
+    const nearAsset1 = {
+        yoctonear: NEAR.parse("1").toString()
+    }
 
-//     const asset_data_for_all_uses = {
-//         assets: [null],
-//         num_uses: 1
-//     }
+    const asset_data_for_all_uses = {
+        assets: [null],
+        num_uses: 1
+    }
     
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data_for_all_uses,
-//             public_keys: [keyPairs.publicKeys[0]]
-//         },
-//     })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data_for_all_uses,
+            public_keys: [keyPairs.publicKeys[0]]
+        },
+    })
 
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-//     // CAAC using just createAccount flag
-//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         receiverId: ali.accountId
-//     })
+    // CAAC using just createAccount flag
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        receiverId: ali.accountId
+    })
 
-//     // Key should be deleted but drop should still exist
-//     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
-// });
+    // Key should be deleted but drop should still exist
+    t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+});
 
-// test('Claim Implicit', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
+test('Claim Implicit', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    const dropId = "my-drop-id";
+    const numKeys = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-//     const nearAsset1 = {
-//         yoctonear: NEAR.parse("1").toString()
-//     }
+    const nearAsset1 = {
+        yoctonear: NEAR.parse("1").toString()
+    }
 
-//     const assets_per_use = {
-//         1: [nearAsset1]
-//     }
+    const assets_per_use = {
+        1: [nearAsset1]
+    }
 
-//     const asset_data_for_all_uses = {
-//         assets: [null],
-//         num_uses: 1
-//     }
+    const asset_data_for_all_uses = {
+        assets: [null],
+        num_uses: 1
+    }
     
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data_for_all_uses,
-//             public_keys: [keyPairs.publicKeys[0]]
-//         },
-//     })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data_for_all_uses,
+            public_keys: [keyPairs.publicKeys[0]]
+        },
+    })
 
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-//     // Implicit claimflags
-//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         useImplicitAccount: true
-//     })
+    // Implicit claimflags
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        useImplicitAccount: true
+    })
 
-//     // Key should be deleted but drop should still exist
-//     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
-// });
+    // Key should be deleted but drop should still exist
+    t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+});

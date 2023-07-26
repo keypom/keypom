@@ -395,7 +395,116 @@ test.afterEach(async t => {
 
 // });
 
-test('Sanity Check', async t => {
+// test('Sanity Check', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+//     const nearAssetAmount: number = 1
+//     const ftRegistrationCost: number =  1
+
+//     const dropId = "my-drop-id";
+//     const numKeys = 2;
+//     let keyPairs = await generateKeyPairs(numKeys);
+
+//     const ftAsset1: ExtFTData = {
+//         ft_contract_id: ftContract1.accountId,
+//         registration_cost: NEAR.parse("1").toString(),
+//         ft_amount: ftRegistrationCost.toString()
+//     }
+
+//     // bunch of asset IDs
+//     const nftAssets: ExtNFTData[] = []
+//     const expectedNFTs: InternalNFTData[] = []
+//     // 12 was ok with long
+//     for(let i = 1; i <= 14; i++){
+//         let num: string = (i < 10) ? '0' + i.toString() : i.toString();
+//         // let new_contract_id: string = num + "1690235236996169023523699616902352369961690235236996.test.near";
+//         let new_contract_id: string = num + "abc.test.near";
+//         nftAssets.push({nft_contract_id: new_contract_id})
+//         expectedNFTs.push({contract_id: new_contract_id, token_ids: []})
+//     }
+//     console.log(nftAssets)
+
+//     const asset_data_per_use = {
+//         // Max amount of spoof NFTs that will still pass
+//         1: {
+//             assets: nftAssets
+//         },
+//         // Max number of FT assets under 300T in estimation
+//         2: {
+//             assets: [ftAsset1, ftAsset1, ftAsset1, ftAsset1, ftAsset1,
+//                      ftAsset1, ftAsset1, ftAsset1, ftAsset1]
+//         },
+//     }
+    
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data_per_use,
+//             public_keys: [keyPairs.publicKeys[0]]
+//         },
+//         attachedDeposit: NEAR.parse("1").toString(),
+//     })
+
+//     await sendFTs(funder, "10", keypomV3, ftContract1, dropId)
+    
+
+//     // Assert Assets
+//     await assertKeypomInternalAssets({
+//         keypom: keypomV3,
+//         dropId,
+//         expectedFtData: [{
+//             contract_id: ftContract1.accountId,
+//             balance_avail: '10',
+//         }],
+//         expectedNftData: expectedNFTs,
+//     })
+
+//     // 2 uses at the start
+//     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+//     t.is(keyInfo.uses_remaining, 2)
+
+//     // starting claim NEAR and FT balance
+//     let preClaimFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+//     let userPreClaimFTBal= await ftContract1.view("ft_balance_of", {account_id: ali.accountId});
+//     let userPreClaimNEARBal: {available: NEAR} = await ali.balance()
+
+//     // First failed claim
+//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+//         keypom: keypomV3,
+//         root,
+//         keyPair: keyPairs.keys[0],
+//         createAccount: true,
+//         receiverId: ali.accountId,
+//         shouldPanic: true
+//     })
+//     t.is(result.response, "false")
+
+//     // Key uses should have decremented
+//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+//     t.is(keyInfo.uses_remaining, 1)
+
+//     // Second failed claim
+//     result = await claimWithRequiredGas({
+//         keypom: keypomV3,
+//         root,
+//         keyPair: keyPairs.keys[0],
+//         createAccount: true,
+//         receiverId: ali.accountId,
+//         shouldPanic: true
+//     })
+//     t.is(result.response, "false")
+
+//     // Key should be deleted but drop should still exist
+//     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
+
+// });
+
+test('NFT Const Tweaking', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
@@ -406,31 +515,30 @@ test('Sanity Check', async t => {
     const numKeys = 2;
     let keyPairs = await generateKeyPairs(numKeys);
 
-    const ftAsset1: ExtFTData = {
-        ft_contract_id: ftContract1.accountId,
-        registration_cost: NEAR.parse("1").toString(),
-        ft_amount: ftRegistrationCost.toString()
-    }
+    // TO DO: TWEAK NFT CONSTANTS SUCH THAT DROPS CREATED = DROPS CLAIMABLE
+    // MAKE SURE THAT THIS IS THE ISSUE AS WELL, AND NOT FAILING ELSEWHERE
+    // LACK OF LOGS FROM ON_ACCOUNT_CREATED IS CONCERNING
 
     // bunch of asset IDs
     const nftAssets: ExtNFTData[] = []
     const expectedNFTs: InternalNFTData[] = []
-    for(let i = 1; i < 16; i++){
+    // 12 was ok with long
+    for(let i = 1; i <= 15; i++){
         let num: string = (i < 10) ? '0' + i.toString() : i.toString();
         let new_contract_id: string = num + "1690235236996169023523699616902352369961690235236996.test.near";
+        // let new_contract_id: string = num + "abc.test.near";
         nftAssets.push({nft_contract_id: new_contract_id})
         expectedNFTs.push({contract_id: new_contract_id, token_ids: []})
     }
-    console.log(nftAssets)
 
     const asset_data_per_use = {
+        // Max amount of spoof NFTs that will still pass226/18
         1: {
             assets: nftAssets
         },
         2: {
-            assets: [ftAsset1, ftAsset1, ftAsset1, ftAsset1, ftAsset1,
-                     ftAsset1, ftAsset1]
-        },
+            assets: [null]
+        }
     }
     
     await functionCall({
@@ -444,46 +552,22 @@ test('Sanity Check', async t => {
         },
         attachedDeposit: NEAR.parse("1").toString(),
     })
-
-    await sendFTs(funder, "10", keypomV3, ftContract1, dropId)
     
-
     // Assert Assets
-    await assertKeypomInternalAssets({
-        keypom: keypomV3,
-        dropId,
-        expectedFtData: [{
-            contract_id: ftContract1.accountId,
-            balance_avail: '10',
-        }],
-        expectedNftData: expectedNFTs,
-    })
+    // await assertKeypomInternalAssets({
+    //     keypom: keypomV3,
+    //     dropId,
+    //     expectedNftData: expectedNFTs,
+    // })
 
-    // 2 uses at the start
-    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-    t.is(keyInfo.uses_remaining, 2)
-
-    // starting claim NEAR and FT balance
-    let preClaimFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-    let userPreClaimFTBal= await ftContract1.view("ft_balance_of", {account_id: ali.accountId});
-    let userPreClaimNEARBal: {available: NEAR} = await ali.balance()
-
-    // First failed claim
+    // First legit claim to get to 2nd use
     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
         keypom: keypomV3,
         root,
         keyPair: keyPairs.keys[0],
         createAccount: true,
-        receiverId: ali.accountId,
-        shouldPanic: true
     })
-    t.is(result.response, "false")
 
-    // Key uses should have decremented
-    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-    t.is(keyInfo.uses_remaining, 1)
-
-    // Second failed claim
     result = await claimWithRequiredGas({
         keypom: keypomV3,
         root,
@@ -499,6 +583,7 @@ test('Sanity Check', async t => {
     t.is(await doesDropExist(keypomV3, dropId), true)
 
 });
+
 
 // account creation succeeded but asset claims failed -> should refund assets that failed and do nothing for ones that weren’t
 // test('Asset Claim Failure in CAAC', async t => {
