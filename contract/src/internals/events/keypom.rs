@@ -55,6 +55,33 @@ pub struct AddOrDeleteKeyLog {
     pub metadata: Option<String>,
 }
 
+/// An event log to capture whenever a key has been transferred (either meaning the public key was rotated or there's a new owner)
+///
+/// Arguments
+/// * `old_owner_id`: Old owner of the key
+/// * `new_owner_id`: New owner of the key
+/// * `old_public_key`: Original public key
+/// * `new_public_key`: New public key
+/// * `drop_id`: "my-drop123"
+/// * `token_id`: The ID of the key that was transferred
+/// 
+/// * `authorized_id`: approved account to transfer
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct TransferKeyLog {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorized_id: Option<String>,
+
+    pub old_owner_id: String,
+    pub new_owner_id: String,
+    
+    pub old_public_key: String,
+    pub new_public_key: String,
+    
+    pub drop_id: String,
+    pub token_id: String
+}
+
 /// An event log to capture whenever a key is used to call `claim`
 ///
 /// Arguments

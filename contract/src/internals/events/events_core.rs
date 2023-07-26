@@ -9,17 +9,24 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 #[non_exhaustive]
 pub enum EventLogVariant {
-    // Keypom specific events
+    /// Drop creation / deletion
     DropCreation(DropCreationLog),
     DropDeletion(DropDeletionLog),
-    AddKey(Vec<AddOrDeleteKeyLog>),
-    DeleteKey(Vec<AddOrDeleteKeyLog>),
+    
+    /// Whenever keys are claimed
     Claim(ClaimLog),
     CreateAccountAndClaim(CreateAccountAndClaimLog),
 
-    // NFT specific events
+    /// Whenever keys are added
+    AddKey(Vec<AddOrDeleteKeyLog>),
     NftMint(Vec<NftMintLog>),
+
+    /// Whenever keys are deleted
+    DeleteKey(Vec<AddOrDeleteKeyLog>),
     NftBurn(Vec<NftBurnLog>),
+
+    /// Whenever keys are transferred
+    KeyTransfer(TransferKeyLog),
     NftTransfer(Vec<NftTransferLog>),
 }
 
