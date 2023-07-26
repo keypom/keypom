@@ -1,8 +1,8 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, functionCall, generateKeyPairs } from "../utils/general";
+import { CONTRACT_METADATA, claimWithRequiredGas, functionCall, generateKeyPairs } from "../utils/general";
 import { keypom_args, nftMetadata, nftSeriesMetadata } from "./utils/nft-utils";
-import { generatePasswordsForKey } from "./utils/pwUtils";
+import { generatePasswordsForKey, hash } from "./utils/pwUtils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -59,7 +59,7 @@ test.afterEach(async t => {
 
 test('Null Claim', async t => {
     //get Keypopm initial balance
-    const { keypom, funder, ali, nftSeries, minter } = t.context.accounts;
+    const { keypom, funder, ali, nftSeries, minter, root } = t.context.accounts;
 
     //add 20 $NEAR to balance
     console.log("adding to balance");
@@ -110,5 +110,13 @@ test('Null Claim', async t => {
             public_keys: publicKeys
         },
         attachedDeposit: NEAR.parse("20").toString()
+    })
+
+    await claimWithRequiredGas({
+        keypom,
+        keyPair: keys[0],
+        root,
+        receiverId: ali.accountId,
+        password: hash(basePassword + publicKeys[0] + '1')
     })
 });

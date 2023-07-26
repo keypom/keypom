@@ -35,17 +35,19 @@ impl Keypom {
         let (drop_id, _) = parse_token_id(&token_id);
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
-        
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        // If there is some password for the current key use, assert that it matches the one provided
-        if let Some(pw_by_use) = &key_info.pw_by_use {
-            if let Some(pw) = pw_by_use.get(&cur_key_use) {
-                assert_key_password(password, pw.clone());
-            }
-        }
+        let InternalKeyBehavior {assets_metadata, config: key_config} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        
+        assert_pre_claim_conditions(
+            &key_info,
+            &drop.drop_config,
+            &key_config,
+            &password,
+            &cur_key_use,
+            new_public_key.is_some()
+        );
         
         // Tally up all the gas for the assets
-        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         let mut required_asset_gas = Gas(0);
         let mut assets = Vec::new();
         for metadata in assets_metadata {
@@ -233,12 +235,41 @@ pub(crate) fn was_account_created() -> bool {
     false
 }
 
+/// Internal function to perform all the pre-claim checks such as passwords, configs etc.
+pub(crate) fn assert_pre_claim_conditions(
+    key_info: &InternalKeyInfo,
+    drop_config: &Option<ConfigForAllUses>,
+    key_config: &Option<ConfigForGivenUse>,
+    user_password: &Option<String>,
+    cur_key_use: &UseNumber,
+    creating_account: bool
+) {
+    // Ensure that claim and create_account_and_claim are only called based on the key / drop's config
+    if let Some(perm) = key_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
+        match perm {
+            ClaimPermissions::claim => {
+                require!(creating_account == false, "Cannot call `create_account_and_claim` when key permission is set to only claim")
+            },
+            ClaimPermissions::create_account_and_claim => {
+                require!(creating_account == true, "Cannot call `claim` when key permission is set to only create_account_and_claim")
+            },
+        }
+    }
+    
+    // If there is some password for the current key use, assert that it matches the one provided
+    if let Some(pw_by_use) = &key_info.pw_by_use {
+        if let Some(pw) = pw_by_use.get(cur_key_use) {
+            assert_key_password(user_password, pw.clone());
+        }
+    }
+}
+
 /// Internal function to assert that the password for claim matches the one in the key info
 pub(crate) fn assert_key_password(
-    user_password: Option<String>,
+    user_password: &Option<String>,
     expected_password: Vec<u8>
 ) {
-    let hashed_user_pw = sha256(&user_password.and_then(|f| hex::decode(f).ok()).expect("Password expected."));
+    let hashed_user_pw = sha256(&user_password.as_ref().and_then(|f| hex::decode(f).ok()).expect("Password expected."));
 
     require!(hashed_user_pw == expected_password, format!("User provided password: {:?} does not match expected password: {:?}", hashed_user_pw, expected_password));
 }

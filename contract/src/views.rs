@@ -26,10 +26,10 @@ impl Keypom {
             .expect("no drop found for drop ID");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalKeyBehavior {assets_metadata, config} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehavior {assets_metadata, config: use_config} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
 
         // If the config usage's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
-        let base_gas_for_use = if let Some(perm) = config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()) {
+        let base_gas_for_use = if let Some(perm) = use_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop.drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
             match perm {
                 ClaimPermissions::claim => {
                     BASE_GAS_FOR_CLAIM

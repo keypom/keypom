@@ -289,6 +289,7 @@ export async function claimWithRequiredGas({
   keyPair,
   root,
   fcArgs,
+  password,
   receiverId,
   createAccount=false,
   useLongAccount=true,
@@ -299,6 +300,7 @@ export async function claimWithRequiredGas({
   keyPair: KeyPair,
   root: NearAccount,
   fcArgs?: UserProvidedFCArgs,
+  password?: string,
   receiverId?: string,
   createAccount?: boolean,
   useLongAccount?: boolean,
@@ -349,7 +351,8 @@ export async function claimWithRequiredGas({
         args: {
           new_account_id: actualReceiverId,
           new_public_key: newPublicKey,
-          fc_args: fcArgs
+          fc_args: fcArgs,
+          password
         },
         gas: keyInfo.required_gas,
         shouldPanic
@@ -366,7 +369,8 @@ export async function claimWithRequiredGas({
     methodName: 'claim',
     args: {
       account_id: actualReceiverId,
-      fc_args: fcArgs
+      fc_args: fcArgs,
+      password
     },
     gas: keyInfo.required_gas,
     shouldPanic
