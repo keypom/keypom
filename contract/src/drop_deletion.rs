@@ -97,18 +97,7 @@ impl Keypom {
         if drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(false) {
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
-            internal_clear_drop_storage(&mut drop);
-
-            // Add the drop deletion log to the event logs
-            event_logs.push(EventLog {
-                standard: KEYPOM_STANDARD_NAME.to_string(),
-                version: KEYPOM_STANDARD_VERSION.to_string(),
-                event: EventLogVariant::DropDeletion(DropDeletionLog {
-                    funder_id: funder_id.to_string(),
-                    drop_id,
-                    metadata: drop.metadata.get()
-                })
-            });
+            internal_clear_drop_storage(&mut drop, &mut event_logs, &drop_id);
         } else {
             // Put the modified drop back in storage
             self.drop_by_id.insert(&drop_id, &drop);
@@ -130,9 +119,24 @@ impl Keypom {
 }
 
 /// Internal helper function to clear the storage in the drop
-pub(crate) fn internal_clear_drop_storage(drop: &mut InternalDrop) {
+pub(crate) fn internal_clear_drop_storage(
+    drop: &mut InternalDrop,
+    event_logs: &mut Vec<EventLog>,
+    drop_id: &DropId
+) {
     drop.asset_by_id.clear();
     clear_key_behaviors(drop.uses_per_key, &mut drop.key_behavior_by_use);
+
+    // Add the drop deletion log to the event logs
+    event_logs.push(EventLog {
+        standard: KEYPOM_STANDARD_NAME.to_string(),
+        version: KEYPOM_STANDARD_VERSION.to_string(),
+        event: EventLogVariant::DropDeletion(DropDeletionLog {
+            funder_id: drop.funder_id.to_string(),
+            drop_id: drop_id.to_string(),
+            metadata: drop.metadata.get()
+        })
+    });
 }
 
 /// Loop through each use number and remove the assets metadata for that use number

@@ -27,7 +27,7 @@ impl InternalDrop {
             
             for metadata in assets_metadata {
                 let asset = self.asset_by_id.get(&metadata.asset_id).unwrap();
-                assets.push(asset.to_external_asset(&metadata));
+                assets.push(asset.to_external_asset(&metadata.tokens_per_use));
             }
             assets_per_use.insert(use_number, assets);
         }
@@ -44,19 +44,19 @@ impl InternalDrop {
 
 impl InternalAsset {
     /// Convert an `InternalAsset` into an `ExtAsset`
-    pub fn to_external_asset(self, asset_metadata: &AssetMetadata) -> Option<ExtAsset> {
+    pub fn to_external_asset(&self, tokens_per_use: &Option<U128>) -> Option<ExtAsset> {
         match self {
             InternalAsset::ft(ft_data) => Some(ExtAsset::FTAsset(ExtFTData {
                 ft_contract_id: ft_data.contract_id.clone(),
                 registration_cost: ft_data.registration_cost.into(),
                 // FTs should ALWAYS have a tokens_per_use value
-                ft_amount: asset_metadata.tokens_per_use.unwrap().into()
+                ft_amount: tokens_per_use.unwrap()
             })),
             InternalAsset::nft(nft_data) => Some(ExtAsset::NFTAsset(ExtNFTData {
                 nft_contract_id: nft_data.contract_id.clone()
             })),
-            InternalAsset::fc(fc_data) => Some(ExtAsset::FCAsset(FCData::new(fc_data.methods))),
-            InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: asset_metadata.tokens_per_use.unwrap().into() })),
+            InternalAsset::fc(fc_data) => Some(ExtAsset::FCAsset(FCData::new(fc_data.methods.clone()))),
+            InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: tokens_per_use.unwrap() })),
             InternalAsset::none => None
         }
     }
