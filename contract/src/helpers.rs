@@ -56,7 +56,8 @@ pub(crate) fn get_total_costs_for_key(
     remaining_uses: UseNumber, 
     max_uses_per_key: UseNumber, 
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>
+    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>,
+    drop_config: &Option<ConfigForAllUses>
 ) {
     // For every remaining use, we need to loop through all assets and refund
     for cur_use in 1..=remaining_uses {
@@ -68,7 +69,8 @@ pub(crate) fn get_total_costs_for_key(
             total_allowance_for_keys,
             use_to_refund,
             asset_by_id,
-            key_behavior_by_use
+            key_behavior_by_use,
+            drop_config
         );
     }
 }
@@ -78,15 +80,29 @@ pub(crate) fn get_total_costs_for_use(
     total_allowance_for_use: &mut Balance,
     use_number: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>
+    key_behavior_by_use: &LookupMap<UseNumber, InternalKeyBehavior>,
+    drop_config: &Option<ConfigForAllUses>
 ) {
     // Get the assets metadata for this use number
-    let InternalKeyBehavior {assets_metadata, config: _} = key_behavior_by_use
+    let InternalKeyBehavior {assets_metadata, config: use_config} = key_behavior_by_use
         .get(&use_number)
         .expect("Use number not found");
 
+    // If the config usage's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
+    let base_gas_for_use = if let Some(perm) = use_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
+        match perm {
+            ClaimPermissions::claim => {
+                BASE_GAS_FOR_CLAIM
+            }
+            _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
+        }
+    } else {
+        BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
+    };
+
     // Keep track of the total gas across all assets in the current use
-    let mut total_gas_for_use: Gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM;
+    near_sdk::log!("{} base gas for use {}", use_number, base_gas_for_use.0);
+    let mut total_gas_for_use: Gas = base_gas_for_use;
 
     // Loop through each asset metadata and tally the costs
     for metadata in assets_metadata {

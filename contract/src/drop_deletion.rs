@@ -63,7 +63,8 @@ impl Keypom {
                 key_info.remaining_uses,
                 drop.uses_per_key,
                 &drop.asset_by_id,
-                &drop.key_behavior_by_use
+                &drop.key_behavior_by_use,
+                &drop.drop_config
             );
 
             add_delete_key_logs(

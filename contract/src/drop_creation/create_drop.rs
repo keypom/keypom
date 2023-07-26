@@ -78,7 +78,8 @@ impl Keypom {
             uses_per_key,
             uses_per_key,
             &asset_by_id,
-            &key_behavior_by_use
+            &key_behavior_by_use,
+            &config_for_all_uses
         );
 
         // Keep track of all the key IDs 

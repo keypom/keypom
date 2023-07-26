@@ -87,16 +87,20 @@ impl Keypom {
         }
 
         // Construct the events themselves
-        event_logs.push(EventLog {
-            standard: NFT_STANDARD_NAME.to_string(),
-            version: NFT_METADATA_SPEC.to_string(),
-            event: EventLogVariant::NftMint(nft_mint_logs),
-        });
-        event_logs.push(EventLog {
-            standard: KEYPOM_STANDARD_NAME.to_string(),
-            version: KEYPOM_STANDARD_VERSION.to_string(),
-            event: EventLogVariant::AddKey(add_key_logs),
-        });
+        if nft_mint_logs.len() > 0 {
+            event_logs.push(EventLog {
+                standard: NFT_STANDARD_NAME.to_string(),
+                version: NFT_METADATA_SPEC.to_string(),
+                event: EventLogVariant::NftMint(nft_mint_logs),
+            });
+        }
+        if add_key_logs.len() > 0 {
+            event_logs.push(EventLog {
+                standard: KEYPOM_STANDARD_NAME.to_string(),
+                version: KEYPOM_STANDARD_VERSION.to_string(),
+                event: EventLogVariant::AddKey(add_key_logs),
+            });
+        }
 
         env::promise_return(promise);
     }

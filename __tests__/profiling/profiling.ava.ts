@@ -73,9 +73,15 @@ test('Null Claim', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            asset_data_for_all_uses: {
-                assets: [null],
-                num_uses: 1
+            asset_data_per_use: {
+                1: {
+                    assets: [null],
+                    config: {
+                        usage: {
+                            permissions: "claim"
+                        }
+                    },
+                }
             },
             public_keys: []
         },

@@ -25,6 +25,7 @@ impl Keypom {
             funder_id == env::predecessor_account_id(),
             "Only drop funder can add keys"
         );
+        require!(public_keys.len() > 0, "Must provide at least one public key");
 
         // Parse the external assets and store them in the contract
         let uses_per_key = drop.uses_per_key;
@@ -40,7 +41,8 @@ impl Keypom {
             uses_per_key,
             uses_per_key,
             &drop.asset_by_id,
-            &drop.key_behavior_by_use
+            &drop.key_behavior_by_use,
+            &drop.drop_config
         );
 
         // Keep track of all the events
