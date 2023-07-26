@@ -1,24 +1,18 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS } from "../utils/general";
-import { DropConfig } from "../utils/types";
-
-const path = require("path");
-const homedir = require("os").homedir();
-const { writeFile, mkdir, readFile } = require('fs/promises');
+import { CONTRACT_METADATA, functionCall, generateKeyPairs } from "../utils/general";
+import { keypom_args, nftMetadata, nftSeriesMetadata } from "./utils/nft-utils";
+import { generatePasswordsForKey } from "./utils/pwUtils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
     accounts: Record<string, NearAccount>;
     keypomInitialBalance: NEAR;
-    keypomInitialStateStaked: NEAR;
 }>;
-
 
 test.beforeEach(async (t) => {
     // Comment this if you want to see console logs
     //console.log = function() {}
-    console.log("starting")
 
     // Init the worker and start a Sandbox server
     const worker = await Worker.init();
@@ -26,39 +20,34 @@ test.beforeEach(async (t) => {
     // Prepare sandbox for tests, create accounts, deploy contracts, etc.
     const root = worker.rootAccount;
 
-    // Deploy all 3 contracts
+    // Deploy all 3 contracts to 2 dev accounts; the NFT series and keypom
     const keypom = await root.devDeploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
-    
+    const nftSeries = await root.devDeploy(`./__tests__/ext-wasm/nft-series.wasm`);
+
     // Init the 3 contracts
     await root.call(root, 'new', {});
     await keypom.call(keypom, 'new', { root_account: 'test.near', owner_id: keypom, contract_metadata: CONTRACT_METADATA });
-    
+    await nftSeries.call(nftSeries, 'new', { owner_id: nftSeries, metadata: nftSeriesMetadata });
+
     // Test users
     const ali = await root.createSubAccount('ali');
-    const owner = await root.createSubAccount('owner');
-    
-    // Custom root
-    const customRoot = await root.createSubAccount('custom-root');
-    await customRoot.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
-    await customRoot.call(customRoot, 'new', {});
-    
-    // Add 10k $NEAR to owner's account
-    await owner.updateAccount({
+    const funder = await root.createSubAccount('funder');
+    const minter = await root.createSubAccount('minter');
+
+    // Add 10k $NEAR to funder's account
+    await funder.updateAccount({
         amount: NEAR.parse('10000 N').toString()
     })
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
-    
-    let keypomBalance = await keypom.balance();
-    console.log('keypom available INITIAL: ', keypomBalance.available.toString())
-    console.log('keypom staked INITIAL: ', keypomBalance.staked.toString())
-    console.log('keypom stateStaked INITIAL: ', keypomBalance.stateStaked.toString())
-    console.log('keypom total INITIAL: ', keypomBalance.total.toString())
+    await funder.call(keypom, 'add_to_balance', {}, {attachedDeposit: "0"});
+
+    // Mint the NFT
+    await nftSeries.call(nftSeries, 'create_series', { mint_id: 0, metadata: nftMetadata }, { attachedDeposit: NEAR.parse("1").toString() });
+    await nftSeries.call(nftSeries, 'nft_mint', { mint_id: '0', receiver_id: minter, keypom_args }, { attachedDeposit: NEAR.parse("1").toString() });
 
     // Save state for test runs
     t.context.worker = worker;
-    t.context.accounts = { root, keypom, owner, ali, customRoot };
+    t.context.accounts = { root, keypom, funder, ali, minter, nftSeries };
 });
 
 // If the environment is reused, use test.after to replace test.afterEach
@@ -68,98 +57,52 @@ test.afterEach(async t => {
     });
 });
 
-test('Simple Drop Upfront', async t => {
-    const { keypom, owner, ali } = t.context.accounts;
-    let startIndex = 0;
-    let finishIndex = 100;
+test('Null Claim', async t => {
+    //get Keypopm initial balance
+    const { keypom, funder, ali, nftSeries, minter } = t.context.accounts;
 
-    // dataToWrite is an object containing strings that map to objects
-    let dataToWrite: Record<string, Record<string, string>> = {};
+    //add 20 $NEAR to balance
+    console.log("adding to balance");
+    await funder.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
-    let config: DropConfig = {
-        usage: {
-            auto_withdraw: true,
-            auto_delete_drop: true
-        }
-    }
+    const dropId = "drop-id";
+
+    await functionCall({
+        signer: funder,
+        receiver: keypom,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data_for_all_uses: {
+                assets: [null],
+                num_uses: 1
+            },
+            public_keys: []
+        },
+        attachedDeposit: NEAR.parse("20").toString()
+    })
+
+    let numKeys = 1;
+    let {keys, publicKeys} = await generateKeyPairs(numKeys);
+
+    let basePassword = 'mypassword1';
+    //generates an array of hash(hash(basePassword + publicKeys[i])) --> all PWs for all key use
+    let password_by_use = generatePasswordsForKey(publicKeys[0], [1], basePassword);
     
-    // Loop through and create a drop with 0 all the way to 100 keys per drop and check the net user costs
-    for (let i = startIndex; i < finishIndex; i++) {
-        let {keys, publicKeys} = await generateKeyPairs(i+1);
-
-        // Withdraw all balance and deposit 1000 $NEAR
-        await owner.call(keypom, 'withdraw_from_balance', {});
-        await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("1000").toString()});
-
-        let bal1 = await owner.balance();
-        // Creating the drop that should be deleted
-        await owner.call(keypom, 'create_drop', {
-            public_keys: publicKeys, 
-            deposit_per_use: NEAR.parse("1").toString(),
-            config,
-        },{gas: LARGE_GAS});
-        let bal2 = await owner.balance();
-
-        let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
-        let netCost = NEAR.parse("1000").sub(NEAR.from(ownerBal));
-        
-        dataToWrite[`${i}-keys`] = {
-            "initialActual": bal1.available.toString(),
-            "finalActual": bal2.available.toString(),
-            "netActual": bal1.available.sub(bal2.available).toString(),
-            "initialBalance": NEAR.parse("1000").toString(),
-            "finalBalance": ownerBal,
-            "netCost": netCost.toString(),
-        }
+    // Create an array of size numKeys that's entirely empty
+    let data_for_keys = new Array(numKeys).fill(null);
+    data_for_keys[0] = {
+        password_by_use
     }
-
-    await writeFile(path.resolve(__dirname, `simple.json`), JSON.stringify(dataToWrite));
-});
-
-test('Simple Drop NET', async t => {
-    const { keypom, owner, ali } = t.context.accounts;
-    let startIndex = 0;
-    let finishIndex = 1;
-
-    // dataToWrite is an object containing strings that map to objects
-    let dataToWrite: Record<string, Record<string, string>> = {};
-
-    let config: DropConfig = {
-        usage: {
-            auto_withdraw: true,
-            auto_delete_drop: true
-        }
-    }
-    
-    // Loop through and create a drop with 0 all the way to 100 keys per drop and check the net user costs
-    for (let i = startIndex; i < finishIndex; i++) {
-        let {keys, publicKeys} = await generateKeyPairs(i+1);
-
-        // Withdraw all balance and deposit 1000 $NEAR
-        await owner.call(keypom, 'withdraw_from_balance', {});
-        await owner.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("1000").toString()});
-
-        let bal1 = await owner.balance();
-        // Creating the drop that should be deleted
-        await owner.call(keypom, 'create_drop', {
-            public_keys: publicKeys, 
-            deposit_per_use: NEAR.parse("1").toString(),
-            config,
-        },{gas: LARGE_GAS});
-        let bal2 = await owner.balance();
-
-        let ownerBal: string = await keypom.view('get_user_balance', {account_id: owner});
-        let netCost = NEAR.parse("1000").sub(NEAR.from(ownerBal));
-        
-        dataToWrite[`${i}-keys`] = {
-            "initialActual": bal1.available.toString(),
-            "finalActual": bal2.available.toString(),
-            "netActual": bal1.available.sub(bal2.available).toString(),
-            "initialBalance": NEAR.parse("1000").toString(),
-            "finalBalance": ownerBal,
-            "netCost": netCost.toString(),
-        }
-    }
-
-    await writeFile(path.resolve(__dirname, `simple.json`), JSON.stringify(dataToWrite));
+    await functionCall({
+        signer: funder,
+        receiver: keypom,
+        methodName: 'add_keys',
+        args: {
+            drop_id: dropId,
+            data_for_keys,
+            public_keys: publicKeys
+        },
+        attachedDeposit: NEAR.parse("20").toString()
+    })
 });

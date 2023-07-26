@@ -9,18 +9,19 @@ trait ExtAccountCreation {
 
 #[near_bindgen]
 impl Keypom {
-    pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs) -> Promise {
+    pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
         let mut event_logs = Vec::new();
         let (token_id, required_asset_gas) = self.before_claim_logic(
             &mut event_logs,
             &account_id,
-            None
+            None,
+            password
         );
 
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CLAIM + required_asset_gas;
         require!(
-            prepaid_gas == total_required_gas,
+            prepaid_gas >= total_required_gas,
             format!("Not enough gas attached. Required: {}, Prepaid: {}",
             total_required_gas.0,
             prepaid_gas.0)
@@ -29,18 +30,19 @@ impl Keypom {
         self.internal_claim_assets(token_id, account_id, fc_args)
     }
 
-    pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs) -> Promise {
+    pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
         let mut event_logs = Vec::new();
         let (token_id, required_asset_gas) = self.before_claim_logic(
             &mut event_logs,
             &new_account_id,
-            Some(&new_public_key)
+            Some(&new_public_key),
+            password
         );
 
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM + required_asset_gas;
         require!(
-            prepaid_gas == total_required_gas,
+            prepaid_gas >= total_required_gas,
             format!("Not enough gas attached. Required: {}, Prepaid: {}",
             total_required_gas.0,
             prepaid_gas.0)

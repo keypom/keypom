@@ -41,12 +41,12 @@ pub struct InternalKeyInfo {
 
     // Owner of the Key
     pub owner_id: AccountId,
-    
+
     pub metadata: Option<String>,
+    pub pw_by_use: Option<HashMap<UseNumber, Vec<u8>>>,
 
     // List of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
     pub approved_account_ids: HashMap<AccountId, u64>,
-
 
     // The next approval ID to give out. 
     pub next_approval_id: u64,

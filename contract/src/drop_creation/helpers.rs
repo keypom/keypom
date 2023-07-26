@@ -12,7 +12,7 @@ impl Keypom {
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         public_keys: &Vec<PublicKey>,
-        metadata_for_keys: Option<Vec<Option<String>>>,
+        data_for_keys: Option<Vec<Option<ExtMetaPerKey>>>,
         key_owners: Option<Vec<Option<AccountId>>>,
         method_names: &str, 
         allowance: Balance
@@ -22,7 +22,7 @@ impl Keypom {
         // Ensure that a key owner is specified for each key
         let num_pks = public_keys.len();
         require!(key_owners.clone().map(|o| o.len()).unwrap_or(num_pks) == num_pks, "Must specify an owner for each key");
-        require!(metadata_for_keys.clone().map(|m| m.len()).unwrap_or(num_pks) == num_pks, "Must specify metadata for each key");
+        require!(data_for_keys.clone().map(|m| m.len()).unwrap_or(num_pks) == num_pks, "Must specify metadata for each key");
 
         // Logs for add key and NFT mint events
         let mut add_key_logs = Vec::new();
@@ -37,12 +37,20 @@ impl Keypom {
         for (i, pk) in public_keys.iter().enumerate() {
             let token_id = format!("{}:{}", drop_id, next_key_id);
             let token_owner = key_owners.as_ref().and_then(|o| o[i].clone()).unwrap_or(env::current_account_id());
-            let key_metadata: Option<String> = metadata_for_keys.as_ref().and_then(|m| m[i].clone());
+            let key_data: ExtMetaPerKey = data_for_keys.as_ref().and_then(|m| m[i].clone()).unwrap_or(ExtMetaPerKey { password_by_use: None, metadata: None });
             
             require!(
                 self.token_id_by_pk.insert(pk, &token_id).is_none(),
                 "Key already added to contract"
             );
+
+            // Iterate through the key_data.password_by_use hash map (if there is one) and decode all the strings to hex
+            let pw_by_use: Option<HashMap<UseNumber, Vec<u8>>> = key_data.password_by_use.map(|p| {
+                p.into_iter().map(|(k, v)| {
+                    let decoded = hex::decode(v).expect("Invalid hex string");
+                    (k, decoded)
+                }).collect()
+            });
 
             key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
                 pub_key: pk.clone(), 
@@ -50,7 +58,8 @@ impl Keypom {
                 owner_id: token_owner.clone(), 
                 next_approval_id: 0,
                 approved_account_ids: Default::default(),
-                metadata: key_metadata.clone()
+                metadata: key_data.metadata.clone(),
+                pw_by_use,
             });
             
             // Add this key to the batch
@@ -71,7 +80,7 @@ impl Keypom {
                 &drop_id,
                 &pk,
                 &token_id,
-                &key_metadata
+                &key_data.metadata
             );
 
             *next_key_id += 1;

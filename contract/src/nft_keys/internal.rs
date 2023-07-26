@@ -123,7 +123,8 @@ impl Keypom {
             approved_account_ids: Default::default(),
             remaining_uses: key_info.remaining_uses,
             next_approval_id: key_info.next_approval_id,
-            metadata: key_info.metadata
+            metadata: key_info.metadata,
+            pw_by_use: key_info.pw_by_use
         };
 
         // Reinsert key info mapping to NFT and then add token ID mapping to public key

@@ -1,4 +1,4 @@
-use near_sdk::{PromiseResult, ext_contract};
+use near_sdk::{PromiseResult, ext_contract, env::sha256};
 
 use crate::*;
 
@@ -16,7 +16,8 @@ impl Keypom {
         &mut self, 
         event_logs: &mut Vec<EventLog>, 
         receiver_id: &AccountId, 
-        new_public_key: Option<&PublicKey>
+        new_public_key: Option<&PublicKey>,
+        password: Option<String>
     ) -> (TokenId, Gas) {
         let signer_pk = env::signer_account_pk();
 
@@ -35,10 +36,16 @@ impl Keypom {
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         
-        // Tally up all the gas for the assets
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        // If there is some password for the current key use, assert that it matches the one provided
+        if let Some(pw_by_use) = &key_info.pw_by_use {
+            if let Some(pw) = pw_by_use.get(&cur_key_use) {
+                assert_key_password(password, pw.clone());
+            }
+        }
         
+        // Tally up all the gas for the assets
+        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
         let mut required_asset_gas = Gas(0);
         let mut assets = Vec::new();
         for metadata in assets_metadata {
@@ -224,4 +231,14 @@ pub(crate) fn was_account_created() -> bool {
     }
 
     false
+}
+
+/// Internal function to assert that the password for claim matches the one in the key info
+pub(crate) fn assert_key_password(
+    user_password: Option<String>,
+    expected_password: Vec<u8>
+) {
+    let hashed_user_pw = sha256(&user_password.and_then(|f| hex::decode(f).ok()).expect("Password expected."));
+
+    require!(hashed_user_pw == expected_password, format!("User provided password: {:?} does not match expected password: {:?}", hashed_user_pw, expected_password));
 }

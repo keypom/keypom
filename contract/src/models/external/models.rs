@@ -64,6 +64,8 @@ pub struct ExtAssetDataForAllUses {
     pub num_uses: UseNumber,
 }
 
+/// For any given use of a key, there's a set of assets and also a config that is shared
+/// For all keys in a drop
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct AssetDataForGivenUse {
@@ -75,3 +77,15 @@ pub struct AssetDataForGivenUse {
 
 /// Specifies exactly what assets are contained in every given use for a drop
 pub type ExtAssetDataPerUse = HashMap<UseNumber, AssetDataForGivenUse>;
+
+/// Every key can have its own passwords and metadata which is stored in the key info
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ExtMetaPerKey {
+    /// A map outlining what the password should be for any given use.
+    /// The password here should be a double hash and when claim is called,
+    /// The user arguments are hashed and compared to the password here (i.e user passes in single hash)
+    pub password_by_use: Option<HashMap<UseNumber, String>>,
+    /// Metadata for the given key represented as a string. Most often, this will be JSON stringified.
+    pub metadata: Option<String>
+}

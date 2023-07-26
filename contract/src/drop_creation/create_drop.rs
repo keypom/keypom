@@ -9,7 +9,7 @@ impl Keypom {
         drop_id: String, 
 
         public_keys: Option<Vec<PublicKey>>, 
-        metadata_for_keys: Option<Vec<Option<String>>>,
+        data_for_keys: Option<Vec<Option<ExtMetaPerKey>>>,
         
         asset_data_per_use: Option<ExtAssetDataPerUse>,
         asset_data_for_all_uses: Option<ExtAssetDataForAllUses>,
@@ -93,7 +93,7 @@ impl Keypom {
             &drop_id,
             uses_per_key,
             &public_keys, 
-            metadata_for_keys,
+            data_for_keys,
             key_owners,
             ACCESS_KEY_BOTH_METHOD_NAMES, 
             total_allowance_per_key
