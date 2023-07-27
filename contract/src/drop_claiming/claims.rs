@@ -9,34 +9,48 @@ trait ExtAccountCreation {
 
 #[near_bindgen]
 impl Keypom {
-    pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs) -> Promise {
-        let (token_id, required_asset_gas) = self.before_claim_logic();
+    pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
+        let mut event_logs = Vec::new();
+        let (token_id, required_asset_gas) = self.before_claim_logic(
+            &mut event_logs,
+            &account_id,
+            None,
+            password
+        );
 
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CLAIM + required_asset_gas;
         require!(
-            prepaid_gas == total_required_gas,
+            prepaid_gas >= total_required_gas,
             format!("Not enough gas attached. Required: {}, Prepaid: {}",
             total_required_gas.0,
             prepaid_gas.0)
         );
 
+        log_events(event_logs);
         self.internal_claim_assets(token_id, account_id, fc_args)
     }
 
-    pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs) -> Promise {
-        let (token_id, required_asset_gas) = self.before_claim_logic();
+    pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
+        let mut event_logs = Vec::new();
+        let (token_id, required_asset_gas) = self.before_claim_logic(
+            &mut event_logs,
+            &new_account_id,
+            Some(&new_public_key),
+            password
+        );
 
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM + required_asset_gas;
         require!(
-            prepaid_gas == total_required_gas,
+            prepaid_gas >= total_required_gas,
             format!("Not enough gas attached. Required: {}, Prepaid: {}",
             total_required_gas.0,
             prepaid_gas.0)
         );
         let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + total_required_gas;
         
+        log_events(event_logs);
         // First, create the zero-balance account and then, claim the assets
         ext_account_creation::ext(self.root_account.clone())
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)

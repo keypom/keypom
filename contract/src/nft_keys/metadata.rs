@@ -54,7 +54,7 @@ pub struct InternalNFTKey {
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct NFTKeyBehaviour {
+pub struct NFTKeyConfigurations {
     /// Metadata that all the NFTs in this drop will have
     pub token_metadata: Option<TokenMetadata>,
 

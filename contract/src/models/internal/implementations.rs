@@ -3,8 +3,6 @@ use crate::*;
 impl InternalDrop {
     /// Convert an `InternalDrop` into an `ExtDrop`
     pub fn to_external_drop(&self) -> ExtDrop {
-        let mut assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>> = HashMap::new();
-
         let mut nft_list = vec![];
         let mut ft_list = vec![];
         let mut fc_list = vec![];
@@ -19,21 +17,38 @@ impl InternalDrop {
             }
         });
 
-        // Loop through starting from 1 -> max_num_uses and add the assets to the hashmap
-        for use_number in 1..=self.uses_per_key {
-            let InternalKeyBehavior {assets_metadata, config: _} = self.key_behavior_by_use.get(&use_number).expect("Use number not found");
-
-            let mut assets: Vec<Option<ExtAsset>> = Vec::new();
-            
-            for metadata in assets_metadata {
-                let asset = self.asset_by_id.get(&metadata.asset_id).unwrap();
-                assets.push(asset.to_external_asset(&metadata));
+        let asset_data: ExtAssetData = match &self.key_use_behaviors {
+            InternalKeyUseBehaviors::AllUses(data) => {
+                let mut ext_assets = vec![];
+                for metadata in &data.assets_metadata {
+                    let asset = self.asset_by_id.get(&metadata.asset_id).unwrap();
+                    ext_assets.push(asset.to_external_asset(&metadata.tokens_per_use));
+                }
+                ExtAssetData::AssetsForAllUses(ExtAssetDataForAllUses {
+                    assets: ext_assets,
+                    num_uses: data.num_uses
+                })
+            },
+            InternalKeyUseBehaviors::PerUse(data) => {
+                let mut ext_asset_data = vec![];
+                for InternalKeyBehaviorForUse {assets_metadata, config} in data {
+                    let mut ext_assets = vec![];
+                    for metadata in assets_metadata {
+                        let asset = self.asset_by_id.get(&metadata.asset_id).unwrap();
+                        ext_assets.push(asset.to_external_asset(&metadata.tokens_per_use));
+                    }
+                    ext_asset_data.push(ExtAssetDataForGivenUse {
+                        assets: ext_assets,
+                        config: config.clone()
+                    });
+                }
+                ExtAssetData::AssetsPerUse(ext_asset_data)
             }
-            assets_per_use.insert(use_number, assets);
-        }
+                
+        };
 
         ExtDrop {
-            assets_per_use,
+            asset_data,
             nft_asset_data: nft_list,
             ft_asset_data: ft_list,
             fc_asset_data: fc_list,
@@ -44,19 +59,19 @@ impl InternalDrop {
 
 impl InternalAsset {
     /// Convert an `InternalAsset` into an `ExtAsset`
-    pub fn to_external_asset(self, asset_metadata: &AssetMetadata) -> Option<ExtAsset> {
+    pub fn to_external_asset(&self, tokens_per_use: &Option<U128>) -> Option<ExtAsset> {
         match self {
             InternalAsset::ft(ft_data) => Some(ExtAsset::FTAsset(ExtFTData {
                 ft_contract_id: ft_data.contract_id.clone(),
                 registration_cost: ft_data.registration_cost.into(),
                 // FTs should ALWAYS have a tokens_per_use value
-                ft_amount: asset_metadata.tokens_per_use.unwrap().into()
+                ft_amount: tokens_per_use.unwrap()
             })),
             InternalAsset::nft(nft_data) => Some(ExtAsset::NFTAsset(ExtNFTData {
                 nft_contract_id: nft_data.contract_id.clone()
             })),
-            InternalAsset::fc(fc_data) => Some(ExtAsset::FCAsset(FCData::new(fc_data.methods))),
-            InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: asset_metadata.tokens_per_use.unwrap().into() })),
+            InternalAsset::fc(fc_data) => Some(ExtAsset::FCAsset(FCData::new(fc_data.methods.clone()))),
+            InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: tokens_per_use.unwrap() })),
             InternalAsset::none => None
         }
     }

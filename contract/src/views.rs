@@ -26,9 +26,22 @@ impl Keypom {
             .expect("no drop found for drop ID");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
 
-        let mut required_gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM;
+        // If the config usage's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
+        let base_gas_for_use = if let Some(perm) = use_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop.drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
+            match perm {
+                ClaimPermissions::claim => {
+                    BASE_GAS_FOR_CLAIM
+                }
+                _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
+            }
+        } else {
+            BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
+        };
+
+        // Keep track of the total gas across all assets in the current use
+        let mut required_gas: Gas = base_gas_for_use;
 
         let mut ft_list: Vec<FTListData> = Vec::new();
         let mut nft_list: Vec<NFTListData> = Vec::new();

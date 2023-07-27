@@ -530,6 +530,7 @@ dependencies = [
 name = "keypom"
 version = "3.0.0"
 dependencies = [
+ "hex",
  "near-sdk",
  "serde_json",
 ]

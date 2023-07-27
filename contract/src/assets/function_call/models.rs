@@ -1,7 +1,7 @@
 use crate::*;
 
 /// Keep track of info for the method_name to be called
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MethodData {
     /// Contract that will be called
@@ -45,7 +45,7 @@ pub struct KeypomInjectedArgs {
     pub funder_id_field: Option<String>,
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 /// When a user provides arguments for FC drops in `claim` or `create_account_and_claim`, what behaviour is expected?
 /// For `AllUser`, any arguments provided by the user will completely overwrite any previous args provided by the drop creator.

@@ -11,17 +11,15 @@ impl Keypom {
         event_logs: &mut Vec<EventLog>,
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
-        public_keys: &Vec<PublicKey>,
-        key_owners: Option<Vec<Option<AccountId>>>,
+        key_data: &Vec<ExtKeyData>,
         method_names: &str, 
         allowance: Balance
     ) {
         let current_account_id = &env::current_account_id();
 
-        
-        // Ensure that a key owner is specified for each key
-        let num_pks = public_keys.len();
-        require!(key_owners.clone().map(|o| o.len()).unwrap_or(num_pks) == num_pks, "Must specify an owner for each key");
+        // Logs for add key and NFT mint events
+        let mut add_key_logs = Vec::new();
+        let mut nft_mint_logs = Vec::new();
 
         // Create a new promise batch to create all the access keys
         let promise = env::promise_batch_create(current_account_id);
@@ -29,53 +27,75 @@ impl Keypom {
         // Loop through the public keys and add them to the contract.
         // None of these promises will fire if there's a panic so it's
         // Fine to add them in the loop
-        for (i, pk) in public_keys.iter().enumerate() {
+        for data in key_data.iter() {
+            let ExtKeyData { public_key, password_by_use, metadata, key_owner } = data;
+
             let token_id = format!("{}:{}", drop_id, next_key_id);
-            let token_owner = key_owners.as_ref().and_then(|o| o[i].clone()).unwrap_or(env::current_account_id());
-            
             require!(
-                self.token_id_by_pk.insert(pk, &token_id).is_none(),
+                self.token_id_by_pk.insert(public_key, &token_id).is_none(),
                 "Key already added to contract"
             );
 
+            // Iterate through the key_data.password_by_use hash map (if there is one) and decode all the strings to hex
+            let pw_by_use: Option<HashMap<UseNumber, Vec<u8>>> = password_by_use.as_ref().map(|p| {
+                p.into_iter().map(|(k, v)| {
+                    let decoded = hex::decode(v).expect("Invalid hex string");
+                    (*k, decoded)
+                }).collect()
+            });
+
+            let key_owner = key_owner.clone().unwrap_or(env::current_account_id());
+
             key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
-                pub_key: pk.clone(), 
+                pub_key: public_key.clone(), 
                 remaining_uses: max_uses_per_key,
-                owner_id: token_owner.clone(), 
+                owner_id: key_owner.clone(), 
                 next_approval_id: 0,
                 approved_account_ids: Default::default(),
+                metadata: metadata.clone(),
+                pw_by_use,
             });
+
+            // TODO: add to tokens_per_owner
             
             // Add this key to the batch
             env::promise_batch_action_add_key_with_function_call(
                 promise,
-                pk,
+                public_key,
                 0, // Nonce
                 allowance,
                 current_account_id,
                 method_names,
             );
 
-            // Construct the mint log as per the events standard and add it to the list of logs
-            let nft_mint_log: EventLog = EventLog {
-                // Standard name ("nep171").
-                standard: NFT_STANDARD_NAME.to_string(),
-                // Version of the standard ("nft-1.0.0").
-                version: NFT_METADATA_SPEC.to_string(),
-                // The data related with the event stored in a vector.
-                event: EventLogVariant::NftMint(vec![NftMintLog {
-                    // Owner of the token.
-                    owner_id: token_owner.to_string(),
-                    // Vector of token IDs that were minted.
-                    token_ids: vec![token_id.to_string()],
-                    // An optional memo to include.
-                    memo: None,
-                }]),
-            };
-
-            event_logs.push(nft_mint_log);
+            // Construct the nft mint and add key logs to be added as events later
+            add_new_key_logs(
+                &mut nft_mint_logs,
+                &mut add_key_logs,
+                &key_owner,
+                &drop_id,
+                &public_key,
+                &token_id,
+                &metadata
+            );
 
             *next_key_id += 1;
+        }
+
+        // Construct the events themselves
+        if nft_mint_logs.len() > 0 {
+            event_logs.push(EventLog {
+                standard: NFT_STANDARD_NAME.to_string(),
+                version: NFT_METADATA_SPEC.to_string(),
+                event: EventLogVariant::NftMint(nft_mint_logs),
+            });
+        }
+        if add_key_logs.len() > 0 {
+            event_logs.push(EventLog {
+                standard: KEYPOM_STANDARD_NAME.to_string(),
+                version: KEYPOM_STANDARD_VERSION.to_string(),
+                event: EventLogVariant::AddKey(add_key_logs),
+            });
         }
 
         env::promise_return(promise);
@@ -99,55 +119,98 @@ impl Keypom {
     }
 }
 
-/// Parses the external assets and stores them in the drop's internal maps
-pub fn parse_ext_assets_per_use (
-    uses_per_key: UseNumber,
-    asset_data_per_use: ExtAssetDataPerUse, 
-    key_behavior_by_use: &mut LookupMap<UseNumber, InternalKeyBehavior>,
+pub fn parse_ext_assets (
+    ext_assets: &Vec<Option<ExtAsset>>,
+    assets_metadata: &mut Vec<AssetMetadata>,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) {
-    require!(uses_per_key == asset_data_per_use.len() as UseNumber, "Must specify behavior for all uses");
+    for ext_asset in ext_assets {
+        // If the external asset is of type FCData, the asset ID will be the length of the vector
+        // Otherwise, it will be the asset ID specified
+        let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
+            asset_by_id.len().to_string()
+        } else {
+            ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
+        };
+        let tokens_per_use = ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use())).unwrap_or(U128(0));
+
+        assets_metadata.push(AssetMetadata {
+            asset_id: asset_id.clone(),
+            tokens_per_use: tokens_per_use.into()
+        });
+
+        // Only insert into the asset ID map if it doesn't already exist
+        // If we insert, we should also add the cost to the total asset cost
+        if asset_by_id.get(&asset_id).is_none() {
+            let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
+
+            asset_by_id.insert(&asset_id, &internal_asset);
+        }
+    }
+}
+
+pub fn parse_ext_all_use_assets (
+    ext_data: &ExtAssetDataForAllUses,
+    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
+) -> InternalAllUseBehaviors {
+    require!(ext_data.assets.len() > 0, "Must specify at least one asset");
+    
+    // Keep track of the metadata for all the assets across each use
+    let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
+    parse_ext_assets(
+        &ext_data.assets,
+        &mut assets_metadata,
+        asset_by_id
+    );
+
+    InternalAllUseBehaviors { 
+        assets_metadata, 
+        num_uses: ext_data.num_uses
+    }
+}
+
+pub fn parse_ext_per_use_assets (
+    ext_datas: &Vec<ExtAssetDataForGivenUse>,
+    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
+) -> Vec<InternalKeyBehaviorForUse> {
+    let mut key_behavior = Vec::new();
 
     // Iterate through the external assets, convert them to internal assets and add them to both lookup maps
-    for (use_number, ext_asset_data) in asset_data_per_use {
-        let AssetDataForGivenUse {assets, config} = ext_asset_data;
+    for ext_data in ext_datas {
+        let ExtAssetDataForGivenUse {assets, config} = ext_data;
 
         // Quick sanity check to make sure the use number is valid
-        require!(use_number <= uses_per_key, "Invalid use number");
         require!(assets.len() > 0, "Must specify at least one asset per use");
 
         // Keep track of the metadata for all the assets across each use
         let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
 
-        // If there's assets, loop through and get all the asset IDs while also
-        // adding them to the asset_by_id lookup map if they weren't already present
-        // If there aren't any assets, the vector will be of length 1
-        for ext_asset in assets {
-            // If the external asset is of type FCData, the asset ID will be the length of the vector
-            // Otherwise, it will be the asset ID specified
-            let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
-                asset_by_id.len().to_string()
-            } else {
-                ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
-            };
-            let tokens_per_use = ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use())).unwrap_or(U128(0));
+        parse_ext_assets(
+            &assets,
+            &mut assets_metadata,
+            asset_by_id
+        );
 
-            assets_metadata.push(AssetMetadata {
-                asset_id: asset_id.clone(),
-                tokens_per_use: tokens_per_use.into()
-            });
-
-            // Only insert into the asset ID map if it doesn't already exist
-            // If we insert, we should also add the cost to the total asset cost
-            if asset_by_id.get(&asset_id).is_none() {
-                let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
-
-                asset_by_id.insert(&asset_id, &internal_asset);
-            }
-        }
-        key_behavior_by_use.insert(&use_number, &InternalKeyBehavior {
+        key_behavior.push(InternalKeyBehaviorForUse {
             assets_metadata,
-            config
+            config: config.clone()
         });
+    }
+
+    key_behavior
+}
+
+/// Parses the external assets and stores them in the drop's internal maps
+pub fn parse_ext_asset_data (
+    asset_data: &ExtAssetData, 
+    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
+) -> InternalKeyUseBehaviors {
+    match asset_data {
+        ExtAssetData::AssetsForAllUses(data) => {
+            InternalKeyUseBehaviors::AllUses(parse_ext_all_use_assets(data, asset_by_id))
+        },
+        ExtAssetData::AssetsPerUse(data) => {
+            InternalKeyUseBehaviors::PerUse( parse_ext_per_use_assets(data, asset_by_id))
+        }
     }
 }

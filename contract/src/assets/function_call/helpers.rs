@@ -77,9 +77,15 @@ pub(crate) fn insert_keypom_arg(
             return Err(format!("Keypom field {} present in args already. Skipping method.", field));
         }
 
+        let insert_str = if output_args == "{}" {
+            format!("\"{}\":\"{}\"", field, value)
+        } else {
+            format!(",\"{}\":\"{}\"", field, value)
+        };
+
         output_args.insert_str(
             output_args.len() - 1,
-            &format!(",\"{}\":\"{}\"", field, value),
+            &insert_str,
         );
 
         near_sdk::log!("Args after: {}", output_args);
@@ -96,7 +102,7 @@ pub(crate) fn handle_user_args_rules (
 ) -> Result<(), String> {
     let try_json: Result<Value, _> = from_str(&output_args);
     if try_json.is_err() {
-        return Err("Cannot cast args to JSON. Returning and decrementing keys".to_string());
+        return Err(format!("Cannot cast args: {:?} to JSON. Returning and decrementing keys", output_args).to_string());
     }
 
     let mut output_args_json = try_json.unwrap();
@@ -152,7 +158,7 @@ pub(crate) fn handle_fc_args(
         key_id_field: None,
         funder_id_field: None
     });
-    
+
     if output_args.len() <= 4096 {
         handle_user_args_rules(
             output_args, 

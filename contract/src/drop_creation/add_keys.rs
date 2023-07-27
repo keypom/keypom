@@ -5,11 +5,8 @@ impl Keypom {
     #[payable]
     pub fn add_keys(
         &mut self, 
-        drop_id: String, 
-        public_keys: Vec<PublicKey>,
-
-        // What will the owners of the keys be? Must match length of public keys
-        key_owners: Option<Vec<Option<AccountId>>>
+        drop_id: DropId, 
+        key_data: Vec<ExtKeyData>, 
     ) -> bool {
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
@@ -23,9 +20,10 @@ impl Keypom {
             funder_id == env::predecessor_account_id(),
             "Only drop funder can add keys"
         );
+        require!(key_data.len() > 0, "Must provide at least one public key");
 
         // Parse the external assets and store them in the contract
-        let uses_per_key = drop.uses_per_key;
+        let max_key_uses = drop.max_key_uses;
 
         let mut total_cost_per_key = 0;
         let mut total_allowance_per_key = 0;
@@ -35,10 +33,11 @@ impl Keypom {
         get_total_costs_for_key(
             &mut total_cost_per_key,
             &mut total_allowance_per_key,
-            uses_per_key,
-            uses_per_key,
+            max_key_uses,
+            max_key_uses,
             &drop.asset_by_id,
-            &drop.key_behavior_by_use
+            &drop.key_use_behaviors,
+            &drop.drop_config
         );
 
         // Keep track of all the events
@@ -49,9 +48,8 @@ impl Keypom {
             &mut drop.key_info_by_token_id,
             &mut event_logs,
             &drop_id,
-            uses_per_key,
-            &public_keys, 
-            key_owners,
+            max_key_uses,
+            &key_data,
             ACCESS_KEY_BOTH_METHOD_NAMES, 
             total_allowance_per_key
         );
@@ -62,7 +60,7 @@ impl Keypom {
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
         self.determine_costs(
-            public_keys.len(),
+            key_data.len(),
             total_cost_per_key,
             total_allowance_per_key,
             net_storage,

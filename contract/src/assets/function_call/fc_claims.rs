@@ -30,6 +30,9 @@ impl FCData {
 
         for (idx, method) in self.methods.iter().enumerate() {
             let mut actual_args = method.args.clone();
+            if actual_args.len() == 0 {
+                actual_args = "{}".to_string();
+            }
             
             match handle_fc_args(
                 &mut actual_args, 

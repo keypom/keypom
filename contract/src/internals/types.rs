@@ -1,5 +1,5 @@
 /// Which specific use is something being acted on. This is not zero indexed (i.e the first use is 1)
-pub type UseNumber = u16;
+pub type UseNumber = u32;
 /// The ID of a given asset such as FTs, NFTs, or Function Calls.
 pub type AssetId = String;
 /// The ID for a given drop (this is the unique identifier for the drop and is how it will be referenced)
