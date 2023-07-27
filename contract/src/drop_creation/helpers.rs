@@ -17,9 +17,6 @@ impl Keypom {
     ) {
         let current_account_id = &env::current_account_id();
 
-        // Ensure that a key owner is specified for each key
-        let num_pks = key_data.len();
-
         // Logs for add key and NFT mint events
         let mut add_key_logs = Vec::new();
         let mut nft_mint_logs = Vec::new();
@@ -30,7 +27,7 @@ impl Keypom {
         // Loop through the public keys and add them to the contract.
         // None of these promises will fire if there's a panic so it's
         // Fine to add them in the loop
-        for (i, data) in key_data.iter().enumerate() {
+        for data in key_data.iter() {
             let ExtKeyData { public_key, password_by_use, metadata, key_owner } = data;
 
             let token_id = format!("{}:{}", drop_id, next_key_id);

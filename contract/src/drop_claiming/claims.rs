@@ -27,6 +27,7 @@ impl Keypom {
             prepaid_gas.0)
         );
 
+        log_events(event_logs);
         self.internal_claim_assets(token_id, account_id, fc_args)
     }
 
@@ -49,6 +50,7 @@ impl Keypom {
         );
         let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + total_required_gas;
         
+        log_events(event_logs);
         // First, create the zero-balance account and then, claim the assets
         ext_account_creation::ext(self.root_account.clone())
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)

@@ -101,7 +101,6 @@ pub struct AssetMetadata {
 
 #[derive(BorshSerialize, BorshStorageKey)]
 pub enum StorageKeys {
-    AssetIdsByUse { drop_id_hash: CryptoHash },
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
     DropMetadata { drop_id_hash: CryptoHash },

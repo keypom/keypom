@@ -73,8 +73,8 @@ test('Null Claim', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            asset_data_per_use: {
-                1: {
+            asset_data: [
+                {
                     assets: [null],
                     config: {
                         usage: {
@@ -82,26 +82,7 @@ test('Null Claim', async t => {
                         }
                     },
                 },
-                2: {
-                    assets: [ftAsset, null],
-                    config: {
-                        usage: {
-                            permissions: "claim"
-                        }
-                    },
-                },
-                3: {},
-                4: {}
-                .. 500: {}
-            },
-            drop_config: {
-                config: {
-                    usage: {
-                        permissions: "create_account_and_claim"
-                    }
-                }
-            }
-            public_keys: []
+            ]
         },
         attachedDeposit: NEAR.parse("20").toString()
     })
@@ -113,19 +94,23 @@ test('Null Claim', async t => {
     //generates an array of hash(hash(basePassword + publicKeys[i])) --> all PWs for all key use
     let password_by_use = generatePasswordsForKey(publicKeys[0], [1], basePassword);
     
-    // Create an array of size numKeys that's entirely empty
-    let data_for_keys = new Array(numKeys).fill(null);
-    data_for_keys[0] = {
-        password_by_use
+    // Create an array of size numKeys that's filled with objects
+
+    let key_data: Array<{public_key: string, password?: string}> = [];
+    for (var pk of publicKeys) {
+        key_data.push({
+            public_key: pk,
+            password: password_by_use[0]
+        })
     }
+
     await functionCall({
         signer: funder,
         receiver: keypom,
         methodName: 'add_keys',
         args: {
             drop_id: dropId,
-            data_for_keys,
-            public_keys: publicKeys
+            key_data
         },
         attachedDeposit: NEAR.parse("20").toString()
     })
