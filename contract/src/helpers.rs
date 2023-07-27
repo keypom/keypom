@@ -56,7 +56,7 @@ pub(crate) fn get_total_costs_for_key(
     remaining_uses: UseNumber, 
     max_uses_per_key: UseNumber, 
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_use_behaviors: InternalKeyUseBehaviors,
+    key_use_behaviors: &InternalKeyUseBehaviors,
     drop_config: &Option<DropConfig>
 ) {
     // For every remaining use, we need to loop through all assets and refund
@@ -77,17 +77,17 @@ pub(crate) fn get_total_costs_for_key(
 
 /// Helper function to get the internal key behavior for a given use number
 pub(crate) fn get_internal_key_behavior_for_use (
-    key_use_behaviors: InternalKeyUseBehaviors,
+    key_use_behaviors: &InternalKeyUseBehaviors,
     use_number: &UseNumber
 ) -> InternalKeyBehaviorForUse {
     // Get the assets metadata for this use number
     match key_use_behaviors {
         InternalKeyUseBehaviors::AllUses(data) => InternalKeyBehaviorForUse {
-            assets_metadata: data.assets_metadata,
+            assets_metadata: data.assets_metadata.clone(),
             config: None
         },
         // The use number should be decremented by 1 since the vector is zero indexed
-        InternalKeyUseBehaviors::PerUse(data) => *data.get((use_number - 1)as usize).expect("Use number not found")
+        InternalKeyUseBehaviors::PerUse(data) => data.get((use_number - 1) as usize).expect("Use number not found").clone()
     }
 }
 
@@ -96,7 +96,7 @@ pub(crate) fn get_total_costs_for_use(
     total_allowance_for_use: &mut Balance,
     use_number: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_use_behaviors: InternalKeyUseBehaviors,
+    key_use_behaviors: &InternalKeyUseBehaviors,
     drop_config: &Option<DropConfig>
 ) {
     let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(key_use_behaviors, &use_number);

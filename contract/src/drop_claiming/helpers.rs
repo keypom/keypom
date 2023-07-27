@@ -36,7 +36,7 @@ impl Keypom {
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(drop.key_use_behaviors, &cur_key_use);
+        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
         
         assert_pre_claim_conditions(
             &key_info,
@@ -127,7 +127,7 @@ impl Keypom {
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(drop.key_use_behaviors, &cur_key_use);
+        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
         
         //let promises;
         let mut promises = Vec::new();

@@ -68,7 +68,7 @@ pub struct InternalKeyInfo {
 }
 
 /// Every use number has corresponding behavior data which includes information about all the assets in that use
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct InternalKeyBehaviorForUse {
     /// Configurations for this specific use
     pub config: Option<ConfigForGivenUse>,
@@ -90,7 +90,7 @@ pub enum InternalAsset {
 }
 
 /// Metadata corresponding to a specific asset. This keeps track of the ID and optionally tokens being transferred per use
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct AssetMetadata {
     /// What asset is mapped to this specific use
     pub asset_id: AssetId,

@@ -52,7 +52,7 @@ impl Keypom {
             max_key_uses,
             max_key_uses,
             &asset_by_id,
-            key_use_behaviors,
+            &key_use_behaviors,
             &drop_config
         );
 

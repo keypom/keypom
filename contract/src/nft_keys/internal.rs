@@ -181,7 +181,7 @@ impl Keypom {
             key_info.remaining_uses,
             drop.max_key_uses,
             &drop.asset_by_id,
-            drop.key_use_behaviors,
+            &drop.key_use_behaviors,
             &drop.drop_config
         );
 
