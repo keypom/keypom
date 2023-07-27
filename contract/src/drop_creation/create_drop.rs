@@ -6,7 +6,7 @@ impl Keypom {
     #[payable]
     pub fn create_drop(
         &mut self, 
-        drop_id: DropId, 
+        drop_id: DropId,
         key_data: Option<Vec<ExtKeyData>>, 
         asset_data: ExtAssetData,
 
