@@ -12,7 +12,7 @@ pub enum ClaimPermissions {
 /// Keep track of different configuration options for all the uses of a key in a given drop
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct ConfigForAllUses {
+pub struct DropConfig {
     /// Configurations related to how often keys can be used
     pub time: Option<TimeConfig>,
     

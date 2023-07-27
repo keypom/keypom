@@ -36,12 +36,12 @@ impl Keypom {
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalKeyBehavior {assets_metadata, config: key_config} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(drop.key_use_behaviors, &cur_key_use);
         
         assert_pre_claim_conditions(
             &key_info,
             &drop.drop_config,
-            &key_config,
+            &use_config,
             &password,
             &cur_key_use,
             new_public_key.is_some()
@@ -127,7 +127,7 @@ impl Keypom {
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalKeyBehavior {assets_metadata, config: _} = drop.key_behavior_by_use.get(&cur_key_use).expect("Use number not found");
+        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(drop.key_use_behaviors, &cur_key_use);
         
         //let promises;
         let mut promises = Vec::new();
@@ -238,14 +238,14 @@ pub(crate) fn was_account_created() -> bool {
 /// Internal function to perform all the pre-claim checks such as passwords, configs etc.
 pub(crate) fn assert_pre_claim_conditions(
     key_info: &InternalKeyInfo,
-    drop_config: &Option<ConfigForAllUses>,
-    key_config: &Option<ConfigForGivenUse>,
+    drop_config: &Option<DropConfig>,
+    use_config: &Option<ConfigForGivenUse>,
     user_password: &Option<String>,
     cur_key_use: &UseNumber,
     creating_account: bool
 ) {
     // Ensure that claim and create_account_and_claim are only called based on the key / drop's config
-    if let Some(perm) = key_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
+    if let Some(perm) = use_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
         match perm {
             ClaimPermissions::claim => {
                 require!(creating_account == false, "Cannot call `create_account_and_claim` when key permission is set to only claim")
@@ -255,7 +255,7 @@ pub(crate) fn assert_pre_claim_conditions(
             },
         }
     }
-    
+
     // If there is some password for the current key use, assert that it matches the one provided
     if let Some(pw_by_use) = &key_info.pw_by_use {
         if let Some(pw) = pw_by_use.get(cur_key_use) {

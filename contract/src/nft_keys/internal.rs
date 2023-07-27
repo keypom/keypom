@@ -179,9 +179,9 @@ impl Keypom {
             &mut total_cost_for_key,
             &mut total_allowance_for_key,
             key_info.remaining_uses,
-            drop.uses_per_key,
+            drop.max_key_uses,
             &drop.asset_by_id,
-            &drop.key_behavior_by_use,
+            drop.key_use_behaviors,
             &drop.drop_config
         );
 

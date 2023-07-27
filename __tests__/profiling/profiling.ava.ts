@@ -81,8 +81,26 @@ test('Null Claim', async t => {
                             permissions: "claim"
                         }
                     },
-                }
+                },
+                2: {
+                    assets: [ftAsset, null],
+                    config: {
+                        usage: {
+                            permissions: "claim"
+                        }
+                    },
+                },
+                3: {},
+                4: {}
+                .. 500: {}
             },
+            drop_config: {
+                config: {
+                    usage: {
+                        permissions: "create_account_and_claim"
+                    }
+                }
+            }
             public_keys: []
         },
         attachedDeposit: NEAR.parse("20").toString()

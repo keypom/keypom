@@ -1,33 +1,48 @@
+use crate::*;
 use near_sdk::collections::{UnorderedMap, LazyOption};
 
-use crate::*;
+/// When creating a drop, assets can either be specified on a per use basis or for all uses
+#[derive(BorshDeserialize, BorshSerialize)]
+pub enum InternalKeyUseBehaviors {
+    PerUse(Vec<InternalKeyBehaviorForUse>),
+    AllUses(InternalAllUseBehaviors)
+}
+
+/// If the user wishes to specify a set of assets that is repeated across many uses, they can use
+/// This struct rather than pasting duplicate data when calling `create_drop`
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct InternalAllUseBehaviors {
+    /// Which assets should be present for each use
+    pub assets_metadata: Vec<AssetMetadata>,
+    /// How many uses are there for this drop?
+    pub num_uses: UseNumber,
+}
 
 /// Internal drop data that is stored in the contract
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct InternalDrop {
     /// Account ID who funded / owns the rights to this specific drop
     pub funder_id: AccountId,
-    /// Metadata for the drop in the form of stringified JSON. The format is completely up to the
-    /// user and there are no standards for format.
-    pub metadata: LazyOption<DropMetadata>,
-    /// How many uses there are per key in the drop. This should be equal to the length of keys in assets_metadata_by_use
-    pub uses_per_key: UseNumber,
-    
+
+    /// What is the maximum number of uses a given key can have in the drop?
+    pub max_key_uses: UseNumber,
     /// Map an asset ID to a specific asset. This is a hyper optimization so the asset data isn't repeated in the contract
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
-    /// For every use number, keep track of what assets there are.
-    pub key_behavior_by_use: LookupMap<UseNumber, InternalKeyBehavior>,
-
-    /// Information about the NFT keys and how they're rendered / payout options etc.
-    pub nft_config: Option<NFTKeyBehaviour>,
-
-    /// Keep track of different configuration options for all the uses of a key in a given drop
-    pub drop_config: Option<ConfigForAllUses>,
+    /// For every use, keep track of what assets there are (in order)
+    pub key_use_behaviors: InternalKeyUseBehaviors,
 
     /// Set of public keys associated with this drop mapped to their specific key information.
     pub key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo>,
     /// Keep track of the next nonce to give out to a key
-    pub next_key_id: u64
+    pub next_key_id: u64,
+
+    /// Metadata for the drop in the form of stringified JSON. The format is completely up to the
+    /// user and there are no standards for format.
+    pub metadata: LazyOption<DropMetadata>,
+    /// Information about the NFT keys and how they're rendered / payout options etc.
+    pub nft_keys_config: Option<NFTKeyConfigurations>,
+    /// Keep track of different configuration options for all the uses of a key in a given drop
+    pub drop_config: Option<DropConfig>
 }
 
 /// Keep track of different configuration options for each key in a drop
@@ -54,7 +69,7 @@ pub struct InternalKeyInfo {
 
 /// Every use number has corresponding behavior data which includes information about all the assets in that use
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct InternalKeyBehavior {
+pub struct InternalKeyBehaviorForUse {
     /// Configurations for this specific use
     pub config: Option<ConfigForGivenUse>,
     /// Metadata for each asset in this use
