@@ -124,6 +124,8 @@ impl Keypom {
         let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).or(drop.drop_config.as_ref().and_then(|c| c.root_account_id.clone())).unwrap_or(self.root_account.clone());
         let usage_config = use_config.as_ref().and_then(|c| c.get_usage_config()).or(drop.drop_config.as_ref().and_then(|c| c.get_usage_config()));
         
+        near_sdk::log!("Gas at end of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
+
         BeforeClaimData {
             token_id,
             required_asset_gas,

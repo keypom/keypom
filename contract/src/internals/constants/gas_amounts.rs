@@ -8,7 +8,7 @@ pub const MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP: Gas = Gas(5_000_000_000_000); // 5 T
 /// Maximum amount of Gas that can be attached to the transaction
 pub const MAX_GAS_ATTACHABLE: Gas = Gas(300_000_000_000_000); // 300 TGas
 /// Minimum amount of gas required to perform any necessary computations for the receipt
-pub const MIN_GAS_FOR_RECEIPT_COMPUTATION: Gas = Gas(12_000_000_000_000); // 10 TGas
+pub const MIN_GAS_FOR_RECEIPT_COMPUTATION: Gas = Gas(10_000_000_000_000); // 10 TGas
 
 
 // ------------------------ Create Account & Claim ------------------------ //

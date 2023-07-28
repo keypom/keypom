@@ -61,7 +61,7 @@ impl Keypom {
             total_required_gas.0,
             prepaid_gas.0)
         );
-        let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + total_required_gas;
+        let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + required_asset_gas;
         
         log_events(event_logs);
         // First, create the zero-balance account and then, claim the assets
