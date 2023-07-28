@@ -65,19 +65,6 @@ impl Keypom {
     
         // Get drop in order to get key info (and royalties if applicable)
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        // Decide what methods the new access key can call
-        let access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        // if let Some(perms) = drop.config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()) {
-        //     match perms {
-        //         // If we have a config, use the config to determine what methods the access keys can call
-        //         ClaimPermissions::claim => {
-        //             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
-        //         }
-        //         ClaimPermissions::create_account_and_claim => {
-        //             access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
-        //         }
-        //     }
-        // }
         
         // Get key info (will overwrite mapping to new key info after)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
@@ -113,8 +100,8 @@ impl Keypom {
         self.internal_add_token_to_owner(&receiver_id, &token_id);
 
         // Remove old public key from mapping
-        let pub_key = key_info.pub_key.clone();
-        self.token_id_by_pk.remove(&pub_key);
+        let old_pub_key = key_info.pub_key.clone();
+        self.token_id_by_pk.remove(&old_pub_key);
 
         // Generate new key info struct
         let new_key_info = InternalKeyInfo {
@@ -123,6 +110,9 @@ impl Keypom {
             approved_account_ids: Default::default(),
             remaining_uses: key_info.remaining_uses,
             next_approval_id: key_info.next_approval_id,
+            metadata: key_info.metadata,
+            last_claimed: key_info.last_claimed,
+            pw_by_use: key_info.pw_by_use
         };
 
         // Reinsert key info mapping to NFT and then add token ID mapping to public key
@@ -140,30 +130,35 @@ impl Keypom {
         }
 
         // Construct the transfer log as per the events standard.
-        let nft_transfer_log: EventLog = EventLog {
-            // Standard name ("nep171").
-            standard: NFT_STANDARD_NAME.to_string(),
-            // Version of the standard ("nft-1.0.0").
-            version: NFT_METADATA_SPEC.to_string(),
-            // The data related with the event stored in a vector.
-            event: EventLogVariant::NftTransfer(vec![NftTransferLog {
-                // The optional authorized account ID to transfer the token on behalf of the old owner.
-                authorized_id,
-                // The old owner's account ID.
-                old_owner_id: old_owner_id.to_string(),
-                // The account ID of the new owner of the token.
-                new_owner_id: receiver_id.to_string(),
-                // A vector containing the token IDs as strings.
-                token_ids: vec![token_id.to_string()],
-                // An optional memo to include.
-                memo: None,
-            }]),
-        };
-        // Log the serialized json.
-        env::log_str(&nft_transfer_log.to_string());
+        let event_logs = vec![
+            EventLog {
+                standard: NFT_STANDARD_NAME.to_string(),
+                version: NFT_METADATA_SPEC.to_string(),
+                event: EventLogVariant::NftTransfer(vec![NftTransferLog {
+                    authorized_id: authorized_id.clone(),
+                    old_owner_id: old_owner_id.to_string(),
+                    new_owner_id: receiver_id.to_string(),
+                    token_ids: vec![token_id.to_string()],
+                    memo: None,
+                }]),
+            },
+            EventLog {
+                standard: KEYPOM_STANDARD_NAME.to_string(),
+                version: KEYPOM_STANDARD_VERSION.to_string(),
+                event: EventLogVariant::KeyTransfer(TransferKeyLog {
+                    authorized_id,
+                    old_owner_id: old_owner_id.to_string(),
+                    new_owner_id: receiver_id.to_string(),
+                    old_public_key: (&old_pub_key).into(),
+                    new_public_key: (&new_public_key).into(),
+                    drop_id,
+                    token_id
+                })
+            }
+        ];
 
         // Delete the original key
-        Promise::new(env::current_account_id()).delete_key(pub_key);
+        Promise::new(env::current_account_id()).delete_key(old_pub_key);
 
         // Get the allowance that should be transferred to the new key
         let mut total_cost_for_key: Balance = 0;
@@ -172,9 +167,10 @@ impl Keypom {
             &mut total_cost_for_key,
             &mut total_allowance_for_key,
             key_info.remaining_uses,
-            drop.uses_per_key,
+            drop.max_key_uses,
             &drop.asset_by_id,
-            &drop.key_behavior_by_use
+            &drop.key_use_behaviors,
+            &drop.drop_config
         );
 
         // Add the new key with the corresponding allowance
@@ -182,8 +178,11 @@ impl Keypom {
             new_public_key.clone(),
             total_allowance_for_key,
             env::current_account_id(),
-            access_key_method_names.to_string(),
+            ACCESS_KEY_METHOD_NAMES.to_string(),
         );
+
+        // Log the transfer events
+        log_events(event_logs);
         
         old_owner_id
     }

@@ -1,7 +1,7 @@
 use crate::*;
 
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, PanicOnDefault, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, PanicOnDefault, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FCData {
     pub methods: Vec<MethodData>

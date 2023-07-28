@@ -15,6 +15,8 @@ impl Keypom {
         approval_id: Option<u64>,
         memo: PublicKey,
     ) {
+        self.asset_no_global_freeze();
+        
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
         let receiver_id = receiver_id.unwrap_or(env::current_account_id());
@@ -29,7 +31,7 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).0;
 
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
-            let NFTKeyBehaviour { token_metadata, royalties } = drop.nft_config.unwrap_or(NFTKeyBehaviour {
+            let NFTKeyConfigurations { token_metadata, royalties } = drop.nft_keys_config.unwrap_or(NFTKeyConfigurations {
                 token_metadata: None,
                 royalties: None,
             });
