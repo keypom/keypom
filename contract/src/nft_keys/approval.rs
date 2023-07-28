@@ -5,8 +5,6 @@ impl Keypom {
     /// Allow a specific account ID to transfer a token on your behalf
     #[payable]
     pub fn nft_approve(&mut self, token_id: Option<TokenId>, account_id: AccountId, msg: Option<String>) {
-        self.asset_no_global_freeze();
-
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
 
@@ -82,8 +80,6 @@ impl Keypom {
     //revoke a specific account from transferring the token on your behalf 
     #[payable]
     pub fn nft_revoke(&mut self, token_id: Option<TokenId>, account_id: AccountId) {
-        self.asset_no_global_freeze();
-        
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
 

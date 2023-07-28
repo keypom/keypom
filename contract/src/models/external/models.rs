@@ -100,7 +100,7 @@ pub struct ExtKeyData {
     pub key_owner: Option<AccountId>
 }
 
-/// Optional data for the drop such as configs, metadata etc.
+/// Optional aata for the drop such as configs, metadata etc.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDropData {

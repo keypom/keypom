@@ -54,20 +54,16 @@ pub struct InternalKeyInfo {
     /// How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: UseNumber,
 
-    /// Owner of the key
+    // Owner of the Key
     pub owner_id: AccountId,
 
-    /// When was the last time the key was used
-    pub last_claimed: u64,
-
-    /// Metadata for the current key
     pub metadata: Option<String>,
     pub pw_by_use: Option<HashMap<UseNumber, Vec<u8>>>,
 
-    /// List of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
+    // List of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
     pub approved_account_ids: HashMap<AccountId, u64>,
 
-    /// The next approval ID to give out. 
+    // The next approval ID to give out. 
     pub next_approval_id: u64,
 }
 
@@ -103,46 +99,12 @@ pub struct AssetMetadata {
     pub tokens_per_use: Option<U128>,
 }
 
-/// Contract metadata structure
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde")]
-pub struct ContractSourceMetadata {
-    /// Commit hash being used for the currently deployed wasm. If the contract is not open-sourced, this could also be a numbering system for internal organization / tracking such as "1.0.0" and "2.1.0".
-    pub version: String,
-    /// Link to open source code such as a Github repository or a CID to somewhere on IPFS.
-    pub link: String,
-}
-
-/// Fee Structures for drops and keys
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct KeypomFees {
-    /// How much $NEAR users are charged for creating a drop
-    pub per_drop: u128,
-    /// How much $NEAR users are charged for adding a key
-    pub per_key: u128,
-}
-
-/// Data returned from the `before_claim_logic` function
-pub struct BeforeClaimData {
-    /// What is the token ID for the key being claimed
-    pub token_id: TokenId,
-    /// How much gas the assets in the given use require
-    pub required_asset_gas: Gas,
-    /// For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
-    pub root_account_id: AccountId,
-    /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
-    pub account_creation_keypom_args: Option<KeypomInjectedArgs>,
-}
-
 #[derive(BorshSerialize, BorshStorageKey)]
 pub enum StorageKeys {
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
     DropMetadata { drop_id_hash: CryptoHash },
     TokensPerOwnerInner { account_id_hash: CryptoHash },
-    FeesPerUser,
-    ContractMetadata,
     TokensPerOwner,
     DropById,
     TokenIdByPk,

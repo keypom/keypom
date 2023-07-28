@@ -21,8 +21,6 @@ impl Keypom {
         ft_contract_id: AccountId,
         tokens_to_withdraw: U128
     ) {
-        self.asset_no_global_freeze();
-        
         // get the drop object
         let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
         let funder_id = &drop.funder_id;

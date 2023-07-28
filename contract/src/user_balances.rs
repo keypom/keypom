@@ -5,8 +5,6 @@ impl Keypom {
     /// Allows users to add to their balance. This is to prepay and cover drop costs
     #[payable]
     pub fn add_to_balance(&mut self) -> bool  {
-        self.asset_no_global_freeze();
-
         // Get the attached_deposit value which is how much the user wants to add to their storage
         let attached_deposit = env::attached_deposit();
 
@@ -17,8 +15,6 @@ impl Keypom {
 
     /// Allows users to withdraw their balance
     pub fn withdraw_from_balance(&mut self, amount_to_withdraw: Option<U128>) -> bool  {
-        self.asset_no_global_freeze();
-        
         // The account to withdraw storage to is always the predecessor
         let owner_id = env::predecessor_account_id();
         // Get the amount that the user has by removing them from the map. If they're not in the map, default to 0

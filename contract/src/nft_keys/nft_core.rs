@@ -15,8 +15,6 @@ impl Keypom {
         approval_id: Option<u64>,
         memo: PublicKey,
     ) {
-        self.asset_no_global_freeze();
-        
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
         let receiver_id = receiver_id.unwrap_or(env::current_account_id());
