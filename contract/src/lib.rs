@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LazyOption};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Serialize, Deserialize, Serializer};
 use near_sdk::serde::ser::SerializeStruct;
@@ -44,18 +44,28 @@ pub struct Keypom {
     pub user_balances: LookupMap<AccountId, Balance>,
     /// Which account should all newly created accounts be sub-accounts of? (i.e `testnet` or `near`)
     pub root_account: AccountId,
+
+     /// Source metadata extension:
+     pub contract_metadata: LazyOption<ContractSourceMetadata>,
 }
 
 #[near_bindgen]
 impl Keypom {
     #[init]
-    pub fn new(root_account: AccountId) -> Self {
+    pub fn new(
+        root_account: AccountId,
+        contract_metadata: ContractSourceMetadata,
+    ) -> Self {
         Self {
             drop_by_id: LookupMap::new(StorageKeys::DropById),
             token_id_by_pk: UnorderedMap::new(StorageKeys::TokenIdByPk),
             tokens_per_owner: LookupMap::new(StorageKeys::TokensPerOwner),
             user_balances: LookupMap::new(StorageKeys::UserBalances),
-            root_account
+            root_account,
+            contract_metadata: LazyOption::new(
+                StorageKeys::ContractMetadata,
+                Some(&contract_metadata),
+            ),
         }
     }
 }

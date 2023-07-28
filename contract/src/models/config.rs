@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::*;
 
 #[allow(non_camel_case_types)]
@@ -84,10 +86,10 @@ pub struct PublicSaleConfig {
     pub price_per_key: Option<u128>,
  
     /// Which accounts are allowed to add keys?
-    pub allowlist: Option<Vec<AccountId>>,
+    pub allowlist: Option<HashSet<AccountId>>,
  
     /// Which accounts are NOT allowed to add keys?
-    pub blocklist: Option<Vec<AccountId>>,
+    pub blocklist: Option<HashSet<AccountId>>,
 
     /// Should the revenue generated be sent to the funder's account balance or
     /// automatically withdrawn and sent to their NEAR wallet?

@@ -65,19 +65,6 @@ impl Keypom {
     
         // Get drop in order to get key info (and royalties if applicable)
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        // Decide what methods the new access key can call
-        let access_key_method_names = ACCESS_KEY_BOTH_METHOD_NAMES;
-        // if let Some(perms) = drop.config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()) {
-        //     match perms {
-        //         // If we have a config, use the config to determine what methods the access keys can call
-        //         ClaimPermissions::claim => {
-        //             access_key_method_names = ACCESS_KEY_CLAIM_METHOD_NAME;
-        //         }
-        //         ClaimPermissions::create_account_and_claim => {
-        //             access_key_method_names = ACCESS_KEY_CREATE_ACCOUNT_METHOD_NAME;
-        //         }
-        //     }
-        // }
         
         // Get key info (will overwrite mapping to new key info after)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
@@ -190,7 +177,7 @@ impl Keypom {
             new_public_key.clone(),
             total_allowance_for_key,
             env::current_account_id(),
-            access_key_method_names.to_string(),
+            ACCESS_KEY_METHOD_NAMES.to_string(),
         );
 
         // Log the transfer events

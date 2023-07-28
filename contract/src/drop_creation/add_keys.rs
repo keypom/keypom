@@ -50,7 +50,6 @@ impl Keypom {
             &drop_id,
             max_key_uses,
             &key_data,
-            ACCESS_KEY_BOTH_METHOD_NAMES, 
             total_allowance_per_key
         );
 

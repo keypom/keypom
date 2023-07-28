@@ -99,12 +99,23 @@ pub struct AssetMetadata {
     pub tokens_per_use: Option<U128>,
 }
 
+/// Contract metadata structure
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ContractSourceMetadata {
+    /// Commit hash being used for the currently deployed wasm. If the contract is not open-sourced, this could also be a numbering system for internal organization / tracking such as "1.0.0" and "2.1.0".
+    pub version: String,
+    /// Link to open source code such as a Github repository or a CID to somewhere on IPFS.
+    pub link: String,
+}
+
 #[derive(BorshSerialize, BorshStorageKey)]
 pub enum StorageKeys {
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
     DropMetadata { drop_id_hash: CryptoHash },
     TokensPerOwnerInner { account_id_hash: CryptoHash },
+    ContractMetadata,
     TokensPerOwner,
     DropById,
     TokenIdByPk,

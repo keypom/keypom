@@ -12,7 +12,6 @@ impl Keypom {
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         key_data: &Vec<ExtKeyData>,
-        method_names: &str, 
         allowance: Balance
     ) {
         let current_account_id = &env::current_account_id();
@@ -65,7 +64,7 @@ impl Keypom {
                 0, // Nonce
                 allowance,
                 current_account_id,
-                method_names,
+                ACCESS_KEY_METHOD_NAMES,
             );
 
             // Construct the nft mint and add key logs to be added as events later
