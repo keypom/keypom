@@ -12,6 +12,8 @@ impl Keypom {
 
         drop_data: Option<ExtDropData>,
     ) -> bool {
+        self.asset_no_global_freeze();
+        
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);

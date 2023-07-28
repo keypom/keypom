@@ -18,6 +18,8 @@ impl Keypom {
         amount: U128,
         msg: DropId,
     ) -> PromiseOrValue<U128> {
+        self.asset_no_global_freeze();
+        
         let drop_id = msg;
         let asset_id = env::predecessor_account_id();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");

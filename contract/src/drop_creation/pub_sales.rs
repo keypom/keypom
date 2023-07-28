@@ -9,6 +9,8 @@ impl Keypom {
         drop_id: DropId,
         account_ids: Vec<AccountId>
     ) {
+        self.asset_no_global_freeze();
+
         let initial_storage = env::storage_usage();
         
         // Get the drop and ensure the owner is calling this method
@@ -44,6 +46,8 @@ impl Keypom {
         drop_id: DropId,
         account_ids: Vec<AccountId>
     ) {
+        self.asset_no_global_freeze();
+
         let initial_storage = env::storage_usage();
         
         // Get the drop and ensure the owner is calling this method
@@ -84,6 +88,8 @@ impl Keypom {
         drop_id: DropId,
         account_ids: Vec<AccountId>
     ) {
+        self.asset_no_global_freeze();
+
         let initial_storage = env::storage_usage();
         
         // Get the drop and ensure the owner is calling this method
@@ -119,6 +125,8 @@ impl Keypom {
         drop_id: DropId,
         account_ids: Vec<AccountId>
     ) {
+        self.asset_no_global_freeze();
+
         let initial_storage = env::storage_usage();
         
         // Get the drop and ensure the owner is calling this method
@@ -163,6 +171,8 @@ impl Keypom {
         start: Option<u64>,
         end: Option<u64>,
     ) {
+        self.asset_no_global_freeze();
+        
         let initial_storage = env::storage_usage();
         
         require!(max_num_keys.is_some() || price_per_key.is_some() || start.is_some() || end.is_some(), "no parameters provided");

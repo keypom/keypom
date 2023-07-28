@@ -22,6 +22,8 @@ impl Keypom {
         balance: U128,
         max_len_payout: Option<u32>,
     ) -> Payout {
+        self.asset_no_global_freeze();
+        
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
         // Receiver is either passed in or current account
