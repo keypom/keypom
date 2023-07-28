@@ -15,6 +15,8 @@ impl Keypom {
         limit: Option<u8>,
         keep_empty_drop: Option<bool>
     ) {
+        self.asset_no_global_freeze();
+
         // Measure initial storage before doing any operations
         let initial_storage = env::storage_usage();
 
@@ -61,9 +63,9 @@ impl Keypom {
                 &mut total_cost_for_keys,
                 &mut total_allowance_for_keys,
                 key_info.remaining_uses,
-                drop.uses_per_key,
+                drop.max_key_uses,
                 &drop.asset_by_id,
-                &drop.key_behavior_by_use,
+                &drop.key_use_behaviors,
                 &drop.drop_config
             );
 
@@ -126,7 +128,6 @@ pub(crate) fn internal_clear_drop_storage(
     drop_id: &DropId
 ) {
     drop.asset_by_id.clear();
-    clear_key_behaviors(drop.uses_per_key, &mut drop.key_behavior_by_use);
 
     // Add the drop deletion log to the event logs
     event_logs.push(EventLog {
@@ -138,14 +139,4 @@ pub(crate) fn internal_clear_drop_storage(
             metadata: drop.metadata.get()
         })
     });
-}
-
-/// Loop through each use number and remove the assets metadata for that use number
-pub(crate) fn clear_key_behaviors (
-    uses_per_key: UseNumber,
-    key_behavior_by_use: &mut LookupMap<UseNumber, InternalKeyBehavior>,
-) {
-    for use_number in 1..=uses_per_key {
-        key_behavior_by_use.remove(&use_number);
-    }
 }

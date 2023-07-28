@@ -1,5 +1,14 @@
 use crate::*;
 
+/// When creating a drop, assets can either be specified on a per use basis or for all uses
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[serde(untagged)]
+pub enum ExtAssetData {
+    AssetsPerUse(Vec<ExtAssetDataForGivenUse>),
+    AssetsForAllUses(ExtAssetDataForAllUses)
+}
+
 /// Outlines the different asset types that can be used in drops. This is the external version of `InternalAsset`
 /// And represents the data that is passed into and out of the Keypom contract
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
@@ -44,7 +53,7 @@ pub struct ExtNFTData {
 #[derive(BorshDeserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDrop {
-    pub assets_per_use: HashMap<UseNumber, Vec<Option<ExtAsset>>>,
+    pub asset_data: ExtAssetData,
 
     pub nft_asset_data: Vec<InternalNFTData>,
     pub ft_asset_data: Vec<InternalFTData>,
@@ -68,24 +77,40 @@ pub struct ExtAssetDataForAllUses {
 /// For all keys in a drop
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct AssetDataForGivenUse {
+pub struct ExtAssetDataForGivenUse {
     /// Which assets should be present for this use
     pub assets: Vec<Option<ExtAsset>>,
     /// What config should be used for this use
     pub config: Option<ConfigForGivenUse>
 }
 
-/// Specifies exactly what assets are contained in every given use for a drop
-pub type ExtAssetDataPerUse = HashMap<UseNumber, AssetDataForGivenUse>;
-
-/// Every key can have its own passwords and metadata which is stored in the key info
+/// Data for each key coming in (public key, password, metadata, owner etc.)
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct ExtMetaPerKey {
+pub struct ExtKeyData {
+    /// What is the public key?
+    pub public_key: PublicKey,
     /// A map outlining what the password should be for any given use.
     /// The password here should be a double hash and when claim is called,
     /// The user arguments are hashed and compared to the password here (i.e user passes in single hash)
     pub password_by_use: Option<HashMap<UseNumber, String>>,
     /// Metadata for the given key represented as a string. Most often, this will be JSON stringified.
-    pub metadata: Option<String>
+    pub metadata: Option<String>,
+    /// What account ID owns the given key (if any)
+    pub key_owner: Option<AccountId>
+}
+
+/// Optional data for the drop such as configs, metadata etc.
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ExtDropData {
+    /// Any configurations for the drop such as public sale info etc.
+    /// This will be applied to ALL uses & keys in the drop unless a config
+    /// Is present for the current key use (which will override this)
+    pub config: Option<DropConfig>,
+    /// Metadata for the given drop represented as a string. Most often, this will be JSON stringified.
+    pub metadata: Option<DropMetadata>,
+    /// Configurations for all the NFT keys in this drop. This contains info about royalties and metadata
+    /// That each key will inherit
+    pub nft_keys_config: Option<NFTKeyConfigurations>,
 }

@@ -13,7 +13,7 @@ use crate::*;
 pub struct DropCreationLog {
     pub funder_id: String,
     pub drop_id: String,
-    pub uses_per_key: u32,
+    pub max_key_uses: u32,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<String>,

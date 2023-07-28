@@ -12,7 +12,7 @@ pub enum EventLogVariant {
     /// Drop creation / deletion
     DropCreation(DropCreationLog),
     DropDeletion(DropDeletionLog),
-    
+
     /// Whenever keys are claimed
     Claim(ClaimLog),
     CreateAccountAndClaim(CreateAccountAndClaimLog),
