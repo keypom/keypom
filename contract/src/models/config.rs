@@ -91,10 +91,6 @@ pub struct PublicSaleConfig {
     /// Which accounts are NOT allowed to add keys?
     pub blocklist: Option<HashSet<AccountId>>,
 
-    /// Should the revenue generated be sent to the funder's account balance or
-    /// automatically withdrawn and sent to their NEAR wallet?
-    pub auto_withdraw_funds: Option<bool>,
-
     /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
     /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
     pub start: Option<u64>,

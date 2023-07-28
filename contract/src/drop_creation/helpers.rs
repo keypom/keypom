@@ -106,14 +106,15 @@ impl Keypom {
         num_keys: usize, 
         asset_cost_per_key: Balance, 
         allowance_per_key: Balance,
+        pub_sale_costs: Balance,
         net_storage: u64
     ) {
         let num_keys = num_keys as u128;
         let storage_cost = net_storage as Balance * env::storage_byte_cost();
         let total_asset_cost = asset_cost_per_key * num_keys;
         let total_allowance_cost = allowance_per_key * num_keys;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
-        near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + pub_sale_costs;
+        near_sdk::log!("total {} storage {} asset {} allowance {} pub sale costs {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, pub_sale_costs);
         self.charge_with_deposit_or_balance(total_cost);
     }
 }

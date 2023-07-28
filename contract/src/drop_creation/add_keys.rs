@@ -16,11 +16,24 @@ impl Keypom {
         let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
         
         let funder_id = drop.funder_id.clone();
-        require!(
-            funder_id == env::predecessor_account_id(),
-            "Only drop funder can add keys"
-        );
-        require!(key_data.len() > 0, "Must provide at least one public key");
+        let caller_id = env::predecessor_account_id();
+
+        let num_keys_to_add = key_data.len();
+        require!(num_keys_to_add > 0, "Must provide at least one public key");
+
+        let mut pub_sale_costs = 0;
+        // If there is a public sale and the predecessor isn't the funder, perform checks and return revenue
+        if let Some(sale) = drop.drop_config.as_ref().and_then(|c| c.sale.as_ref()) {
+            if funder_id != caller_id {
+                pub_sale_costs = self.assert_sale_requirements(&funder_id, sale, drop.next_key_id, num_keys_to_add as u64);
+            }
+        } else {
+            // If there is no public sale, ensure the predecessor is the funder
+            require!(
+                funder_id == caller_id,
+                "only funder can add to drops"
+            );
+        }
 
         // Parse the external assets and store them in the contract
         let max_key_uses = drop.max_key_uses;
@@ -62,6 +75,7 @@ impl Keypom {
             key_data.len(),
             total_cost_per_key,
             total_allowance_per_key,
+            pub_sale_costs,
             net_storage,
         );
 

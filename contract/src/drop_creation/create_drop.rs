@@ -98,6 +98,7 @@ impl Keypom {
             key_data.len(),
             total_cost_per_key,
             total_allowance_per_key,
+            0, // No public sale costs for creating a drop
             net_storage,
         );
 
