@@ -44,7 +44,11 @@ impl Keypom {
             });
 
             let key_owner = key_owner.clone().unwrap_or(env::current_account_id());
-
+            // Add the NFT key to the owner's list of tokens
+            self.internal_add_token_to_owner(
+                &key_owner,
+                &token_id
+            );
             key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
                 pub_key: public_key.clone(), 
                 remaining_uses: max_uses_per_key,

@@ -63,6 +63,7 @@ impl Keypom {
         key_info.last_claimed = env::block_timestamp();
         if key_info.remaining_uses == 0 {
             // Delete everything except the token ID -> key info mapping since we need the key info in callbacks
+            self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
             self.token_id_by_pk.remove(&signer_pk);
             Promise::new(env::current_account_id()).delete_key(signer_pk.clone());
             
@@ -91,6 +92,7 @@ impl Keypom {
         drop.key_info_by_token_id.insert(&token_id, &key_info);
         self.drop_by_id.insert(&drop_id, &drop);
 
+        // Log either CAAC or claim events depending on whether or not a new public key was provided
         if let Some(pk) = new_public_key {
             event_logs.push(EventLog {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
