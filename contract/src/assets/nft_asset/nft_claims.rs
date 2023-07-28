@@ -5,8 +5,8 @@ use crate::*;
 /// 7 TGas
 pub const GAS_FOR_NFT_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.0);
 /// Minimum Gas required to perform a simple NFT transfer.
-/// 5 TGas
-pub const MIN_GAS_FOR_NFT_TRANSFER: Gas = Gas(5_000_000_000_000);
+/// 4 TGas
+pub const MIN_GAS_FOR_NFT_TRANSFER: Gas = Gas(4_000_000_000_000);
 /// Minimum Gas required to execute any callback logic after the claim is complete
 /// 2 TGas
 pub const MIN_GAS_FOR_NFT_CALLBACK_LOGIC: Gas = Gas(2_000_000_000_000);

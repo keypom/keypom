@@ -45,7 +45,8 @@
 		"test:failed": "ava __tests__/creation/failed-creation.ts",
 		"test:edge": "ava __tests__/creation/edge-creation.ava.ts",
 		"test:caac": "ava __tests__/claims/create-account-and-claim.ava.ts",
-		"test:utils-test": "ava __tests__/claims/testing-utils.ava.ts"
+		"test:utils-test": "ava __tests__/claims/testing-utils.ava.ts",
+		"test:constants": "ava __tests__/claims/constants-tweaking.ava.ts"
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
