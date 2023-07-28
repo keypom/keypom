@@ -109,12 +109,23 @@ pub struct ContractSourceMetadata {
     pub link: String,
 }
 
+/// Fee Structures for drops and keys
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct KeypomFees {
+    /// How much $NEAR users are charged for creating a drop
+    pub per_drop: u128,
+    /// How much $NEAR users are charged for adding a key
+    pub per_key: u128,
+}
+
 #[derive(BorshSerialize, BorshStorageKey)]
 pub enum StorageKeys {
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
     DropMetadata { drop_id_hash: CryptoHash },
     TokensPerOwnerInner { account_id_hash: CryptoHash },
+    FeesPerUser,
     ContractMetadata,
     TokensPerOwner,
     DropById,

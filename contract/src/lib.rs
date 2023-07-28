@@ -18,6 +18,7 @@ mod drop_claiming;
 mod user_balances;
 mod drop_deletion;
 mod views;
+mod owner;
 mod nft_keys;
 
 use assets::*;
@@ -37,6 +38,12 @@ pub struct Keypom {
     pub contract_owner_id: AccountId,
     /// Whether or not the contract is frozen and no new drops can be created / keys added.
     pub global_freeze: bool,
+    /// Outlines the fees that are charged for every drop and key
+    pub fee_structure: KeypomFees,
+    /// Total amount of fees available for withdrawal collected overtime.
+    pub fees_collected: u128,
+    /// Overload the fees for specific users by providing custom fees
+    pub fees_per_user: LookupMap<AccountId, KeypomFees>,
 
     // ------------------------ Drops ------------------------ //
     /// Map a drop ID to its internal drop data
@@ -73,6 +80,12 @@ impl Keypom {
             tokens_per_owner: LookupMap::new(StorageKeys::TokensPerOwner),
             user_balances: LookupMap::new(StorageKeys::UserBalances),
             root_account,
+            fees_per_user: LookupMap::new(StorageKeys::FeesPerUser),
+            fees_collected: 0,
+            fee_structure: KeypomFees {
+                per_drop: 0,
+                per_key: 0,
+            },
             contract_metadata: LazyOption::new(
                 StorageKeys::ContractMetadata,
                 Some(&contract_metadata),

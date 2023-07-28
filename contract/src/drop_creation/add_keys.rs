@@ -9,7 +9,7 @@ impl Keypom {
         key_data: Vec<ExtKeyData>, 
     ) -> bool {
         self.asset_no_global_freeze();
-        
+
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);
@@ -21,7 +21,7 @@ impl Keypom {
         let caller_id = env::predecessor_account_id();
 
         let num_keys_to_add = key_data.len();
-        require!(num_keys_to_add > 0, "Must provide at least one public key");
+        require!(num_keys_to_add > 0 && num_keys_to_add <= 100, "Must provide between 1 and 100 keys at a time");
 
         let mut pub_sale_costs = 0;
         // If there is a public sale and the predecessor isn't the funder, perform checks and return revenue
@@ -75,6 +75,7 @@ impl Keypom {
         let net_storage = env::storage_usage() - initial_storage;
         self.determine_costs(
             key_data.len(),
+            false, // No drop was created
             total_cost_per_key,
             total_allowance_per_key,
             pub_sale_costs,

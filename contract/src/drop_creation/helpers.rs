@@ -104,17 +104,24 @@ impl Keypom {
      pub(crate) fn determine_costs(
         &mut self,
         num_keys: usize, 
+        did_create_drop: bool,
         asset_cost_per_key: Balance, 
         allowance_per_key: Balance,
         pub_sale_costs: Balance,
         net_storage: u64
     ) {
         let num_keys = num_keys as u128;
+        
         let storage_cost = net_storage as Balance * env::storage_byte_cost();
         let total_asset_cost = asset_cost_per_key * num_keys;
         let total_allowance_cost = allowance_per_key * num_keys;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + pub_sale_costs;
-        near_sdk::log!("total {} storage {} asset {} allowance {} pub sale costs {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, pub_sale_costs);
+
+        let fees_for_user = self.fees_per_user.get(&env::predecessor_account_id()).unwrap_or(self.fee_structure.clone());
+        let total_fees = num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
+        self.fees_collected += total_fees;
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + pub_sale_costs + total_fees;
+        
+        near_sdk::log!("total {} storage {} asset {} allowance {} pub sale {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, pub_sale_costs, total_fees);
         self.charge_with_deposit_or_balance(total_cost);
     }
 }
@@ -149,7 +156,7 @@ pub fn parse_ext_assets (
     }
 }
 
-pub fn parse_ext_all_use_assets (
+pub fn parse_and_store_ext_all_use_assets (
     ext_data: &ExtAssetDataForAllUses,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) -> InternalAllUseBehaviors {
@@ -169,7 +176,7 @@ pub fn parse_ext_all_use_assets (
     }
 }
 
-pub fn parse_ext_per_use_assets (
+pub fn parse_and_store_ext_per_use_assets (
     ext_datas: &Vec<ExtAssetDataForGivenUse>,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) -> Vec<InternalKeyBehaviorForUse> {
@@ -201,16 +208,16 @@ pub fn parse_ext_per_use_assets (
 }
 
 /// Parses the external assets and stores them in the drop's internal maps
-pub fn parse_ext_asset_data (
+pub fn ext_asset_data_to_key_use_behaviors (
     asset_data: &ExtAssetData, 
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) -> InternalKeyUseBehaviors {
     match asset_data {
         ExtAssetData::AssetsForAllUses(data) => {
-            InternalKeyUseBehaviors::AllUses(parse_ext_all_use_assets(data, asset_by_id))
+            InternalKeyUseBehaviors::AllUses(parse_and_store_ext_all_use_assets(data, asset_by_id))
         },
         ExtAssetData::AssetsPerUse(data) => {
-            InternalKeyUseBehaviors::PerUse( parse_ext_per_use_assets(data, asset_by_id))
+            InternalKeyUseBehaviors::PerUse( parse_and_store_ext_per_use_assets(data, asset_by_id))
         }
     }
 }

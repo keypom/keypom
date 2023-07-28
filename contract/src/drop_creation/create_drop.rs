@@ -13,7 +13,7 @@ impl Keypom {
         drop_data: Option<ExtDropData>,
     ) -> bool {
         self.asset_no_global_freeze();
-        
+
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
         near_sdk::log!("initial bytes {}", initial_storage);
@@ -32,9 +32,10 @@ impl Keypom {
             nft_keys_config: None
         });
         let key_data = key_data.unwrap_or(vec![]);
+        require!(key_data.len() <= 100, "Cannot add more than 100 keys at a time");
 
         // Parse the external asset data and convert it into the internal representation
-        let key_use_behaviors = parse_ext_asset_data(
+        let key_use_behaviors = ext_asset_data_to_key_use_behaviors(
             &asset_data,
             &mut asset_by_id 
         );
@@ -92,12 +93,13 @@ impl Keypom {
                 drop_metadata.as_ref(),
             ),
         };
-        self.drop_by_id.insert(&drop_id, &drop);
+        require!(self.drop_by_id.insert(&drop_id, &drop).is_none(), format!("Drop with ID {} already exists", drop_id));
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
         self.determine_costs(
             key_data.len(),
+            true, // We did create a drop here
             total_cost_per_key,
             total_allowance_per_key,
             0, // No public sale costs for creating a drop
