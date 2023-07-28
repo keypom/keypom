@@ -123,6 +123,18 @@ pub struct KeypomFees {
     pub per_key: u128,
 }
 
+/// Data returned from the `before_claim_logic` function
+pub struct BeforeClaimData {
+    /// What is the token ID for the key being claimed
+    pub token_id: TokenId,
+    /// How much gas the assets in the given use require
+    pub required_asset_gas: Gas,
+    /// For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
+    pub root_account_id: AccountId,
+    /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
+    pub account_creation_keypom_args: Option<KeypomInjectedArgs>,
+}
+
 #[derive(BorshSerialize, BorshStorageKey)]
 pub enum StorageKeys {
     AssetById { drop_id_hash: CryptoHash },

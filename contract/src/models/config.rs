@@ -126,5 +126,5 @@ pub struct UsageConfig {
     /// Can the access key for this use call the claim method_name? Default to both method_name callable
     pub permissions: Option<ClaimPermissions>,
     /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
-    pub account_creation_fields: Option<KeypomInjectedArgs>,
+    pub account_creation_keypom_args: Option<KeypomInjectedArgs>,
 }

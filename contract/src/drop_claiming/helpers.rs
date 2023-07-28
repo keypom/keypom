@@ -18,7 +18,7 @@ impl Keypom {
         receiver_id: &AccountId, 
         new_public_key: Option<&PublicKey>,
         password: Option<String>
-    ) -> (TokenId, Gas) {
+    ) -> BeforeClaimData {
         let signer_pk = env::signer_account_pk();
 
         // Get the key info and decrement its remaining uses.
@@ -116,7 +116,15 @@ impl Keypom {
             })
         };
 
-        (token_id, required_asset_gas)
+        // For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
+        let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).or(drop.drop_config.as_ref().and_then(|c| c.root_account_id.clone())).unwrap_or(self.root_account.clone());
+        let usage_config = use_config.as_ref().and_then(|c| c.get_usage_config()).or(drop.drop_config.as_ref().and_then(|c| c.get_usage_config()));
+        BeforeClaimData {
+            token_id,
+            required_asset_gas,
+            root_account_id,
+            account_creation_keypom_args: usage_config.and_then(|c| c.account_creation_keypom_args.clone())
+        }
     }
 
     /// Internal function that loops through all assets for the given use and claims them.
@@ -190,7 +198,7 @@ impl Keypom {
         key_info: &InternalKeyInfo,
         token_id: &TokenId,
         drop_id: &DropId,
-        is_drop_empty: bool,
+        drop_assets_withdrawn: bool,
         initial_storage: u64
     ) {
         let mut event_logs = vec![];
@@ -199,15 +207,17 @@ impl Keypom {
         if key_info.remaining_uses == 0 {
             drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
     
+            let should_delete_on_empty = drop.drop_config.as_ref().and_then(|c| c.delete_empty_drop).unwrap_or(true);
+
             // Now that we've removed the key info, check if the drop is empty
             // Otherwise, re-insert the drop into state
-            if drop.key_info_by_token_id.is_empty() && is_drop_empty {
+            if drop.key_info_by_token_id.is_empty() && drop_assets_withdrawn && should_delete_on_empty {
                 near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
                 // Remove the drop from storage and clear the maps inside of it
                 self.drop_by_id.remove(&drop_id);
                 internal_clear_drop_storage(drop, &mut event_logs, &drop_id);
             } else {
-                near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {}", drop_id, !is_drop_empty);
+                near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {} Config specified to delete: {}", drop_id, !drop_assets_withdrawn, should_delete_on_empty);
                 // Put the modified drop back in storage
                 self.drop_by_id.insert(&drop_id, &drop);
             }

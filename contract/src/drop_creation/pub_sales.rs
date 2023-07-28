@@ -172,7 +172,7 @@ impl Keypom {
         end: Option<u64>,
     ) {
         self.asset_no_global_freeze();
-        
+
         let initial_storage = env::storage_usage();
         
         require!(max_num_keys.is_some() || price_per_key.is_some() || start.is_some() || end.is_some(), "no parameters provided");
@@ -254,6 +254,7 @@ impl Keypom {
         }
 
         // Send the $NEAR to the funder
+        // If the receipt panics, this will be rolled back.
         let revenue_generated = sale.price_per_key.unwrap_or(0) * num_keys_to_add as u128;
         self.internal_modify_user_balance(funder_id, revenue_generated, false);
 
