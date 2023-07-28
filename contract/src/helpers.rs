@@ -100,10 +100,12 @@ pub(crate) fn get_total_costs_for_use(
     drop_config: &Option<DropConfig>
 ) {
     let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(key_use_behaviors, &use_number);
+    
+    let usage_config = use_config.as_ref().and_then(|c| c.get_usage_config()).or(drop_config.as_ref().and_then(|c| c.get_usage_config()));        
     // If the config usage's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
-    let base_gas_for_use = if let Some(perm) = use_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
-        match perm {
-            ClaimPermissions::claim => {
+    let base_gas_for_use = if let Some(usage) = usage_config {
+        match usage.permissions {
+            Some(ClaimPermissions::claim) => {
                 BASE_GAS_FOR_CLAIM
             }
             _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
@@ -111,6 +113,11 @@ pub(crate) fn get_total_costs_for_use(
     } else {
         BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
     };
+
+    // Check and make sure that the time config is valid
+    if let Some(time_config) = use_config.as_ref().and_then(|c| c.get_time_config()).or(drop_config.as_ref().and_then(|c| c.get_time_config())) {
+        assert_valid_time_config(&time_config)
+    }
 
     // Keep track of the total gas across all assets in the current use
     near_sdk::log!("{} base gas for use {}", use_number, base_gas_for_use.0);

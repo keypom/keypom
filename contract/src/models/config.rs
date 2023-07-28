@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::*;
 
 #[allow(non_camel_case_types)]
@@ -33,6 +35,16 @@ pub struct DropConfig {
     pub delete_empty_drop: Option<bool>,
 }
 
+impl DropConfig {
+    pub fn get_time_config(&self) -> Option<TimeConfig> {
+        self.time.clone()
+    }
+
+    pub fn get_usage_config(&self) -> Option<UsageConfig> {
+        self.usage.clone()
+    }
+}
+
 /// Keep track of different configuration options for a given use
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -48,6 +60,16 @@ pub struct ConfigForGivenUse {
     /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
     /// be `ACCOUNT.fayyr.near`
     pub root_account_id: Option<AccountId>,
+}
+
+impl ConfigForGivenUse {
+    pub fn get_time_config(&self) -> Option<TimeConfig> {
+        self.time.clone()
+    }
+
+    pub fn get_usage_config(&self) -> Option<UsageConfig> {
+        self.usage.clone()
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
@@ -84,14 +106,10 @@ pub struct PublicSaleConfig {
     pub price_per_key: Option<u128>,
  
     /// Which accounts are allowed to add keys?
-    pub allowlist: Option<Vec<AccountId>>,
+    pub allowlist: Option<HashSet<AccountId>>,
  
     /// Which accounts are NOT allowed to add keys?
-    pub blocklist: Option<Vec<AccountId>>,
-
-    /// Should the revenue generated be sent to the funder's account balance or
-    /// automatically withdrawn and sent to their NEAR wallet?
-    pub auto_withdraw_funds: Option<bool>,
+    pub blocklist: Option<HashSet<AccountId>>,
 
     /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
     /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
@@ -108,5 +126,5 @@ pub struct UsageConfig {
     /// Can the access key for this use call the claim method_name? Default to both method_name callable
     pub permissions: Option<ClaimPermissions>,
     /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
-    pub account_creation_fields: Option<KeypomInjectedArgs>,
+    pub account_creation_keypom_args: Option<KeypomInjectedArgs>,
 }

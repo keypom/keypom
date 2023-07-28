@@ -12,7 +12,6 @@ impl Keypom {
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         key_data: &Vec<ExtKeyData>,
-        method_names: &str, 
         allowance: Balance
     ) {
         let current_account_id = &env::current_account_id();
@@ -51,6 +50,7 @@ impl Keypom {
                 remaining_uses: max_uses_per_key,
                 owner_id: key_owner.clone(), 
                 next_approval_id: 0,
+                last_claimed: 0, // Set to 0 since this will make the key always claimable.
                 approved_account_ids: Default::default(),
                 metadata: metadata.clone(),
                 pw_by_use,
@@ -65,7 +65,7 @@ impl Keypom {
                 0, // Nonce
                 allowance,
                 current_account_id,
-                method_names,
+                ACCESS_KEY_METHOD_NAMES,
             );
 
             // Construct the nft mint and add key logs to be added as events later
@@ -105,16 +105,24 @@ impl Keypom {
      pub(crate) fn determine_costs(
         &mut self,
         num_keys: usize, 
+        did_create_drop: bool,
         asset_cost_per_key: Balance, 
         allowance_per_key: Balance,
+        pub_sale_costs: Balance,
         net_storage: u64
     ) {
         let num_keys = num_keys as u128;
+        
         let storage_cost = net_storage as Balance * env::storage_byte_cost();
         let total_asset_cost = asset_cost_per_key * num_keys;
         let total_allowance_cost = allowance_per_key * num_keys;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost;
-        near_sdk::log!("total {} storage {} asset {} allowance {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost);
+
+        let fees_for_user = self.fees_per_user.get(&env::predecessor_account_id()).unwrap_or(self.fee_structure.clone());
+        let total_fees = num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
+        self.fees_collected += total_fees;
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + pub_sale_costs + total_fees;
+        
+        near_sdk::log!("total {} storage {} asset {} allowance {} pub sale {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, pub_sale_costs, total_fees);
         self.charge_with_deposit_or_balance(total_cost);
     }
 }
@@ -149,7 +157,7 @@ pub fn parse_ext_assets (
     }
 }
 
-pub fn parse_ext_all_use_assets (
+pub fn parse_and_store_ext_all_use_assets (
     ext_data: &ExtAssetDataForAllUses,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) -> InternalAllUseBehaviors {
@@ -169,7 +177,7 @@ pub fn parse_ext_all_use_assets (
     }
 }
 
-pub fn parse_ext_per_use_assets (
+pub fn parse_and_store_ext_per_use_assets (
     ext_datas: &Vec<ExtAssetDataForGivenUse>,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) -> Vec<InternalKeyBehaviorForUse> {
@@ -201,16 +209,43 @@ pub fn parse_ext_per_use_assets (
 }
 
 /// Parses the external assets and stores them in the drop's internal maps
-pub fn parse_ext_asset_data (
+pub fn ext_asset_data_to_key_use_behaviors (
     asset_data: &ExtAssetData, 
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) -> InternalKeyUseBehaviors {
     match asset_data {
         ExtAssetData::AssetsForAllUses(data) => {
-            InternalKeyUseBehaviors::AllUses(parse_ext_all_use_assets(data, asset_by_id))
+            InternalKeyUseBehaviors::AllUses(parse_and_store_ext_all_use_assets(data, asset_by_id))
         },
         ExtAssetData::AssetsPerUse(data) => {
-            InternalKeyUseBehaviors::PerUse( parse_ext_per_use_assets(data, asset_by_id))
+            InternalKeyUseBehaviors::PerUse( parse_and_store_ext_per_use_assets(data, asset_by_id))
         }
+    }
+}
+
+/// Ensure that the time configurations passed in is valid
+pub(crate) fn assert_valid_time_config(config: &TimeConfig) {
+    // Assert that if the claim_interval is some, the start_timestamp is also some
+    assert!(
+        (config.interval.is_some() && config.start.is_none()) == false,
+        "If you want to set a claim interval, you must also set a start timestamp"
+    );
+
+    // Assert that both the start_timestamp and end timestamps are greater than the current block
+    assert!(
+        config.start.unwrap_or(env::block_timestamp()) >= env::block_timestamp(),
+        "The start timestamp must be greater than the current block timestamp"
+    );
+    assert!(
+        config.end.unwrap_or(env::block_timestamp()) >= env::block_timestamp(),
+        "The end timestamp must be greater than the current block timestamp"
+    );
+
+    // If both the start timestamp and end timestamp are set, ensure that the start timestamp is less than the end timestamp
+    if config.start.is_some() && config.end.is_some() {
+        assert!(
+            config.start.unwrap() < config.end.unwrap(),
+            "The start timestamp must be less than the end timestamp"
+        );
     }
 }

@@ -1,7 +1,7 @@
 use serde_json::{Value, from_str, to_string};
 use crate::*;
 /// b will overwrite a and `a` will be mutated
-pub fn merge_json(a: &mut Value, b: &Value) {
+pub(crate) fn merge_json(a: &mut Value, b: &Value) {
     match (a, b) {
         (&mut Value::Object(ref mut a), &Value::Object(ref b)) => {
             for (k, v) in b {
