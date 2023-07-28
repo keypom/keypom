@@ -217,6 +217,7 @@ impl Keypom {
                 near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
                 // Remove the drop from storage and clear the maps inside of it
                 self.drop_by_id.remove(&drop_id);
+                self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
                 internal_clear_drop_storage(drop, &mut event_logs, &drop_id);
             } else {
                 near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {} Config specified to delete: {}", drop_id, !drop_assets_withdrawn, should_delete_on_empty);

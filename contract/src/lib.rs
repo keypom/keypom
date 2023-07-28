@@ -48,6 +48,8 @@ pub struct Keypom {
     // ------------------------ Drops ------------------------ //
     /// Map a drop ID to its internal drop data
     pub drop_by_id: LookupMap<DropId, InternalDrop>,
+    /// Keep track of the drop ids that each funder has created. This is used for view methods.
+    pub drop_ids_by_funder: LookupMap<AccountId, UnorderedSet<DropId>>,
     /// Get the token ID for any given public key
     pub token_id_by_pk: UnorderedMap<PublicKey, TokenId>,
     /// Which account should all newly created accounts be sub-accounts of? (i.e `testnet` or `near`)
@@ -81,6 +83,7 @@ impl Keypom {
             user_balances: LookupMap::new(StorageKeys::UserBalances),
             root_account,
             fees_per_user: LookupMap::new(StorageKeys::FeesPerUser),
+            drop_ids_by_funder: LookupMap::new(StorageKeys::DropIdsByFunder),
             fees_collected: 0,
             fee_structure: KeypomFees {
                 per_drop: 0,

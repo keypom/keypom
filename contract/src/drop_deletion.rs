@@ -102,6 +102,7 @@ impl Keypom {
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
             internal_clear_drop_storage(&mut drop, &mut event_logs, &drop_id);
+            self.internal_remove_drop_for_funder(&funder_id, &drop_id);
         } else {
             // Put the modified drop back in storage
             self.drop_by_id.insert(&drop_id, &drop);

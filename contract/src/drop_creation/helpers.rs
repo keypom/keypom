@@ -129,6 +129,48 @@ impl Keypom {
         near_sdk::log!("total {} storage {} asset {} allowance {} pub sale {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, pub_sale_costs, total_fees);
         self.charge_with_deposit_or_balance(total_cost);
     }
+
+    /// Internal method to add a drop ID the list of drops a funder has. If they don't have any, instantiate
+    /// A new unordered set and add the drop ID to it. Otherwise, just add the drop ID to the existing set
+    pub(crate) fn internal_add_drop_to_funder(&mut self, funder_id: &AccountId, drop_id: &DropId) {
+        let mut drop_set = self.drop_ids_by_funder.get(funder_id).unwrap_or_else(|| {
+            // If the account doesn't have any drops, we create a new unordered set
+            UnorderedSet::new(StorageKeys::DropIdsByFunderInner {
+                // We get a new unique prefix for the collection equal to the funder (since it's unique)
+                account_id_hash: hash_string(&funder_id.to_string()),
+            })
+        });
+
+        // We insert the drop ID into the set
+        drop_set.insert(drop_id);
+
+        // We insert that set for the given account ID.
+        self.drop_ids_by_funder.insert(funder_id, &drop_set);
+    }
+
+    /// Internal method to remove a drop ID from the list of drops a funder has.
+    /// If the funder has no more drops, we remove the funder from the drop_ids_by_funder collection
+    pub(crate) fn internal_remove_drop_for_funder(
+        &mut self,
+        funder_id: &AccountId,
+        drop_id: &DropId,
+    ) {
+        // Get the set of drop IDs that the funder currently has
+        let mut drop_set = self
+            .drop_ids_by_funder
+            .get(funder_id)
+            .expect("No Drops found for the funder");
+
+        // Remove the drop ID from the set
+        drop_set.remove(drop_id);
+
+        // If the set is now empty, we remove the funder from the collection
+        if drop_set.is_empty() {
+            self.drop_ids_by_funder.remove(funder_id);
+        } else {
+            self.drop_ids_by_funder.insert(funder_id, &drop_set);
+        }
+    }
 }
 
 pub fn parse_ext_assets (

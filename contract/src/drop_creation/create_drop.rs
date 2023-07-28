@@ -94,6 +94,8 @@ impl Keypom {
             ),
         };
         require!(self.drop_by_id.insert(&drop_id, &drop).is_none(), format!("Drop with ID {} already exists", drop_id));
+        // Add the drop ID to the list of drops owned by the funder
+        self.internal_add_drop_to_funder(&funder_id, &drop_id);
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;

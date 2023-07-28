@@ -141,6 +141,8 @@ pub enum StorageKeys {
     KeyInfoByPk { drop_id_hash: CryptoHash },
     DropMetadata { drop_id_hash: CryptoHash },
     TokensPerOwnerInner { account_id_hash: CryptoHash },
+    DropIdsByFunderInner { account_id_hash: CryptoHash },
+    DropIdsByFunder,
     FeesPerUser,
     ContractMetadata,
     TokensPerOwner,
