@@ -44,6 +44,7 @@ impl Keypom {
             &use_config,
             &password,
             &cur_key_use,
+            &drop.max_key_uses,
             new_public_key.is_some()
         );
         
@@ -59,6 +60,7 @@ impl Keypom {
         }
         
         key_info.remaining_uses -= 1;
+        key_info.last_claimed = env::block_timestamp();
         if key_info.remaining_uses == 0 {
             // Delete everything except the token ID -> key info mapping since we need the key info in callbacks
             self.token_id_by_pk.remove(&signer_pk);
@@ -73,7 +75,7 @@ impl Keypom {
                     authorized_id: None,
                     memo: None,
                 }]),
-            });        
+            });
             event_logs.push(EventLog {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
                 version: KEYPOM_STANDARD_VERSION.to_string(),
@@ -242,6 +244,7 @@ pub(crate) fn assert_pre_claim_conditions(
     use_config: &Option<ConfigForGivenUse>,
     user_password: &Option<String>,
     cur_key_use: &UseNumber,
+    max_uses_per_key: &UseNumber,
     creating_account: bool
 ) {
     // Ensure that claim and create_account_and_claim are only called based on the key / drop's config
@@ -255,6 +258,9 @@ pub(crate) fn assert_pre_claim_conditions(
             },
         }
     }
+
+    // Ensure any timestamps in the configs have been fulfilled
+    assert_claim_timestamps(drop_config, use_config, key_info, &String::from(&env::signer_account_pk()), max_uses_per_key);
 
     // If there is some password for the current key use, assert that it matches the one provided
     if let Some(pw_by_use) = &key_info.pw_by_use {
@@ -272,4 +278,48 @@ pub(crate) fn assert_key_password(
     let hashed_user_pw = sha256(&user_password.as_ref().and_then(|f| hex::decode(f).ok()).expect("Password expected."));
 
     require!(hashed_user_pw == expected_password, format!("User provided password: {:?} does not match expected password: {:?}", hashed_user_pw, expected_password));
+}
+
+/// Internal function to assert that the predecessor is the contract owner
+pub(crate) fn assert_claim_timestamps(
+    drop_config: &Option<DropConfig>,
+    per_use_config: &Option<ConfigForGivenUse>,
+    key_info: &InternalKeyInfo,
+    signer_pk: &String,
+    max_uses_per_key: &UseNumber,
+) {
+    let time_config = per_use_config.as_ref().and_then(|c| c.get_time_config()).or(drop_config.as_ref().and_then(|c| c.get_time_config()));
+    
+    if let Some(time_data) = time_config {
+        // Ensure enough time has passed if a start timestamp was specified in the config.
+        let current_timestamp = env::block_timestamp();
+
+        let desired_start_timestamp = time_data.start.unwrap_or(0);
+        require!(current_timestamp >= desired_start_timestamp, format!("Key {} isn't claimable until {}. Current timestamp {}", signer_pk, desired_start_timestamp, current_timestamp));
+
+        // Ensure the end timestamp hasn't passed and the key is still usable
+        let desired_end_timestamp = time_data.end.unwrap_or(u64::MAX);
+        require!(current_timestamp <= desired_end_timestamp, format!("Key {} is no longer claimable. It was claimable up until {}. Current timestamp {}", signer_pk, desired_end_timestamp, current_timestamp));
+
+        let throttle = time_data.throttle.unwrap_or(u64::MAX);
+        require!((current_timestamp - key_info.last_claimed) >= throttle, format!("Key {} was used too recently. It must be used ever {}. Time since last use {}", signer_pk, throttle, current_timestamp - key_info.last_claimed));
+
+
+        // Ensure the key is within the claim interval if specified
+        if let Some(interval) = time_data.interval {
+            let start_timestamp = time_data.start.unwrap();
+
+            // At this moment, what is the maximum number of uses that COULD have been possibly claimed
+            let total_possible_claims = (env::block_timestamp() - start_timestamp) / interval;
+            
+            // How many claims given the interval and remaining uses does this key have left?
+            // Take the current total claims possible, and subtract the number of uses the key has left
+            // Example: If the interval is 1 day, and 4 days have passed, the key has 4 total claimable uses.
+            // If the key has already been claimed 3/4 times, then the key has 1 remaining claimable uses.
+            let claims_so_far = max_uses_per_key - key_info.remaining_uses;
+            let num_claimable_uses = total_possible_claims - claims_so_far as u64;
+
+            require!(num_claimable_uses > 0, format!("Key {} has been claimed {} times. Given the interval {} and starting timestamp of {}, there are {} claims available.", signer_pk, claims_so_far, interval, start_timestamp, num_claimable_uses));
+        }
+    }
 }

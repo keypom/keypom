@@ -35,6 +35,16 @@ pub struct DropConfig {
     pub delete_empty_drop: Option<bool>,
 }
 
+impl DropConfig {
+    pub fn get_time_config(&self) -> Option<TimeConfig> {
+        self.time.clone()
+    }
+
+    pub fn get_usage_config(&self) -> Option<UsageConfig> {
+        self.usage.clone()
+    }
+}
+
 /// Keep track of different configuration options for a given use
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -50,6 +60,16 @@ pub struct ConfigForGivenUse {
     /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
     /// be `ACCOUNT.fayyr.near`
     pub root_account_id: Option<AccountId>,
+}
+
+impl ConfigForGivenUse {
+    pub fn get_time_config(&self) -> Option<TimeConfig> {
+        self.time.clone()
+    }
+
+    pub fn get_usage_config(&self) -> Option<UsageConfig> {
+        self.usage.clone()
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]

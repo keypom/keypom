@@ -54,16 +54,20 @@ pub struct InternalKeyInfo {
     /// How many uses this key has left. Once 0 is reached, the key is deleted
     pub remaining_uses: UseNumber,
 
-    // Owner of the Key
+    /// Owner of the key
     pub owner_id: AccountId,
 
+    /// When was the last time the key was used
+    pub last_claimed: u64,
+
+    /// Metadata for the current key
     pub metadata: Option<String>,
     pub pw_by_use: Option<HashMap<UseNumber, Vec<u8>>>,
 
-    // List of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
+    /// List of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
     pub approved_account_ids: HashMap<AccountId, u64>,
 
-    // The next approval ID to give out. 
+    /// The next approval ID to give out. 
     pub next_approval_id: u64,
 }
 

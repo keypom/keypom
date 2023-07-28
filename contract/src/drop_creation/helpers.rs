@@ -50,6 +50,7 @@ impl Keypom {
                 remaining_uses: max_uses_per_key,
                 owner_id: key_owner.clone(), 
                 next_approval_id: 0,
+                last_claimed: 0, // Set to 0 since this will make the key always claimable.
                 approved_account_ids: Default::default(),
                 metadata: metadata.clone(),
                 pw_by_use,
@@ -219,5 +220,32 @@ pub fn ext_asset_data_to_key_use_behaviors (
         ExtAssetData::AssetsPerUse(data) => {
             InternalKeyUseBehaviors::PerUse( parse_and_store_ext_per_use_assets(data, asset_by_id))
         }
+    }
+}
+
+/// Ensure that the time configurations passed in is valid
+pub(crate) fn assert_valid_time_config(config: &TimeConfig) {
+    // Assert that if the claim_interval is some, the start_timestamp is also some
+    assert!(
+        (config.interval.is_some() && config.start.is_none()) == false,
+        "If you want to set a claim interval, you must also set a start timestamp"
+    );
+
+    // Assert that both the start_timestamp and end timestamps are greater than the current block
+    assert!(
+        config.start.unwrap_or(env::block_timestamp()) >= env::block_timestamp(),
+        "The start timestamp must be greater than the current block timestamp"
+    );
+    assert!(
+        config.end.unwrap_or(env::block_timestamp()) >= env::block_timestamp(),
+        "The end timestamp must be greater than the current block timestamp"
+    );
+
+    // If both the start timestamp and end timestamp are set, ensure that the start timestamp is less than the end timestamp
+    if config.start.is_some() && config.end.is_some() {
+        assert!(
+            config.start.unwrap() < config.end.unwrap(),
+            "The start timestamp must be less than the end timestamp"
+        );
     }
 }

@@ -111,6 +111,7 @@ impl Keypom {
             remaining_uses: key_info.remaining_uses,
             next_approval_id: key_info.next_approval_id,
             metadata: key_info.metadata,
+            last_claimed: key_info.last_claimed,
             pw_by_use: key_info.pw_by_use
         };
 
