@@ -53,7 +53,7 @@ impl Keypom {
         
         // Tally up all the gas for the assets
         let mut required_asset_gas = Gas(0);
-
+        let mut assets = Vec::new();
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             
@@ -123,14 +123,14 @@ impl Keypom {
         // For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
         let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).or(drop.drop_config.as_ref().and_then(|c| c.root_account_id.clone())).unwrap_or(self.root_account.clone());
         let usage_config = use_config.as_ref().and_then(|c| c.get_usage_config()).or(drop.drop_config.as_ref().and_then(|c| c.get_usage_config()));
+        
         BeforeClaimData {
             token_id,
             required_asset_gas,
             root_account_id,
             account_creation_keypom_args: usage_config.and_then(|c| c.account_creation_keypom_args.clone())
         }
-        near_sdk::log!("Gas at end of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
-        (token_id, required_asset_gas)
+
     }
 
     /// Internal function that loops through all assets for the given use and claims them.
