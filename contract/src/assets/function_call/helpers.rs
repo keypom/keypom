@@ -140,7 +140,7 @@ pub(crate) fn handle_user_args_rules (
     Ok(())
 }
 
-pub(crate) fn handle_fc_args(
+pub fn handle_fc_args(
     output_args: &mut String, 
     keypom_args: Option<KeypomInjectedArgs>,
     user_args_rule: &Option<UserArgsRule>,
