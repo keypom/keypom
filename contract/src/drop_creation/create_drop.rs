@@ -1,5 +1,4 @@
 use crate::*;
-use near_sdk::collections::LazyOption;
 
 #[near_bindgen]
 impl Keypom {
@@ -10,7 +9,7 @@ impl Keypom {
         key_data: Vec<ExtKeyData>, 
         asset_data: ExtAssetData,
 
-        drop_data: Option<ExtDropData>,
+        drop_config: Option<DropConfig>,
     ) -> bool {
         self.asset_no_global_freeze();
 
@@ -26,11 +25,6 @@ impl Keypom {
             drop_id_hash: hash_string(&drop_id.to_string()),
         });
 
-        let ExtDropData { config: drop_config, metadata: drop_metadata, nft_keys_config } = drop_data.unwrap_or(ExtDropData {
-            config: None,
-            metadata: None,
-            nft_keys_config: None
-        });
         require!(key_data.len() <= 100, "Cannot add more than 100 keys at a time");
 
         // Parse the external asset data and convert it into the internal representation
@@ -54,8 +48,7 @@ impl Keypom {
             max_key_uses,
             max_key_uses,
             &asset_by_id,
-            &key_use_behaviors,
-            &drop_config
+            &key_use_behaviors
         );
 
         // Keep track of all the key IDs 
@@ -81,16 +74,8 @@ impl Keypom {
             asset_by_id,
             key_info_by_token_id,
             next_key_id,
-            nft_keys_config,
-            drop_config,
+            config: drop_config,
             funder_id: funder_id.clone(),
-            metadata: LazyOption::new(
-                StorageKeys::DropMetadata {
-                    // We get a new unique prefix for the collection
-                    drop_id_hash: hash_string(&drop_id.to_string()),
-                },
-                drop_metadata.as_ref(),
-            ),
         };
         require!(self.drop_by_id.insert(&drop_id, &drop).is_none(), format!("Drop with ID {} already exists", drop_id));
         // Add the drop ID to the list of drops owned by the funder
@@ -103,7 +88,6 @@ impl Keypom {
             true, // We did create a drop here
             total_cost_per_key,
             total_allowance_per_key,
-            0, // No public sale costs for creating a drop
             net_storage,
         );
 
@@ -115,7 +99,7 @@ impl Keypom {
                 funder_id: funder_id.to_string(),
                 drop_id,
                 max_key_uses,
-                metadata: drop_metadata
+                metadata: drop.config.as_ref().and_then(|c| c.metadata.clone()),
             }),
         };
         event_logs.push(drop_creation_event);

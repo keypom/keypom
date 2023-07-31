@@ -112,7 +112,6 @@ impl Keypom {
         did_create_drop: bool,
         asset_cost_per_key: Balance, 
         allowance_per_key: Balance,
-        pub_sale_costs: Balance,
         net_storage: u64
     ) {
         let num_keys = num_keys as u128;
@@ -124,9 +123,9 @@ impl Keypom {
         let fees_for_user = self.fees_per_user.get(&env::predecessor_account_id()).unwrap_or(self.fee_structure.clone());
         let total_fees = num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
         self.fees_collected += total_fees;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + pub_sale_costs + total_fees;
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + total_fees;
         
-        near_sdk::log!("total {} storage {} asset {} allowance {} pub sale {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, pub_sale_costs, total_fees);
+        near_sdk::log!("total {} storage {} asset {} allowance {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, total_fees);
         self.charge_with_deposit_or_balance(total_cost);
     }
 

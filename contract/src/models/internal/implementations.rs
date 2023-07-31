@@ -52,7 +52,7 @@ impl InternalDrop {
             nft_asset_data: nft_list,
             ft_asset_data: ft_list,
             fc_asset_data: fc_list,
-            metadata: self.metadata.get()
+            drop_config: self.config.clone()
         }
     }
 }

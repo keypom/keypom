@@ -67,7 +67,6 @@ impl Keypom {
                 drop.max_key_uses,
                 &drop.asset_by_id,
                 &drop.key_use_behaviors,
-                &drop.drop_config
             );
 
             add_delete_key_logs(
@@ -138,7 +137,7 @@ pub(crate) fn internal_clear_drop_storage(
         event: EventLogVariant::DropDeletion(DropDeletionLog {
             funder_id: drop.funder_id.to_string(),
             drop_id: drop_id.to_string(),
-            metadata: drop.metadata.get()
+            metadata: drop.config.as_ref().and_then(|c| c.metadata.clone()).map(|m| m.to_string())
         })
     });
 }

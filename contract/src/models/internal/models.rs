@@ -1,5 +1,5 @@
 use crate::*;
-use near_sdk::collections::{UnorderedMap, LazyOption};
+use near_sdk::collections::UnorderedMap;
 
 /// When creating a drop, assets can either be specified on a per use basis or for all uses
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -36,13 +36,8 @@ pub struct InternalDrop {
     /// Keep track of the next nonce to give out to a key
     pub next_key_id: u64,
 
-    /// Metadata for the drop in the form of stringified JSON. The format is completely up to the
-    /// user and there are no standards for format.
-    pub metadata: LazyOption<DropMetadata>,
-    /// Information about the NFT keys and how they're rendered / payout options etc.
-    pub nft_keys_config: Option<NFTKeyConfigurations>,
     /// Keep track of different configuration options for all the uses of a key in a given drop
-    pub drop_config: Option<DropConfig>
+    pub config: Option<DropConfig>
 }
 
 /// Keep track of different configuration options for each key in a drop
@@ -75,7 +70,7 @@ pub struct InternalKeyInfo {
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct InternalKeyBehaviorForUse {
     /// Configurations for this specific use
-    pub config: Option<ConfigForGivenUse>,
+    pub config: Option<UseConfig>,
     /// Metadata for each asset in this use
     pub assets_metadata: Vec<AssetMetadata>
 }
@@ -139,7 +134,6 @@ pub struct BeforeClaimData {
 pub enum StorageKeys {
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
-    DropMetadata { drop_id_hash: CryptoHash },
     TokensPerOwnerInner { account_id_hash: CryptoHash },
     DropIdsByFunderInner { account_id_hash: CryptoHash },
     DropIdsByFunder,

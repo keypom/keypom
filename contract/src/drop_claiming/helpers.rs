@@ -40,7 +40,6 @@ impl Keypom {
         
         assert_pre_claim_conditions(
             &key_info,
-            &drop.drop_config,
             &use_config,
             &password,
             &cur_key_use,
@@ -119,13 +118,13 @@ impl Keypom {
         };
 
         // For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
-        let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).or(drop.drop_config.as_ref().and_then(|c| c.root_account_id.clone())).unwrap_or(self.root_account.clone());
-        let usage_config = use_config.as_ref().and_then(|c| c.get_usage_config()).or(drop.drop_config.as_ref().and_then(|c| c.get_usage_config()));
+        let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).unwrap_or(self.root_account.clone());
+        let account_creation_keypom_args = use_config.as_ref().and_then(|c| c.account_creation_keypom_args.clone());
         BeforeClaimData {
             token_id,
             required_asset_gas,
             root_account_id,
-            account_creation_keypom_args: usage_config.and_then(|c| c.account_creation_keypom_args.clone())
+            account_creation_keypom_args,
         }
     }
 
@@ -209,7 +208,7 @@ impl Keypom {
         if key_info.remaining_uses == 0 {
             drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
     
-            let should_delete_on_empty = drop.drop_config.as_ref().and_then(|c| c.delete_empty_drop).unwrap_or(true);
+            let should_delete_on_empty = drop.config.as_ref().and_then(|c| c.delete_empty_drop).unwrap_or(true);
 
             // Now that we've removed the key info, check if the drop is empty
             // Otherwise, re-insert the drop into state
@@ -253,15 +252,14 @@ pub(crate) fn was_account_created() -> bool {
 /// Internal function to perform all the pre-claim checks such as passwords, configs etc.
 pub(crate) fn assert_pre_claim_conditions(
     key_info: &InternalKeyInfo,
-    drop_config: &Option<DropConfig>,
-    use_config: &Option<ConfigForGivenUse>,
+    use_config: &Option<UseConfig>,
     user_password: &Option<String>,
     cur_key_use: &UseNumber,
     max_uses_per_key: &UseNumber,
     creating_account: bool
 ) {
     // Ensure that claim and create_account_and_claim are only called based on the key / drop's config
-    if let Some(perm) = use_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
+    if let Some(perm) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
         match perm {
             ClaimPermissions::claim => {
                 require!(creating_account == false, "Cannot call `create_account_and_claim` when key permission is set to only claim")
@@ -273,7 +271,7 @@ pub(crate) fn assert_pre_claim_conditions(
     }
 
     // Ensure any timestamps in the configs have been fulfilled
-    assert_claim_timestamps(drop_config, use_config, key_info, &String::from(&env::signer_account_pk()), max_uses_per_key);
+    assert_claim_timestamps(use_config, key_info, &String::from(&env::signer_account_pk()), max_uses_per_key);
 
     // If there is some password for the current key use, assert that it matches the one provided
     if let Some(pw_by_use) = &key_info.pw_by_use {
@@ -295,13 +293,12 @@ pub(crate) fn assert_key_password(
 
 /// Internal function to assert that the predecessor is the contract owner
 pub(crate) fn assert_claim_timestamps(
-    drop_config: &Option<DropConfig>,
-    per_use_config: &Option<ConfigForGivenUse>,
+    use_config: &Option<UseConfig>,
     key_info: &InternalKeyInfo,
     signer_pk: &String,
     max_uses_per_key: &UseNumber,
 ) {
-    let time_config = per_use_config.as_ref().and_then(|c| c.get_time_config()).or(drop_config.as_ref().and_then(|c| c.get_time_config()));
+    let time_config = use_config.as_ref().and_then(|c| c.time.as_ref());
     
     if let Some(time_data) = time_config {
         // Ensure enough time has passed if a start timestamp was specified in the config.

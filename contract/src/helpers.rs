@@ -56,8 +56,7 @@ pub(crate) fn get_total_costs_for_key(
     remaining_uses: UseNumber, 
     max_uses_per_key: UseNumber, 
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_use_behaviors: &InternalKeyUseBehaviors,
-    drop_config: &Option<DropConfig>
+    key_use_behaviors: &InternalKeyUseBehaviors
 ) {
     // For every remaining use, we need to loop through all assets and refund
     for cur_use in 1..=remaining_uses {
@@ -69,8 +68,7 @@ pub(crate) fn get_total_costs_for_key(
             total_allowance_for_keys,
             use_to_refund,
             asset_by_id,
-            key_use_behaviors,
-            drop_config
+            key_use_behaviors
         );
     }
 }
@@ -96,16 +94,14 @@ pub(crate) fn get_total_costs_for_use(
     total_allowance_for_use: &mut Balance,
     use_number: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_use_behaviors: &InternalKeyUseBehaviors,
-    drop_config: &Option<DropConfig>
+    key_use_behaviors: &InternalKeyUseBehaviors
 ) {
     let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(key_use_behaviors, &use_number);
-    
-    let usage_config = use_config.as_ref().and_then(|c| c.get_usage_config()).or(drop_config.as_ref().and_then(|c| c.get_usage_config()));        
-    // If the config usage's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
-    let base_gas_for_use = if let Some(usage) = usage_config {
-        match usage.permissions {
-            Some(ClaimPermissions::claim) => {
+
+    // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
+    let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
+        match perms {
+            ClaimPermissions::claim => {
                 BASE_GAS_FOR_CLAIM
             }
             _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
@@ -115,8 +111,8 @@ pub(crate) fn get_total_costs_for_use(
     };
 
     // Check and make sure that the time config is valid
-    if let Some(time_config) = use_config.as_ref().and_then(|c| c.get_time_config()).or(drop_config.as_ref().and_then(|c| c.get_time_config())) {
-        assert_valid_time_config(&time_config)
+    if let Some(time_config) = use_config.as_ref().and_then(|c| c.time.as_ref()) {
+        assert_valid_time_config(time_config)
     }
 
     // Keep track of the total gas across all assets in the current use

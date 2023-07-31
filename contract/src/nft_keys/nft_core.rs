@@ -31,7 +31,7 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).0;
 
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
-            let NFTKeyConfigurations { token_metadata, royalties } = drop.nft_keys_config.unwrap_or(NFTKeyConfigurations {
+            let NFTKeyConfigurations { token_metadata, royalties } = drop.config.and_then(|c| c.nft_keys_config).unwrap_or(NFTKeyConfigurations {
                 token_metadata: None,
                 royalties: None,
             });

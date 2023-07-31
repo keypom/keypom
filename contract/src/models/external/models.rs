@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::*;
 
 /// When querying view functions related to drops, you can either pass in the drop ID or a public key
@@ -77,7 +79,7 @@ pub struct ExtDrop {
     pub ft_asset_data: Vec<InternalFTData>,
     pub fc_asset_data: Vec<FCData>,
 
-    pub metadata: Option<DropMetadata>
+    pub drop_config: Option<DropConfig>
 }
 
 /// If the user wishes to specify a set of assets that is repeated across many uses, they can use
@@ -99,7 +101,7 @@ pub struct ExtAssetDataForGivenUse {
     /// Which assets should be present for this use
     pub assets: Vec<Option<ExtAsset>>,
     /// What config should be used for this use
-    pub config: Option<ConfigForGivenUse>
+    pub config: Option<UseConfig>
 }
 
 /// Data for each key coming in (public key, password, metadata, owner etc.)
@@ -118,17 +120,22 @@ pub struct ExtKeyData {
     pub key_owner: Option<AccountId>
 }
 
-/// Optional data for the drop such as configs, metadata etc.
+/// Optional configurations for the drop such as metadata, deleting empty drops etc.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct ExtDropData {
-    /// Any configurations for the drop such as public sale info etc.
-    /// This will be applied to ALL uses & keys in the drop unless a config
-    /// Is present for the current key use (which will override this)
-    pub config: Option<DropConfig>,
+pub struct DropConfig {
     /// Metadata for the given drop represented as a string. Most often, this will be JSON stringified.
     pub metadata: Option<DropMetadata>,
     /// Configurations for all the NFT keys in this drop. This contains info about royalties and metadata
     /// That each key will inherit
     pub nft_keys_config: Option<NFTKeyConfigurations>,
+
+    /// Which users can add keys to the drop. The public sale config was moved out of the Keypom contract
+    /// And now should be deployed on its own proxy contract that in turn performs any necessary sale logic
+    /// And then fires a cross contract call to the Keypom contract to add keys
+    pub add_key_allowlist: Option<HashSet<AccountId>>,
+
+    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
+    /// Must be overwritten
+    pub delete_empty_drop: Option<bool>,
 }

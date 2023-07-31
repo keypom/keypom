@@ -37,7 +37,7 @@ impl Keypom {
         
         // Get royalties from key info
         let default_royalty = &HashMap::new();
-        let nft_royalty = drop.nft_keys_config.as_ref().and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
+        let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_keys_config.as_ref()).and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
 
         // Perform the transfer and then calculate payouts
         let old_owner_id = self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo);
@@ -52,7 +52,7 @@ impl Keypom {
     
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let default_royalty = &HashMap::new();
-        let nft_royalty = drop.nft_keys_config.as_ref().and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
+        let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_keys_config.as_ref()).and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
         calculate_payouts(key_info.owner_id, nft_royalty.clone(), u128::from(balance), max_len_payout.unwrap_or(MAX_LEN_PAYOUT))

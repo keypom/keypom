@@ -170,7 +170,6 @@ impl Keypom {
             drop.max_key_uses,
             &drop.asset_by_id,
             &drop.key_use_behaviors,
-            &drop.drop_config
         );
 
         // Add the new key with the corresponding allowance
