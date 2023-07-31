@@ -98,14 +98,15 @@ test.beforeEach(async (t) => {
      let ftAccounts: NearAccount[] = []
 
      const ftContract1 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract2 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract3 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract4 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract5 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract6 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract7 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract8 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
-    //  const ftContract9 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+
+     const ftContract2 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+     const ftContract3 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+     const ftContract4 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+     const ftContract5 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+     const ftContract6 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+     const ftContract7 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+     const ftContract8 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
+     const ftContract9 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
 
     //  const ftContract10 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
     //  const ftContract11 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
@@ -117,14 +118,15 @@ test.beforeEach(async (t) => {
     //  const ftContract17 = await root.devDeploy(`./__tests__/ext-wasm/ft.wasm`);
 
      ftAccounts.push(ftContract1)
-    //  ftAccounts.push(ftContract2)
-    //  ftAccounts.push(ftContract3)
-    //  ftAccounts.push(ftContract4)
-    //  ftAccounts.push(ftContract5)
-    //  ftAccounts.push(ftContract6)
-    //  ftAccounts.push(ftContract7)
-    //  ftAccounts.push(ftContract8)
-    //  ftAccounts.push(ftContract9)
+
+     ftAccounts.push(ftContract2)
+     ftAccounts.push(ftContract3)
+     ftAccounts.push(ftContract4)
+     ftAccounts.push(ftContract5)
+     ftAccounts.push(ftContract6)
+     ftAccounts.push(ftContract7)
+     ftAccounts.push(ftContract8)
+     ftAccounts.push(ftContract9)
 
     //  ftAccounts.push(ftContract10)
     //  ftAccounts.push(ftContract11)
@@ -136,9 +138,10 @@ test.beforeEach(async (t) => {
     //  ftAccounts.push(ftContract17)
 
     for(let i = 0; i < ftAccounts.length; i++){
+        console.log(`Initializing ${ftAccounts[i].accountId}`)
         await ftAccounts[i].call(ftAccounts[i], 'new_default_meta', { owner_id: ftAccounts[i], total_supply: totalSupply.toString() });
-        await functionCall({signer: ftAccounts[i], receiver: ftAccounts[i], methodName: 'storage_deposit', args: {account_id: keypomV3.accountId},attachedDeposit: NEAR.parse("1").toString(), shouldLog: false})
-        await functionCall({signer: ftAccounts[i], receiver: ftAccounts[i], methodName: 'storage_deposit', args: {account_id: funder.accountId},attachedDeposit: NEAR.parse("1").toString(), shouldLog: false})
+        await functionCall({signer: ftAccounts[i], receiver: ftAccounts[i], methodName: 'storage_deposit', args: {account_id: keypomV3.accountId},attachedDeposit: NEAR.parse("10").toString(), shouldLog: false})
+        await functionCall({signer: ftAccounts[i], receiver: ftAccounts[i], methodName: 'storage_deposit', args: {account_id: funder.accountId},attachedDeposit: NEAR.parse("10").toString(), shouldLog: false})
         await functionCall({signer: ftAccounts[i], receiver: ftAccounts[i], methodName: 'ft_transfer', args: {receiver_id: funder.accountId, amount: NEAR.parse("1000").toString()},attachedDeposit: "1", shouldLog: false})
     }
 
@@ -183,14 +186,15 @@ test.beforeEach(async (t) => {
     //     ali };
     t.context.accounts = { root, funder, keypomV3, 
         ftContract1, 
-        // ftContract2, 
-        // ftContract3, 
-        // ftContract4, 
-        // ftContract5, 
-        // ftContract6, 
-        // ftContract7, 
-        // ftContract8, 
-        // ftContract9, 
+
+        ftContract2, 
+        ftContract3, 
+        ftContract4, 
+        ftContract5, 
+        ftContract6, 
+        ftContract7, 
+        ftContract8, 
+        ftContract9, 
 
         // ftContract10, 
         // ftContract11, 
@@ -552,14 +556,14 @@ test('FT Const Tweaking', async t => {
     
     let ftAccounts: NearAccount[] = [ 
         ftContract1, 
-        // ftContract2, 
-        // ftContract3, 
-        // ftContract4, 
-        // ftContract5, 
-        // ftContract6, 
-        // ftContract7, 
-        // ftContract8, 
-        // ftContract9, 
+        ftContract2, 
+        ftContract3, 
+        ftContract4, 
+        ftContract5, 
+        ftContract6, 
+        ftContract7, 
+        ftContract8, 
+        ftContract9, 
         ]
     
     let initialBal = await keypomV3.balance();
@@ -570,6 +574,7 @@ test('FT Const Tweaking', async t => {
     const dropId = "my-drop-id";
     const numKeys = 2;
     let keyPairs = await generateKeyPairs(numKeys);
+    let under_max = 2;
 
     // ******************* EMPTIES *******************
     // let ftAssets: ExtFTData[] = []
@@ -604,15 +609,15 @@ test('FT Const Tweaking', async t => {
     // ******************* BIG BOY *******************
     let ftAssets: ExtFTData[] = [];
     let expectedFtAssets: {contract_id: string, balance_avail: string}[] = [];
-    for(let i = 0 ; i < ftAccounts.length; i++){
-        ftAssets.push({ft_contract_id: ftAccounts[i].accountId, registration_cost: "1", ft_amount: "1"});
+    for(let i = 0 ; i < ftAccounts.length - under_max; i++){
+        ftAssets.push({ft_contract_id: ftAccounts[i].accountId, registration_cost: NEAR.parse("1").toString(), ft_amount: "1"});
         expectedFtAssets.push({contract_id: ftAccounts[i].accountId, balance_avail: "1"})
     }
 
     const asset_data_per_use = [
         // Max amount of spoof NFTs that will still pass226/18
         {
-            assets: [null]
+            assets: ftAssets
         },
     ]
     
@@ -626,7 +631,7 @@ test('FT Const Tweaking', async t => {
             key_data: [{public_key: keyPairs.publicKeys[0]}]
             // public_keys: [keyPairs.publicKeys[0]]
         },
-        attachedDeposit: NEAR.parse("1").toString(),
+        attachedDeposit: NEAR.parse("10").toString(),
     })
 
      
@@ -653,7 +658,7 @@ test('FT Const Tweaking', async t => {
     //         attachedDeposit: NEAR.parse("0.01").toString(),
     //         shouldLog: true
     //     })
-
+ 
     //     await functionCall({
     //         signer: funder,
     //         receiver: nftContract1,
@@ -670,21 +675,23 @@ test('FT Const Tweaking', async t => {
     // }
 
     // ******************* BIG BOY *******************
-    // for(let i = 0; i < ftAccounts.length; i++){
-    //     await sendFTs(funder, "1", keypomV3, ftAccounts[i], dropId)
-    // }
+    for(let i = 0; i < ftAccounts.length - under_max; i++){
+        console.log(`Sending FTs from ${ftAccounts[i].accountId}`)
+        await sendFTs(funder, "1", keypomV3, ftAccounts[i], dropId)
+    }
     
-    // await assertKeypomInternalAssets({
-    //     keypom: keypomV3,
-    //     dropId,
-    //     expectedFtData: expectedFtAssets
-    // })
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedFtData: expectedFtAssets
+    })
 
     // ******************* EMPTIES *******************
     // await assertKeypomInternalAssets({
     //     keypom: keypomV3,
     //     dropId,
-    //     expectedFtData: expectedFTs
+    //     expectedFtData: expectedFtAssets,
+    //     expectedNftData: []
     // })
 
     // First legit claim to get to 2nd use

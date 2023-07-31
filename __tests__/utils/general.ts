@@ -215,7 +215,7 @@ export async function assertKeypomInternalAssets({
 
         console.log(`Found Contract ID: ${dropInfo.nft_asset_data[count].contract_id}`)
         console.log(`Found Tokens: ${dropInfo.nft_asset_data[count].token_ids.sort().join(',')}`)
-        throw new Error(`Expected NFT Data ${expectedAsset} not found`);
+        throw new Error(`Expected NFT Data [${expectedAsset.contract_id}, ${expectedAsset.token_ids}] not found`);
       }
 
       count += 1;
@@ -239,7 +239,7 @@ export async function assertKeypomInternalAssets({
         console.log(`Found Balance: ${dropInfo.ft_asset_data[count].balance_avail}`);
 
 
-        throw new Error(`Expected NFT Data ${expectedAsset} not found`);
+        throw new Error(`Expected FT Data [${expectedAsset.contract_id}, ${expectedAsset.balance_avail}] not found`);
       }
       count += 1;
     }
