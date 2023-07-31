@@ -7,7 +7,7 @@ impl Keypom {
     pub fn create_drop(
         &mut self, 
         drop_id: DropId,
-        key_data: Option<Vec<ExtKeyData>>, 
+        key_data: Vec<ExtKeyData>, 
         asset_data: ExtAssetData,
 
         drop_data: Option<ExtDropData>,
@@ -31,7 +31,6 @@ impl Keypom {
             metadata: None,
             nft_keys_config: None
         });
-        let key_data = key_data.unwrap_or(vec![]);
         require!(key_data.len() <= 100, "Cannot add more than 100 keys at a time");
 
         // Parse the external asset data and convert it into the internal representation

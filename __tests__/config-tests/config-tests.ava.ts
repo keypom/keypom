@@ -1,7 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { assertBalanceChange, CONTRACT_METADATA, generateKeyPairs, getDropSupplyForOwner, getKeyInformation, getKeySupplyForDrop, LARGE_GAS, queryAllViewFunctions, WALLET_GAS } from "../utils/general";
-import { DropConfig, JsonKeyInfo } from "../utils/types";
+import { CONTRACT_METADATA, generateKeyPairs } from "../utils/general";
 
 const test = anyTest as TestFn<{
     worker: Worker;
@@ -45,9 +44,6 @@ test.beforeEach(async (t) => {
     await owner.updateAccount({
         amount: NEAR.parse('10000 N').toString()
     })
-    
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: owner.accountId });
-    await keypom.call(keypom, 'add_to_refund_allowlist', { account_id: ali.accountId });
     
     //get current keypom (contract) balances 
     let keypomBalance = await keypom.balance();

@@ -2,22 +2,32 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
-    /// Returns the drop information associated with given drop ID.
-    pub fn get_drop_information(&self, drop_id: DropId) -> Option<ExtDrop> {
-        if let Some(drop) = self.drop_by_id.get(&drop_id) {
-            return Some(drop.to_external_drop());
-        } else {
-            near_sdk::log!("Drop {} not found!", drop_id);
-            None
-        }
+    /// Allows you to query for the amount of $NEAR tokens contained in a linkdrop corresponding to a given public key.
+    ///
+    /// Requirements:
+    /// * Panics if the key does not exist.
+    ///
+    /// Arguments:
+    /// * `key` the public counterpart of the key used to sign, expressed as a string with format "<key-type>:<base58-key-bytes>" (e.g. "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y")
+    ///
+    /// Returns a string representing the $yoctoNEAR amount associated with a given public key
+    #[handle_result]
+    pub fn get_key_balance(&self, key: ExtKeyOrTokenId) -> Result<U128, String> {
+        Ok(self.get_key_information(key)?.yoctonear)
     }
 
-    /// Returns the balance associated with given key. This is used by the NEAR wallet to display the amount of the linkdrop
-    pub fn get_key_information(&self, key: Option<PublicKey>, token_id: Option<String>) -> ExtKeyInfo {
-        let token_id = token_id.unwrap_or_else(|| self
-            .token_id_by_pk
-            .get(&key.expect("Must provide a key if no token ID is provided"))
-            .expect("no token ID found for key"));
+    /// Allows you to query for the `KeyInfo` corresponding to a given public key. This method is preferred over `get_key_balance` as it provides more information about the key.
+    ///
+    /// Requirements:
+    /// * Panics if the key does not exist.
+    ///
+    /// Arguments:
+    /// * `key` the public counterpart of the key used to sign, expressed as a string with format "<key-type>:<base58-key-bytes>" (e.g. "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y")
+    ///
+    /// Returns `KeyInfo` associated with a given public key
+    #[handle_result]
+    pub fn get_key_information(&self, key: ExtKeyOrTokenId) -> Result<ExtKeyInfo, String> {
+        let token_id = self.parse_key_or_token_id(key);
         let (drop_id, _) = parse_token_id(&token_id);
 
         let drop = self
@@ -84,7 +94,7 @@ impl Keypom {
             }
         }
 
-        ExtKeyInfo {
+        Ok(ExtKeyInfo {
             yoctonear: U128(yoctonear),
             ft_list,
             nft_list,
@@ -95,44 +105,31 @@ impl Keypom {
             token_id,
             pub_key: key_info.pub_key,
             owner_id: key_info.owner_id,
-        }
+        })
     }
 
-    /// Returns the total supply of active keys for a given drop
-    pub fn get_key_supply_for_drop(&self, drop_id: DropId) -> u64 {
-        // Get the drop object and return the length
-        self.drop_by_id
-            .get(&drop_id)
-            .expect("no drop found")
-            .key_info_by_token_id
-            .len()
+    /// Query for the total supply of keys on the contract
+    pub fn get_key_total_supply(&self) -> u64 {
+        self.token_id_by_pk.len()
     }
 
-    /// Paginate through keys in a specific drop
-    pub fn get_keys_for_drop(
-        &self,
-        drop_id: DropId,
-        from_index: Option<U128>,
-        limit: Option<u64>,
-    ) -> Vec<ExtKeyInfo> {
-        //where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
+    /// Paginate through all active keys on the contract and return a vector of key info.
+    #[handle_result]
+    pub fn get_keys(&self, from_index: Option<U128>, limit: Option<u64>) -> Result<Vec<ExtKeyInfo>, String> {
         let start = u128::from(from_index.unwrap_or(U128(0)));
 
-        //iterate through each key using an iterator
-        let drop = self.drop_by_id
-            .get(&drop_id)
-            .expect("No drop for given ID");
-        
-        return drop
-            .key_info_by_token_id
-            .keys()
-            //skip to the index we specified in the start variable
+        self.token_id_by_pk
+            .values()
             .skip(start as usize)
-            //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
             .take(limit.unwrap_or(50) as usize)
-            //we'll map the public key which are strings into Drops
-            .map(|token_id| self.get_key_information(None, Some(token_id)))
-            //since we turned the keys into an iterator, we need to turn it back into a vector to return
+            .map(|token_id| self.get_key_information(ExtKeyOrTokenId::TokenId(token_id)))
+            .collect()
+    }
+
+    /// Get the key information for a list of keys. If any key doesn't exist, it will be None in the vector
+    pub fn get_key_information_batch(&self, keys: Vec<ExtKeyOrTokenId>) -> Vec<Option<ExtKeyInfo>> {
+        keys.iter()
+            .map(|key| self.get_key_information(key.clone()).ok())
             .collect()
     }
 }

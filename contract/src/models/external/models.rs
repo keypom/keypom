@@ -1,5 +1,23 @@
 use crate::*;
 
+/// When querying view functions related to drops, you can either pass in the drop ID or a public key
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[serde(untagged)]
+pub enum ExtDropOrPublicKey {
+    DropId(DropId),
+    PublicKey(PublicKey)
+}
+
+/// When querying view functions related to keys, you can either pass in a token ID or a public key
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[serde(untagged)]
+pub enum ExtKeyOrTokenId {
+    TokenId(String),
+    PublicKey(PublicKey)
+}
+
 /// When creating a drop, assets can either be specified on a per use basis or for all uses
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
