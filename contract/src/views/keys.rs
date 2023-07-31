@@ -8,7 +8,8 @@ impl Keypom {
     /// * Panics if the key does not exist.
     ///
     /// Arguments:
-    /// * `key` the public counterpart of the key used to sign, expressed as a string with format "<key-type>:<base58-key-bytes>" (e.g. "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y")
+    /// * `key` Either the public counterpart of the key used to sign, expressed as a string with format "<key-type>:<base58-key-bytes>" (e.g. "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y")
+    /// or the token ID corresponding to the key.
     ///
     /// Returns a string representing the $yoctoNEAR amount associated with a given public key
     #[handle_result]
@@ -22,7 +23,8 @@ impl Keypom {
     /// * Panics if the key does not exist.
     ///
     /// Arguments:
-    /// * `key` the public counterpart of the key used to sign, expressed as a string with format "<key-type>:<base58-key-bytes>" (e.g. "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y")
+    /// * `key` Either the public counterpart of the key used to sign, expressed as a string with format "<key-type>:<base58-key-bytes>" (e.g. "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y")
+    /// or the token ID corresponding to the key.
     ///
     /// Returns `KeyInfo` associated with a given public key
     #[handle_result]
@@ -108,12 +110,22 @@ impl Keypom {
         })
     }
 
-    /// Query for the total supply of keys on the contract
+    /// Allows you to query for the total number of keys currently active on the Keypom contract
+    ///
+    ///
+    /// Returns a `u64` representing the total number of keys currently active on the Keypom contract
     pub fn get_key_total_supply(&self) -> u64 {
         self.token_id_by_pk.len()
     }
 
-    /// Paginate through all active keys on the contract and return a vector of key info.
+    /// Allows you to paginate through all the active keys on the Keypom contract regardless of which drop they are part of.
+    ///
+    ///
+    /// Arguments:
+    /// * `from_index` where to start paginating from. If not specified, will start from 0 index.
+    /// * `limit` how many keys to return. If not specified, will return 50 keys.
+    ///
+    /// Returns a vector of `ExtKeyInfo` objects representing the information about the keys
     #[handle_result]
     pub fn get_keys(&self, from_index: Option<U128>, limit: Option<u64>) -> Result<Vec<ExtKeyInfo>, String> {
         let start = u128::from(from_index.unwrap_or(U128(0)));
@@ -126,7 +138,15 @@ impl Keypom {
             .collect()
     }
 
-    /// Get the key information for a list of keys. If any key doesn't exist, it will be None in the vector
+    /// Allows you to query for the information about a batch of keys all at once with 1 function.
+    ///
+    ///
+    /// Arguments:
+    /// * `key` Either the public counterpart of the key used to sign, expressed as a string with format "<key-type>:<base58-key-bytes>" (e.g. "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y")
+    /// or the token ID corresponding to the key.
+    ///
+    /// Returns a vector of optional `ExtKeyInfo` objects representing the information about the keys. If
+    /// Any of the keys do not exist, the corresponding index in the vector will be `None`
     pub fn get_key_information_batch(&self, keys: Vec<ExtKeyOrTokenId>) -> Vec<Option<ExtKeyInfo>> {
         keys.iter()
             .map(|key| self.get_key_information(key.clone()).ok())

@@ -5,19 +5,27 @@ impl Keypom {
     /// Allows you to query for the information about a specific drop
     ///
     /// Requirements:
-    /// * Panics if the key does not exist.
+    /// * Panics if the drop does not exist.
     ///
     /// Arguments:
     /// * `id` either the ID for the drop as a string or a public key currently part of the drop.
     ///
-    /// Returns the `ExtDrop` drop information associated with given drop ID.
+    /// Returns the `ExtDrop` information
     pub fn get_drop_information(&self, id: ExtDropOrPublicKey) -> ExtDrop {
         let drop_id = self.parse_drop_or_pk(id);
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         return drop.to_external_drop();
     }
 
-    /// Returns the total supply of active keys for a given drop
+    /// Allows you to query for the number of live keys in a drop
+    ///
+    /// Requirements:
+    /// * Panics if the drop does not exist.
+    ///
+    /// Arguments:
+    /// * `id` either the ID for the drop as a string or a public key currently part of the drop.
+    ///
+    /// Returns the total number of keys as `u64` that are currently active for a given drop
     pub fn get_key_supply_for_drop(&self, id: ExtDropOrPublicKey) -> u64 {
         let drop_id = self.parse_drop_or_pk(id);
 
@@ -29,7 +37,17 @@ impl Keypom {
             .len()
     }
 
-    /// Paginate through keys in a specific drop
+    /// Allows you to paginate through active keys in a drop
+    ///
+    /// Requirements:
+    /// * Panics if the drop does not exist.
+    ///
+    /// Arguments:
+    /// * `id` either the ID for the drop as a string or a public key currently part of the drop.
+    /// * `from_index` where to start paginating from. If not specified, will start from 0 index.
+    /// * `limit` how many keys to return. If not specified, will return 50 keys.
+    ///
+    /// Returns a vector of `ExtKeyInfo` objects representing the information about the keys
     #[handle_result]
     pub fn get_keys_for_drop(
         &self,

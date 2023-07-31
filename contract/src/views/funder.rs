@@ -2,12 +2,28 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
-    /// Returns the total supply of active drops for a given funder
+    /// Allows you to query for the total number of drops currently owned by a given funder
+    ///
+    ///
+    /// Arguments:
+    /// * `account_id` The account ID of the funder to query for
+    ///
+    /// Returns a `u64` representing the number of drops owned by the funder. If the funder does not have any drops, returns `0`
     pub fn get_drop_supply_for_funder(&self, account_id: AccountId) -> u64 {
         self.drop_ids_by_funder.get(&account_id).and_then(|d| Some(d.len())).unwrap_or(0)
     }
 
-    /// Return a vector of drop information for a funder
+    /// Allows you to paginate through all the active drops for a given funder
+    ///
+    /// Requirements:
+    /// * Panics if the drop does not exist.
+    ///
+    /// Arguments:
+    /// * `account_id` The account ID of the funder to query for
+    /// * `from_index` where to start paginating from. If not specified, will start from 0 index.
+    /// * `limit` how many keys to return. If not specified, will return 50 keys.
+    ///
+    /// Returns a vector of `ExtDrop` objects representing the information about the drops
     pub fn get_drops_for_funder(
         &self,
         account_id: AccountId,
