@@ -1,5 +1,4 @@
 use crate::*;
-use std::collections::HashSet;
 
 /// Represents the asset data including configs for a set amount of uses.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
@@ -80,24 +79,4 @@ pub struct ExtKeyData {
     pub metadata: Option<String>,
     /// What account ID owns the given key (if any)
     pub key_owner: Option<AccountId>
-}
-
-/// Optional configurations for the drop such as metadata, deleting empty drops etc.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct DropConfig {
-    /// Metadata for the given drop represented as a string. Most often, this will be JSON stringified.
-    pub metadata: Option<DropMetadata>,
-    /// Configurations for all the NFT keys in this drop. This contains info about royalties and metadata
-    /// That each key will inherit
-    pub nft_keys_config: Option<NFTKeyConfigurations>,
-
-    /// Which users can add keys to the drop. The public sale config was moved out of the Keypom contract
-    /// And now should be deployed on its own proxy contract that in turn performs any necessary sale logic
-    /// And then fires a cross contract call to the Keypom contract to add keys
-    pub add_key_allowlist: Option<HashSet<AccountId>>,
-
-    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
-    /// Must be overwritten
-    pub delete_empty_drop: Option<bool>,
 }
