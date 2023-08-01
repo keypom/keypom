@@ -98,11 +98,9 @@ impl Keypom {
         let drop_creation_event: EventLog = EventLog {
             standard: KEYPOM_STANDARD_NAME.to_string(),
             version: KEYPOM_STANDARD_VERSION.to_string(),
-            event: EventLogVariant::DropCreation(DropCreationLog {
+            event: EventLogVariant::DropCreation(CreateOrDeleteDropLog {
                 funder_id: funder_id.to_string(),
-                drop_id,
-                max_key_uses,
-                metadata: drop.config.as_ref().and_then(|c| c.metadata.clone()),
+                drop_id
             }),
         };
         event_logs.push(drop_creation_event);

@@ -80,10 +80,8 @@ impl Keypom {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::DeleteKey(vec![AddOrDeleteKeyLog {
-                    owner_id: key_info.owner_id.to_string(),
                     drop_id: drop_id.to_string(),
-                    public_key: (&signer_pk).into(),
-                    metadata: key_info.metadata.clone()
+                    public_key: (&signer_pk).into()
                 }]),
             });
         }

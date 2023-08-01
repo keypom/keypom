@@ -74,8 +74,7 @@ impl Keypom {
                 &key_info.owner_id,
                 &drop_id,
                 &pk,
-                &token_id,
-                &key_info.metadata
+                &token_id
             );
 
             // Add the delete key action to the batch promise
@@ -133,10 +132,9 @@ pub(crate) fn internal_clear_drop_storage(
     event_logs.push(EventLog {
         standard: KEYPOM_STANDARD_NAME.to_string(),
         version: KEYPOM_STANDARD_VERSION.to_string(),
-        event: EventLogVariant::DropDeletion(DropDeletionLog {
+        event: EventLogVariant::DropDeletion(CreateOrDeleteDropLog {
             funder_id: drop.funder_id.to_string(),
-            drop_id: drop_id.to_string(),
-            metadata: drop.config.as_ref().and_then(|c| c.metadata.clone()).map(|m| m.to_string())
+            drop_id: drop_id.to_string()
         })
     });
 }

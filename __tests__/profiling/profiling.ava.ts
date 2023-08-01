@@ -93,7 +93,7 @@ test('Single Null Claim', async t => {
         attachedDeposit: NEAR.parse("20").toString()
     })
 
-    let numKeys = 1;
+    let numKeys = 100;
     let useWithPw = 1;
     let {keys, publicKeys} = await generateKeyPairs(numKeys);
 
@@ -119,26 +119,13 @@ test('Single Null Claim', async t => {
         attachedDeposit: NEAR.parse("20").toString()
     })
 
-    let keyPk = keys[0].getPublicKey().toString();
-    const keyInfo = await functionCall({
-        signer: keypom,
-        receiver: keypom,
-        methodName: 'get_key_information',
-        args: {
-            key: keyPk
-        },
-        gas: '100000000000000',
-        shouldPanic: false
+    await claimWithRequiredGas({
+        keypom,
+        keyPair: keys[0],
+        root,
+        receiverId: ali.accountId,
+        password: hash(basePassword + publicKeys[0] + useWithPw.toString())
     })
-    console.log('keyInfo: ', keyInfo)
-
-    // await claimWithRequiredGas({
-    //     keypom,
-    //     keyPair: keys[0],
-    //     root,
-    //     receiverId: ali.accountId,
-    //     password: hash(basePassword + publicKeys[0] + useWithPw.toString())
-    // })
 });
 
 // test('Double Null Claim', async t => {

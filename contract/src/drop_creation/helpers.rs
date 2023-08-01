@@ -30,7 +30,6 @@ impl Keypom {
             let ExtKeyData { public_key, password_by_use, metadata, key_owner } = data;
 
             let token_id = format!("{}:{}", drop_id, next_key_id);
-            near_sdk::log!("token id {}", token_id);
             require!(
                 self.token_id_by_pk.insert(public_key, &token_id).is_none(),
                 "Key already added to contract"
@@ -80,8 +79,7 @@ impl Keypom {
                 &key_owner,
                 &drop_id,
                 &public_key,
-                &token_id,
-                &metadata
+                &token_id
             );
 
             *next_key_id += 1;

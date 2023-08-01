@@ -18,8 +18,7 @@ pub fn add_new_key_logs(
     token_owner: &AccountId,
     drop_id: &String,
     pk: &PublicKey,
-    token_id: &TokenId,
-    key_metadata: &Option<String>
+    token_id: &TokenId
 ) {
     nft_mint_logs.push(NftMintLog {
         owner_id: token_owner.to_string(),
@@ -27,10 +26,8 @@ pub fn add_new_key_logs(
         memo: None,
     });
     add_key_logs.push(AddOrDeleteKeyLog {
-        owner_id: token_owner.to_string(),
         drop_id: drop_id.to_string(),
-        public_key: pk.into(),
-        metadata: key_metadata.clone()
+        public_key: pk.into()
     });
 }
 
@@ -43,8 +40,7 @@ pub fn add_delete_key_logs(
     token_owner: &AccountId,
     drop_id: &String,
     pk: &PublicKey,
-    token_id: &TokenId,
-    key_metadata: &Option<String>
+    token_id: &TokenId
 ) {
     nft_burn_logs.push(NftBurnLog {
         owner_id: token_owner.to_string(),
@@ -53,10 +49,8 @@ pub fn add_delete_key_logs(
         memo: None,
     });
     delete_key_logs.push(AddOrDeleteKeyLog {
-        owner_id: token_owner.to_string(),
         drop_id: drop_id.to_string(),
-        public_key: pk.into(),
-        metadata: key_metadata.clone()
+        public_key: pk.into()
     });
 }
 
