@@ -63,72 +63,83 @@ test.afterEach(async t => {
     });
 });
 
-// test('Single Null Claim', async t => {
-//     //get Keypopm initial balance
-//     const { keypom, funder, ali, nftSeries, minter, root } = t.context.accounts;
+test('Single Null Claim', async t => {
+    //get Keypopm initial balance
+    const { keypom, funder, ali, nftSeries, minter, root } = t.context.accounts;
 
-//     //add 20 $NEAR to balance
-//     console.log("adding to balance");
-//     await funder.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
+    //add 20 $NEAR to balance
+    console.log("adding to balance");
+    await funder.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
-//     const dropId = "drop-id";
+    const dropId = "drop-id";
 
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypom,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data: [
-//                 {
-//                     assets: [null],
-//                     config: {
-//                         usage: {
-//                             permissions: "claim"
-//                         }
-//                     },
-//                 },
-//             ]
-//         },
-//         attachedDeposit: NEAR.parse("20").toString()
-//     })
+    await functionCall({
+        signer: funder,
+        receiver: keypom,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            key_data: [],
+            asset_data: [
+                {
+                    uses: 1,
+                    assets: [null],
+                    config: {
+                        permissions: "claim"
+                    },
+                },
+            ]
+        },
+        attachedDeposit: NEAR.parse("20").toString()
+    })
 
-//     let numKeys = 1;
-//     let {keys, publicKeys} = await generateKeyPairs(numKeys);
+    let numKeys = 1;
+    let useWithPw = 1;
+    let {keys, publicKeys} = await generateKeyPairs(numKeys);
 
-//     let basePassword = 'mypassword1';
-//     //generates an array of hash(hash(basePassword + publicKeys[i])) --> all PWs for all key use
-//     let password_by_use = generatePasswordsForKey(publicKeys[0], [1], basePassword);
-    
-//     // Create an array of size numKeys that's filled with objects
+    let basePassword = 'mypassword1';
+    let key_data: Array<{public_key: string, password_by_use?: Record<number, string>}> = [];
+    for (var pk of publicKeys) {
+        let password_by_use = generatePasswordsForKey(pk, [useWithPw], basePassword);
+        
+        key_data.push({
+            public_key: pk,
+            password_by_use
+        })
+    }
 
-//     let key_data: Array<{public_key: string, password_by_use?: Record<number, string>}> = [];
-//     for (var pk of publicKeys) {
-//         key_data.push({
-//             public_key: pk,
-//             password_by_use
-//         })
-//     }
+    await functionCall({
+        signer: funder,
+        receiver: keypom,
+        methodName: 'add_keys',
+        args: {
+            drop_id: dropId,
+            key_data
+        },
+        attachedDeposit: NEAR.parse("20").toString()
+    })
 
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypom,
-//         methodName: 'add_keys',
-//         args: {
-//             drop_id: dropId,
-//             key_data
-//         },
-//         attachedDeposit: NEAR.parse("20").toString()
-//     })
+    let keyPk = keys[0].getPublicKey().toString();
+    const keyInfo = await functionCall({
+        signer: keypom,
+        receiver: keypom,
+        methodName: 'get_key_information',
+        args: {
+            key: keyPk
+        },
+        gas: '100000000000000',
+        shouldPanic: false
+    })
+    console.log('keyInfo: ', keyInfo)
 
-//     await claimWithRequiredGas({
-//         keypom,
-//         keyPair: keys[0],
-//         root,
-//         receiverId: ali.accountId,
-//         password: hash(basePassword + publicKeys[0] + '1')
-//     })
-// });
+    // await claimWithRequiredGas({
+    //     keypom,
+    //     keyPair: keys[0],
+    //     root,
+    //     receiverId: ali.accountId,
+    //     password: hash(basePassword + publicKeys[0] + useWithPw.toString())
+    // })
+});
 
 // test('Double Null Claim', async t => {
 //     //get Keypopm initial balance
@@ -566,97 +577,97 @@ test.afterEach(async t => {
 //     })
 // });
 
-test('2x Null + FT Claim', async t => {
-    //get Keypopm initial balance
-    const { keypom, funder, ali, ftContract, nftSeries, minter, root } = t.context.accounts;
+// test('2x Null + FT Claim', async t => {
+//     //get Keypopm initial balance
+//     const { keypom, funder, ali, ftContract, nftSeries, minter, root } = t.context.accounts;
 
-    //add 20 $NEAR to balance
-    console.log("adding to balance");
-    await funder.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
+//     //add 20 $NEAR to balance
+//     console.log("adding to balance");
+//     await funder.call(keypom, 'add_to_balance', {}, {attachedDeposit: NEAR.parse("20").toString()});
 
-    const dropId = "0";
-    const ftContractData = {
-        ft_contract_id: ftContract.accountId,
-        registration_cost: NEAR.parse("0.0125").toString(),
-        ft_amount: NEAR.parse("1").toString()
-    }
+//     const dropId = "0";
+//     const ftContractData = {
+//         ft_contract_id: ftContract.accountId,
+//         registration_cost: NEAR.parse("0.0125").toString(),
+//         ft_amount: NEAR.parse("1").toString()
+//     }
 
-    await functionCall({
-        signer: funder,
-        receiver: keypom,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: [
-                {
-                    assets: [null],
-                    config: {
-                        usage: {
-                            permissions: "claim"
-                        }
-                    },
-                },
-                {
-                    assets: [null],
-                    config: {
-                        usage: {
-                            permissions: "claim"
-                        }
-                    },
-                },
-                {
-                    assets: [ftContractData],
-                },
-            ]
-        },
-        attachedDeposit: NEAR.parse("20").toString()
-    })
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypom,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: [
+//                 {
+//                     assets: [null],
+//                     config: {
+//                         usage: {
+//                             permissions: "claim"
+//                         }
+//                     },
+//                 },
+//                 {
+//                     assets: [null],
+//                     config: {
+//                         usage: {
+//                             permissions: "claim"
+//                         }
+//                     },
+//                 },
+//                 {
+//                     assets: [ftContractData],
+//                 },
+//             ]
+//         },
+//         attachedDeposit: NEAR.parse("20").toString()
+//     })
 
-    let numKeys = 1;
-    let useWithPw = 2;
-    let {keys, publicKeys} = await generateKeyPairs(numKeys);
+//     let numKeys = 1;
+//     let useWithPw = 2;
+//     let {keys, publicKeys} = await generateKeyPairs(numKeys);
 
-    let basePassword = 'mypassword1';
-    let key_data: Array<{public_key: string, password_by_use?: Record<number, string>}> = [];
-    for (var pk of publicKeys) {
-        let password_by_use = generatePasswordsForKey(pk, [useWithPw], basePassword);
+//     let basePassword = 'mypassword1';
+//     let key_data: Array<{public_key: string, password_by_use?: Record<number, string>}> = [];
+//     for (var pk of publicKeys) {
+//         let password_by_use = generatePasswordsForKey(pk, [useWithPw], basePassword);
         
-        key_data.push({
-            public_key: pk,
-            password_by_use
-        })
-    }
+//         key_data.push({
+//             public_key: pk,
+//             password_by_use
+//         })
+//     }
 
-    await functionCall({
-        signer: funder,
-        receiver: keypom,
-        methodName: 'add_keys',
-        args: {
-            drop_id: dropId,
-            key_data
-        },
-        attachedDeposit: NEAR.parse("20").toString()
-    })
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypom,
+//         methodName: 'add_keys',
+//         args: {
+//             drop_id: dropId,
+//             key_data
+//         },
+//         attachedDeposit: NEAR.parse("20").toString()
+//     })
 
-    await claimWithRequiredGas({
-        keypom,
-        keyPair: keys[0],
-        root,
-        useImplicitAccount: true
-    })
+//     await claimWithRequiredGas({
+//         keypom,
+//         keyPair: keys[0],
+//         root,
+//         useImplicitAccount: true
+//     })
 
-    await claimWithRequiredGas({
-        keypom,
-        keyPair: keys[0],
-        root,
-        receiverId: ali.accountId,
-        password: hash(basePassword + publicKeys[0] + useWithPw.toString())
-    })
+//     await claimWithRequiredGas({
+//         keypom,
+//         keyPair: keys[0],
+//         root,
+//         receiverId: ali.accountId,
+//         password: hash(basePassword + publicKeys[0] + useWithPw.toString())
+//     })
 
-    await claimWithRequiredGas({
-        keypom,
-        keyPair: keys[0],
-        root,
-        useImplicitAccount: true
-    })
-});
+//     await claimWithRequiredGas({
+//         keypom,
+//         keyPair: keys[0],
+//         root,
+//         useImplicitAccount: true
+//     })
+// });

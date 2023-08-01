@@ -1,7 +1,7 @@
 use crate::*;
 
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Debug, Serialize)]
+#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Debug, Serialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct InternalNFTData {
     /// Account ID of the token contract

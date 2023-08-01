@@ -1,7 +1,7 @@
 use crate::*;
 
 #[allow(non_camel_case_types)]
-#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 /// Can a key be used to call `claim` or just `create_account_and_claim`? 
 pub enum ClaimPermissions {
@@ -10,7 +10,7 @@ pub enum ClaimPermissions {
 }
 
 /// Keep track of different configuration options for all the uses of a key in a given drop
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct UseConfig {
     /// Configurations related to how often keys can be used
@@ -29,7 +29,7 @@ pub struct UseConfig {
     pub root_account_id: Option<AccountId>,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TimeConfig {
     /// Minimum block timestamp before keys can be used. If None, keys can be used immediately

@@ -28,7 +28,7 @@ impl Keypom {
 
     /// Get the token object info for a specific token ID
     pub fn nft_token(&self, token_id: TokenId) -> Option<ExtNFTKey> {
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
 
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
             let NFTKeyConfigurations { token_metadata, royalties } = drop.config.and_then(|c| c.nft_keys_config).unwrap_or(NFTKeyConfigurations {

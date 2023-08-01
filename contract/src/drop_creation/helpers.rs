@@ -30,6 +30,7 @@ impl Keypom {
             let ExtKeyData { public_key, password_by_use, metadata, key_owner } = data;
 
             let token_id = format!("{}:{}", drop_id, next_key_id);
+            near_sdk::log!("token id {}", token_id);
             require!(
                 self.token_id_by_pk.insert(public_key, &token_id).is_none(),
                 "Key already added to contract"
@@ -175,7 +176,7 @@ impl Keypom {
 /// Helper function to ingest external assets and store them in the internal asset by ID map
 pub fn store_assets_by_id (
     ext_assets: &Vec<Option<ExtAsset>>,
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
+    asset_by_id: &mut HashMap<AssetId, InternalAsset>
 ) {
     let mut fc_asset_id = 0;
     for ext_asset in ext_assets {
@@ -193,7 +194,7 @@ pub fn store_assets_by_id (
         if asset_by_id.get(&asset_id).is_none() {
             let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
 
-            asset_by_id.insert(&asset_id, &internal_asset);
+            asset_by_id.insert(asset_id, internal_asset);
         }
     }
 }

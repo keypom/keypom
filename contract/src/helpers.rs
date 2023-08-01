@@ -54,12 +54,14 @@ pub(crate) fn get_total_costs_for_key(
     total_cost_for_keys: &mut Balance,
     total_allowance_for_keys: &mut Balance,
     remaining_uses: UseNumber, 
-    asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    asset_data_for_uses: &Vector<InternalAssetDataForUses>,
+    asset_by_id: &HashMap<AssetId, InternalAsset>,
+    asset_data_for_uses: &Vec<InternalAssetDataForUses>,
 ) {
     // Get the remaining asset data
     let remaining_asset_data = get_remaining_asset_data(asset_data_for_uses, remaining_uses);
     
+    near_sdk::log!("Remaining Asset Data: {:?}", remaining_asset_data);
+
     // For every remaining asset data, we should query the costs and multiply it by the number of uses left
     for asset_data in remaining_asset_data {
         let InternalAssetDataForUses { uses, config: use_config, assets_metadata } = asset_data;
@@ -75,6 +77,8 @@ pub(crate) fn get_total_costs_for_key(
         } else {
             BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
         };
+
+        near_sdk::log!("Base gas for use: {}", base_gas_for_use.0);
 
         // Check and make sure that the time config is valid
         if let Some(time_config) = use_config.as_ref().and_then(|c| c.time.as_ref()) {
@@ -109,7 +113,7 @@ pub(crate) fn get_total_costs_for_key(
 
 /// Returns a vector of remaining asset datas given the remaining uses for a key.
 /// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=f11c6325055ed73fccd6b5c870dbccc2
-pub(crate) fn get_remaining_asset_data(asset_data: &Vector<InternalAssetDataForUses>, remaining_uses: UseNumber) -> Vec<InternalAssetDataForUses> {
+pub(crate) fn get_remaining_asset_data(asset_data: &Vec<InternalAssetDataForUses>, remaining_uses: UseNumber) -> Vec<InternalAssetDataForUses> {
     let mut uses_traversed = 0;
     let mut remaining_data = vec![];
     
@@ -119,8 +123,8 @@ pub(crate) fn get_remaining_asset_data(asset_data: &Vector<InternalAssetDataForU
         if uses_traversed >= remaining_uses {
             let asset_to_push = InternalAssetDataForUses { 
                 uses: asset.uses - (uses_traversed - remaining_uses),
-                config: asset.config, 
-                assets_metadata: asset.assets_metadata
+                config: asset.config.clone(), 
+                assets_metadata: asset.assets_metadata.clone()
             };
             
             remaining_data.push(asset_to_push);
@@ -136,7 +140,7 @@ pub(crate) fn get_remaining_asset_data(asset_data: &Vector<InternalAssetDataForU
 /// Helper function to get the internal key behavior for a given use number
 /// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=e60e0bd12e87b90d375040d3c2fad715
 pub(crate) fn get_asset_data_for_specific_use (
-    asset_data_for_uses: &Vector<InternalAssetDataForUses>,
+    asset_data_for_uses: &Vec<InternalAssetDataForUses>,
     use_number: &UseNumber
 ) -> InternalAssetDataForUses {
     let mut cur_use = 0;
@@ -157,12 +161,13 @@ pub(crate) fn get_asset_data_for_specific_use (
 }
 
 /// Take a token ID and return the drop ID and key nonce based on the `:` delimiter.
-pub(crate) fn parse_token_id(token_id: &TokenId) -> (DropId, u64) {
+pub(crate) fn parse_token_id(token_id: &TokenId) -> Result<(DropId, u64), String> {
+    near_sdk::log!("Token ID: {}", token_id);
     let delimiter = ":";
     let split: Vec<&str> = token_id.split(delimiter).collect();
     let drop_id = split[0];
     let key_nonce = split[1].parse::<u64>().expect("Key nonce is not a valid number");
-    return (drop_id.to_string(), key_nonce);
+    return Ok((drop_id.to_string(), key_nonce));
 }
 
 /// Helper function to convert an external asset to an internal asset

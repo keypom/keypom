@@ -18,15 +18,12 @@ impl Keypom {
         near_sdk::log!("initial bytes {}", initial_storage);
 
         // Instantiate the drop data structures
-        let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
-            drop_id_hash: hash_string(&drop_id.to_string()),
-        });
         let mut key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo> = UnorderedMap::new(StorageKeys::KeyInfoByPk {
             drop_id_hash: hash_string(&drop_id.to_string()),
         });
-        let mut asset_data_for_uses: Vector<InternalAssetDataForUses> = Vector::new(StorageKeys::AssetDataForUses {
-            drop_id_hash: hash_string(&drop_id.to_string()),
-        });
+        // Since these won't have a ton of data, using standard data structures is fine
+        let mut asset_by_id = HashMap::new();
+        let mut asset_data_for_uses = vec![];
 
         require!(key_data.len() <= 100, "Cannot add more than 100 keys at a time");
 
@@ -34,7 +31,7 @@ impl Keypom {
         // Parse the external asset data and convert it into the internal representation
         for ext_asset_data in asset_data {
             // Convert the external asset data into the internal asset data
-            asset_data_for_uses.push(&InternalAssetDataForUses::from(&ext_asset_data));
+            asset_data_for_uses.push(InternalAssetDataForUses::from(&ext_asset_data));
 
             // Take the assets and populate the asset_by_id mapping
             store_assets_by_id(

@@ -32,7 +32,7 @@ impl Keypom {
             .get(&signer_pk)
             .expect("No drop ID found for PK");
         
-        let (drop_id, _) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id).unwrap();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
@@ -132,7 +132,7 @@ impl Keypom {
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
     pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> Promise {
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
 
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
@@ -145,7 +145,7 @@ impl Keypom {
         let mut token_ids_transferred = Vec::new();
         let mut fc_arg_idx = 0;
         for metadata in assets_metadata {
-            let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
+            let mut asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();
             
             // We need to keep track of all the NFT token IDs in order to potentially perform refunds
             if let InternalAsset::nft(data) = &asset {
@@ -169,11 +169,11 @@ impl Keypom {
             ));
 
             // Increment the number of fc args we've seen
-            if let InternalAsset::fc(_) = &asset {
+            if let InternalAsset::fc(_) = asset {
                 fc_arg_idx += 1;
             }
             
-            drop.asset_by_id.insert(&metadata.asset_id, &asset);
+            drop.asset_by_id.insert(metadata.asset_id, asset.clone());
         }
 
         // Put the modified drop back in storage

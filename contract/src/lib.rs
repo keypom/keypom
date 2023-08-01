@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LazyOption, Vector};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, LazyOption};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Serialize, Deserialize, Serializer};
 use near_sdk::serde::ser::SerializeStruct;

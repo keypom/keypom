@@ -61,7 +61,7 @@ impl Keypom {
         approval_id: Option<u64>,
         new_public_key: PublicKey
     ) -> AccountId {
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
     
         // Get drop in order to get key info (and royalties if applicable)
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");

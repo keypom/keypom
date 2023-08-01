@@ -44,7 +44,7 @@ impl Keypom {
                 // Take the first "limit" elements in the vector. If we didn't specify a limit, use 50
                 .take(limit.unwrap_or(50) as usize)
                 // Convert each ID into a JsonDrop
-                .map(|id| self.get_drop_information(ExtDropOrPublicKey::DropId(id)))
+                .map(|drop_id| self.get_drop_information(drop_id))
                 // Collect all JsonDrops into a vector and return it
                 .collect()
         } else {

@@ -32,14 +32,14 @@ impl Keypom {
             "Only drop funder can delete keys"
         );
 
-        let mut asset: InternalAsset = drop.asset_by_id.get(&ft_contract_id.to_string()).expect("Asset not found");
+        let mut asset: InternalAsset = drop.asset_by_id.get(&ft_contract_id.to_string()).expect("Asset not found").clone();
         // Ensure asset is fungible token and then call the internal function
         if let InternalAsset::ft(ft_data) = &mut asset {
             let refund_registration = false;
             ft_data.ft_refund(&drop_id, tokens_to_withdraw.into(), &drop.funder_id, refund_registration);
         };
 
-        drop.asset_by_id.insert(&ft_contract_id.to_string(), &asset);
+        drop.asset_by_id.insert(ft_contract_id.to_string(), asset);
 
         self.drop_by_id.insert(&drop_id, &drop);
     }
@@ -78,12 +78,12 @@ impl Keypom {
 
         // Transfer failed so we need to increment the uses registered and return false
         let mut drop = self.drop_by_id.get(&drop_id).expect("no drop for ID");
-        let mut internal_asset = drop.asset_by_id.get(&asset_id).expect("no asset for ID");
+        let mut internal_asset = drop.asset_by_id.get(&asset_id).expect("no asset for ID").clone();
         
         // ensure asset is FT and then increment the tokens to transfer again
         if let InternalAsset::ft(ref mut ft_asset) = internal_asset {
             ft_asset.add_to_balance_avail(&tokens_to_transfer);
-            drop.asset_by_id.insert(&asset_id, &internal_asset);
+            drop.asset_by_id.insert(asset_id, internal_asset);
         } else {
             panic!("asset is not FT");
         }

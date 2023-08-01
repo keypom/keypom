@@ -32,7 +32,7 @@ impl Keypom {
         let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
         
         // Get drop in order to get key info and royalties
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         
         // Get royalties from key info
@@ -48,7 +48,7 @@ impl Keypom {
     /// Calculates the payout for a token given the passed in balance.
     pub fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: Option<u32>) -> Payout {
         //get the key info object from the token_id
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
     
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let default_royalty = &HashMap::new();

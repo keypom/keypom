@@ -13,7 +13,7 @@ impl Keypom {
     ///
     /// Returns a string representing the $yoctoNEAR amount associated with a given public key
     #[handle_result]
-    pub fn get_key_balance(&self, key: ExtKeyOrTokenId) -> Result<U128, String> {
+    pub fn get_key_balance(&self, key: String) -> Result<U128, String> {
         Ok(self.get_key_information(key)?.yoctonear)
     }
 
@@ -28,9 +28,9 @@ impl Keypom {
     ///
     /// Returns `KeyInfo` associated with a given public key
     #[handle_result]
-    pub fn get_key_information(&self, key: ExtKeyOrTokenId) -> Result<ExtKeyInfo, String> {
+    pub fn get_key_information(&self, key: String) -> Result<ExtKeyInfo, String> {
         let token_id = self.parse_key_or_token_id(key);
-        let (drop_id, _) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id)?;
 
         let drop = self
             .drop_by_id
@@ -86,7 +86,7 @@ impl Keypom {
                     num_nfts += 1;
                 },
                 InternalAsset::fc(fc) => {
-                    fc_list.push(fc);
+                    fc_list.push(fc.clone());
                 },
                 InternalAsset::near => {
                     yoctonear += metadata.tokens_per_use.unwrap().0;
@@ -133,7 +133,7 @@ impl Keypom {
             .values()
             .skip(start as usize)
             .take(limit.unwrap_or(50) as usize)
-            .map(|token_id| self.get_key_information(ExtKeyOrTokenId::TokenId(token_id)))
+            .map(|token_id| self.get_key_information(token_id))
             .collect()
     }
 
@@ -146,7 +146,7 @@ impl Keypom {
     ///
     /// Returns a vector of optional `ExtKeyInfo` objects representing the information about the keys. If
     /// Any of the keys do not exist, the corresponding index in the vector will be `None`
-    pub fn get_key_information_batch(&self, keys: Vec<ExtKeyOrTokenId>) -> Vec<Option<ExtKeyInfo>> {
+    pub fn get_key_information_batch(&self, keys: Vec<String>) -> Vec<Option<ExtKeyInfo>> {
         keys.iter()
             .map(|key| self.get_key_information(key.clone()).ok())
             .collect()

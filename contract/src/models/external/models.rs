@@ -13,24 +13,6 @@ pub struct ExtAssetDataForUses {
     pub config: Option<UseConfig>
 }
 
-/// When querying view functions related to drops, you can either pass in the drop ID or a public key
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(untagged)]
-pub enum ExtDropOrPublicKey {
-    DropId(DropId),
-    PublicKey(PublicKey)
-}
-
-/// When querying view functions related to keys, you can either pass in a token ID or a public key
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(untagged)]
-pub enum ExtKeyOrTokenId {
-    TokenId(String),
-    PublicKey(PublicKey)
-}
-
 /// Outlines the different asset types that can be used in drops. This is the external version of `InternalAsset`
 /// And represents the data that is passed into and out of the Keypom contract
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]

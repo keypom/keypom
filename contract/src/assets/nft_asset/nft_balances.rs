@@ -31,14 +31,14 @@ impl Keypom {
         // and then the funder has to pay for the storage.
         require!(drop.funder_id == sender_id, "Only the funder can add NFTs to the drop");
 
-        let mut asset: InternalAsset = drop.asset_by_id.get(&asset_id.to_string()).expect("Asset not found");
+        let mut asset: InternalAsset = drop.asset_by_id.get(&asset_id.to_string()).expect("Asset not found").clone();
         // Ensure asset is an NFT and then call the internal function
         if let InternalAsset::nft(nft_data) = &mut asset {
             nft_data.add_to_token_ids(&token_id);
             near_sdk::log!("Added Token ID: {} to drop ID {}. There are now {} NFTs available for claim", token_id, drop_id, nft_data.token_ids.len() as u32);
         };
 
-        drop.asset_by_id.insert(&asset_id.to_string(), &asset);
+        drop.asset_by_id.insert(asset_id.to_string(), asset);
 
         self.drop_by_id.insert(&drop_id, &drop);
 

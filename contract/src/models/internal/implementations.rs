@@ -10,9 +10,9 @@ impl InternalDrop {
         // Loop through all the values in the asset_by_id hashmap and add them to the corresponding vectors
         self.asset_by_id.values().for_each(|asset| {
             match asset {
-                InternalAsset::nft(nft_asset) => nft_list.push(nft_asset),
-                InternalAsset::ft(ft_asset) => ft_list.push(ft_asset),
-                InternalAsset::fc(fc_asset) => fc_list.push(fc_asset),
+                InternalAsset::nft(nft_asset) => nft_list.push(nft_asset.clone()),
+                InternalAsset::ft(ft_asset) => ft_list.push(ft_asset.clone()),
+                InternalAsset::fc(fc_asset) => fc_list.push(fc_asset.clone()),
                 _ => {}
             }
         });
@@ -30,7 +30,7 @@ impl InternalDrop {
             asset_data.push(ExtAssetDataForUses { 
                 uses: internal_asset.uses,
                 assets: ext_assets, 
-                config: internal_asset.config
+                config: internal_asset.config.clone()
             })
         }
 
