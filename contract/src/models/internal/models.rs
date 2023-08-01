@@ -1,22 +1,5 @@
 use crate::*;
-use near_sdk::collections::UnorderedMap;
-
-/// When creating a drop, assets can either be specified on a per use basis or for all uses
-#[derive(BorshDeserialize, BorshSerialize)]
-pub enum InternalKeyUseBehaviors {
-    PerUse(Vec<InternalKeyBehaviorForUse>),
-    AllUses(InternalAllUseBehaviors)
-}
-
-/// If the user wishes to specify a set of assets that is repeated across many uses, they can use
-/// This struct rather than pasting duplicate data when calling `create_drop`
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct InternalAllUseBehaviors {
-    /// Which assets should be present for each use
-    pub assets_metadata: Vec<AssetMetadata>,
-    /// How many uses are there for this drop?
-    pub num_uses: UseNumber,
-}
+use near_sdk::collections::{UnorderedMap, Vector};
 
 /// Internal drop data that is stored in the contract
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -29,7 +12,7 @@ pub struct InternalDrop {
     /// Map an asset ID to a specific asset. This is a hyper optimization so the asset data isn't repeated in the contract
     pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
     /// For every use, keep track of what assets there are (in order)
-    pub key_use_behaviors: InternalKeyUseBehaviors,
+    pub asset_data_for_uses: Vector<InternalAssetDataForUses>,
 
     /// Set of public keys associated with this drop mapped to their specific key information.
     pub key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo>,
@@ -66,13 +49,45 @@ pub struct InternalKeyInfo {
     pub next_approval_id: u64,
 }
 
-/// Every use number has corresponding behavior data which includes information about all the assets in that use
+/// Outlines the asset data for a set of uses
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
-pub struct InternalKeyBehaviorForUse {
-    /// Configurations for this specific use
+pub struct InternalAssetDataForUses {
+    /// How many uses does this asset data apply to?
+    pub uses: UseNumber,
+    /// Any configurations for this set of uses
     pub config: Option<UseConfig>,
-    /// Metadata for each asset in this use
+    /// The actual assets themselves (ID + tokens)
     pub assets_metadata: Vec<AssetMetadata>
+}
+
+impl From<ExtAssetDataForUses> for InternalAssetDataForUses {
+    fn from(ext_asset_data: ExtAssetDataForUses) -> Self {
+        let mut assets_metadata = vec![];
+
+        let mut fc_asset_id = 0;
+        for ext_asset in ext_asset_data.assets {
+            // If the external asset is of type FCData, the asset ID will be the incrementing number
+            // Otherwise, it will be the asset ID specified
+            let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
+                fc_asset_id += 1;
+                fc_asset_id.to_string()
+            } else {
+                ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
+            };
+
+            assets_metadata.push(AssetMetadata {
+                asset_id: asset_id.clone(),
+                tokens_per_use: ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use()))
+            });
+        }
+
+
+        Self {
+            uses: ext_asset_data.uses,
+            config: ext_asset_data.config,
+            assets_metadata
+        }
+    }
 }
 
 /// Outlines the different asset types that can be used in drops. This is the internal version of `ExtAsset`
@@ -134,6 +149,7 @@ pub struct BeforeClaimData {
 pub enum StorageKeys {
     AssetById { drop_id_hash: CryptoHash },
     KeyInfoByPk { drop_id_hash: CryptoHash },
+    AssetDataForUses { drop_id_hash: CryptoHash },
     TokensPerOwnerInner { account_id_hash: CryptoHash },
     DropIdsByFunderInner { account_id_hash: CryptoHash },
     DropIdsByFunder,

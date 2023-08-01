@@ -167,9 +167,8 @@ impl Keypom {
             &mut total_cost_for_key,
             &mut total_allowance_for_key,
             key_info.remaining_uses,
-            drop.max_key_uses,
             &drop.asset_by_id,
-            &drop.key_use_behaviors,
+            &drop.asset_data_for_uses,
         );
 
         // Add the new key with the corresponding allowance

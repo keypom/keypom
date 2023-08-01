@@ -54,38 +54,105 @@ pub(crate) fn get_total_costs_for_key(
     total_cost_for_keys: &mut Balance,
     total_allowance_for_keys: &mut Balance,
     remaining_uses: UseNumber, 
-    max_uses_per_key: UseNumber, 
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_use_behaviors: &InternalKeyUseBehaviors
+    asset_data_for_uses: &Vector<InternalAssetDataForUses>,
 ) {
-    // For every remaining use, we need to loop through all assets and refund
-    for cur_use in 1..=remaining_uses {
-        let use_to_refund = max_uses_per_key - remaining_uses + cur_use;
+    // Get the remaining asset data
+    let remaining_asset_data = get_remaining_asset_data(asset_data_for_uses, remaining_uses);
+    
+    // For every remaining asset data, we should query the costs and multiply it by the number of uses left
+    for asset_data in remaining_asset_data {
+        let InternalAssetDataForUses { uses, config: use_config, assets_metadata } = asset_data;
 
-        // Get the total costs for this current use
-        get_total_costs_for_use(
-            total_cost_for_keys,
-            total_allowance_for_keys,
-            use_to_refund,
-            asset_by_id,
-            key_use_behaviors
-        );
+        // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
+        let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
+            match perms {
+                ClaimPermissions::claim => {
+                    BASE_GAS_FOR_CLAIM
+                }
+                _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
+            }
+        } else {
+            BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
+        };
+
+        // Check and make sure that the time config is valid
+        if let Some(time_config) = use_config.as_ref().and_then(|c| c.time.as_ref()) {
+            assert_valid_time_config(time_config)
+        }
+
+        // Keep track of the total gas across all assets in the current use
+        let mut total_gas_for_use: Gas = base_gas_for_use;
+
+        // Loop through each asset metadata and tally the costs
+        for metadata in assets_metadata {
+            // Get the asset object (we only clear the assets by ID when the drop is empty and deleted)
+            let internal_asset = asset_by_id
+                .get(&metadata.asset_id)
+                .expect("Asset not found");
+
+            // Every asset has a gas cost associated. We should add that to the total gas.
+            let gas_for_asset = internal_asset.get_required_gas();
+            total_gas_for_use += gas_for_asset;
+
+            // Get the refund amount for the asset
+            let cost_for_use = internal_asset.get_yocto_refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
+            *total_cost_for_keys += cost_for_use * uses as u128;
+        }
+        require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, format!("Cannot exceed 300 TGas for any given key use. Found {}", total_gas_for_use.0));
+
+        // Get the total allowance for this use
+        let allowance_for_use = calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, false);
+        *total_allowance_for_keys += allowance_for_use * uses as u128;
     }
 }
 
+/// Returns a vector of remaining asset datas given the remaining uses for a key.
+/// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=f11c6325055ed73fccd6b5c870dbccc2
+pub(crate) fn get_remaining_asset_data(asset_data: &Vector<InternalAssetDataForUses>, remaining_uses: UseNumber) -> Vec<InternalAssetDataForUses> {
+    let mut uses_traversed = 0;
+    let mut remaining_data = vec![];
+    
+    for asset in asset_data.iter().rev() {
+        uses_traversed += asset.uses;
+        
+        if uses_traversed >= remaining_uses {
+            let asset_to_push = InternalAssetDataForUses { 
+                uses: asset.uses - (uses_traversed - remaining_uses),
+                config: asset.config, 
+                assets_metadata: asset.assets_metadata
+            };
+            
+            remaining_data.push(asset_to_push);
+            break;
+        } else {
+            remaining_data.push(asset.clone());
+        }
+    }
+    
+    remaining_data
+}
+
 /// Helper function to get the internal key behavior for a given use number
-pub(crate) fn get_internal_key_behavior_for_use (
-    key_use_behaviors: &InternalKeyUseBehaviors,
+/// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=e60e0bd12e87b90d375040d3c2fad715
+pub(crate) fn get_asset_data_for_specific_use (
+    asset_data_for_uses: &Vector<InternalAssetDataForUses>,
     use_number: &UseNumber
-) -> InternalKeyBehaviorForUse {
-    // Get the assets metadata for this use number
-    match key_use_behaviors {
-        InternalKeyUseBehaviors::AllUses(data) => InternalKeyBehaviorForUse {
-            assets_metadata: data.assets_metadata.clone(),
-            config: None
-        },
-        // The use number should be decremented by 1 since the vector is zero indexed
-        InternalKeyUseBehaviors::PerUse(data) => data.get((use_number - 1) as usize).expect("Use number not found").clone()
+) -> InternalAssetDataForUses {
+    let mut cur_use = 0;
+
+    for asset_data in asset_data_for_uses.iter() {
+        cur_use += asset_data.uses;
+
+        if cur_use >= *use_number {
+            return asset_data.clone();
+        }
+    }
+
+    InternalAssetDataForUses {
+        uses: 0,
+        assets_metadata: vec![],
+        config: None
     }
 }
 
@@ -94,9 +161,9 @@ pub(crate) fn get_total_costs_for_use(
     total_allowance_for_use: &mut Balance,
     use_number: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    key_use_behaviors: &InternalKeyUseBehaviors
+    asset_data_for_uses: &Vector<InternalAssetDataForUses>,
 ) {
-    let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(key_use_behaviors, &use_number);
+    let InternalAssetDataForUses { uses, config: use_config, assets_metadata } = get_asset_data_for_specific_use(asset_data_for_uses, &use_number);
 
     // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
     let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {

@@ -172,25 +172,21 @@ impl Keypom {
     }
 }
 
-pub fn parse_ext_assets (
+/// Helper function to ingest external assets and store them in the internal asset by ID map
+pub fn store_assets_by_id (
     ext_assets: &Vec<Option<ExtAsset>>,
-    assets_metadata: &mut Vec<AssetMetadata>,
     asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) {
+    let mut fc_asset_id = 0;
     for ext_asset in ext_assets {
-        // If the external asset is of type FCData, the asset ID will be the length of the vector
+        // If the external asset is of type FCData, the asset ID will be the incrementing number
         // Otherwise, it will be the asset ID specified
         let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
-            asset_by_id.len().to_string()
+            fc_asset_id += 1;
+            fc_asset_id.to_string()
         } else {
             ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
         };
-        let tokens_per_use = ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use())).unwrap_or(U128(0));
-
-        assets_metadata.push(AssetMetadata {
-            asset_id: asset_id.clone(),
-            tokens_per_use: tokens_per_use.into()
-        });
 
         // Only insert into the asset ID map if it doesn't already exist
         // If we insert, we should also add the cost to the total asset cost
@@ -198,72 +194,6 @@ pub fn parse_ext_assets (
             let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
 
             asset_by_id.insert(&asset_id, &internal_asset);
-        }
-    }
-}
-
-pub fn parse_and_store_ext_all_use_assets (
-    ext_data: &ExtAssetDataForAllUses,
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
-) -> InternalAllUseBehaviors {
-    require!(ext_data.assets.len() > 0, "Must specify at least one asset");
-    
-    // Keep track of the metadata for all the assets across each use
-    let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
-    parse_ext_assets(
-        &ext_data.assets,
-        &mut assets_metadata,
-        asset_by_id
-    );
-
-    InternalAllUseBehaviors { 
-        assets_metadata, 
-        num_uses: ext_data.num_uses
-    }
-}
-
-pub fn parse_and_store_ext_per_use_assets (
-    ext_datas: &Vec<ExtAssetDataForGivenUse>,
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
-) -> Vec<InternalKeyBehaviorForUse> {
-    let mut key_behavior = Vec::new();
-
-    // Iterate through the external assets, convert them to internal assets and add them to both lookup maps
-    for ext_data in ext_datas {
-        let ExtAssetDataForGivenUse {assets, config} = ext_data;
-
-        // Quick sanity check to make sure the use number is valid
-        require!(assets.len() > 0, "Must specify at least one asset per use");
-
-        // Keep track of the metadata for all the assets across each use
-        let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
-
-        parse_ext_assets(
-            &assets,
-            &mut assets_metadata,
-            asset_by_id
-        );
-
-        key_behavior.push(InternalKeyBehaviorForUse {
-            assets_metadata,
-            config: config.clone()
-        });
-    }
-
-    key_behavior
-}
-
-/// Parses the external assets and stores them in the drop's internal maps
-pub fn ext_asset_data_to_key_use_behaviors (
-    asset_data: &ExtAssetData, 
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
-) -> InternalKeyUseBehaviors {
-    match asset_data {
-        ExtAssetData::AssetsForAllUses(data) => {
-            InternalKeyUseBehaviors::AllUses(parse_and_store_ext_all_use_assets(data, asset_by_id))
-        },
-        ExtAssetData::AssetsPerUse(data) => {
-            InternalKeyUseBehaviors::PerUse( parse_and_store_ext_per_use_assets(data, asset_by_id))
         }
     }
 }
