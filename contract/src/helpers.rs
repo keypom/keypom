@@ -120,7 +120,7 @@ pub(crate) fn get_total_costs_for_use(
     }
 
     // Keep track of the total gas across all assets in the current use
-    near_sdk::log!("{} base gas for use {}", use_number, base_gas_for_use.0);
+    near_sdk::log!("{} base gas for use {}", base_gas_for_use.0, use_number);
     let mut total_gas_for_use: Gas = base_gas_for_use;
 
     // Loop through each asset metadata and tally the costs
