@@ -166,8 +166,12 @@ pub(crate) fn parse_token_id(token_id: &TokenId) -> Result<(DropId, u64), String
     let delimiter = ":";
     let split: Vec<&str> = token_id.split(delimiter).collect();
     let drop_id = split[0];
-    let key_nonce = split[1].parse::<u64>().expect("Key nonce is not a valid number");
-    return Ok((drop_id.to_string(), key_nonce));
+    let key_nonce = split[1].parse::<u64>();
+    if key_nonce.is_err() {
+        return Err("Invalid key nonce".to_string());
+    }
+
+    return Ok((drop_id.to_string(), key_nonce.unwrap()));
 }
 
 /// Helper function to convert an external asset to an internal asset
