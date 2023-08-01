@@ -56,19 +56,21 @@ impl Keypom {
     pub(crate) fn internal_transfer(
         &mut self,
         sender_id: AccountId,
-        receiver_id: AccountId,
+        receiver_id: Option<AccountId>,
         token_id: String,
         approval_id: Option<u64>,
         new_public_key: PublicKey
     ) -> AccountId {
         let drop_id = parse_token_id(&token_id).unwrap().0;
-    
+        
         // Get drop in order to get key info (and royalties if applicable)
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         
         // Get key info (will overwrite mapping to new key info after)
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
-        if sender_id != key_info.owner_id.clone() {
+        let cur_account = env::current_account_id();
+        let old_owner = key_info.owner_id.as_ref().unwrap_or(&cur_account);
+        if &sender_id != old_owner {
             //if the sender doesn't equal the owner, we check if the sender is in the approval list
             //if the token's approved account IDs doesn't contain the sender, we panic
             if !key_info.approved_account_ids.contains_key(&sender_id) {
@@ -93,11 +95,15 @@ impl Keypom {
             }
         }
 
-        let old_owner_id = key_info.owner_id;
-        // Remove token from old owner
-        self.internal_remove_token_from_owner(&old_owner_id, &token_id);
-        // Add token to new receiver
-        self.internal_add_token_to_owner(&receiver_id, &token_id);
+        // Remove token from old owner if there is one
+        if let Some(owner) = key_info.owner_id.as_ref() {
+            self.internal_remove_token_from_owner(owner, &token_id);
+        }
+
+        // Add token to new receiver if there is one
+        if let Some(new_owner) = receiver_id.as_ref() {
+            self.internal_add_token_to_owner(new_owner, &token_id);
+        }
 
         // Remove old public key from mapping
         let old_pub_key = key_info.pub_key.clone();
@@ -136,8 +142,8 @@ impl Keypom {
                 version: NFT_METADATA_SPEC.to_string(),
                 event: EventLogVariant::NftTransfer(vec![NftTransferLog {
                     authorized_id: authorized_id.clone(),
-                    old_owner_id: old_owner_id.to_string(),
-                    new_owner_id: receiver_id.to_string(),
+                    old_owner_id: old_owner.to_string(),
+                    new_owner_id: receiver_id.as_ref().unwrap_or(&env::current_account_id()).to_string(),
                     token_ids: vec![token_id.to_string()],
                     memo: None,
                 }]),
@@ -147,8 +153,8 @@ impl Keypom {
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::KeyTransfer(TransferKeyLog {
                     authorized_id,
-                    old_owner_id: old_owner_id.to_string(),
-                    new_owner_id: receiver_id.to_string(),
+                    old_owner_id: old_owner.to_string(),
+                    new_owner_id: receiver_id.as_ref().unwrap_or(&env::current_account_id()).to_string(),
                     old_public_key: (&old_pub_key).into(),
                     new_public_key: (&new_public_key).into(),
                     drop_id,
@@ -182,6 +188,6 @@ impl Keypom {
         // Log the transfer events
         log_events(event_logs);
         
-        old_owner_id
+        old_owner.clone()
     }
 } 

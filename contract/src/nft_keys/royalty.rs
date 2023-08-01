@@ -26,8 +26,6 @@ impl Keypom {
         
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
-        // Receiver is either passed in or current account
-        let receiver_id = receiver_id.unwrap_or(env::current_account_id());
         // Token ID is either from sender PK or passed in
         let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
         
@@ -55,7 +53,7 @@ impl Keypom {
         let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_keys_config.as_ref()).and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
-        calculate_payouts(key_info.owner_id, nft_royalty.clone(), u128::from(balance), max_len_payout.unwrap_or(MAX_LEN_PAYOUT))
+        calculate_payouts(key_info.owner_id.unwrap_or(env::current_account_id()), nft_royalty.clone(), u128::from(balance), max_len_payout.unwrap_or(MAX_LEN_PAYOUT))
 	}
 }
 

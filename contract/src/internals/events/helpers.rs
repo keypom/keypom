@@ -15,16 +15,17 @@ pub(crate) fn log_events(events: Vec<EventLog>) {
 pub fn add_new_key_logs(
     nft_mint_logs: &mut Vec<NftMintLog>,
     add_key_logs: &mut Vec<AddOrDeleteKeyLog>,
-    token_owner: &AccountId,
+    token_owner: &Option<AccountId>,
     drop_id: &String,
     pk: &PublicKey,
     token_id: &TokenId
 ) {
     nft_mint_logs.push(NftMintLog {
-        owner_id: token_owner.to_string(),
+        owner_id: token_owner.as_ref().unwrap_or(&env::current_account_id()).to_string(),
         token_ids: vec![token_id.to_string()],
         memo: None,
     });
+
     add_key_logs.push(AddOrDeleteKeyLog {
         drop_id: drop_id.to_string(),
         public_key: pk.into()
@@ -37,13 +38,13 @@ pub fn add_new_key_logs(
 pub fn add_delete_key_logs(
     nft_burn_logs: &mut Vec<NftBurnLog>,
     delete_key_logs: &mut Vec<AddOrDeleteKeyLog>,
-    token_owner: &AccountId,
+    token_owner: &Option<AccountId>,
     drop_id: &String,
     pk: &PublicKey,
     token_id: &TokenId
 ) {
     nft_burn_logs.push(NftBurnLog {
-        owner_id: token_owner.to_string(),
+        owner_id: token_owner.as_ref().unwrap_or(&env::current_account_id()).to_string(),
         token_ids: vec![token_id.to_string()],
         authorized_id: None,
         memo: None,

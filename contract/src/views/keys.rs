@@ -105,7 +105,7 @@ impl Keypom {
             drop_id,
             token_id,
             pub_key: key_info.pub_key,
-            owner_id: key_info.owner_id,
+            owner_id: key_info.owner_id.unwrap_or(env::current_account_id()),
         })
     }
 

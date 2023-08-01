@@ -62,7 +62,10 @@ impl Keypom {
         key_info.last_claimed = env::block_timestamp();
         if key_info.remaining_uses == 0 {
             // Delete everything except the token ID -> key info mapping since we need the key info in callbacks
-            self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
+            if let Some(owner) = key_info.owner_id.as_ref() {
+                self.internal_remove_token_from_owner(owner, &token_id);
+            }
+
             self.token_id_by_pk.remove(&signer_pk);
             Promise::new(env::current_account_id()).delete_key(signer_pk.clone());
             
@@ -70,7 +73,7 @@ impl Keypom {
                 standard: NFT_STANDARD_NAME.to_string(),
                 version: NFT_METADATA_SPEC.to_string(),
                 event: EventLogVariant::NftBurn(vec![NftBurnLog {
-                    owner_id: key_info.owner_id.to_string(),
+                    owner_id: key_info.owner_id.as_ref().unwrap_or(&env::current_account_id()).to_string(),
                     token_ids: vec![token_id.to_string()],
                     authorized_id: None,
                     memo: None,

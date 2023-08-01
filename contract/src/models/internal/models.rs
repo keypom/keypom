@@ -32,7 +32,7 @@ pub struct InternalKeyInfo {
     pub remaining_uses: UseNumber,
 
     /// Owner of the key
-    pub owner_id: AccountId,
+    pub owner_id: Option<AccountId>,
 
     /// When was the last time the key was used
     pub last_claimed: u64,

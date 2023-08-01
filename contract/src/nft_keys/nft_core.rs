@@ -19,7 +19,6 @@ impl Keypom {
         
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
-        let receiver_id = receiver_id.unwrap_or(env::current_account_id());
 
         // Token ID is either from sender PK or passed in
         let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
@@ -39,7 +38,7 @@ impl Keypom {
             if let Some(key_info) = drop.key_info_by_token_id.get(&token_id) {
                 return Some(ExtNFTKey {
                     token_id,
-                    owner_id: key_info.owner_id,
+                    owner_id: key_info.owner_id.unwrap_or(env::current_account_id()),
                     metadata: token_metadata.unwrap_or(TokenMetadata {
                         title: Some(String::from("Keypom Access Key")),
                         description: Some(String::from("Keypom is pretty lit")),

@@ -93,7 +93,7 @@ test('Single Null Claim', async t => {
         attachedDeposit: NEAR.parse("20").toString()
     })
 
-    let numKeys = 100;
+    let numKeys = 1;
     let useWithPw = 1;
     let {keys, publicKeys} = await generateKeyPairs(numKeys);
 

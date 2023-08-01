@@ -57,7 +57,9 @@ impl Keypom {
             // Get the key info for this public key (by removing - re-entrancy attack prevention)
             let token_id = self.token_id_by_pk.remove(pk).expect("Token ID not found for Public Key");
             let key_info = drop.key_info_by_token_id.remove(&token_id).expect("Key Info not found for Token ID");
-            self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
+            if let Some(owner) = key_info.owner_id.as_ref() {
+                self.internal_remove_token_from_owner(owner, &token_id);
+            }
 
             // For every remaining use, we need to loop through all assets and refund
             get_total_costs_for_key(

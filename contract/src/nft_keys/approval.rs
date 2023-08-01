@@ -117,7 +117,7 @@ impl Keypom {
 pub(crate) fn check_key_owner(sender_id: AccountId, key_info: &InternalKeyInfo) {
     if sender_id != env::current_account_id() {
         require!(
-            key_info.owner_id == sender_id,
+            key_info.owner_id.as_ref().unwrap_or(&env::current_account_id()) == &sender_id,
             "Sender does not own this token"
         );
     }
