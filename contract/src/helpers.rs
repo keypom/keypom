@@ -156,56 +156,6 @@ pub(crate) fn get_asset_data_for_specific_use (
     }
 }
 
-pub(crate) fn get_total_costs_for_use(
-    total_cost_for_use: &mut Balance,
-    total_allowance_for_use: &mut Balance,
-    use_number: UseNumber,
-    asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    asset_data_for_uses: &Vector<InternalAssetDataForUses>,
-) {
-    let InternalAssetDataForUses { uses, config: use_config, assets_metadata } = get_asset_data_for_specific_use(asset_data_for_uses, &use_number);
-
-    // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
-    let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
-        match perms {
-            ClaimPermissions::claim => {
-                BASE_GAS_FOR_CLAIM
-            }
-            _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
-        }
-    } else {
-        BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
-    };
-
-    // Check and make sure that the time config is valid
-    if let Some(time_config) = use_config.as_ref().and_then(|c| c.time.as_ref()) {
-        assert_valid_time_config(time_config)
-    }
-
-    // Keep track of the total gas across all assets in the current use
-    near_sdk::log!("{} base gas for use {}", use_number, base_gas_for_use.0);
-    let mut total_gas_for_use: Gas = base_gas_for_use;
-
-    // Loop through each asset metadata and tally the costs
-    for metadata in assets_metadata {
-        // Get the asset object (we only clear the assets by ID when the drop is empty and deleted)
-        let internal_asset = asset_by_id
-            .get(&metadata.asset_id)
-            .expect("Asset not found");
-
-        // Every asset has a gas cost associated. We should add that to the total gas.
-        let gas_for_asset = internal_asset.get_required_gas();
-        total_gas_for_use += gas_for_asset;
-
-        // Get the refund amount for the asset
-        *total_cost_for_use += internal_asset.get_yocto_refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
-    }
-    require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, format!("Cannot exceed 300 TGas for any given key use. Found {}", total_gas_for_use.0));
-
-    // Get the total allowance for this use
-    *total_allowance_for_use += calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, false);
-}
-
 /// Take a token ID and return the drop ID and key nonce based on the `:` delimiter.
 pub(crate) fn parse_token_id(token_id: &TokenId) -> (DropId, u64) {
     let delimiter = ":";

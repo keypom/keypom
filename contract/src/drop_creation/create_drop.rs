@@ -34,7 +34,7 @@ impl Keypom {
         // Parse the external asset data and convert it into the internal representation
         for ext_asset_data in asset_data {
             // Convert the external asset data into the internal asset data
-            asset_data_for_uses.push(&InternalAssetDataForUses::from(ext_asset_data));
+            asset_data_for_uses.push(&InternalAssetDataForUses::from(&ext_asset_data));
 
             // Take the assets and populate the asset_by_id mapping
             store_assets_by_id(

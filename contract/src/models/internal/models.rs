@@ -60,12 +60,12 @@ pub struct InternalAssetDataForUses {
     pub assets_metadata: Vec<AssetMetadata>
 }
 
-impl From<ExtAssetDataForUses> for InternalAssetDataForUses {
-    fn from(ext_asset_data: ExtAssetDataForUses) -> Self {
+impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
+    fn from(ext_asset_data: &ExtAssetDataForUses) -> Self {
         let mut assets_metadata = vec![];
 
         let mut fc_asset_id = 0;
-        for ext_asset in ext_asset_data.assets {
+        for ext_asset in &ext_asset_data.assets {
             // If the external asset is of type FCData, the asset ID will be the incrementing number
             // Otherwise, it will be the asset ID specified
             let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
@@ -84,7 +84,7 @@ impl From<ExtAssetDataForUses> for InternalAssetDataForUses {
 
         Self {
             uses: ext_asset_data.uses,
-            config: ext_asset_data.config,
+            config: ext_asset_data.config.clone(),
             assets_metadata
         }
     }
