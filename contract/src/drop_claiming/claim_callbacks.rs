@@ -15,12 +15,12 @@ impl Keypom {
         }
 
         let initial_storage = env::storage_usage();
-        let (drop_id, _) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id).unwrap();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the account creation, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalKeyBehaviorForUse { config: _, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: _, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
 
         for metadata in assets_metadata {
             let amount_to_increment = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").get_yocto_refund_amount(&metadata.tokens_per_use.map(|t| t.into()));
@@ -59,12 +59,12 @@ impl Keypom {
         let num_promises = env::promise_results_count();
 
         let initial_storage = env::storage_usage();
-        let (drop_id, _) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id).unwrap();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalKeyBehaviorForUse { config: _, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: _, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
         
         // Iterate through all the promises and get the results
         let mut was_successful = true;
@@ -72,7 +72,7 @@ impl Keypom {
         for i in 0..num_promises {
             let promise_result = env::promise_result(i);
             let metadata = &assets_metadata[i as usize];
-            let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
+            let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();
 
             match promise_result {
                 PromiseResult::NotReady => return PromiseOrValue::Promise(
@@ -95,7 +95,7 @@ impl Keypom {
                     let amount_to_increment = asset.on_failed_claim(&tokens_per_use);
                     self.internal_modify_user_balance(&drop.funder_id, amount_to_increment, false);
                     // Re-insert into storage
-                    drop.asset_by_id.insert(&metadata.asset_id, &asset);
+                    drop.asset_by_id.insert(metadata.asset_id.clone(), asset.clone());
 
                     was_successful = false;
                 }

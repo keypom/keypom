@@ -10,8 +10,8 @@ use crate::*;
 #[non_exhaustive]
 pub enum EventLogVariant {
     /// Drop creation / deletion
-    DropCreation(DropCreationLog),
-    DropDeletion(DropDeletionLog),
+    DropCreation(CreateOrDeleteDropLog),
+    DropDeletion(CreateOrDeleteDropLog),
 
     /// Whenever keys are claimed
     Claim(ClaimLog),

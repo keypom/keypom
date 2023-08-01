@@ -13,7 +13,7 @@ impl Keypom {
     ///
     /// Returns a string representing the $yoctoNEAR amount associated with a given public key
     #[handle_result]
-    pub fn get_key_balance(&self, key: ExtKeyOrTokenId) -> Result<U128, String> {
+    pub fn get_key_balance(&self, key: String) -> Result<U128, String> {
         Ok(self.get_key_information(key)?.yoctonear)
     }
 
@@ -28,9 +28,9 @@ impl Keypom {
     ///
     /// Returns `KeyInfo` associated with a given public key
     #[handle_result]
-    pub fn get_key_information(&self, key: ExtKeyOrTokenId) -> Result<ExtKeyInfo, String> {
+    pub fn get_key_information(&self, key: String) -> Result<ExtKeyInfo, String> {
         let token_id = self.parse_key_or_token_id(key);
-        let (drop_id, _) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id)?;
 
         let drop = self
             .drop_by_id
@@ -38,7 +38,7 @@ impl Keypom {
             .expect("no drop found for drop ID");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
 
         // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
         let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
@@ -86,7 +86,7 @@ impl Keypom {
                     num_nfts += 1;
                 },
                 InternalAsset::fc(fc) => {
-                    fc_list.push(fc);
+                    fc_list.push(fc.clone());
                 },
                 InternalAsset::near => {
                     yoctonear += metadata.tokens_per_use.unwrap().0;
@@ -105,7 +105,7 @@ impl Keypom {
             drop_id,
             token_id,
             pub_key: key_info.pub_key,
-            owner_id: key_info.owner_id,
+            owner_id: key_info.owner_id.unwrap_or(env::current_account_id()),
         })
     }
 
@@ -133,7 +133,7 @@ impl Keypom {
             .values()
             .skip(start as usize)
             .take(limit.unwrap_or(50) as usize)
-            .map(|token_id| self.get_key_information(ExtKeyOrTokenId::TokenId(token_id)))
+            .map(|token_id| self.get_key_information(token_id))
             .collect()
     }
 
@@ -146,7 +146,7 @@ impl Keypom {
     ///
     /// Returns a vector of optional `ExtKeyInfo` objects representing the information about the keys. If
     /// Any of the keys do not exist, the corresponding index in the vector will be `None`
-    pub fn get_key_information_batch(&self, keys: Vec<ExtKeyOrTokenId>) -> Vec<Option<ExtKeyInfo>> {
+    pub fn get_key_information_batch(&self, keys: Vec<String>) -> Vec<Option<ExtKeyInfo>> {
         keys.iter()
             .map(|key| self.get_key_information(key.clone()).ok())
             .collect()

@@ -11,8 +11,7 @@ impl Keypom {
     /// * `id` either the ID for the drop as a string or a public key currently part of the drop.
     ///
     /// Returns the `ExtDrop` information
-    pub fn get_drop_information(&self, id: ExtDropOrPublicKey) -> ExtDrop {
-        let drop_id = self.parse_drop_or_pk(id);
+    pub fn get_drop_information(&self, drop_id: DropId) -> ExtDrop {
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         return drop.to_external_drop();
     }
@@ -26,9 +25,7 @@ impl Keypom {
     /// * `id` either the ID for the drop as a string or a public key currently part of the drop.
     ///
     /// Returns the total number of keys as `u64` that are currently active for a given drop
-    pub fn get_key_supply_for_drop(&self, id: ExtDropOrPublicKey) -> u64 {
-        let drop_id = self.parse_drop_or_pk(id);
-
+    pub fn get_key_supply_for_drop(&self, drop_id: DropId) -> u64 {
         // Get the drop object and return the length
         self.drop_by_id
             .get(&drop_id)
@@ -51,12 +48,10 @@ impl Keypom {
     #[handle_result]
     pub fn get_keys_for_drop(
         &self,
-        id: ExtDropOrPublicKey,
+        drop_id: DropId,
         from_index: Option<U128>,
         limit: Option<u64>,
     ) -> Result<Vec<ExtKeyInfo>, String> {
-        let drop_id = self.parse_drop_or_pk(id);
-
         //iterate through each key using an iterator
         let drop = self.drop_by_id
             .get(&drop_id)
@@ -73,7 +68,7 @@ impl Keypom {
             //take the first "limit" elements in the vector. If we didn't specify a limit, use 50
             .take(limit.unwrap_or(50) as usize)
             //we'll map the public key which are strings into Drops
-            .map(|token_id| self.get_key_information(ExtKeyOrTokenId::TokenId(token_id)))
+            .map(|token_id| self.get_key_information(token_id))
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
             .collect()
     }

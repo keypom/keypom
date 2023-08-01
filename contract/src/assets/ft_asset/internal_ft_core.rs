@@ -1,7 +1,7 @@
 use crate::*;
 
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
+#[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Clone)]
 pub struct InternalFTData {
     /// Account ID of the token contract
     pub contract_id: AccountId,

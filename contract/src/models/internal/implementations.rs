@@ -10,42 +10,29 @@ impl InternalDrop {
         // Loop through all the values in the asset_by_id hashmap and add them to the corresponding vectors
         self.asset_by_id.values().for_each(|asset| {
             match asset {
-                InternalAsset::nft(nft_asset) => nft_list.push(nft_asset),
-                InternalAsset::ft(ft_asset) => ft_list.push(ft_asset),
-                InternalAsset::fc(fc_asset) => fc_list.push(fc_asset),
+                InternalAsset::nft(nft_asset) => nft_list.push(nft_asset.clone()),
+                InternalAsset::ft(ft_asset) => ft_list.push(ft_asset.clone()),
+                InternalAsset::fc(fc_asset) => fc_list.push(fc_asset.clone()),
                 _ => {}
             }
         });
 
-        let asset_data: ExtAssetData = match &self.key_use_behaviors {
-            InternalKeyUseBehaviors::AllUses(data) => {
-                let mut ext_assets = vec![];
-                for metadata in &data.assets_metadata {
-                    let asset = self.asset_by_id.get(&metadata.asset_id).unwrap();
-                    ext_assets.push(asset.to_external_asset(&metadata.tokens_per_use));
-                }
-                ExtAssetData::AssetsForAllUses(ExtAssetDataForAllUses {
-                    assets: ext_assets,
-                    num_uses: data.num_uses
-                })
-            },
-            InternalKeyUseBehaviors::PerUse(data) => {
-                let mut ext_asset_data = vec![];
-                for InternalKeyBehaviorForUse {assets_metadata, config} in data {
-                    let mut ext_assets = vec![];
-                    for metadata in assets_metadata {
-                        let asset = self.asset_by_id.get(&metadata.asset_id).unwrap();
-                        ext_assets.push(asset.to_external_asset(&metadata.tokens_per_use));
-                    }
-                    ext_asset_data.push(ExtAssetDataForGivenUse {
-                        assets: ext_assets,
-                        config: config.clone()
-                    });
-                }
-                ExtAssetData::AssetsPerUse(ext_asset_data)
+        let mut asset_data = vec![];
+
+        for internal_asset in self.asset_data_for_uses.iter() {
+            
+            let mut ext_assets = vec![];
+            for asset_metadata in internal_asset.assets_metadata.iter() {
+                let internal_asset = self.asset_by_id.get(&asset_metadata.asset_id).expect("no asset found");
+                ext_assets.push(internal_asset.to_external_asset(&asset_metadata.tokens_per_use));
             }
-                
-        };
+
+            asset_data.push(ExtAssetDataForUses { 
+                uses: internal_asset.uses,
+                assets: ext_assets, 
+                config: internal_asset.config.clone()
+            })
+        }
 
         ExtDrop {
             asset_data,

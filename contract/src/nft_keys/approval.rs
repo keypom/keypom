@@ -12,7 +12,7 @@ impl Keypom {
 
         // Token ID is either from sender PK or passed in
         let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
         
         // Get drop in order to get key info
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
@@ -54,7 +54,7 @@ impl Keypom {
         approval_id: Option<u64>,
     ) -> bool {
         //get the key info object from the token_id
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
     
         // Get drop in order to get key info
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
@@ -89,7 +89,7 @@ impl Keypom {
 
         // Token ID is either from sender PK or passed in
         let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
         
         // Get drop in order to get key info
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
@@ -117,7 +117,7 @@ impl Keypom {
 pub(crate) fn check_key_owner(sender_id: AccountId, key_info: &InternalKeyInfo) {
     if sender_id != env::current_account_id() {
         require!(
-            key_info.owner_id == sender_id,
+            key_info.owner_id.as_ref().unwrap_or(&env::current_account_id()) == &sender_id,
             "Sender does not own this token"
         );
     }

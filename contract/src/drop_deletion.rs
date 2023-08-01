@@ -57,16 +57,17 @@ impl Keypom {
             // Get the key info for this public key (by removing - re-entrancy attack prevention)
             let token_id = self.token_id_by_pk.remove(pk).expect("Token ID not found for Public Key");
             let key_info = drop.key_info_by_token_id.remove(&token_id).expect("Key Info not found for Token ID");
-            self.internal_remove_token_from_owner(&key_info.owner_id, &token_id);
+            if let Some(owner) = key_info.owner_id.as_ref() {
+                self.internal_remove_token_from_owner(owner, &token_id);
+            }
 
             // For every remaining use, we need to loop through all assets and refund
             get_total_costs_for_key(
                 &mut total_cost_for_keys,
                 &mut total_allowance_for_keys,
                 key_info.remaining_uses,
-                drop.max_key_uses,
                 &drop.asset_by_id,
-                &drop.key_use_behaviors,
+                &drop.asset_data_for_uses
             );
 
             add_delete_key_logs(
@@ -75,8 +76,7 @@ impl Keypom {
                 &key_info.owner_id,
                 &drop_id,
                 &pk,
-                &token_id,
-                &key_info.metadata
+                &token_id
             );
 
             // Add the delete key action to the batch promise
@@ -134,10 +134,9 @@ pub(crate) fn internal_clear_drop_storage(
     event_logs.push(EventLog {
         standard: KEYPOM_STANDARD_NAME.to_string(),
         version: KEYPOM_STANDARD_VERSION.to_string(),
-        event: EventLogVariant::DropDeletion(DropDeletionLog {
+        event: EventLogVariant::DropDeletion(CreateOrDeleteDropLog {
             funder_id: drop.funder_id.to_string(),
-            drop_id: drop_id.to_string(),
-            metadata: drop.config.as_ref().and_then(|c| c.metadata.clone()).map(|m| m.to_string())
+            drop_id: drop_id.to_string()
         })
     });
 }
