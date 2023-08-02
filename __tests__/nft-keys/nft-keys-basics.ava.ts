@@ -201,7 +201,136 @@ test.afterEach(async t => {
 //     t.is(found_nft_info.metadata.title == "my token", true)
 // });
 
-test('Owned key transfer, approval, revoking - with owner account', async t => {
+// test('Owned key transfer, approval, revoking - with owner account', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+    
+//     let initialBal = await keypomV3.balance();
+
+//     const dropId = "my-drop-id";
+//     const numKeys = 2;
+//     let keyPairs = await generateKeyPairs(numKeys);
+
+//     // ******************* SETUP *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
+
+//     const asset_data = [{
+//         assets: [nearAsset1],
+//         uses: 1
+//     }];
+    
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[0],
+//                 key_owner: funder
+//             }],
+//             drop_config: {
+//                 nft_keys_config: {
+//                     token_metadata: {
+//                         title: "my token",
+//                         description: 'Coming off a maiden victory at the Sahlen Six Hours of the Glen, the BMW Team RLL squad looks to repeat at Canadian Tire Motorsports following a disappointing qualifying. - Shot On: Nikon 55-200 f4-5.6',
+//                         media: 'https://ipfs.near.social/ipfs/bafybeig4hirpwvr2suakpwhikwfs4f2tjd5hky233k3fpzfeq6npz72fuy',
+//                     },
+//                 }
+//             }
+//         },
+//     }) 
+
+//     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     t.is(found_key_info.owner_id == funder.accountId, true)
+
+//     // **************** APPROVE AND REVOKE TESTING ****************
+//     try{
+//         // Add and Revoke, then try Transferring - SHOULD FAIL
+//         await functionCall({
+//             signer: funder,
+//             receiver: keypomV3,
+//             methodName: "nft_approve",
+//             args:{
+//                 token_id: found_key_info.token_id,
+//                 account_id: ali.accountId
+//             }
+//         })
+    
+//         let found_nft_info: {owner_id: string, approved_account_ids: Record<string, string>} = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+//         t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), true);
+    
+//         // Remove Ali from list of 
+//         await functionCall({
+//             signer: funder,
+//             receiver: keypomV3,
+//             methodName: "nft_revoke",
+//             args: {
+//                 token_id: found_key_info.token_id,
+//                 account_id: ali.accountId
+//             }
+//         })
+    
+//         found_nft_info = await keypomV3.view("nft_token", {token_id: found_key_info.token_id});
+//         t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), false);
+        
+//         // This should throw
+//         let newKeyPair = await generateKeyPairs(1);
+//         await functionCall({
+//             signer: ali,
+//             receiver: keypomV3,
+//             methodName: "nft_transfer",
+//             args: {
+//                 token_id: found_key_info.token_id,
+//                 receiver_id: bob.accountId,
+//                 memo: newKeyPair.publicKeys[0]
+//             }
+//         })
+//         // If transfer does not throw error, fail the test.
+//         t.fail()
+//     }catch(e){
+//         // Ensure Revoke from Try block has worked
+//         let found_nft_info: {owner_id: string, approved_account_ids: Record<string, string>} = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+//         t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), false);
+
+//         // If worked, re-approve
+//         await functionCall({
+//             signer: funder,
+//             receiver: keypomV3,
+//             methodName: "nft_approve",
+//             args:{
+//                 token_id: found_key_info.token_id,
+//                 account_id: ali.accountId
+//             }
+//         })
+    
+//         found_nft_info = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+//         t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), true);
+    
+    
+//         // **************** TRANSFER ****************
+//         let newKeyPair = await generateKeyPairs(1);
+//         await functionCall({
+//             signer: ali,
+//             receiver: keypomV3,
+//             methodName: "nft_transfer",
+//             args: {
+//                 token_id: found_key_info.token_id,
+//                 receiver_id: bob.accountId,
+//                 memo: newKeyPair.publicKeys[0]
+//             }
+//         })
+
+//         found_nft_info = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+//         t.is(found_nft_info.owner_id == bob.accountId, true)
+//         // Ensure that ali is no longer an approved account
+//         t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), false)
+//     }
+// });
+
+test('Owned key transfer, approval, revoking - with key', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
     let initialBal = await keypomV3.balance();
@@ -215,10 +344,10 @@ test('Owned key transfer, approval, revoking - with owner account', async t => {
         yoctonear: NEAR.parse("1").toString()
     }
 
-    const asset_data_per_use = {
+    const asset_data = [{
         assets: [nearAsset1],
-        num_uses: 1
-    };
+        uses: 1
+    }];
     
     await functionCall({
         signer: funder,
@@ -226,12 +355,12 @@ test('Owned key transfer, approval, revoking - with owner account', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            asset_data: asset_data_per_use,
+            asset_data,
             key_data: [{
                 public_key: keyPairs.publicKeys[0],
                 key_owner: funder
             }],
-            drop_data: {
+            drop_config: {
                 nft_keys_config: {
                     token_metadata: {
                         title: "my token",
@@ -246,106 +375,60 @@ test('Owned key transfer, approval, revoking - with owner account', async t => {
     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
     t.is(found_key_info.owner_id == funder.accountId, true)
 
-    // add Ali to approved list of transferers
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "nft_approve",
-        args:{
-            token_id: found_key_info.token_id,
-            account_id: ali.accountId
-        }
-    })
-    t.is(found_key_info.owner_id == funder.accountId, true)
+    // **************** APPROVE AND REVOKE TESTING ****************
+    try{
+        // Add and Revoke, then try Transferring - SHOULD FAIL
+        await keypomV3.setKey(keyPairs.keys[0]);
+        await keypomV3.call(keypomV3, 'nft_approve', {token_id: found_key_info.token_id, account_id: ali.accountId});
+        let found_nft_info: {owner_id: string, approved_account_ids: Record<string, string>} = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+        t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), true);
+
+        await keypomV3.call(keypomV3, 'nft_revoke', {token_id: found_key_info.token_id, account_id: ali.accountId});
+        found_nft_info = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+        t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), false);
+
+        // This should throw
+        let newKeyPair = await generateKeyPairs(1);
+        await functionCall({
+            signer: ali,
+            receiver: keypomV3,
+            methodName: "nft_transfer",
+            args: {
+                token_id: found_key_info.token_id,
+                receiver_id: bob.accountId,
+                memo: newKeyPair.publicKeys[0]
+            }
+        })
+        // If transfer does not throw error, fail the test.
+        t.fail()
+    }catch(e){
+        // Ensure Revoke from Try block has worked
+        let found_nft_info: {owner_id: string, approved_account_ids: Record<string, string>} = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+        t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), false);
+
+        // If worked, re-approve
+        await keypomV3.call(keypomV3, 'nft_approve', {token_id: found_key_info.token_id, account_id: ali.accountId});
+        found_nft_info = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+        t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), true);
     
-    console.log("OWNER INFO FROM NFT")
-    let found_nft_info: {owner_id: string} = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
-    console.log(found_nft_info.owner_id)
+    
+        // **************** TRANSFER ****************
+        let newKeyPair = await generateKeyPairs(1);
+        await functionCall({
+            signer: ali,
+            receiver: keypomV3,
+            methodName: "nft_transfer",
+            args: {
+                token_id: found_key_info.token_id,
+                receiver_id: bob.accountId,
+                memo: newKeyPair.publicKeys[0]
+            }
+        })
 
-    // Currently not working, trying to transfer with funder
-    // Problem 1: im trying to send with ali, not funder
-    let newKeyPair = await generateKeyPairs(1);
-    await functionCall({
-        signer: ali,
-        receiver: keypomV3,
-        methodName: "nft_transfer",
-        args: {
-            token_id: found_key_info.token_id,
-            receiver_id: bob.accountId,
-            memo: newKeyPair.publicKeys[0]
-        }
-    })
-
-    // let found_nft_info: {owner_id: string} = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
-    // console.log(found_nft_info.owner_id)
-    // t.is(found_nft_info.owner_id == newKeyPair.publicKeys[0], true)
+        found_nft_info = await keypomV3.view("nft_token", {token_id: found_key_info.token_id})
+        t.is(found_nft_info.owner_id == bob.accountId, true)
+    }
 });
-
-// test('Owned key transfer, approval, revoking - with key', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, nftContract2, ali} = t.context.accounts;
-    
-//     let initialBal = await keypomV3.balance();
-
-//     const dropId = "my-drop-id";
-//     const wrongDropId = "wrong-drop-id";
-//     const numKeys = 2;
-//     let keyPairs = await generateKeyPairs(numKeys);
-
-//     // ******************* Creating Drop *******************
-//     const nftAsset1: ExtNFTData = {
-//         nft_contract_id: nftContract1.accountId
-//     }
-
-//     const asset_data = [
-//         {
-//             assets: [nftAsset1]
-//         },
-//     ]
-
-//     await functionCall({
-//         signer: ali,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: wrongDropId,
-//             asset_data,
-//             public_keys: [keyPairs.publicKeys[0]]
-//         },
-//     }) 
-
-//     // ******************* Adding Assets *******************
-//     let token_id = `${Date.now().toString().repeat(45)}`
-
-//     let preSendBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-//     try{
-//         await functionCall({
-//             signer: nftContract1,
-//             receiver: keypomV3,
-//             methodName: 'nft_on_transfer',
-//             args: {
-//                 sender_id: funder.accountId,
-//                 token_id,
-//                 msg: wrongDropId
-//             }
-//         })
-//     }catch(e){
-
-//     }
-
-//     let postSendBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-//     let balChange = formatNearAmount((BigInt(preSendBal) - BigInt(postSendBal)).toString(), 5);
-//     console.log(balChange)
-//     t.is(balChange == "0", true)
-
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId: wrongDropId,
-//         expectedNftData: [{
-//             contract_id: nftContract1.accountId,
-//             token_ids: []
-//         }],
-//     })
-// });
 
 
 
