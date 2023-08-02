@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use crate::*;
 
 #[near_bindgen]
@@ -34,6 +36,8 @@ impl Keypom {
         account_id: &AccountId,
         token_id: &TokenId,
     ) {
+        near_sdk::log!("Attemping to Transfer using Account ID: {}", account_id);
+        near_sdk::log!("TOKENS_FOR_OWNER contains funder?: {:?}", self.tokens_per_owner.contains_key(&AccountId::try_from("keypom.test.near".to_string()).unwrap()));
         //we get the set of tokens that the owner has
         let mut tokens_set = self
             .tokens_per_owner

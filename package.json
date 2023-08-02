@@ -48,7 +48,8 @@
 		"test:utils-test": "ava __tests__/claims/testing-utils.ava.ts",
 		"test:constants": "ava __tests__/claims/constants-tweaking.ava.ts",
 		"test:payment": "ava __tests__/creation/drop-payment.ava.ts",
-		"test:nft-funding": "ava __tests__/creation/nft-funding.ava.ts"
+		"test:nft-funding": "ava __tests__/creation/nft-funding.ava.ts",
+		"test:nft-keys": "ava __tests__/nft-keys/nft-keys-basics.ava.ts"
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
