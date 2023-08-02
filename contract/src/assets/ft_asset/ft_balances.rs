@@ -18,7 +18,7 @@ impl Keypom {
         amount: U128,
         msg: DropId,
     ) -> PromiseOrValue<U128> {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
         
         let drop_id = msg;
         let asset_id = env::predecessor_account_id();

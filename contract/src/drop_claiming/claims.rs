@@ -16,7 +16,7 @@ trait ExtAccountCreation {
 impl Keypom {
     #[private]
     pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
 
         let mut event_logs: Vec<EventLog> = Vec::new();
         let BeforeClaimData { token_id, required_asset_gas, root_account_id: _, account_creation_keypom_args: _ } = self.before_claim_logic(
@@ -41,7 +41,7 @@ impl Keypom {
 
     #[private]
     pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
 
         let mut event_logs = Vec::new();
         let BeforeClaimData { token_id, required_asset_gas, root_account_id, account_creation_keypom_args } = self.before_claim_logic(

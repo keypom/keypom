@@ -20,7 +20,7 @@ impl Keypom {
         sender_id: AccountId,
         msg: DropId,
     ) -> PromiseOrValue<bool> {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
         
         let initial_storage = env::storage_usage();
         let drop_id = msg;
