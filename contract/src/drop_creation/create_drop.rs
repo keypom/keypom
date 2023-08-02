@@ -1,5 +1,4 @@
 use crate::*;
-use near_sdk::collections::LazyOption;
 
 #[near_bindgen]
 impl Keypom {
@@ -7,10 +6,10 @@ impl Keypom {
     pub fn create_drop(
         &mut self, 
         drop_id: DropId,
-        key_data: Option<Vec<ExtKeyData>>, 
-        asset_data: ExtAssetData,
+        key_data: Vec<ExtKeyData>, 
+        asset_data: Vec<ExtAssetDataForUses>,
 
-        drop_data: Option<ExtDropData>,
+        drop_config: Option<DropConfig>,
     ) -> bool {
         self.asset_no_global_freeze();
 
@@ -19,31 +18,29 @@ impl Keypom {
         near_sdk::log!("initial bytes {}", initial_storage);
 
         // Instantiate the drop data structures
-        let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
-            drop_id_hash: hash_string(&drop_id.to_string()),
-        });
         let mut key_info_by_token_id: UnorderedMap<TokenId, InternalKeyInfo> = UnorderedMap::new(StorageKeys::KeyInfoByPk {
             drop_id_hash: hash_string(&drop_id.to_string()),
         });
+        // Since these won't have a ton of data, using standard data structures is fine
+        let mut asset_by_id = HashMap::new();
+        let mut asset_data_for_uses = vec![];
 
-        let ExtDropData { config: drop_config, metadata: drop_metadata, nft_keys_config } = drop_data.unwrap_or(ExtDropData {
-            config: None,
-            metadata: None,
-            nft_keys_config: None
-        });
-        let key_data = key_data.unwrap_or(vec![]);
         require!(key_data.len() <= 100, "Cannot add more than 100 keys at a time");
 
+        let mut max_key_uses = 0;
         // Parse the external asset data and convert it into the internal representation
-        let key_use_behaviors = ext_asset_data_to_key_use_behaviors(
-            &asset_data,
-            &mut asset_by_id 
-        );
+        for ext_asset_data in asset_data {
+            // Convert the external asset data into the internal asset data
+            asset_data_for_uses.push(InternalAssetDataForUses::from(&ext_asset_data));
 
-        let max_key_uses = match &key_use_behaviors {
-            InternalKeyUseBehaviors::AllUses(data) => data.num_uses,
-            InternalKeyUseBehaviors::PerUse(data) => data.len() as UseNumber,
-        };
+            // Take the assets and populate the asset_by_id mapping
+            store_assets_by_id(
+                &ext_asset_data.assets,
+                &mut asset_by_id,
+            );
+
+            max_key_uses += ext_asset_data.uses;
+        }
 
         let mut total_cost_per_key = 0;
         let mut total_allowance_per_key = 0;
@@ -53,10 +50,8 @@ impl Keypom {
             &mut total_cost_per_key,
             &mut total_allowance_per_key,
             max_key_uses,
-            max_key_uses,
             &asset_by_id,
-            &key_use_behaviors,
-            &drop_config
+            &asset_data_for_uses
         );
 
         // Keep track of all the key IDs 
@@ -78,22 +73,16 @@ impl Keypom {
         let funder_id = env::predecessor_account_id();
         let drop = InternalDrop {
             max_key_uses,
-            key_use_behaviors,
+            asset_data_for_uses,
             asset_by_id,
             key_info_by_token_id,
             next_key_id,
-            nft_keys_config,
-            drop_config,
+            config: drop_config,
             funder_id: funder_id.clone(),
-            metadata: LazyOption::new(
-                StorageKeys::DropMetadata {
-                    // We get a new unique prefix for the collection
-                    drop_id_hash: hash_string(&drop_id.to_string()),
-                },
-                drop_metadata.as_ref(),
-            ),
         };
         require!(self.drop_by_id.insert(&drop_id, &drop).is_none(), format!("Drop with ID {} already exists", drop_id));
+        // Add the drop ID to the list of drops owned by the funder
+        self.internal_add_drop_to_funder(&funder_id, &drop_id);
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
@@ -102,7 +91,6 @@ impl Keypom {
             true, // We did create a drop here
             total_cost_per_key,
             total_allowance_per_key,
-            0, // No public sale costs for creating a drop
             net_storage,
         );
 
@@ -110,11 +98,9 @@ impl Keypom {
         let drop_creation_event: EventLog = EventLog {
             standard: KEYPOM_STANDARD_NAME.to_string(),
             version: KEYPOM_STANDARD_VERSION.to_string(),
-            event: EventLogVariant::DropCreation(DropCreationLog {
+            event: EventLogVariant::DropCreation(CreateOrDeleteDropLog {
                 funder_id: funder_id.to_string(),
-                drop_id,
-                max_key_uses,
-                metadata: drop_metadata
+                drop_id
             }),
         };
         event_logs.push(drop_creation_event);

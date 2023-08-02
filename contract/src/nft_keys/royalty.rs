@@ -26,18 +26,16 @@ impl Keypom {
         
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
-        // Receiver is either passed in or current account
-        let receiver_id = receiver_id.unwrap_or(env::current_account_id());
         // Token ID is either from sender PK or passed in
         let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
         
         // Get drop in order to get key info and royalties
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         
         // Get royalties from key info
         let default_royalty = &HashMap::new();
-        let nft_royalty = drop.nft_keys_config.as_ref().and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
+        let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_keys_config.as_ref()).and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
 
         // Perform the transfer and then calculate payouts
         let old_owner_id = self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo);
@@ -48,14 +46,14 @@ impl Keypom {
     /// Calculates the payout for a token given the passed in balance.
     pub fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: Option<u32>) -> Payout {
         //get the key info object from the token_id
-        let drop_id = parse_token_id(&token_id).0;
+        let drop_id = parse_token_id(&token_id).unwrap().0;
     
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let default_royalty = &HashMap::new();
-        let nft_royalty = drop.nft_keys_config.as_ref().and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
+        let nft_royalty = drop.config.as_ref().and_then(|c| c.nft_keys_config.as_ref()).and_then(|c| c.royalties.as_ref()).unwrap_or(default_royalty);
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key info not found");
 
-        calculate_payouts(key_info.owner_id, nft_royalty.clone(), u128::from(balance), max_len_payout.unwrap_or(MAX_LEN_PAYOUT))
+        calculate_payouts(key_info.owner_id.unwrap_or(env::current_account_id()), nft_royalty.clone(), u128::from(balance), max_len_payout.unwrap_or(MAX_LEN_PAYOUT))
 	}
 }
 

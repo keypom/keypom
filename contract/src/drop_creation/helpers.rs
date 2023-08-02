@@ -43,8 +43,13 @@ impl Keypom {
                 }).collect()
             });
 
-            let key_owner = key_owner.clone().unwrap_or(env::current_account_id());
-
+            if let Some(owner) = key_owner {
+                // Add the NFT key to the owner's list of tokens
+                self.internal_add_token_to_owner(
+                    &owner,
+                    &token_id
+                );
+            }
             key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
                 pub_key: public_key.clone(), 
                 remaining_uses: max_uses_per_key,
@@ -75,8 +80,7 @@ impl Keypom {
                 &key_owner,
                 &drop_id,
                 &public_key,
-                &token_id,
-                &metadata
+                &token_id
             );
 
             *next_key_id += 1;
@@ -108,7 +112,6 @@ impl Keypom {
         did_create_drop: bool,
         asset_cost_per_key: Balance, 
         allowance_per_key: Balance,
-        pub_sale_costs: Balance,
         net_storage: u64
     ) {
         let num_keys = num_keys as u128;
@@ -120,105 +123,77 @@ impl Keypom {
         let fees_for_user = self.fees_per_user.get(&env::predecessor_account_id()).unwrap_or(self.fee_structure.clone());
         let total_fees = num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
         self.fees_collected += total_fees;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + pub_sale_costs + total_fees;
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + total_fees;
         
-        near_sdk::log!("total {} storage {} asset {} allowance {} pub sale {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, pub_sale_costs, total_fees);
+        near_sdk::log!("total {} storage {} asset {} allowance {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, total_fees);
         self.charge_with_deposit_or_balance(total_cost);
+    }
+
+    /// Internal method to add a drop ID the list of drops a funder has. If they don't have any, instantiate
+    /// A new unordered set and add the drop ID to it. Otherwise, just add the drop ID to the existing set
+    pub(crate) fn internal_add_drop_to_funder(&mut self, funder_id: &AccountId, drop_id: &DropId) {
+        let mut drop_set = self.drop_ids_by_funder.get(funder_id).unwrap_or_else(|| {
+            // If the account doesn't have any drops, we create a new unordered set
+            UnorderedSet::new(StorageKeys::DropIdsByFunderInner {
+                // We get a new unique prefix for the collection equal to the funder (since it's unique)
+                account_id_hash: hash_string(&funder_id.to_string()),
+            })
+        });
+
+        // We insert the drop ID into the set
+        drop_set.insert(drop_id);
+
+        // We insert that set for the given account ID.
+        self.drop_ids_by_funder.insert(funder_id, &drop_set);
+    }
+
+    /// Internal method to remove a drop ID from the list of drops a funder has.
+    /// If the funder has no more drops, we remove the funder from the drop_ids_by_funder collection
+    pub(crate) fn internal_remove_drop_for_funder(
+        &mut self,
+        funder_id: &AccountId,
+        drop_id: &DropId,
+    ) {
+        // Get the set of drop IDs that the funder currently has
+        let mut drop_set = self
+            .drop_ids_by_funder
+            .get(funder_id)
+            .expect("No Drops found for the funder");
+
+        // Remove the drop ID from the set
+        drop_set.remove(drop_id);
+
+        // If the set is now empty, we remove the funder from the collection
+        if drop_set.is_empty() {
+            self.drop_ids_by_funder.remove(funder_id);
+        } else {
+            self.drop_ids_by_funder.insert(funder_id, &drop_set);
+        }
     }
 }
 
-pub fn parse_ext_assets (
+/// Helper function to ingest external assets and store them in the internal asset by ID map
+pub fn store_assets_by_id (
     ext_assets: &Vec<Option<ExtAsset>>,
-    assets_metadata: &mut Vec<AssetMetadata>,
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
+    asset_by_id: &mut HashMap<AssetId, InternalAsset>
 ) {
+    let mut fc_asset_id = 0;
     for ext_asset in ext_assets {
-        // If the external asset is of type FCData, the asset ID will be the length of the vector
+        // If the external asset is of type FCData, the asset ID will be the incrementing number
         // Otherwise, it will be the asset ID specified
         let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
-            asset_by_id.len().to_string()
+            fc_asset_id += 1;
+            fc_asset_id.to_string()
         } else {
             ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
         };
-        let tokens_per_use = ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use())).unwrap_or(U128(0));
-
-        assets_metadata.push(AssetMetadata {
-            asset_id: asset_id.clone(),
-            tokens_per_use: tokens_per_use.into()
-        });
 
         // Only insert into the asset ID map if it doesn't already exist
         // If we insert, we should also add the cost to the total asset cost
         if asset_by_id.get(&asset_id).is_none() {
             let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
 
-            asset_by_id.insert(&asset_id, &internal_asset);
-        }
-    }
-}
-
-pub fn parse_and_store_ext_all_use_assets (
-    ext_data: &ExtAssetDataForAllUses,
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
-) -> InternalAllUseBehaviors {
-    require!(ext_data.assets.len() > 0, "Must specify at least one asset");
-    
-    // Keep track of the metadata for all the assets across each use
-    let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
-    parse_ext_assets(
-        &ext_data.assets,
-        &mut assets_metadata,
-        asset_by_id
-    );
-
-    InternalAllUseBehaviors { 
-        assets_metadata, 
-        num_uses: ext_data.num_uses
-    }
-}
-
-pub fn parse_and_store_ext_per_use_assets (
-    ext_datas: &Vec<ExtAssetDataForGivenUse>,
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
-) -> Vec<InternalKeyBehaviorForUse> {
-    let mut key_behavior = Vec::new();
-
-    // Iterate through the external assets, convert them to internal assets and add them to both lookup maps
-    for ext_data in ext_datas {
-        let ExtAssetDataForGivenUse {assets, config} = ext_data;
-
-        // Quick sanity check to make sure the use number is valid
-        require!(assets.len() > 0, "Must specify at least one asset per use");
-
-        // Keep track of the metadata for all the assets across each use
-        let mut assets_metadata: Vec<AssetMetadata> = Vec::new();
-
-        parse_ext_assets(
-            &assets,
-            &mut assets_metadata,
-            asset_by_id
-        );
-
-        key_behavior.push(InternalKeyBehaviorForUse {
-            assets_metadata,
-            config: config.clone()
-        });
-    }
-
-    key_behavior
-}
-
-/// Parses the external assets and stores them in the drop's internal maps
-pub fn ext_asset_data_to_key_use_behaviors (
-    asset_data: &ExtAssetData, 
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
-) -> InternalKeyUseBehaviors {
-    match asset_data {
-        ExtAssetData::AssetsForAllUses(data) => {
-            InternalKeyUseBehaviors::AllUses(parse_and_store_ext_all_use_assets(data, asset_by_id))
-        },
-        ExtAssetData::AssetsPerUse(data) => {
-            InternalKeyUseBehaviors::PerUse( parse_and_store_ext_per_use_assets(data, asset_by_id))
+            asset_by_id.insert(asset_id, internal_asset);
         }
     }
 }

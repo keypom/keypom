@@ -1,58 +1,28 @@
 use crate::*;
 
-/// An event log to capture whenever a new drop is created
+/// An event log to capture whenever a drop is created or deleted
 ///
 /// Arguments
 /// * `funder_id`: "account.near"
 /// * `drop_id`: "my-drop123"
-/// * `uses_per_key`: 1500
-/// 
-/// * `metadata`: optional metadata for the drop
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
-pub struct DropCreationLog {
+pub struct CreateOrDeleteDropLog {
     pub funder_id: String,
     pub drop_id: String,
-    pub max_key_uses: u32,
-    
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<String>,
 }
 
-/// An event log to capture whenever a drop is deleted
-///
-/// Arguments
-/// * `funder_id`: "account.near"
-/// * `drop_id`: "my-drop123"
-/// 
-/// * `metadata`: optional metadata for the drop
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct DropDeletionLog {
-    pub funder_id: String,
-    pub drop_id: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<String>,
-}
 
 /// An event log to capture whenever a key is added to or deleted from a drop
 ///
 /// Arguments
-/// * `owner_id`: "account.near"
 /// * `drop_id`: "my-drop123"
 /// * `public_key`: "ed25519:8WWpRpZswPHoJn5THFdBaFdbVeSjtSrQmEcoUeaNdkKy"
-/// 
-/// * `metadata`: optional metadata for the key
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct AddOrDeleteKeyLog {
-    pub owner_id: String,
     pub drop_id: String,
     pub public_key: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<String>,
 }
 
 /// An event log to capture whenever a key has been transferred (either meaning the public key was rotated or there's a new owner)

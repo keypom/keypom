@@ -35,15 +35,14 @@ impl Keypom {
             .get(&signer_pk)
             .expect("No drop ID found for PK");
         
-        let (drop_id, _) = parse_token_id(&token_id);
+        let (drop_id, _) = parse_token_id(&token_id).unwrap();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalKeyBehaviorForUse { config: use_config, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
         
         assert_pre_claim_conditions(
             &key_info,
-            &drop.drop_config,
             &use_config,
             &password,
             &cur_key_use,
@@ -67,6 +66,10 @@ impl Keypom {
         key_info.last_claimed = env::block_timestamp();
         if key_info.remaining_uses == 0 {
             // Delete everything except the token ID -> key info mapping since we need the key info in callbacks
+            if let Some(owner) = key_info.owner_id.as_ref() {
+                self.internal_remove_token_from_owner(owner, &token_id);
+            }
+
             self.token_id_by_pk.remove(&signer_pk);
             Promise::new(env::current_account_id()).delete_key(signer_pk.clone());
             
@@ -74,7 +77,7 @@ impl Keypom {
                 standard: NFT_STANDARD_NAME.to_string(),
                 version: NFT_METADATA_SPEC.to_string(),
                 event: EventLogVariant::NftBurn(vec![NftBurnLog {
-                    owner_id: key_info.owner_id.to_string(),
+                    owner_id: key_info.owner_id.as_ref().unwrap_or(&env::current_account_id()).to_string(),
                     token_ids: vec![token_id.to_string()],
                     authorized_id: None,
                     memo: None,
@@ -84,10 +87,8 @@ impl Keypom {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::DeleteKey(vec![AddOrDeleteKeyLog {
-                    owner_id: key_info.owner_id.to_string(),
                     drop_id: drop_id.to_string(),
-                    public_key: (&signer_pk).into(),
-                    metadata: key_info.metadata.clone()
+                    public_key: (&signer_pk).into()
                 }]),
             });
         }
@@ -95,6 +96,7 @@ impl Keypom {
         drop.key_info_by_token_id.insert(&token_id, &key_info);
         self.drop_by_id.insert(&drop_id, &drop);
 
+        // Log either CAAC or claim events depending on whether or not a new public key was provided
         if let Some(pk) = new_public_key {
             event_logs.push(EventLog {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
@@ -120,17 +122,15 @@ impl Keypom {
             })
         };
 
-        // For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
-        let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).or(drop.drop_config.as_ref().and_then(|c| c.root_account_id.clone())).unwrap_or(self.root_account.clone());
-        let usage_config = use_config.as_ref().and_then(|c| c.get_usage_config()).or(drop.drop_config.as_ref().and_then(|c| c.get_usage_config()));
-        
+        let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).unwrap_or(self.root_account.clone());
+        let account_creation_keypom_args = use_config.as_ref().and_then(|c| c.account_creation_keypom_args.clone());
         near_sdk::log!("Gas at end of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
 
         BeforeClaimData {
             token_id,
             required_asset_gas,
             root_account_id,
-            account_creation_keypom_args: usage_config.and_then(|c| c.account_creation_keypom_args.clone())
+            account_creation_keypom_args,
         }
 
     }
@@ -139,20 +139,20 @@ impl Keypom {
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
     pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> Promise {
-        let (drop_id, key_id) = parse_token_id(&token_id);
+        let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
 
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalKeyBehaviorForUse { config: _, assets_metadata } = get_internal_key_behavior_for_use(&drop.key_use_behaviors, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: _, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
         
         //let promises;
         let mut promises = Vec::new();
         let mut token_ids_transferred = Vec::new();
         let mut fc_arg_idx = 0;
         for metadata in assets_metadata {
-            let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
+            let mut asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();
             
             // We need to keep track of all the NFT token IDs in order to potentially perform refunds
             if let InternalAsset::nft(data) = &asset {
@@ -176,11 +176,11 @@ impl Keypom {
             ));
 
             // Increment the number of fc args we've seen
-            if let InternalAsset::fc(_) = &asset {
+            if let InternalAsset::fc(_) = asset {
                 fc_arg_idx += 1;
             }
             
-            drop.asset_by_id.insert(&metadata.asset_id, &asset);
+            drop.asset_by_id.insert(metadata.asset_id, asset.clone());
         }
 
         // Put the modified drop back in storage
@@ -215,7 +215,7 @@ impl Keypom {
         if key_info.remaining_uses == 0 {
             drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
     
-            let should_delete_on_empty = drop.drop_config.as_ref().and_then(|c| c.delete_empty_drop).unwrap_or(true);
+            let should_delete_on_empty = drop.config.as_ref().and_then(|c| c.delete_empty_drop).unwrap_or(true);
 
             // Now that we've removed the key info, check if the drop is empty
             // Otherwise, re-insert the drop into state
@@ -223,6 +223,7 @@ impl Keypom {
                 near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
                 // Remove the drop from storage and clear the maps inside of it
                 self.drop_by_id.remove(&drop_id);
+                self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
                 internal_clear_drop_storage(drop, &mut event_logs, &drop_id);
             } else {
                 near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {} Config specified to delete: {}", drop_id, !drop_assets_withdrawn, should_delete_on_empty);
@@ -258,15 +259,14 @@ pub(crate) fn was_account_created() -> bool {
 /// Internal function to perform all the pre-claim checks such as passwords, configs etc.
 pub(crate) fn assert_pre_claim_conditions(
     key_info: &InternalKeyInfo,
-    drop_config: &Option<DropConfig>,
-    use_config: &Option<ConfigForGivenUse>,
+    use_config: &Option<UseConfig>,
     user_password: &Option<String>,
     cur_key_use: &UseNumber,
     max_uses_per_key: &UseNumber,
     creating_account: bool
 ) {
     // Ensure that claim and create_account_and_claim are only called based on the key / drop's config
-    if let Some(perm) = use_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref()).or_else(|| drop_config.as_ref().and_then(|c| c.usage.as_ref()).and_then(|u| u.permissions.as_ref())) {
+    if let Some(perm) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
         match perm {
             ClaimPermissions::claim => {
                 require!(creating_account == false, "Cannot call `create_account_and_claim` when key permission is set to only claim")
@@ -278,7 +278,7 @@ pub(crate) fn assert_pre_claim_conditions(
     }
 
     // Ensure any timestamps in the configs have been fulfilled
-    assert_claim_timestamps(drop_config, use_config, key_info, &String::from(&env::signer_account_pk()), max_uses_per_key);
+    assert_claim_timestamps(use_config, key_info, &String::from(&env::signer_account_pk()), max_uses_per_key);
 
     // If there is some password for the current key use, assert that it matches the one provided
     if let Some(pw_by_use) = &key_info.pw_by_use {
@@ -300,13 +300,12 @@ pub(crate) fn assert_key_password(
 
 /// Internal function to assert that the predecessor is the contract owner
 pub(crate) fn assert_claim_timestamps(
-    drop_config: &Option<DropConfig>,
-    per_use_config: &Option<ConfigForGivenUse>,
+    use_config: &Option<UseConfig>,
     key_info: &InternalKeyInfo,
     signer_pk: &String,
     max_uses_per_key: &UseNumber,
 ) {
-    let time_config = per_use_config.as_ref().and_then(|c| c.get_time_config()).or(drop_config.as_ref().and_then(|c| c.get_time_config()));
+    let time_config = use_config.as_ref().and_then(|c| c.time.as_ref());
     
     if let Some(time_data) = time_config {
         // Ensure enough time has passed if a start timestamp was specified in the config.

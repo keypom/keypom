@@ -1,9 +1,8 @@
+use crate::*;
 use std::collections::HashSet;
 
-use crate::*;
-
 #[allow(non_camel_case_types)]
-#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 /// Can a key be used to call `claim` or just `create_account_and_claim`? 
 pub enum ClaimPermissions {
@@ -12,48 +11,17 @@ pub enum ClaimPermissions {
 }
 
 /// Keep track of different configuration options for all the uses of a key in a given drop
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-pub struct DropConfig {
+pub struct UseConfig {
     /// Configurations related to how often keys can be used
     pub time: Option<TimeConfig>,
     
-    /// Configurations related to how keys are used
-    pub usage: Option<UsageConfig>,
-
-    /// Public sale options for all the keys in this drop
-    pub sale: Option<PublicSaleConfig>,
-
-    /// Override the global root account that sub-accounts will have (near or testnet). This allows
-    /// users to create specific drops that can create sub-accounts of a predefined root.
-    /// For example, Fayyr could specify a root of `fayyr.near` By which all sub-accounts will then
-    /// be `ACCOUNT.fayyr.near`
-    pub root_account_id: Option<AccountId>,
-
-    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
-    /// Must be overwritten
-    pub delete_empty_drop: Option<bool>,
-}
-
-impl DropConfig {
-    pub fn get_time_config(&self) -> Option<TimeConfig> {
-        self.time.clone()
-    }
-
-    pub fn get_usage_config(&self) -> Option<UsageConfig> {
-        self.usage.clone()
-    }
-}
-
-/// Keep track of different configuration options for a given use
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct ConfigForGivenUse {
-    /// Configurations related to how often keys can be used
-    pub time: Option<TimeConfig>,
+    /// Can the access key for this use call the claim method_name? Default to both method_name callable
+    pub permissions: Option<ClaimPermissions>,
     
-    /// Configurations related to how keys are used
-    pub usage: Option<UsageConfig>,
+    /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
+    pub account_creation_keypom_args: Option<KeypomInjectedArgs>,
 
     /// Override the global root account that sub-accounts will have (near or testnet). This allows
     /// users to create specific drops that can create sub-accounts of a predefined root.
@@ -62,17 +30,7 @@ pub struct ConfigForGivenUse {
     pub root_account_id: Option<AccountId>,
 }
 
-impl ConfigForGivenUse {
-    pub fn get_time_config(&self) -> Option<TimeConfig> {
-        self.time.clone()
-    }
-
-    pub fn get_usage_config(&self) -> Option<UsageConfig> {
-        self.usage.clone()
-    }
-}
-
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TimeConfig {
     /// Minimum block timestamp before keys can be used. If None, keys can be used immediately
@@ -95,36 +53,22 @@ pub struct TimeConfig {
     pub interval: Option<u64>,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+/// Optional configurations for the drop such as metadata, deleting empty drops etc.
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-pub struct PublicSaleConfig {
-    /// Maximum number of keys that can be added to this drop. If None, there is no max.
-    pub max_num_keys: Option<u64>,
- 
-    /// Amount of $NEAR that the user needs to attach (if they are not the funder) on top of costs. This amount will be
-    /// Automatically sent to the funder's balance. If None, the keys are free to the public.
-    pub price_per_key: Option<u128>,
- 
-    /// Which accounts are allowed to add keys?
-    pub allowlist: Option<HashSet<AccountId>>,
- 
-    /// Which accounts are NOT allowed to add keys?
-    pub blocklist: Option<HashSet<AccountId>>,
+pub struct DropConfig {
+    /// Metadata for the given drop represented as a string. Most often, this will be JSON stringified.
+    pub metadata: Option<DropMetadata>,
+    /// Configurations for all the NFT keys in this drop. This contains info about royalties and metadata
+    /// That each key will inherit
+    pub nft_keys_config: Option<NFTKeyConfigurations>,
 
-    /// Minimum block timestamp before the public sale starts. If None, keys can be added immediately
-    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-    pub start: Option<u64>,
+    /// Which users can add keys to the drop. The public sale config was moved out of the Keypom contract
+    /// And now should be deployed on its own proxy contract that in turn performs any necessary sale logic
+    /// And then fires a cross contract call to the Keypom contract to add keys
+    pub add_key_allowlist: Option<HashSet<AccountId>>,
 
-    /// Block timestamp dictating the end of the public sale. If None, keys can be added indefinitely
-    /// Measured in number of non-leap-nanoseconds since January 1, 1970 0:00:00 UTC.
-    pub end: Option<u64>,
- }
-
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct UsageConfig {
-    /// Can the access key for this use call the claim method_name? Default to both method_name callable
-    pub permissions: Option<ClaimPermissions>,
-    /// When calling `create_account` on the root account, which keypom args should be attached to the payload.
-    pub account_creation_keypom_args: Option<KeypomInjectedArgs>,
+    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
+    /// Must be overwritten
+    pub delete_empty_drop: Option<bool>,
 }

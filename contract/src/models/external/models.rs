@@ -1,12 +1,15 @@
 use crate::*;
 
-/// When creating a drop, assets can either be specified on a per use basis or for all uses
+/// Represents the asset data including configs for a set amount of uses.
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-#[serde(untagged)]
-pub enum ExtAssetData {
-    AssetsPerUse(Vec<ExtAssetDataForGivenUse>),
-    AssetsForAllUses(ExtAssetDataForAllUses)
+pub struct ExtAssetDataForUses {
+    /// How many uses does this asset data apply to?
+    pub uses: UseNumber,
+    /// Which assets should be present for these uses
+    pub assets: Vec<Option<ExtAsset>>,
+    /// Any configurations for this set of uses
+    pub config: Option<UseConfig>
 }
 
 /// Outlines the different asset types that can be used in drops. This is the external version of `InternalAsset`
@@ -53,35 +56,13 @@ pub struct ExtNFTData {
 #[derive(BorshDeserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDrop {
-    pub asset_data: ExtAssetData,
+    pub asset_data: Vec<ExtAssetDataForUses>,
 
     pub nft_asset_data: Vec<InternalNFTData>,
     pub ft_asset_data: Vec<InternalFTData>,
     pub fc_asset_data: Vec<FCData>,
 
-    pub metadata: Option<DropMetadata>
-}
-
-/// If the user wishes to specify a set of assets that is repeated across many uses, they can use
-/// This struct rather than pasting duplicate data when calling `create_drop`
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct ExtAssetDataForAllUses {
-    /// Which assets should be present for each use
-    pub assets: Vec<Option<ExtAsset>>,
-    /// How many uses are there for this drop?
-    pub num_uses: UseNumber,
-}
-
-/// For any given use of a key, there's a set of assets and also a config that is shared
-/// For all keys in a drop
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct ExtAssetDataForGivenUse {
-    /// Which assets should be present for this use
-    pub assets: Vec<Option<ExtAsset>>,
-    /// What config should be used for this use
-    pub config: Option<ConfigForGivenUse>
+    pub drop_config: Option<DropConfig>
 }
 
 /// Data for each key coming in (public key, password, metadata, owner etc.)
@@ -98,19 +79,4 @@ pub struct ExtKeyData {
     pub metadata: Option<String>,
     /// What account ID owns the given key (if any)
     pub key_owner: Option<AccountId>
-}
-
-/// Optional data for the drop such as configs, metadata etc.
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct ExtDropData {
-    /// Any configurations for the drop such as public sale info etc.
-    /// This will be applied to ALL uses & keys in the drop unless a config
-    /// Is present for the current key use (which will override this)
-    pub config: Option<DropConfig>,
-    /// Metadata for the given drop represented as a string. Most often, this will be JSON stringified.
-    pub metadata: Option<DropMetadata>,
-    /// Configurations for all the NFT keys in this drop. This contains info about royalties and metadata
-    /// That each key will inherit
-    pub nft_keys_config: Option<NFTKeyConfigurations>,
 }

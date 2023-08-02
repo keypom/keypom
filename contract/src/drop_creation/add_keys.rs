@@ -23,17 +23,18 @@ impl Keypom {
         let num_keys_to_add = key_data.len();
         require!(num_keys_to_add > 0 && num_keys_to_add <= 100, "Must provide between 1 and 100 keys at a time");
 
-        let mut pub_sale_costs = 0;
         // If there is a public sale and the predecessor isn't the funder, perform checks and return revenue
-        if let Some(sale) = drop.drop_config.as_ref().and_then(|c| c.sale.as_ref()) {
+        if let Some(allowlist) = drop.config.as_ref().and_then(|c| c.add_key_allowlist.as_ref()) {
             if funder_id != caller_id {
-                pub_sale_costs = self.assert_sale_requirements(&funder_id, sale, drop.next_key_id, num_keys_to_add as u64);
+                require!(
+                    allowlist.contains(&caller_id),
+                    "caller not on allowlist"
+                );
             }
         } else {
-            // If there is no public sale, ensure the predecessor is the funder
             require!(
                 funder_id == caller_id,
-                "only funder can add to drops"
+                "Only funder can add keys to the drop"
             );
         }
 
@@ -49,10 +50,8 @@ impl Keypom {
             &mut total_cost_per_key,
             &mut total_allowance_per_key,
             max_key_uses,
-            max_key_uses,
             &drop.asset_by_id,
-            &drop.key_use_behaviors,
-            &drop.drop_config
+            &drop.asset_data_for_uses
         );
 
         // Keep track of all the events
@@ -78,7 +77,6 @@ impl Keypom {
             false, // No drop was created
             total_cost_per_key,
             total_allowance_per_key,
-            pub_sale_costs,
             net_storage,
         );
 
