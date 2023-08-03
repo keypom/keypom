@@ -3,7 +3,7 @@ import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
 import { AccountBalance, BN, KeyPair, NEAR, NearAccount, PublicKey, TransactionResult } from "near-workspaces";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
-import { ExtDrop, InternalFTData, InternalNFTData, PickOnly, UserProvidedFCArgs } from "./types";
+import { ExtDrop, InternalFTData, InternalNFTData, PickOnly, UserProvidedFCArgs, TokenMetadata } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -262,6 +262,39 @@ export async function assertNFTBalance({
   if (!sameTokens) {
     throw new Error(`Expected NFTs for ${accountId} to be ${tokensOwned}. Got ${nftTokens} instead.`)
   }
+}
+
+// expected royalties, metadata, token_id, keypom
+export async function assertNFTKeyData({
+  keypom,
+  tokenId,
+  expectedRoyalties,
+  expectedMetadata,
+}: {
+  keypom: NearAccount,
+  tokenId: string,
+  expectedRoyalties?: Record<string, number>,
+  expectedMetadata?: TokenMetadata
+}) {
+  let found_nft_info: {
+    owner_id: string, 
+    approved_account_ids: Record<string, string>, 
+    royalty: Record<string, number>,
+    metadata: TokenMetadata
+  } = await keypom.view("nft_token", {token_id: tokenId})
+  let royaltySame = false;
+  let metadataSame = false;
+  console.log(`EXPECTED ROYALTIES: ${JSON.stringify(expectedRoyalties)}`)
+  console.log(`RECEIVED ROYALTIES: ${JSON.stringify(found_nft_info.royalty)}`)
+  if(JSON.stringify(expectedRoyalties) == JSON.stringify(found_nft_info.royalty)){
+    royaltySame = true
+  }
+  console.log(`EXPECTED METADATA: ${JSON.stringify(expectedMetadata)}`)
+  console.log(`RECEIVED METADATA: ${JSON.stringify(found_nft_info.metadata)}`)
+  if(JSON.stringify(expectedMetadata) == JSON.stringify(found_nft_info.metadata)){
+    royaltySame = true
+  }
+  return {royaltySame, metadataSame}
 }
 
 export async function assertFTBalance({

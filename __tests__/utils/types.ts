@@ -41,6 +41,21 @@ export type InternalNFTData = {
     token_ids: Array<string>
 }
 
+export type TokenMetadata = {
+    title: string|undefined,
+    description: string,
+    media: string,
+    media_hash: string|undefined,
+    copies: number|undefined,
+    issued_at: number|undefined,
+    expires_at: number|undefined,
+    starts_at: number|undefined,
+    updated_at: number|undefined,
+    extra: string|undefined,
+    reference: string|undefined,
+    reference_hash: number[]|undefined
+}
+
 export type ExtAsset = ExtFTData;
 
 export type ExtFTData = {
