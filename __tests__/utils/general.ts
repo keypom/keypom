@@ -264,12 +264,44 @@ export async function assertNFTBalance({
   }
 }
 
+// Ensure tokens have been added to proper contract storage
+// tokens_per_owner and token_id_by_pk
+export async function assertProperStorage({
+  keypom,
+  expectedTokenId,
+  keyPair,
+  expectedOwner,
+}: {
+  keypom: NearAccount,
+  expectedTokenId: string,
+  keyPair: KeyPair,
+  expectedOwner: NearAccount,
+}) {
+  // Check tokens_per_owner - ownerless keys not included by design
+  let tokens_per_owner_check: boolean = false
+  let nft_tokens: {
+    token_id: string,
+    owner_id: string, 
+  }[] = await keypom.view("nft_tokens_for_owner", {account_id: expectedOwner.accountId})
+  expectedOwner.accountId == "keypom.test.near" && nft_tokens.length == 0 ? tokens_per_owner_check = true : {}
+  for(let i = 0; i < nft_tokens.length; i++){
+    nft_tokens[i].token_id == expectedTokenId && nft_tokens[i].owner_id == expectedOwner.accountId ? tokens_per_owner_check = true : {}
+  }
+  
+
+  let token_id_by_pk_check = false
+  let key_info: {token_id: string} = await keypom.view("get_key_information", {key: keyPair.getPublicKey().toString()})
+  key_info.token_id == expectedTokenId ? token_id_by_pk_check = true : {};
+
+  return{tokens_per_owner_check, token_id_by_pk_check}
+}
+
 // expected royalties, metadata, token_id, keypom
 export async function assertNFTKeyData({
   keypom,
   tokenId,
-  expectedRoyalties,
-  expectedMetadata,
+  expectedRoyalties=undefined,
+  expectedMetadata=undefined,
 }: {
   keypom: NearAccount,
   tokenId: string,

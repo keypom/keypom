@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker, toYocto } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection, doesKeyExist, doesDropExist, assertNFTKeyData } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection, doesKeyExist, doesDropExist, assertNFTKeyData, assertProperStorage } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop, ExtFTData, ExtNFTData, InternalNFTData, InternalFTData, ExtNearData, TokenMetadata } from "../utils/types";
@@ -251,6 +251,78 @@ test('Metadata and Royalties Helper Test', async t => {
     t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
 });
 
+test('Storage Helper Test', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+    
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "my-drop-id";
+    const numKeys = 2;
+    let keyPairs = await generateKeyPairs(numKeys);
+
+    // ******************* SETUP *******************
+    const nearAsset1: ExtNearData = {
+        yoctonear: NEAR.parse("1").toString()
+    }
+
+    const asset_data = [{
+        assets: [nearAsset1],
+        uses: 1
+    }];
+
+    let royalties: Record<string, number>={
+    }
+    // 100000 is 100% 
+    royalties[keypomV3.accountId] = 6500
+    royalties[funder.accountId] = 3000
+    royalties[bob.accountId] = 500
+
+    let metadata: TokenMetadata = {
+        title: "my token",
+        description: 'Coming off a maiden victory at the Sahlen Six Hours of the Glen, the BMW Team RLL squad looks to repeat at Canadian Tire Motorsports following a disappointing qualifying. - Shot On: Nikon 55-200 f4-5.6',
+        media: 'https://ipfs.near.social/ipfs/bafybeig4hirpwvr2suakpwhikwfs4f2tjd5hky233k3fpzfeq6npz72fuy',
+        media_hash: undefined,
+        copies: undefined,
+        issued_at: undefined,
+        expires_at: undefined,
+        starts_at: undefined,
+        updated_at: undefined,
+        extra: undefined,
+        reference: undefined,
+        reference_hash: undefined
+    }
+    
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+                key_owner: funder
+            }],
+            drop_config: {
+                nft_keys_config: {
+                    token_metadata: metadata,
+                    royalties
+                }
+            }
+        },
+    }) 
+
+    let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+
+    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: funder
+    })
+    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+});
+
 test('Ownerless Keys', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
@@ -321,6 +393,15 @@ test('Ownerless Keys', async t => {
         expectedMetadata: metadata
     })
     t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
+
+    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: keypomV3
+    })
+    console.log(storageBools.token_id_by_pk_check)
+    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 });
 
 test('Owned Keys', async t => {
@@ -394,6 +475,14 @@ test('Owned Keys', async t => {
         expectedMetadata: metadata
     })
     t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
+
+    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: funder
+    })
+    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 });
 
 test('Owned key transfer, approval, revoking - with owner account', async t => {
@@ -550,6 +639,14 @@ test('Owned key transfer, approval, revoking - with owner account', async t => {
              expectedMetadata: metadata
          })
          t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
+
+         let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+            keypom: keypomV3,
+            expectedTokenId: found_key_info.token_id,
+            keyPair: newKeyPair.keys[0],
+            expectedOwner: bob
+        })
+        t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
     }
 });
 
@@ -680,6 +777,14 @@ test('Owned key transfer, approval, revoking - with key', async t => {
             expectedMetadata: metadata
         })
         t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
+
+        let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+            keypom: keypomV3,
+            expectedTokenId: found_key_info.token_id,
+            keyPair: newKeyPair.keys[0],
+            expectedOwner: bob
+        })
+        t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
     }
 });
 
