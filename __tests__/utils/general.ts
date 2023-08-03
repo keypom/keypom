@@ -276,25 +276,44 @@ export async function assertNFTKeyData({
   expectedRoyalties?: Record<string, number>,
   expectedMetadata?: TokenMetadata
 }) {
+  // Get values and setup booleans
   let found_nft_info: {
     owner_id: string, 
     approved_account_ids: Record<string, string>, 
     royalty: Record<string, number>,
     metadata: TokenMetadata
   } = await keypom.view("nft_token", {token_id: tokenId})
-  let royaltySame = false;
+  let royaltySame = true;
   let metadataSame = false;
-  // ORDER IS FLIPPED HERE
-  console.log(`EXPECTED ROYALTIES: ${JSON.stringify(expectedRoyalties)}`)
-  console.log(`RECEIVED ROYALTIES: ${JSON.stringify(found_nft_info.royalty)}`)
-  if(JSON.stringify(expectedRoyalties) == JSON.stringify(found_nft_info.royalty)){
-    royaltySame = true
+
+  // Bootleg royalty records length checking
+  let expectedRoyaltiesLength: number = 0
+  for (const key in expectedRoyalties) {
+    expectedRoyaltiesLength++
   }
-  // UNDEFINED ARE NOT SHOWING UP, RETURNED HAS NULL
-  console.log(`EXPECTED METADATA: ${JSON.stringify(expectedMetadata)}`)
-  console.log(`RECEIVED METADATA: ${JSON.stringify(found_nft_info.metadata)}`)
-  if(JSON.stringify(expectedMetadata) == JSON.stringify(found_nft_info.metadata)){
-    royaltySame = true
+  let receivedRoyaltiesLength: number = 0
+  for (const key in found_nft_info.royalty) {
+    receivedRoyaltiesLength++
+  }
+  if(expectedRoyaltiesLength != receivedRoyaltiesLength){
+    royaltySame = false
+  }
+  
+  // Ensure entries of both royalty records are the same
+  for (const key in expectedRoyalties) {
+    // console.log(`Key: ${key} and Expected Value: ${expectedRoyalties[key]}`)
+    // console.log(`Key: ${key} and Received Value: ${found_nft_info.royalty[key]}`)
+    if(found_nft_info.royalty[key] != expectedRoyalties[key]){
+      royaltySame = false
+    }
+  }
+
+  // PARSE METADATA AND COMPARE
+  let metadataWithoutNull = JSON.stringify(found_nft_info.metadata, (key, value) => {
+    if (value !== null && value !== "null") return value
+  })
+  if(JSON.stringify(expectedMetadata) == metadataWithoutNull){
+    metadataSame = true
   }
   return {royaltySame, metadataSame}
 }

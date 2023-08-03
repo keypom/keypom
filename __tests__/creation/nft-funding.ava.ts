@@ -1,9 +1,9 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker, toYocto } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection, doesKeyExist, doesDropExist } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection, doesKeyExist, doesDropExist, assertNFTKeyData } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
-import { ExtDrop, ExtFTData, ExtNFTData, InternalNFTData, InternalFTData, ExtNearData } from "../utils/types";
+import { ExtDrop, ExtFTData, ExtNFTData, InternalNFTData, InternalFTData, ExtNearData, TokenMetadata } from "../utils/types";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
 import { Near } from "@near-js/wallet-account";
 const { readFileSync } = require('fs');
@@ -369,7 +369,6 @@ test('Tokens to the Wrong Drop - Others with Same Assets', async t => {
         }],
     })
 });
-
 
 
 
