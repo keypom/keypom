@@ -284,11 +284,13 @@ export async function assertNFTKeyData({
   } = await keypom.view("nft_token", {token_id: tokenId})
   let royaltySame = false;
   let metadataSame = false;
+  // ORDER IS FLIPPED HERE
   console.log(`EXPECTED ROYALTIES: ${JSON.stringify(expectedRoyalties)}`)
   console.log(`RECEIVED ROYALTIES: ${JSON.stringify(found_nft_info.royalty)}`)
   if(JSON.stringify(expectedRoyalties) == JSON.stringify(found_nft_info.royalty)){
     royaltySame = true
   }
+  // UNDEFINED ARE NOT SHOWING UP, RETURNED HAS NULL
   console.log(`EXPECTED METADATA: ${JSON.stringify(expectedMetadata)}`)
   console.log(`RECEIVED METADATA: ${JSON.stringify(found_nft_info.metadata)}`)
   if(JSON.stringify(expectedMetadata) == JSON.stringify(found_nft_info.metadata)){
