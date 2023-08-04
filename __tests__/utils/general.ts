@@ -292,7 +292,8 @@ export async function assertProperStorage({
   let token_id_by_pk_check = false
   let key_info: {token_id: string} = await keypom.view("get_key_information", {key: keyPair.getPublicKey().toString()})
   key_info.token_id == expectedTokenId ? token_id_by_pk_check = true : {};
-
+  console.log(`Received: ${key_info.token_id}`)
+  console.log(`Expected: ${expectedTokenId}`)
   return{tokens_per_owner_check, token_id_by_pk_check}
 }
 
