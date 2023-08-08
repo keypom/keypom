@@ -59,8 +59,6 @@ pub(crate) fn get_total_costs_for_key(
 ) {
     // Get the remaining asset data
     let remaining_asset_data = get_remaining_asset_data(asset_data_for_uses, remaining_uses);
-    
-    near_sdk::log!("Remaining Asset Data: {:?}", remaining_asset_data);
 
     // For every remaining asset data, we should query the costs and multiply it by the number of uses left
     for asset_data in remaining_asset_data {

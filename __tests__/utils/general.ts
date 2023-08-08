@@ -483,13 +483,14 @@ export async function doesDropExist(
   keypomV3: NearAccount,
   dropId: String
 ){
-    let response = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    if(response !== null){
-      return true
-    }
+  try{
+    await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log(`Drop Exists`)
+    return true
+  }catch{
     return false
+  }
 }
-
 
 export async function generateKeyPairs(
   numKeys: number,
