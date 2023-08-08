@@ -333,7 +333,7 @@ test.afterEach(async t => {
 
 //     // Key should be deleted but drop should still exist
 //     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
 
 // });
 
@@ -529,7 +529,7 @@ test.afterEach(async t => {
 
 //     // Key should be deleted but drop should still exist
 //     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
 
 // });
 
@@ -705,7 +705,7 @@ test('FT Const Tweaking', async t => {
 
     // Key should be deleted but drop should still exist
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
 });
 

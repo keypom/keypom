@@ -68,7 +68,7 @@ pub struct DropConfig {
     /// And then fires a cross contract call to the Keypom contract to add keys
     pub add_key_allowlist: Option<HashSet<AccountId>>,
 
-    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to false and
+    /// Should the drop be automatically deleted when all the keys are used? This is defaulted to true and
     /// Must be overwritten
     pub delete_empty_drop: Option<bool>,
 }

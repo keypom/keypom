@@ -96,6 +96,63 @@ test.afterEach(async t => {
 // When drop is fully deleted, any cost that was put in should have been refunded (no more, no less). UNLESS keys have been claimed
 // True is returned from function
 
+test('Default - Delete on Empty', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+    
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "my-drop-id";
+    const numKeys = 2;
+    let keyPairs = await generateKeyPairs(numKeys);
+
+    // ******************* Creating Drop *******************
+    const nearAsset1: ExtNearData = {
+        yoctonear: NEAR.parse("1").toString()
+    }
+
+    const asset_data_per_use = [{
+        assets: [null],
+        uses: 1
+    }];
+    
+    // if keep_empty_drop in delete_keys does not work, this will auto-delete
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: asset_data_per_use,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
+        },
+    }) 
+
+    let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: keypomV3
+    })
+    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+
+    // Shoudl not delete drop here
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: "delete_keys",
+        args: {
+            drop_id: dropId,
+            public_keys: [keyPairs.publicKeys[0]],
+        }
+    })
+
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+});
+
 test('Passing in custom public keys belonging to drop', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
@@ -148,7 +205,7 @@ test('Passing in custom public keys belonging to drop', async t => {
     })
 
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 });
 
 test('Passing in invalid public keys', async t => {
@@ -341,7 +398,7 @@ test('Passing in limit', async t => {
 
 //     let allKeys: ExtKeyInfo[] = await keypomV3.view("get_keys_for_drop", {drop_id: dropId})
 //     t.is(allKeys.length == 1, true)
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
 // });
 
 test('Passing in keep empty drop', async t => {
@@ -374,9 +431,6 @@ test('Passing in keep empty drop', async t => {
             key_data: [{
                 public_key: keyPairs.publicKeys[0],
             }],
-            drop_config: {
-                delete_empty_drop: true
-            }
         },
     }) 
 
@@ -556,7 +610,7 @@ test('Deleting a lot of multi-use keys that are partially used', async t => {
         t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[i]), false)
     }
 
-    t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 });
 
 test(' Deleting a drop with a TON of empty asset metadata - check for gas and ensure no panic', async t => {
@@ -638,10 +692,7 @@ test(' Deleting a drop with a TON of empty asset metadata - check for gas and en
             asset_data: asset_data_per_use,
             key_data: [{
                 public_key: keyPairs.publicKeys[0],
-            }],
-            drop_config: {
-                delete_empty_drop: true
-            }
+            }]
         },
     }) 
 
@@ -666,7 +717,6 @@ test(' Deleting a drop with a TON of empty asset metadata - check for gas and en
     })
 
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-    console.log("a")
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
 

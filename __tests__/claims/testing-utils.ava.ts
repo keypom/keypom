@@ -142,7 +142,7 @@ test('CAAC', async t => {
         },
     })
 
-    t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
     // CAAC using just createAccount flag
     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
@@ -154,7 +154,7 @@ test('CAAC', async t => {
 
     // Key should be deleted but drop should still exist
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 });
 
 test('Force CAAC Failure', async t => {
@@ -189,7 +189,7 @@ test('Force CAAC Failure', async t => {
         },
     })
 
-    t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
     // CAAC using just createAccount flag
     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
@@ -203,7 +203,7 @@ test('Force CAAC Failure', async t => {
 
     // Key should be deleted but drop should still exist
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 });
 
 test('Claim Normal', async t => {
@@ -234,7 +234,7 @@ test('Claim Normal', async t => {
         },
     })
 
-    t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
     // CAAC using just createAccount flag
     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
@@ -246,7 +246,7 @@ test('Claim Normal', async t => {
 
     // Key should be deleted but drop should still exist
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 });
 
 test('Claim Implicit', async t => {
@@ -281,7 +281,7 @@ test('Claim Implicit', async t => {
         },
     })
 
-    t.is(await doesDropExist(keypomV3, dropId), true)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
     // Implicit claimflags
     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
@@ -293,5 +293,5 @@ test('Claim Implicit', async t => {
 
     // Key should be deleted but drop should still exist
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 });

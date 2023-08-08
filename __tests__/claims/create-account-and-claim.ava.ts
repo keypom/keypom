@@ -245,7 +245,7 @@ test.afterEach(async t => {
 
 //     // Key should be deleted but drop should still exist
 //     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
 
 //     // Drop should still have assets
 //     await assertKeypomInternalAssets({
@@ -375,7 +375,7 @@ test.afterEach(async t => {
 
 //     // Key should be deleted but drop should still exist
 //     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
 
 //     // Drop should still have assets
 //     await assertKeypomInternalAssets({
@@ -636,7 +636,7 @@ test.afterEach(async t => {
 
 //     // Key should be deleted but drop should still exist
 //     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
 
 //     let endingFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
 //     // refund amount, rounded to 5 decimal places
