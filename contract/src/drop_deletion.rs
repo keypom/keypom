@@ -14,7 +14,7 @@ impl Keypom {
         public_keys: Option<Vec<PublicKey>>,
         limit: Option<u8>,
         keep_empty_drop: Option<bool>
-    ) {
+    ) -> PromiseOrValue<bool>{
         self.asset_no_global_freeze();
 
         // Measure initial storage before doing any operations
@@ -120,6 +120,8 @@ impl Keypom {
         log_events(event_logs);
 
         env::promise_return(key_deletion_promise);
+
+        PromiseOrValue::Value(true)
     }
 }
 

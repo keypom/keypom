@@ -39,8 +39,6 @@ export async function functionCall({
   parseExecutionResults(methodName, receiver.accountId, rawValue, shouldLog, shouldPanic);
 
   if (rawValue.SuccessValue) {
-    console.log(`Start Time: ${rawValue.startMs}`)
-    console.log(`End Time: ${rawValue.endMs}`)
     return atob(rawValue.SuccessValue);
   } else {
     return rawValue.Failure?.error_message
