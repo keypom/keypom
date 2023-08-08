@@ -35,7 +35,12 @@ impl InternalNFTData {
     }
 
     /// Query how much gas is required for a single claim
-    pub fn get_required_gas_for_claim(&self) -> Gas {
+    pub fn get_required_asset_gas(&self) -> Gas {
+        GAS_FOR_NFT_CLAIM_LOGIC + MIN_GAS_FOR_NFT_TRANSFER + MIN_GAS_FOR_NFT_CALLBACK_LOGIC
+    }
+
+    /// Query how much gas is required for a single claim
+    pub fn get_total_required_gas(&self) -> Gas {
         GAS_FOR_NFT_CLAIM_LOGIC + MIN_GAS_FOR_NFT_TRANSFER + MIN_GAS_FOR_NFT_CALLBACK_LOGIC
     }
 }

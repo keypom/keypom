@@ -63,7 +63,7 @@ impl Keypom {
         let mut num_nfts = 0;
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
-            required_gas += internal_asset.get_required_gas();
+            required_gas += internal_asset.get_total_required_gas();
             
             match internal_asset {
                 InternalAsset::ft(ft) => {

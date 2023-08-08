@@ -96,7 +96,7 @@ pub(crate) fn get_total_costs_for_key(
                 .expect("Asset not found");
 
             // Every asset has a gas cost associated. We should add that to the total gas.
-            let gas_for_asset = internal_asset.get_required_gas();
+            let gas_for_asset = internal_asset.get_total_required_gas();
             total_gas_for_use += gas_for_asset;
 
             // Get the refund amount for the asset

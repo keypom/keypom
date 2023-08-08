@@ -54,8 +54,8 @@ impl Keypom {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             
             // For claim events
-            assets.push(internal_asset.to_external_asset(&metadata.tokens_per_use));
-            required_asset_gas += internal_asset.get_required_gas();
+            assets.push(internal_asset.to_external_events_asset(&metadata.tokens_per_use));
+            required_asset_gas += internal_asset.get_required_asset_gas();
         }
         
         key_info.remaining_uses -= 1;

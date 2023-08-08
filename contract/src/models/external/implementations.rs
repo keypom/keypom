@@ -11,8 +11,8 @@ impl ExtAsset {
             ExtAsset::NFTAsset(nft_data) => InternalAsset::nft(InternalNFTData::new(
                 nft_data.nft_contract_id.clone(),
             )),
-            ExtAsset::FCAsset(fc_data) => InternalAsset::fc(FCData::new(
-                fc_data.methods.clone()
+            ExtAsset::FCAsset(method_data) => InternalAsset::fc(FCData::new(
+                method_data.clone()
             )),
             ExtAsset::NearAsset(_) => InternalAsset::near
         }

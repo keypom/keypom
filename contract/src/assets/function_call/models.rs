@@ -5,15 +5,14 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 pub struct MethodData {
     /// Contract that will be called
-    pub receiver_id: AccountId,
+    pub receiver_id: String,
     /// Method to call on receiver_id contract
     pub method_name: String,
     /// Arguments to pass in (stringified JSON)
     pub args: String,
     /// Amount of yoctoNEAR to attach along with the call
     pub attached_deposit: U128,
-    /// How much gas to attach to this method call. If none, all the gas is split between the parallel method calls in a given claim.
-    /// If this is specified, the key can ONLY be used to call `claim` and no `deposit_per_use` can be specified. This leads the key to act like a method calling proxy instead of a linkrop.
+    /// How much gas to attach to this method call.
     pub attached_gas: Gas,
 
     /// Keypom Args struct to be sent to external contracts

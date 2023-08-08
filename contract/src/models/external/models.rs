@@ -21,7 +21,7 @@ pub enum ExtAsset {
     FTAsset(ExtFTData),
     NearAsset(ExtNEARData),
     NFTAsset(ExtNFTData),
-    FCAsset(FCData)
+    FCAsset(Vec<MethodData>)
 }
 
 /// Data going into or out of the Keypom contract representing the presence of fungible tokens as an asset for a drop

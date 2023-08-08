@@ -20,6 +20,23 @@ pub(crate) fn rem_first_and_last_char(value: &mut String) {
     value.remove(0);
 }
 
+pub(crate) fn determine_receiver_id(receiver_to_claimer: &Option<bool>, method_receiver_id: &String, account_id: &AccountId) -> Result<AccountId, String> {
+    if receiver_to_claimer.unwrap_or(false) {
+        if account_id == &env::current_account_id() {
+            return Err("Cannot set receiver to claimer if the account ID is the same as the contract ID".to_string());
+        }
+
+        Ok(account_id.clone())
+    } else {
+        let valid_account: Result<AccountId, _> = method_receiver_id.parse();
+        if valid_account.is_err() {
+            return Err("Invalid receiver ID".to_string());
+        }
+        
+        Ok(valid_account.unwrap())
+    }
+}
+
 /// Given the actual args to the function call, and some user defined arguments
 /// Set / replace the markers with what the user passed in
 pub(crate) fn set_user_markers(
