@@ -11,7 +11,7 @@ impl Keypom {
         // If the account was successfully created, we should claim the assets
         // Otherwise, we should loop through all the assets in the current use and refund the tokens
         if successful_creation {
-            return PromiseOrValue::Promise(self.internal_claim_assets(token_id, receiver_id, fc_args));
+            return self.internal_claim_assets(token_id, receiver_id, fc_args);
         }
 
         let initial_storage = env::storage_usage();

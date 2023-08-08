@@ -25,7 +25,7 @@ impl FCData {
         drop_id: DropId,
         key_id: String,
         funder_id: AccountId
-    ) -> Promise {  
+    ) -> Option<Promise> {  
         let mut promises = Vec::new();
 
         for (idx, method) in self.methods.iter().enumerate() {
@@ -69,6 +69,6 @@ impl FCData {
             promises.push(promise);
         }
 
-        promises.into_iter().reduce(|a, b| a.then(b)).unwrap_or(Promise::new(env::current_account_id()))
+        promises.into_iter().reduce(|a, b| a.then(b))
     }
 }

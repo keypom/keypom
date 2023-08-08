@@ -132,7 +132,7 @@ impl Keypom {
     /// Internal function that loops through all assets for the given use and claims them.
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
-    pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> Promise {
+    pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> PromiseOrValue<bool> {
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
 
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
@@ -180,16 +180,19 @@ impl Keypom {
         // Put the modified drop back in storage
         self.drop_by_id.insert(&drop_id, &drop);
 
-        let resolve = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises");
-        resolve.then(
-            Self::ext(env::current_account_id())
-                .with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
-                .with_unused_gas_weight(1)
-                .on_assets_claimed(
-                    token_id,
-                    token_ids_transferred
-                )
-        )
+        if let Some(resolve) = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises") {
+            PromiseOrValue::Promise(resolve.then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
+                    .with_unused_gas_weight(1)
+                    .on_assets_claimed(
+                        token_id,
+                        token_ids_transferred
+                    )
+            ))
+        } else {
+            self.on_assets_claimed(token_id, token_ids_transferred)
+        }
     }
 
     /// Check if key is empty and perform cleanup if it is

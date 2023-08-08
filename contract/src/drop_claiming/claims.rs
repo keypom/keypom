@@ -15,7 +15,7 @@ trait ExtAccountCreation {
 #[near_bindgen]
 impl Keypom {
     #[private]
-    pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
+    pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs, password: Option<String>) -> PromiseOrValue<bool> {
         self.assert_no_global_freeze();
 
         let mut event_logs: Vec<EventLog> = Vec::new();
@@ -59,14 +59,15 @@ impl Keypom {
             total_required_gas.0,
             prepaid_gas.0)
         );
-        let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + total_required_gas;
-        
+        let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + required_asset_gas;
+        near_sdk::log!("gas_for_callback: {}", gas_for_callback.0);
+
         log_events(event_logs);
         // First, create the zero-balance account and then, claim the assets
         ext_account_creation::ext(root_account_id)
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
             .with_unused_gas_weight(0)
-            .with_attached_deposit(10000000000000000000000) // TODO: remove (needed for sandbox testing)
+            //.with_attached_deposit(10000000000000000000000) // TODO: remove (needed for sandbox testing)
             .create_account(
                 new_account_id.clone(),
                 new_public_key,

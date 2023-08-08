@@ -73,7 +73,7 @@ impl InternalAsset {
         drop_id: DropId,
         key_id: String,
         funder_id: AccountId
-    ) -> Promise {
+    ) -> Option<Promise> {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
@@ -85,10 +85,10 @@ impl InternalAsset {
                 return fc_data.claim_fc_asset(fc_args, receiver_id.clone(), drop_id, key_id, funder_id)
             },
             InternalAsset::near => {
-                return Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
+                return Some(Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap()));
             },
             InternalAsset::none => {
-                return Promise::new(env::current_account_id());
+                return None;
             }
         }
     }
