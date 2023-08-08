@@ -42,13 +42,5 @@ pub const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
 
 
 // ------------------------ Assets ------------------------ //
-/// Asset ID for the none / null asset
-pub const NONE_ASSET_ID: &str = "none-asset";
 pub const GAS_FOR_NONE_ASSET: Gas = Gas(90_000_000_000); // 0.09 TGas
-
-/// Asset ID for the near asset
-pub const NEAR_ASSET_ID: &str = "near";
 pub const GAS_FOR_NEAR_TRANSFER: Gas = Gas(8_000_000_000_000); // 3 TGas
-
-/// Asset ID for the fc assets (this should never be used though and is just a fallback)
-pub const FALLBACK_FC_ASSET_ID: &str = "fc";

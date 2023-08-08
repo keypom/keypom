@@ -72,8 +72,7 @@ impl Keypom {
         for i in 0..num_promises {
             let promise_result = env::promise_result(i);
             let metadata = &assets_metadata[i as usize];
-            let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();
-
+            
             match promise_result {
                 PromiseResult::NotReady => return PromiseOrValue::Promise(
                     Self::ext(env::current_account_id())
@@ -82,9 +81,27 @@ impl Keypom {
                             token_ids_transferred
                         )
                 ),
-                PromiseResult::Successful(_) => {},
+                PromiseResult::Successful(_) => {
+                    if is_fc_asset_id(&metadata.asset_id) {
+                        near_sdk::log!("FC asset claimed");
+                        continue;
+                    }
+
+                    let asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();  
+                    if !asset.is_empty() {
+                        drop_assets_empty = false;
+                    }
+                },
                 PromiseResult::Failed => {
+                    was_successful = false;
                     near_sdk::log!("Asset claim failed");
+                    // If we're dealing with an FC asset, no need to perform any refunds
+                    if is_fc_asset_id(&metadata.asset_id) {
+                        near_sdk::log!("FC asset claimed");
+                        continue;
+                    }
+                    
+                    let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();  
                     let mut tokens_per_use = metadata.tokens_per_use.map(|x| x.0.to_string());
                     
                     // If it's a NFT, we need to get the token ID
@@ -95,15 +112,12 @@ impl Keypom {
                     let amount_to_increment = asset.on_failed_claim(&tokens_per_use);
                     self.internal_modify_user_balance(&drop.funder_id, amount_to_increment, false);
                     // Re-insert into storage
-                    drop.asset_by_id.insert(metadata.asset_id.clone(), asset.clone());
-
-                    was_successful = false;
+                    drop.asset_by_id.insert(metadata.asset_id.clone(), asset.clone()); 
+                    if !asset.is_empty() {
+                        drop_assets_empty = false;
+                    }
                 }
 
-            }
-
-            if !asset.is_empty() {
-                drop_assets_empty = false;
             }
         }
 

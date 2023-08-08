@@ -63,13 +63,13 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
     fn from(ext_asset_data: &ExtAssetDataForUses) -> Self {
         let mut assets_metadata = vec![];
 
-        let mut fc_asset_id = 0;
+        let mut fc_idx = 0;
         for ext_asset in &ext_asset_data.assets {
             // If the external asset is of type FCData, the asset ID will be the incrementing number
             // Otherwise, it will be the asset ID specified
             let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
-                fc_asset_id += 1;
-                fc_asset_id.to_string()
+                fc_idx += 1;
+                format!("{}{}", FC_ASSET_PREFIX, fc_idx)
             } else {
                 ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
             };

@@ -14,7 +14,7 @@ pub const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
 /// 2 TGas
 pub const GAS_FOR_FC_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000);
 /// For every length of the args, add this much gas
-pub const GAS_PER_ARG_LENGTH: Gas = Gas(400_000_000);
+pub const GAS_PER_ARG_LENGTH: Gas = Gas(500_000_000);
 
 impl FCData {
     /// Loop through each method and create a promise to call the method

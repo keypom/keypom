@@ -14,6 +14,11 @@ pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     near
 }
 
+/// Check whether an asset ID is function call or not
+pub(crate) fn is_fc_asset_id(asset_id: &AssetId) -> bool {
+    asset_id.contains(FC_ASSET_PREFIX)
+}
+
 /// Query for the key's current use number given the drop and key info
 pub(crate) fn get_key_cur_use(drop: &InternalDrop, key_info: &InternalKeyInfo) -> UseNumber {
     drop.max_key_uses - key_info.remaining_uses + 1
