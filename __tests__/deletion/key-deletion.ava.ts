@@ -250,7 +250,9 @@ test('Passing in invalid public keys', async t => {
         expectedOwner: keypomV3
     })
     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+    let preDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
 
+    let preDeleteKeypomBal = await keypomV3.balance();
     try{
         await functionCall({
             signer: funder,
@@ -264,7 +266,11 @@ test('Passing in invalid public keys', async t => {
         // Should not pass to here, if it does, fail
         t.fail()
     }catch(e){}
+    let postDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+    let finalBal = await keypomV3.balance();
 
+    t.deepEqual(preDeleteKeypomBal.stateStaked, finalBal.stateStaked)
+    t.is(preDeleteBal == postDeleteBal, true)
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), true)
     t.is(await doesDropExist(keypomV3, dropId), true)
 });
@@ -569,6 +575,9 @@ test(' Deleting a drop with a TON of empty asset metadata - check for gas and en
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
+
+
+
 
 // NEED TO COMMENT OUT ALL LOGS INSIDE DELETE_KEYS PRIOR TO RUNNING THIS TEST
 // test('Passing in no pub keys and no limit', async t => {
