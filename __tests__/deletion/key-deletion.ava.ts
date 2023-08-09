@@ -6,6 +6,7 @@ import { BN } from "bn.js";
 import { ExtDrop, ExtFTData, ExtNFTData, InternalNFTData, InternalFTData, ExtNearData, TokenMetadata, ExtKeyInfo } from "../utils/types";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
 import { Near } from "@near-js/wallet-account";
+import { viewAccessKeyData } from "@keypom/core";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -138,7 +139,7 @@ test('Default - Delete on Empty', async t => {
     })
     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
-    //Should not delete drop here
+    //Should delete drop here
     let deleteResponse = await functionCall({
         signer: funder,
         receiver: keypomV3,
@@ -149,6 +150,18 @@ test('Default - Delete on Empty', async t => {
         }
     })
     t.is(deleteResponse=="true", true)
+
+    storageBools = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: keypomV3,
+        ownerlessDelete: true
+    })
+    // Ensure both fail and are no longer in storage
+    console.log(storageBools.tokens_per_owner_check)
+    console.log(storageBools.token_id_by_pk_check)
+    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
 
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
@@ -206,6 +219,16 @@ test('Passing in custom public keys belonging to drop', async t => {
     })
     t.is(deleteResponse=="true", true)
 
+    storageBools = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: keypomV3,
+        ownerlessDelete: true
+    })
+    // Ensure both fail and are no longer in storage
+    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
@@ -251,6 +274,7 @@ test('Passing in invalid public keys', async t => {
     })
     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
     let preDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+    
 
     let preDeleteKeypomBal = await keypomV3.balance();
     try{
@@ -265,7 +289,16 @@ test('Passing in invalid public keys', async t => {
         })
         // Should not pass to here, if it does, fail
         t.fail()
-    }catch(e){}
+    }catch(e){
+        // Ensure storage has not changed
+        storageBools = await assertProperStorage({
+            keypom: keypomV3,
+            expectedTokenId: found_key_info.token_id,
+            keyPair: keyPairs.keys[0],
+            expectedOwner: keypomV3
+        })
+        t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+    }
     let postDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
     let finalBal = await keypomV3.balance();
 
@@ -390,83 +423,20 @@ test('Passing in keep empty drop', async t => {
     })
     t.is(deleteResponse=="true", true)
 
+    storageBools = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: keypomV3,
+        ownerlessDelete: true
+    })
+    // Ensure both fail and are no longer in storage
+    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), true)
 });
 
-// // 10 use key where 50 keys are deleted, all ranging from 1->10 uses left
-test('Deleting a lot of multi-use keys that are partially used', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
-    
-    let initialBal = await keypomV3.balance();
-
-    const dropId = "my-drop-id";
-    const numKeys = 50;
-    let keyPairs = await generateKeyPairs(numKeys);
-    let key_data: {public_key: string}[]= []
-    for(let i = 0; i < numKeys; i++){
-        key_data.push({public_key: keyPairs.publicKeys[i]})
-    }
-
-    // ******************* Creating Drop *******************
-    const asset_data_per_use = [{
-        assets: [null],
-        uses: 10
-    }];
-    
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data,
-        },
-    }) 
-
-    let found_key_info: {owner_id: string, token_id: string, required_gas: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    console.log(`Required gas: ${found_key_info.required_gas}`)
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
-
-    for(let i = 0; i < numKeys; i++){
-        // Random number between 1-10
-        let numClaims: number = Math.floor(Math.random() * (9) + 1)
-        console.log(`CLAIMING THE ${i+1}th KEY ${numClaims} TIMES`)
-        for(let count = 0; count < numClaims; count++){
-            await claimWithRequiredGas({
-                keypom: keypomV3,
-                keyPair: keyPairs.keys[i],
-                root,
-                useImplicitAccount: true
-            })
-        }
-        console.log(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`)
-    }
-
-    for(let i = 0; i < numKeys; i++){
-        let deleteResponse = await functionCall({
-            signer: funder,
-            receiver: keypomV3,
-            methodName: "delete_keys",
-            args: {
-                drop_id: dropId,
-                public_keys: [keyPairs.publicKeys[i]],
-            }
-        })
-        t.is(deleteResponse=="true", true)
-    
-        t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[i]), false)
-    }
-
-    t.is(await doesDropExist(keypomV3, dropId), false)
-});
 
 test(' Deleting a drop with a TON of empty asset metadata - check for gas and ensure no panic', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
@@ -572,9 +542,105 @@ test(' Deleting a drop with a TON of empty asset metadata - check for gas and en
     })
     t.is(deleteResponse=="true", true)
 
+    storageBools = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: keypomV3,
+        ownerlessDelete: true
+    })
+    // Ensure both fail and are no longer in storage
+    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
+
+// 10 use key where 50 keys are deleted, all ranging from 1->10 uses left
+test('Deleting a lot of multi-use keys that are partially used', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+    
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "my-drop-id";
+    const numKeys = 50;
+    let keyPairs = await generateKeyPairs(numKeys);
+    let key_data: {public_key: string}[]= []
+    for(let i = 0; i < numKeys; i++){
+        key_data.push({public_key: keyPairs.publicKeys[i]})
+    }
+
+    // ******************* Creating Drop *******************
+    const asset_data_per_use = [{
+        assets: [null],
+        uses: 10
+    }];
+    
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: asset_data_per_use,
+            key_data,
+        },
+    }) 
+
+    let found_key_info: {owner_id: string, token_id: string, required_gas: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+    console.log(`Required gas: ${found_key_info.required_gas}`)
+    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+        keypom: keypomV3,
+        expectedTokenId: found_key_info.token_id,
+        keyPair: keyPairs.keys[0],
+        expectedOwner: keypomV3
+    })
+    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+
+    for(let i = 0; i < numKeys; i++){
+        // Random number between 1-10
+        let numClaims: number = Math.floor(Math.random() * (9) + 1)
+        console.log(`CLAIMING THE ${i+1}th KEY ${numClaims} TIMES`)
+        for(let count = 0; count < numClaims; count++){
+            await claimWithRequiredGas({
+                keypom: keypomV3,
+                keyPair: keyPairs.keys[i],
+                root,
+                useImplicitAccount: true
+            })
+        }
+        console.log(`~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`)
+    }
+
+    for(let i = 0; i < numKeys; i++){
+        found_key_info = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[i]})
+        let deleteResponse = await functionCall({
+            signer: funder,
+            receiver: keypomV3,
+            methodName: "delete_keys",
+            args: {
+                drop_id: dropId,
+                public_keys: [keyPairs.publicKeys[i]],
+            }
+        })
+        t.is(deleteResponse=="true", true)
+
+        storageBools = await assertProperStorage({
+            keypom: keypomV3,
+            expectedTokenId: found_key_info.token_id,
+            keyPair: keyPairs.keys[i],
+            expectedOwner: keypomV3,
+            ownerlessDelete: true
+        })
+        // Ensure both fail and are no longer in storage
+        t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+    
+        t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[i]), false)
+    }
+
+    t.is(await doesDropExist(keypomV3, dropId), false)
+});
+
 
 
 
