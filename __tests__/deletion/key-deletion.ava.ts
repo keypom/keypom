@@ -112,7 +112,7 @@ test('Default - Delete on Empty', async t => {
     }
 
     const asset_data_per_use = [{
-        assets: [null],
+        assets: [nearAsset1],
         uses: 1
     }];
     
@@ -139,6 +139,8 @@ test('Default - Delete on Empty', async t => {
     })
     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
+    let userPreDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+
     //Should delete drop here
     let deleteResponse = await functionCall({
         signer: funder,
@@ -151,6 +153,11 @@ test('Default - Delete on Empty', async t => {
     })
     t.is(deleteResponse=="true", true)
 
+    let userPostDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+    let balChange = formatNearAmount((BigInt(userPostDeleteBal) - BigInt(userPreDeleteBal)).toString(), 5);
+    console.log(balChange)
+    t.is(balChange > "1", true)
+   
     storageBools = await assertProperStorage({
         keypom: keypomV3,
         expectedTokenId: found_key_info.token_id,
@@ -436,7 +443,6 @@ test('Passing in keep empty drop', async t => {
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), true)
 });
-
 
 test(' Deleting a drop with a TON of empty asset metadata - check for gas and ensure no panic', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
