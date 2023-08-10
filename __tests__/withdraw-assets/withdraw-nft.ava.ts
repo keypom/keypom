@@ -97,7 +97,7 @@ test.afterEach(async t => {
 //      True is returned from function
 
 
-test('Withdraw with TokenId - No Panic', async t => {
+test('Withdraw - No Panic', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
     
     let initialBal = await keypomV3.balance();
@@ -268,7 +268,7 @@ test('Withdraw with TokenId - No Panic', async t => {
     t.is(formatNearAmount((BigInt(bal4) - BigInt(bal3)).toString(), 5) > "0", true)
 });
 
-test('Withdraw with TokenId - Panic', async t => {
+test('Withdraw - Panic', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
 
     const dropId = "my-drop-id";
