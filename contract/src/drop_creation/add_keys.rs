@@ -6,7 +6,9 @@ impl Keypom {
     pub fn add_keys(
         &mut self, 
         drop_id: DropId, 
-        key_data: Vec<ExtKeyData>, 
+        key_data: Vec<ExtKeyData>,
+        // Should any excess attached deposit be deposited to the user's balance?
+        keep_excess_deposit: Option<bool>
     ) -> bool {
         self.assert_no_global_freeze();
 
@@ -78,6 +80,7 @@ impl Keypom {
             total_cost_per_key,
             total_allowance_per_key,
             net_storage,
+            keep_excess_deposit
         );
 
         // Now that everything is done (no more potential for panics), we can log the events

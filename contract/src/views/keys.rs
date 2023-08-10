@@ -38,7 +38,7 @@ impl Keypom {
             .expect("no drop found for drop ID");
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata, required_asset_gas } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
 
         // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
         let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
@@ -53,7 +53,7 @@ impl Keypom {
         };
 
         // Keep track of the total gas across all assets in the current use
-        let mut required_gas: Gas = base_gas_for_use;
+        let required_gas: Gas = base_gas_for_use + required_asset_gas;
 
         let mut ft_list: Vec<FTListData> = Vec::new();
         let mut nft_list: Vec<NFTListData> = Vec::new();
@@ -63,7 +63,6 @@ impl Keypom {
         let mut num_nfts = 0;
         for metadata in assets_metadata {
             let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
-            required_gas += internal_asset.get_total_required_gas();
             
             match internal_asset {
                 InternalAsset::ft(ft) => {

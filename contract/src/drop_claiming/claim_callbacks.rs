@@ -5,13 +5,13 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     #[private]
-    pub fn on_new_account_created(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> PromiseOrValue<bool> {
+    pub fn on_new_account_created(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs, new_public_key: PublicKey) -> PromiseOrValue<bool> {
         let successful_creation = was_account_created();
 
         // If the account was successfully created, we should claim the assets
         // Otherwise, we should loop through all the assets in the current use and refund the tokens
         if successful_creation {
-            return self.internal_claim_assets(token_id, receiver_id, fc_args);
+            return self.internal_claim_assets(token_id, receiver_id, fc_args, Some(new_public_key));
         }
 
         let initial_storage = env::storage_usage();
@@ -20,7 +20,7 @@ impl Keypom {
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the account creation, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalAssetDataForUses { uses: _, config: _, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: _, assets_metadata, required_asset_gas: _ } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
 
         for metadata in assets_metadata {
             let amount_to_increment = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").get_yocto_refund_amount(&metadata.tokens_per_use.map(|t| t.into()));
@@ -64,7 +64,7 @@ impl Keypom {
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalAssetDataForUses { uses: _, config: _, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
+        let InternalAssetDataForUses { uses: _, config: _, assets_metadata, required_asset_gas: _ } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
         
         // Iterate through all the promises and get the results
         let mut was_successful = true;
@@ -87,7 +87,7 @@ impl Keypom {
                         continue;
                     }
 
-                    let asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();  
+                    let asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");  
                     if !asset.is_empty() {
                         drop_assets_empty = false;
                     }
@@ -101,7 +101,7 @@ impl Keypom {
                         continue;
                     }
                     
-                    let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();  
+                    let mut asset: InternalAsset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");  
                     let mut tokens_per_use = metadata.tokens_per_use.map(|x| x.0.to_string());
                     
                     // If it's a NFT, we need to get the token ID
@@ -112,7 +112,7 @@ impl Keypom {
                     let amount_to_increment = asset.on_failed_claim(&tokens_per_use);
                     self.internal_modify_user_balance(&drop.funder_id, amount_to_increment, false);
                     // Re-insert into storage
-                    drop.asset_by_id.insert(metadata.asset_id.clone(), asset.clone()); 
+                    drop.asset_by_id.insert(&metadata.asset_id, &asset); 
                     if !asset.is_empty() {
                         drop_assets_empty = false;
                     }

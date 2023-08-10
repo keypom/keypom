@@ -10,6 +10,8 @@ impl Keypom {
         asset_data: Vec<ExtAssetDataForUses>,
 
         drop_config: Option<DropConfig>,
+        // Should any excess attached deposit be deposited to the user's balance?
+        keep_excess_deposit: Option<bool>
     ) -> bool {
         self.assert_no_global_freeze();
 
@@ -22,7 +24,9 @@ impl Keypom {
             drop_id_hash: hash_string(&drop_id.to_string()),
         });
         // Since these won't have a ton of data, using standard data structures is fine
-        let mut asset_by_id = HashMap::new();
+        let mut asset_by_id: UnorderedMap<AssetId, InternalAsset> = UnorderedMap::new(StorageKeys::AssetById {
+            drop_id_hash: hash_string(&drop_id.to_string()),
+        });
         let mut asset_data_for_uses = vec![];
 
         require!(key_data.len() <= 100, "Cannot add more than 100 keys at a time");
@@ -92,6 +96,7 @@ impl Keypom {
             total_cost_per_key,
             total_allowance_per_key,
             net_storage,
+            keep_excess_deposit
         );
 
         // Construct the drop creation log and push it to the event logs

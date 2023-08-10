@@ -89,13 +89,19 @@ impl Keypom {
     /// Checks that the attached deposit is greater than the required deposit and refunds any excess
     /// If the attached deposit is less than the required deposit, decrement the user balance
     /// If the user doesn't have enough deposit or balance, panic
-    pub(crate) fn charge_with_deposit_or_balance(&mut self, required_deposit: Balance) {
+    pub(crate) fn charge_with_deposit_or_balance(&mut self, required_deposit: Balance, keep_excess_deposit: Option<bool>) {
         let predecessor = env::predecessor_account_id();
         let can_deposit_cover = env::attached_deposit() >= required_deposit;
         
         // In the case that the attached deposit covers what is required, refund the excess
         if can_deposit_cover {
             let amount_to_refund = env::attached_deposit() - required_deposit;
+
+            // If the user wants to keep the excess deposit, just modify the user balance
+            if keep_excess_deposit.unwrap_or(false) {
+                self.internal_modify_user_balance(&predecessor, amount_to_refund, false);
+                return;
+            }
 
             near_sdk::log!("Refunding {} excess deposit", amount_to_refund);
             Promise::new(predecessor).transfer(amount_to_refund);

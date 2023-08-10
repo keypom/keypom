@@ -19,12 +19,14 @@ impl Keypom {
         self.assert_no_global_freeze();
 
         let mut event_logs: Vec<EventLog> = Vec::new();
+        let initial_gas = env::used_gas();
         let BeforeClaimData { token_id, required_asset_gas, root_account_id: _, account_creation_keypom_args: _ } = self.before_claim_logic(
             &mut event_logs,
             &account_id,
             None,
             password
         );
+        near_sdk::log!("Gas for before claim {}", (env::used_gas() - initial_gas).0);
 
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CLAIM + required_asset_gas;
@@ -36,7 +38,7 @@ impl Keypom {
         );
 
         log_events(event_logs);
-        self.internal_claim_assets(token_id, account_id, fc_args)
+        self.internal_claim_assets(token_id, account_id, fc_args, None)
     }
 
     #[private]
@@ -70,7 +72,7 @@ impl Keypom {
             //.with_attached_deposit(10000000000000000000000) // TODO: remove (needed for sandbox testing)
             .create_account(
                 new_account_id.clone(),
-                new_public_key,
+                new_public_key.clone(),
                 account_creation_keypom_args
         ).then(
             // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
@@ -80,7 +82,8 @@ impl Keypom {
                 .on_new_account_created(
                     token_id,
                     new_account_id,
-                    fc_args
+                    fc_args,
+                    new_public_key
                 )
         )
     }

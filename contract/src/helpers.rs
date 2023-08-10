@@ -59,17 +59,15 @@ pub(crate) fn get_total_costs_for_key(
     total_cost_for_keys: &mut Balance,
     total_allowance_for_keys: &mut Balance,
     remaining_uses: UseNumber, 
-    asset_by_id: &HashMap<AssetId, InternalAsset>,
+    asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
     asset_data_for_uses: &Vec<InternalAssetDataForUses>,
 ) {
     // Get the remaining asset data
     let remaining_asset_data = get_remaining_asset_data(asset_data_for_uses, remaining_uses);
     
-    near_sdk::log!("Remaining Asset Data: {:?}", remaining_asset_data);
-
     // For every remaining asset data, we should query the costs and multiply it by the number of uses left
     for asset_data in remaining_asset_data {
-        let InternalAssetDataForUses { uses, config: use_config, assets_metadata } = asset_data;
+        let InternalAssetDataForUses { uses, config: use_config, assets_metadata, required_asset_gas } = asset_data;
 
         // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
         let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
@@ -90,9 +88,6 @@ pub(crate) fn get_total_costs_for_key(
             assert_valid_time_config(time_config)
         }
 
-        // Keep track of the total gas across all assets in the current use
-        let mut total_gas_for_use: Gas = base_gas_for_use;
-
         // Loop through each asset metadata and tally the costs
         for metadata in assets_metadata {
             // Get the asset object (we only clear the assets by ID when the drop is empty and deleted)
@@ -100,18 +95,15 @@ pub(crate) fn get_total_costs_for_key(
                 .get(&metadata.asset_id)
                 .expect("Asset not found");
 
-            // Every asset has a gas cost associated. We should add that to the total gas.
-            let gas_for_asset = internal_asset.get_total_required_gas();
-            total_gas_for_use += gas_for_asset;
-
             // Get the refund amount for the asset
             let cost_for_use = internal_asset.get_yocto_refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
             *total_cost_for_keys += cost_for_use * uses as u128;
         }
-        require!(total_gas_for_use <= MAX_GAS_ATTACHABLE, format!("Cannot exceed 300 TGas for any given key use. Found {}", total_gas_for_use.0));
 
+        let total_claim_gas = required_asset_gas + base_gas_for_use;
+        
         // Get the total allowance for this use
-        let allowance_for_use = calculate_base_allowance(YOCTO_PER_GAS, total_gas_for_use, false);
+        let allowance_for_use = calculate_base_allowance(YOCTO_PER_GAS, total_claim_gas, false);
         *total_allowance_for_keys += allowance_for_use * uses as u128;
     }
 }
@@ -129,7 +121,8 @@ pub(crate) fn get_remaining_asset_data(asset_data: &Vec<InternalAssetDataForUses
             let asset_to_push = InternalAssetDataForUses { 
                 uses: asset.uses - (uses_traversed - remaining_uses),
                 config: asset.config.clone(), 
-                assets_metadata: asset.assets_metadata.clone()
+                assets_metadata: asset.assets_metadata.clone(),
+                required_asset_gas: asset.required_asset_gas
             };
             
             remaining_data.push(asset_to_push);
@@ -161,7 +154,8 @@ pub(crate) fn get_asset_data_for_specific_use (
     InternalAssetDataForUses {
         uses: 0,
         assets_metadata: vec![],
-        config: None
+        config: None,
+        required_asset_gas: Gas(0)
     }
 }
 

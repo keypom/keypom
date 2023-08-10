@@ -32,14 +32,13 @@ impl Keypom {
             "Only drop funder can delete keys"
         );
 
-        let mut asset: InternalAsset = drop.asset_by_id.get(&ft_contract_id.to_string()).expect("Asset not found").clone();
+        let mut asset: InternalAsset = drop.asset_by_id.get(&ft_contract_id.to_string()).expect("Asset not found");
         // Ensure asset is fungible token and then call the internal function
         if let InternalAsset::ft(ft_data) = &mut asset {
-            let refund_registration = false;
-            ft_data.ft_refund(&drop_id, tokens_to_withdraw.into(), &drop.funder_id, refund_registration);
+            ft_data.ft_refund(&drop_id, tokens_to_withdraw.into(), &drop.funder_id);
         };
 
-        drop.asset_by_id.insert(ft_contract_id.to_string(), asset);
+        drop.asset_by_id.insert(&ft_contract_id.to_string(), &asset);
 
         self.drop_by_id.insert(&drop_id, &drop);
     }
@@ -48,10 +47,8 @@ impl Keypom {
     pub fn ft_resolve_refund(
         &mut self, 
         drop_id: DropId, 
-        asset_id: AssetId, 
-        refund_to: AccountId,
-        tokens_to_transfer: Balance, 
-        near_refund_amount: Balance
+        asset_id: AssetId,
+        tokens_to_transfer: Balance
     ) -> bool {
         let transfer_succeeded = matches!(env::promise_result(0), PromiseResult::Successful(_));
 
@@ -64,9 +61,6 @@ impl Keypom {
                 drop_id,
             );
 
-            if near_refund_amount > 0 {
-                self.internal_modify_user_balance(&refund_to, near_refund_amount, false);
-            }
             return true;
         }
 
@@ -78,12 +72,12 @@ impl Keypom {
 
         // Transfer failed so we need to increment the uses registered and return false
         let mut drop = self.drop_by_id.get(&drop_id).expect("no drop for ID");
-        let mut internal_asset = drop.asset_by_id.get(&asset_id).expect("no asset for ID").clone();
+        let mut internal_asset = drop.asset_by_id.get(&asset_id).expect("no asset for ID");
         
         // ensure asset is FT and then increment the tokens to transfer again
         if let InternalAsset::ft(ref mut ft_asset) = internal_asset {
             ft_asset.add_to_balance_avail(&tokens_to_transfer);
-            drop.asset_by_id.insert(asset_id, internal_asset);
+            drop.asset_by_id.insert(&asset_id, &internal_asset);
         } else {
             panic!("asset is not FT");
         }
@@ -101,8 +95,7 @@ impl InternalFTData {
         &mut self, 
         drop_id: &DropId, 
         tokens_to_transfer: Balance, 
-        refund_to: &AccountId,
-        refund_registration: bool
+        refund_to: &AccountId
     ) {
         require!(self.enough_balance(&tokens_to_transfer), format!("not enough balance to transfer. Found {} but needed {}", self.balance_avail, tokens_to_transfer));
         
@@ -130,10 +123,8 @@ impl InternalFTData {
                 .with_static_gas(MIN_GAS_FOR_RESOLVE_REFUND)
                 .ft_resolve_refund(
                     drop_id.to_string(), 
-                    self.contract_id.to_string(), 
-                    refund_to.clone(),
-                    tokens_to_transfer,
-                    if refund_registration == true { self.registration_cost } else { 0 }
+                    self.contract_id.to_string(),
+                    tokens_to_transfer
                 )
         )
         .as_return();                           

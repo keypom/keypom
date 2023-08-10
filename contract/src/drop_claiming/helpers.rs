@@ -27,17 +27,26 @@ impl Keypom {
         // This state will be written in the current block so prevents re-entrancy attacks.
         // We shouldn't just remove the public key mapping off the bat because there might be
         // Multi use keys that submit multiple txns in the same block. Only delete if empty.
+        let mut pre_gas = env::used_gas();
         let token_id = self
             .token_id_by_pk
             .get(&signer_pk)
             .expect("No drop ID found for PK");
+        near_sdk::log!("Gas to get token ID: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
         
         let (drop_id, _) = parse_token_id(&token_id).unwrap();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        near_sdk::log!("Gas to get drop: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        near_sdk::log!("Gas to get key info: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
-        
+        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata, required_asset_gas } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
+        near_sdk::log!("Gas to get InternalAssetDataForUses: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
+
         assert_pre_claim_conditions(
             &key_info,
             &use_config,
@@ -46,18 +55,10 @@ impl Keypom {
             &drop.max_key_uses,
             new_public_key.is_some()
         );
-        
-        // Tally up all the gas for the assets
-        let mut required_asset_gas = Gas(0);
-        let mut assets = Vec::new();
-        for metadata in assets_metadata {
-            let internal_asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
-            
-            // For claim events
-            assets.push(internal_asset.to_external_events_asset(&metadata.tokens_per_use));
-            required_asset_gas += internal_asset.get_required_asset_gas();
-        }
-        
+
+        near_sdk::log!("Gas to assert pre claim: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
+
         key_info.remaining_uses -= 1;
         key_info.last_claimed = env::block_timestamp();
         if key_info.remaining_uses == 0 {
@@ -89,34 +90,14 @@ impl Keypom {
             });
         }
 
+        near_sdk::log!("Gas for remaining uses decrement: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
+
         drop.key_info_by_token_id.insert(&token_id, &key_info);
         self.drop_by_id.insert(&drop_id, &drop);
 
-        // Log either CAAC or claim events depending on whether or not a new public key was provided
-        if let Some(pk) = new_public_key {
-            event_logs.push(EventLog {
-                standard: KEYPOM_STANDARD_NAME.to_string(),
-                version: KEYPOM_STANDARD_VERSION.to_string(),
-                event: EventLogVariant::CreateAccountAndClaim(CreateAccountAndClaimLog { 
-                    new_account_id: receiver_id.to_string(), 
-                    new_public_key: pk.into(), 
-                    public_key: (&signer_pk).into(), 
-                    drop_id, 
-                    assets
-                }),
-            })
-        } else {
-            event_logs.push(EventLog {
-                standard: KEYPOM_STANDARD_NAME.to_string(),
-                version: KEYPOM_STANDARD_VERSION.to_string(),
-                event: EventLogVariant::Claim(ClaimLog { 
-                    account_id: receiver_id.to_string(), 
-                    public_key: (&signer_pk).into(), 
-                    drop_id, 
-                    assets
-                }),
-            })
-        };
+        near_sdk::log!("Gas for insertions: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
 
         // For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
         let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).unwrap_or(self.root_account.clone());
@@ -132,22 +113,42 @@ impl Keypom {
     /// Internal function that loops through all assets for the given use and claims them.
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
-    pub(crate) fn internal_claim_assets(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs) -> PromiseOrValue<bool> {
+    pub(crate) fn internal_claim_assets(
+        &mut self, 
+        token_id: TokenId, 
+        receiver_id: AccountId, 
+        fc_args: UserProvidedFCArgs,
+        new_public_key: Option<PublicKey>
+    ) -> PromiseOrValue<bool> {
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
 
+        let mut pre_gas = env::used_gas();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        near_sdk::log!("Gas to get drop: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
+        
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        near_sdk::log!("Gas to get key info: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
+
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalAssetDataForUses { uses: _, config: _, assets_metadata } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
-        
+        let InternalAssetDataForUses { uses: _, config: _, assets_metadata, required_asset_gas: _ } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
+        near_sdk::log!("Gas to get asset data: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
+
         //let promises;
         let mut promises = Vec::new();
         let mut token_ids_transferred = Vec::new();
         let mut fc_arg_idx = 0;
+        let mut assets_to_log = Vec::new();
+        let mut idx = 0;
         for metadata in assets_metadata {
-            let mut asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found").clone();
+            let mut asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
             
+            // For claim events
+            assets_to_log.push(asset.to_external_events_asset(&metadata.tokens_per_use));
+
             // We need to keep track of all the NFT token IDs in order to potentially perform refunds
             if let InternalAsset::nft(data) = &asset {
                 token_ids_transferred.push(data.get_next_token_id());
@@ -174,11 +175,46 @@ impl Keypom {
                 fc_arg_idx += 1;
             }
             
-            drop.asset_by_id.insert(metadata.asset_id, asset.clone());
+            drop.asset_by_id.insert(&metadata.asset_id, &asset);
+
+            if idx % 5 == 0 {
+                near_sdk::log!("Gas for loop: {}", (env::used_gas() - pre_gas).0);
+            }
+            pre_gas = env::used_gas();
+            idx += 1;
         }
 
         // Put the modified drop back in storage
         self.drop_by_id.insert(&drop_id, &drop);
+        near_sdk::log!("Gas for insert: {}", (env::used_gas() - pre_gas).0);
+        pre_gas = env::used_gas();
+
+        // Log either CAAC or claim events depending on whether or not a new public key was provided
+        let event_log = if let Some(pk) = &new_public_key {
+            EventLog {
+                standard: KEYPOM_STANDARD_NAME.to_string(),
+                version: KEYPOM_STANDARD_VERSION.to_string(),
+                event: EventLogVariant::CreateAccountAndClaim(CreateAccountAndClaimLog { 
+                    new_account_id: receiver_id.to_string(), 
+                    new_public_key: pk.into(), 
+                    public_key: env::signer_account_id().into(), 
+                    drop_id, 
+                    assets: assets_to_log
+                }),
+            }
+        } else {
+            EventLog {
+                standard: KEYPOM_STANDARD_NAME.to_string(),
+                version: KEYPOM_STANDARD_VERSION.to_string(),
+                event: EventLogVariant::Claim(ClaimLog { 
+                    account_id: receiver_id.to_string(), 
+                    public_key: env::signer_account_id().into(), 
+                    drop_id, 
+                    assets: assets_to_log
+                }),
+            }
+        };
+        log_events(vec![event_log]);
 
         if let Some(resolve) = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises") {
             PromiseOrValue::Promise(resolve.then(
