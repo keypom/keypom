@@ -194,6 +194,9 @@ export async function assertKeypomInternalAssets({
   expectedFtData = expectedFtData || [];
   let dropInfo: ExtDrop = await keypom.view('get_drop_information', {drop_id: dropId});
   console.log('dropInfo: ', dropInfo)
+  // for(let i = 0; i < expectedNftData.length; i++){
+  //   console.log(expectedNftData[i].token_ids)
+  // }
   
   if (expectedNftData.length != dropInfo.nft_asset_data.length) {
     throw new Error(`Expected ${expectedNftData.length} NFTs but found ${dropInfo.nft_asset_data.length}`);
@@ -201,18 +204,16 @@ export async function assertKeypomInternalAssets({
     let count = 0;
     for (let expectedAsset of expectedNftData) {
       // Check if the NFT data matches one from the list
+      console.log(expectedAsset.token_ids)
       let matches = dropInfo.nft_asset_data.find((foundAsset) => {
-        let sameTokens = expectedAsset.token_ids.sort().join(',') === foundAsset.token_ids.sort().join(',')
+        let sameTokens = expectedAsset.token_ids.join(',') === foundAsset.token_ids.join(',')
         console.log('sameTokens: ', sameTokens)
         return foundAsset.contract_id == expectedAsset.contract_id && sameTokens
       });
 
       if (!matches) {
-        console.log(`Expected Contract ID: ${expectedAsset.contract_id}`)
-        console.log(`Expected Tokens: ${expectedAsset.token_ids.sort().join(',')}`)
-
         console.log(`Found Contract ID: ${dropInfo.nft_asset_data[count].contract_id}`)
-        console.log(`Found Tokens: ${dropInfo.nft_asset_data[count].token_ids.sort().join(',')}`)
+        console.log(`Found Tokens: ${dropInfo.nft_asset_data[count].token_ids.join(',')}`)
         throw new Error(`Expected NFT Data [${expectedAsset.contract_id}, ${expectedAsset.token_ids}] not found`);
       }
 
