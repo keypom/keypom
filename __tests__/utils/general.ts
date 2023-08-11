@@ -16,6 +16,10 @@ export const CONTRACT_METADATA = {
   "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
 }
 
+export async function delay(ms: number) {
+  return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
 export async function functionCall({
   signer,
   receiver,

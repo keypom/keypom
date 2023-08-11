@@ -357,8 +357,8 @@ pub(crate) fn assert_claim_timestamps(
         let desired_end_timestamp = time_data.end.unwrap_or(u64::MAX);
         require!(current_timestamp <= desired_end_timestamp, format!("Key {} is no longer claimable. It was claimable up until {}. Current timestamp {}", signer_pk, desired_end_timestamp, current_timestamp));
 
-        let throttle = time_data.throttle.unwrap_or(u64::MAX);
-        require!((current_timestamp - key_info.last_claimed) >= throttle, format!("Key {} was used too recently. It must be used ever {}. Time since last use {}", signer_pk, throttle, current_timestamp - key_info.last_claimed));
+        let throttle = time_data.throttle.unwrap_or(0);
+        require!((current_timestamp - key_info.last_claimed) >= throttle, format!("Key {} was used too recently. It must be used every {}. Time since last use {}", signer_pk, throttle, current_timestamp - key_info.last_claimed));
 
 
         // Ensure the key is within the claim interval if specified
