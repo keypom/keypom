@@ -5,7 +5,7 @@ impl Keypom {
     /// Allows users to add to their balance. This is to prepay and cover drop costs
     #[payable]
     pub fn add_to_balance(&mut self) -> bool  {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
 
         // Get the attached_deposit value which is how much the user wants to add to their storage
         let attached_deposit = env::attached_deposit();
@@ -17,7 +17,7 @@ impl Keypom {
 
     /// Allows users to withdraw their balance
     pub fn withdraw_from_balance(&mut self, amount_to_withdraw: Option<U128>) -> bool  {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
         
         // The account to withdraw storage to is always the predecessor
         let owner_id = env::predecessor_account_id();
@@ -89,13 +89,19 @@ impl Keypom {
     /// Checks that the attached deposit is greater than the required deposit and refunds any excess
     /// If the attached deposit is less than the required deposit, decrement the user balance
     /// If the user doesn't have enough deposit or balance, panic
-    pub(crate) fn charge_with_deposit_or_balance(&mut self, required_deposit: Balance) {
+    pub(crate) fn charge_with_deposit_or_balance(&mut self, required_deposit: Balance, keep_excess_deposit: Option<bool>) {
         let predecessor = env::predecessor_account_id();
         let can_deposit_cover = env::attached_deposit() >= required_deposit;
         
         // In the case that the attached deposit covers what is required, refund the excess
         if can_deposit_cover {
             let amount_to_refund = env::attached_deposit() - required_deposit;
+
+            // If the user wants to keep the excess deposit, just modify the user balance
+            if keep_excess_deposit.unwrap_or(false) {
+                self.internal_modify_user_balance(&predecessor, amount_to_refund, false);
+                return;
+            }
 
             near_sdk::log!("Refunding {} excess deposit", amount_to_refund);
             Promise::new(predecessor).transfer(amount_to_refund);

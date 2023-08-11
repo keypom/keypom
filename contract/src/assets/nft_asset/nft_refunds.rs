@@ -17,7 +17,7 @@ impl Keypom {
         token_ids: Option<Vec<TokenId>>,
         limit: Option<u8>
     ) -> Promise {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
         
         // get the drop object
         let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
@@ -28,7 +28,7 @@ impl Keypom {
             "Only drop funder can delete keys"
         );
 
-        let mut asset: InternalAsset = drop.asset_by_id.get(&nft_contract_id.to_string()).expect("Asset not found").clone();
+        let mut asset: InternalAsset = drop.asset_by_id.get(&nft_contract_id.to_string()).expect("Asset not found");
         
         let initial_storage = env::storage_usage();
         let mut batch_transfer = Promise::new(env::current_account_id());
@@ -61,7 +61,7 @@ impl Keypom {
             );
         };
         
-        drop.asset_by_id.insert(nft_contract_id.to_string(), asset);
+        drop.asset_by_id.insert(&nft_contract_id.to_string(), &asset);
         self.drop_by_id.insert(&drop_id, &drop);
 
         near_sdk::log!("Tokens to transfer: {:?}", tokens_to_transfer);
@@ -96,7 +96,7 @@ impl Keypom {
 
         let initial_storage = env::storage_usage();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        let mut asset: InternalAsset = drop.asset_by_id.get(&asset_id).expect("Asset not found").clone();
+        let mut asset: InternalAsset = drop.asset_by_id.get(&asset_id).expect("Asset not found");
 
         let mut was_successful = true;
         match promise_result {
@@ -130,7 +130,7 @@ impl Keypom {
         // If a transfer failed, we should re-insert the asset into storage
         // Since tokens have been set
         if !was_successful {
-            drop.asset_by_id.insert(asset_id, asset);
+            drop.asset_by_id.insert(&asset_id, &asset);
             self.drop_by_id.insert(&drop_id, &drop);
         }
 

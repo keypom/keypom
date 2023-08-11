@@ -9,7 +9,7 @@ pub struct InternalDrop {
     /// What is the maximum number of uses a given key can have in the drop?
     pub max_key_uses: UseNumber,
     /// Map an asset ID to a specific asset. This is a hyper optimization so the asset data isn't repeated in the contract
-    pub asset_by_id: HashMap<AssetId, InternalAsset>,
+    pub asset_by_id: UnorderedMap<AssetId, InternalAsset>,
     /// For every use, keep track of what assets there are (in order)
     pub asset_data_for_uses: Vec<InternalAssetDataForUses>,
 
@@ -56,20 +56,30 @@ pub struct InternalAssetDataForUses {
     /// Any configurations for this set of uses
     pub config: Option<UseConfig>,
     /// The actual assets themselves (ID + tokens)
-    pub assets_metadata: Vec<AssetMetadata>
+    pub assets_metadata: Vec<AssetMetadata>,
+    /// The amount of gas required to claim this set of assets
+    pub required_asset_gas: Gas
 }
 
 impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
     fn from(ext_asset_data: &ExtAssetDataForUses) -> Self {
         let mut assets_metadata = vec![];
 
-        let mut fc_asset_id = 0;
+        // Keep track of the total gas across all assets in the current use
+        let mut total_required_asset_gas: Gas = Gas(0);
+
+        let mut fc_idx = 0;
         for ext_asset in &ext_asset_data.assets {
+            // Every asset has a gas cost associated. We should add that to the total gas.
+            let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
+            let gas_for_asset = internal_asset.get_total_required_gas();
+            total_required_asset_gas += gas_for_asset;
+
             // If the external asset is of type FCData, the asset ID will be the incrementing number
             // Otherwise, it will be the asset ID specified
             let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
-                fc_asset_id += 1;
-                fc_asset_id.to_string()
+                fc_idx += 1;
+                format!("{}{}", FC_ASSET_PREFIX, fc_idx)
             } else {
                 ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
             };
@@ -80,11 +90,11 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
             });
         }
 
-
         Self {
             uses: ext_asset_data.uses,
             config: ext_asset_data.config.clone(),
-            assets_metadata
+            assets_metadata,
+            required_asset_gas: total_required_asset_gas
         }
     }
 }
@@ -147,6 +157,7 @@ pub struct BeforeClaimData {
 #[derive(BorshSerialize, BorshStorageKey)]
 pub enum StorageKeys {
     KeyInfoByPk { drop_id_hash: CryptoHash },
+    AssetById { drop_id_hash: CryptoHash },
     TokensPerOwnerInner { account_id_hash: CryptoHash },
     DropIdsByFunderInner { account_id_hash: CryptoHash },
     DropIdsByFunder,

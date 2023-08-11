@@ -46,6 +46,31 @@ impl InternalDrop {
 
 impl InternalAsset {
     /// Convert an `InternalAsset` into an `ExtAsset`
+    pub fn to_external_events_asset(&self, tokens_per_use: &Option<U128>) -> Option<ExtAssetForEvents> {
+        match self {
+            InternalAsset::ft(ft_data) => Some(ExtAssetForEvents::FTAsset(ExtFTData {
+                ft_contract_id: ft_data.contract_id.clone(),
+                registration_cost: ft_data.registration_cost.into(),
+                // FTs should ALWAYS have a tokens_per_use value
+                ft_amount: tokens_per_use.unwrap()
+            })),
+            InternalAsset::nft(nft_data) => Some(ExtAssetForEvents::NFTAsset(ExtNFTData {
+                nft_contract_id: nft_data.contract_id.clone()
+            })),
+            InternalAsset::fc(fc_data) => Some(ExtAssetForEvents::FCAsset(
+                fc_data.methods.iter().map(|method| ExtFCDataForEvents { 
+                    receiver_id: method.receiver_id.clone(), 
+                    method_name: method.method_name.clone(), 
+                    attached_deposit: method.attached_deposit, 
+                    attached_gas: method.attached_gas 
+                }).collect()
+            )),
+            InternalAsset::near => Some(ExtAssetForEvents::NearAsset(ExtNEARData { yoctonear: tokens_per_use.unwrap() })),
+            InternalAsset::none => None
+        }
+    }
+
+    /// Convert an `InternalAsset` into an `ExtAsset`
     pub fn to_external_asset(&self, tokens_per_use: &Option<U128>) -> Option<ExtAsset> {
         match self {
             InternalAsset::ft(ft_data) => Some(ExtAsset::FTAsset(ExtFTData {
@@ -57,7 +82,7 @@ impl InternalAsset {
             InternalAsset::nft(nft_data) => Some(ExtAsset::NFTAsset(ExtNFTData {
                 nft_contract_id: nft_data.contract_id.clone()
             })),
-            InternalAsset::fc(fc_data) => Some(ExtAsset::FCAsset(FCData::new(fc_data.methods.clone()))),
+            InternalAsset::fc(fc_data) => Some(ExtAsset::FCAsset(fc_data.methods.clone())),
             InternalAsset::near => Some(ExtAsset::NearAsset(ExtNEARData { yoctonear: tokens_per_use.unwrap() })),
             InternalAsset::none => None
         }
@@ -73,7 +98,7 @@ impl InternalAsset {
         drop_id: DropId,
         key_id: String,
         funder_id: AccountId
-    ) -> Promise {
+    ) -> Option<Promise> {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
@@ -85,10 +110,10 @@ impl InternalAsset {
                 return fc_data.claim_fc_asset(fc_args, receiver_id.clone(), drop_id, key_id, funder_id)
             },
             InternalAsset::near => {
-                return Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap());
+                return Some(Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap()));
             },
             InternalAsset::none => {
-                return Promise::new(env::current_account_id());
+                return None;
             }
         }
     }
@@ -154,12 +179,23 @@ impl InternalAsset {
         }
     }
 
-    /// Standard function to query how much gas it takes for 1 claim of a given asset
-    pub fn get_required_gas(&self) -> Gas {
+    /// Standard function to query how much gas should be attached to a given claim
+    pub fn get_total_required_gas(&self) -> Gas {
         match self {
-            InternalAsset::ft(ft_data) => ft_data.get_required_gas_for_claim(),
-            InternalAsset::nft(nft_data) => nft_data.get_required_gas_for_claim(),
-            InternalAsset::fc(fc_data) => fc_data.get_required_gas_for_claim(),
+            InternalAsset::ft(ft_data) => ft_data.get_total_required_gas(),
+            InternalAsset::nft(nft_data) => nft_data.get_total_required_gas(),
+            InternalAsset::fc(fc_data) => fc_data.get_total_required_gas(),
+            InternalAsset::near => GAS_FOR_NEAR_TRANSFER,
+            InternalAsset::none => GAS_FOR_NONE_ASSET
+        }
+    }
+
+    /// Standard function to query how much gas it takes for 1 claim of a given asset
+    pub fn get_required_asset_gas(&self) -> Gas {
+        match self {
+            InternalAsset::ft(ft_data) => ft_data.get_required_asset_gas(),
+            InternalAsset::nft(nft_data) => nft_data.get_required_asset_gas(),
+            InternalAsset::fc(fc_data) => fc_data.get_required_asset_gas(),
             InternalAsset::near => GAS_FOR_NEAR_TRANSFER,
             InternalAsset::none => GAS_FOR_NONE_ASSET
         }

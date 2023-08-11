@@ -18,7 +18,7 @@ impl FCData {
             require!(!DEFAULT_PROHIBITED_FC_METHODS.contains(&method.method_name.as_str()), format!("Method {} is prohibited from being called in an FC drop", method.method_name));
 
             // Check if the receiver is valid
-            require!(method.receiver_id != env::current_account_id(), "Receiver ID cannot be current Keypom contract.");
+            require!(method.receiver_id != env::current_account_id().to_string(), "Receiver ID cannot be current Keypom contract.");
         }
         
         Self {
@@ -38,15 +38,29 @@ impl FCData {
     }
 
     /// Query how much gas is required for a single claim
-    pub fn get_required_gas_for_claim(&self) -> Gas {
+    pub fn get_required_asset_gas(&self) -> Gas {
         // Loop through all the methods, tally up their attached gas and then:
-        // Total Method Gas + MIN_BASE_GAS_FOR_ONE_CCC * num_methods + GAS_FOR_FC_CLAIM_LOGIC
+        // Total Method Gas + MIN_BASE_GAS_FOR_ONE_CCC * num_methods + GAS_FOR_FC_CLAIM_LOGIC + num_methods + the length of the arguments
         let mut total_gas = Gas(0);
         for method in self.methods.iter() {
             total_gas += method.attached_gas;
+            total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP + GAS_FOR_FC_CLAIM_LOGIC;
         }
-        total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP * self.methods.len() as u64;
-        total_gas += GAS_FOR_FC_CLAIM_LOGIC;
+
+        total_gas
+    }
+
+    /// Query how much gas is required for a single claim
+    pub fn get_total_required_gas(&self) -> Gas {
+        // Loop through all the methods, tally up their attached gas and then:
+        // Total Method Gas + MIN_BASE_GAS_FOR_ONE_CCC * num_methods + GAS_FOR_FC_CLAIM_LOGIC + num_methods + the length of the arguments
+        let mut total_gas = Gas(0);
+        for method in self.methods.iter() {
+            let arg_len = method.args.len() as u64;
+            total_gas += GAS_PER_ARG_LENGTH * arg_len * 2;
+            total_gas += method.attached_gas;
+            total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP + GAS_FOR_FC_CLAIM_LOGIC;
+        }
 
         total_gas
     }

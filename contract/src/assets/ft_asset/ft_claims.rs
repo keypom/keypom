@@ -20,10 +20,10 @@ impl InternalFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).
     /// If the transfer fails, the FTs will be returned to the available balance
     /// Should *only* be invoked if the available balance is greater than or equal to the transfer amount.
-    pub fn claim_ft_asset(&mut self, receiver_id: &AccountId, transfer_amount: &Balance) -> Promise {
+    pub fn claim_ft_asset(&mut self, receiver_id: &AccountId, transfer_amount: &Balance) -> Option<Promise> {
         if !self.enough_balance(&transfer_amount) {
             near_sdk::log!("not enough balance to transfer. Found {} but needed {}. Skipping asset claim.", self.balance_avail, transfer_amount);
-            return Promise::new(env::current_account_id());
+            return None;
         }
             
         
@@ -53,6 +53,6 @@ impl InternalFTData {
             GasWeight(1)
         );
 
-        batch_transfer
+        Some(batch_transfer)
     }
 }

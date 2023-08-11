@@ -66,7 +66,7 @@ pub struct ClaimLog {
     pub drop_id: String,
     pub public_key: String,
 
-    pub assets: Vec<Option<ExtAsset>>,
+    pub assets: Vec<Option<ExtAssetForEvents>>,
 }
 
 /// An event log to capture whenever a key is used to call `claim`
@@ -84,5 +84,5 @@ pub struct CreateAccountAndClaimLog {
     pub public_key: String,
     pub drop_id: String,
 
-    pub assets: Vec<Option<ExtAsset>>,
+    pub assets: Vec<Option<ExtAssetForEvents>>,
 }

@@ -20,7 +20,7 @@ impl Keypom {
         sender_id: AccountId,
         msg: DropId,
     ) -> PromiseOrValue<bool> {
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
         
         let initial_storage = env::storage_usage();
         let drop_id = msg;
@@ -31,14 +31,14 @@ impl Keypom {
         // and then the funder has to pay for the storage.
         require!(drop.funder_id == sender_id, "Only the funder can add NFTs to the drop");
 
-        let mut asset: InternalAsset = drop.asset_by_id.get(&asset_id.to_string()).expect("Asset not found").clone();
+        let mut asset: InternalAsset = drop.asset_by_id.get(&asset_id.to_string()).expect("Asset not found");
         // Ensure asset is an NFT and then call the internal function
         if let InternalAsset::nft(nft_data) = &mut asset {
             nft_data.add_to_token_ids(&token_id);
             near_sdk::log!("Added Token ID: {} to drop ID {}. There are now {} NFTs available for claim", token_id, drop_id, nft_data.token_ids.len() as u32);
         };
 
-        drop.asset_by_id.insert(asset_id.to_string(), asset);
+        drop.asset_by_id.insert(&asset_id.to_string(), &asset);
 
         self.drop_by_id.insert(&drop_id, &drop);
 

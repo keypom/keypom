@@ -15,7 +15,7 @@ impl Keypom {
         limit: Option<u8>,
         keep_empty_drop: Option<bool>
     ) -> PromiseOrValue<bool>{
-        self.asset_no_global_freeze();
+        self.assert_no_global_freeze();
 
         // Measure initial storage before doing any operations
         let initial_storage = env::storage_usage();

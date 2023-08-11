@@ -112,7 +112,8 @@ impl Keypom {
         did_create_drop: bool,
         asset_cost_per_key: Balance, 
         allowance_per_key: Balance,
-        net_storage: u64
+        net_storage: u64,
+        keep_excess_deposit: Option<bool>
     ) {
         let num_keys = num_keys as u128;
         
@@ -126,7 +127,7 @@ impl Keypom {
         let total_cost = total_asset_cost + storage_cost + total_allowance_cost + total_fees;
         
         near_sdk::log!("total {} storage {} asset {} allowance {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, total_fees);
-        self.charge_with_deposit_or_balance(total_cost);
+        self.charge_with_deposit_or_balance(total_cost, keep_excess_deposit);
     }
 
     /// Internal method to add a drop ID the list of drops a funder has. If they don't have any, instantiate
@@ -175,15 +176,15 @@ impl Keypom {
 /// Helper function to ingest external assets and store them in the internal asset by ID map
 pub fn store_assets_by_id (
     ext_assets: &Vec<Option<ExtAsset>>,
-    asset_by_id: &mut HashMap<AssetId, InternalAsset>
+    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
 ) {
-    let mut fc_asset_id = 0;
+    let mut fc_idx = 0;
     for ext_asset in ext_assets {
         // If the external asset is of type FCData, the asset ID will be the incrementing number
         // Otherwise, it will be the asset ID specified
         let asset_id = if let Some(ExtAsset::FCAsset(_)) = ext_asset {
-            fc_asset_id += 1;
-            fc_asset_id.to_string()
+            fc_idx += 1;
+            format!("{}{}", FC_ASSET_PREFIX, fc_idx)
         } else {
             ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
         };
@@ -193,7 +194,7 @@ pub fn store_assets_by_id (
         if asset_by_id.get(&asset_id).is_none() {
             let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
 
-            asset_by_id.insert(asset_id, internal_asset);
+            asset_by_id.insert(&asset_id, &internal_asset);
         }
     }
 }

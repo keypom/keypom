@@ -8,13 +8,12 @@ pub const MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP: Gas = Gas(5_000_000_000_000); // 5 T
 /// Maximum amount of Gas that can be attached to the transaction
 pub const MAX_GAS_ATTACHABLE: Gas = Gas(300_000_000_000_000); // 300 TGas
 /// Minimum amount of gas required to perform any necessary computations for the receipt
-pub const MIN_GAS_FOR_RECEIPT_COMPUTATION: Gas = Gas(10_000_000_000_000); // 10 TGas
-
+pub const MIN_GAS_FOR_RECEIPT_COMPUTATION: Gas = Gas(5_000_000_000_000); // 7.5 TGas
 
 // ------------------------ Create Account & Claim ------------------------ //
 /// The base amount of gas required for create_account_and_claim calls.
 /// This does not include the actual asset promises
-pub const BASE_GAS_FOR_CREATE_ACC_AND_CLAIM: Gas = Gas(BASE_GAS_FOR_CLAIM.0 + GAS_FOR_CREATE_ACCOUNT.0 + MIN_GAS_FOR_RECEIPT_COMPUTATION.0 + MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.0);
+pub const BASE_GAS_FOR_CREATE_ACC_AND_CLAIM: Gas = Gas(BASE_GAS_FOR_CLAIM.0 + GAS_FOR_CREATE_ACCOUNT.0 + MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.0);
 /// Actual amount of GAS to attach for creating a new account.
 /// This value is equal to 28 TGas
 pub const GAS_FOR_CREATE_ACCOUNT: Gas = Gas(28_000_000_000_000); 
@@ -26,7 +25,7 @@ pub const BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION: Gas = Gas(MIN_GAS_FOR_RECEIPT_C
 // ------------------------ Claim ------------------------ //
 /// The base amount of gas required for claim calls.
 /// This does not include the actual asset promises
-pub const BASE_GAS_FOR_CLAIM: Gas = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION;
+pub const BASE_GAS_FOR_CLAIM: Gas = Gas(BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION.0 + 2*MIN_GAS_FOR_RECEIPT_COMPUTATION.0);
 
 
 // ------------------------ Shared Constants ------------------------ //
@@ -43,13 +42,5 @@ pub const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
 
 
 // ------------------------ Assets ------------------------ //
-/// Asset ID for the none / null asset
-pub const NONE_ASSET_ID: &str = "none-asset";
-pub const GAS_FOR_NONE_ASSET: Gas = Gas(450_000_000_000); // 0.45 TGas
-
-/// Asset ID for the near asset
-pub const NEAR_ASSET_ID: &str = "near";
-pub const GAS_FOR_NEAR_TRANSFER: Gas = Gas(3_000_000_000_000); // 3 TGas
-
-/// Asset ID for the fc assets (this should never be used though and is just a fallback)
-pub const FALLBACK_FC_ASSET_ID: &str = "fc";
+pub const GAS_FOR_NONE_ASSET: Gas = Gas(400_000_000_000); // 0.4 TGas
+pub const GAS_FOR_NEAR_TRANSFER: Gas = Gas(9_000_000_000_000); // 9 TGas
