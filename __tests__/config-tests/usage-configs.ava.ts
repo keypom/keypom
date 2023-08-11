@@ -35,6 +35,9 @@ test.beforeEach(async (t) => {
     await ali.updateAccount({
         amount: NEAR.parse('10000000 N').toString()
     })
+
+    const keypom_args_linkdrop = await root.createSubAccount(`keypom-args-linkdrop`)
+    await keypom_args_linkdrop.deploy(`./__tests__/ext-wasm/create-account-keypom-injected-args-linkdrop.wasm`)
     
     await keypomV3.deploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
@@ -53,6 +56,7 @@ test.beforeEach(async (t) => {
    
 
     await root.call(root, 'new', {});
+    await keypom_args_linkdrop.call(keypom_args_linkdrop, 'new', {})
     await keypomV3.call(keypomV3, 'new', { root_account: root.accountId, owner_id: keypomV3.accountId, contract_metadata: {version: "3.0.0", link: "hello"} });
 
     await functionCall({
@@ -75,7 +79,7 @@ test.beforeEach(async (t) => {
     // Save state for test runs
     t.context.worker = worker;
     // t.context.accounts = { root, funder, keypomV3, ali };
-    t.context.accounts = { root, funder, ftContract1, keypomV3, ali };
+    t.context.accounts = { root, funder, ftContract1, keypomV3, ali, keypom_args_linkdrop };
 
     // ftContract1, ftContract2
     t.context.rpcPort = rpcPort;
@@ -94,13 +98,140 @@ test.afterEach(async t => {
 //    Account creation fields being properly sent
 
 
-test('Different Permission for Keys', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
+// test('Different Permission for Keys + Auto Delete when Empty', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
+    
+//     let initialBal = await keypomV3.balance();
+
+//     const dropId = "my-drop-id";
+//     const numKeys = 1;
+//     let keyPairs = await generateKeyPairs(numKeys);
+
+//     // ******************* Creating Drop *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("0.2").toString()
+//     }
+
+//     const asset_data_per_use = [
+//         {
+//             assets: [nearAsset1],
+//             uses: 1,
+//             config: {
+//                 permissions: "claim"
+//             }
+//         },
+//         {
+//             assets: [nearAsset1],
+//             uses: 1,
+//             config: {
+//                 permissions: "create_account_and_claim"
+//             }
+//         },
+//         {
+//             assets: [nearAsset1],
+//             uses: 2
+//         },
+//     ]
+
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[0],
+//             }],
+//         },
+//     }) 
+
+//     // ******************* Claiming *******************
+//     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+//     t.is(keyInfo.uses_remaining == 4, true)
+//     // First claim is limited to claim, try CAAC
+//     try{
+//         await claimWithRequiredGas({
+//             keypom: keypomV3,
+//             keyPair: keyPairs.keys[0],
+//             root,
+//             createAccount: true
+//         })
+//         t.fail()
+//     }catch{
+//         await claimWithRequiredGas({
+//             keypom: keypomV3,
+//             keyPair: keyPairs.keys[0],
+//             root,
+//             receiverId: ali.accountId
+//         })
+//     }
+
+//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+//     t.is(keyInfo.uses_remaining == 3, true)
+
+//     // Second Claim is limited to CAAC, try claim
+//     try{
+//         await claimWithRequiredGas({
+//             keypom: keypomV3,
+//             keyPair: keyPairs.keys[0],
+//             root,
+//             receiverId: ali.accountId
+//         })
+//         t.fail()
+//     }catch{
+//         await claimWithRequiredGas({
+//             keypom: keypomV3,
+//             keyPair: keyPairs.keys[0],
+//             root,
+//             createAccount: true
+//         })
+//     }
+
+//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+//     t.is(keyInfo.uses_remaining == 2, true)
+
+//     // Next Two Claims not limited
+//     // Claim
+//     try{
+//         await claimWithRequiredGas({
+//             keypom: keypomV3,
+//             keyPair: keyPairs.keys[0],
+//             root,
+//             receiverId: ali.accountId
+//         })
+//     }catch{
+//         t.fail()
+//     }
+
+//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+//     t.is(keyInfo.uses_remaining == 1, true)
+
+//     //CAAC
+//     try{
+//         await claimWithRequiredGas({
+//             keypom: keypomV3,
+//             keyPair: keyPairs.keys[0],
+//             root,
+//             createAccount: true
+//         })
+//     }catch{
+//         t.fail()
+//     }
+
+//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
+//     let finalBal = await keypomV3.balance();
+//     t.deepEqual(initialBal.stateStaked, finalBal.stateStaked)
+// });
+
+test('Account creation fields being properly sent', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, keypom_args_linkdrop} = t.context.accounts;
     
     let initialBal = await keypomV3.balance();
 
     const dropId = "my-drop-id";
-    const numKeys = 2;
+    const numKeys = 1;
     let keyPairs = await generateKeyPairs(numKeys);
 
     // ******************* Creating Drop *******************
@@ -111,7 +242,13 @@ test('Different Permission for Keys', async t => {
     const asset_data_per_use = [
         {
             assets: [nearAsset1],
-            uses: 5
+            uses: 1,
+            config: {
+                account_creation_keypom_args: {
+                    drop_id_field: "keypom_drop_id"
+                },
+                root_account_id: keypom_args_linkdrop.accountId
+            }
         },
     ]
 
@@ -125,81 +262,28 @@ test('Different Permission for Keys', async t => {
             key_data: [{
                 public_key: keyPairs.publicKeys[0],
             }],
-            drop_config: {
-                
-            }
         },
     }) 
 
-    // ******************* Adding Assets *******************
-    let preSendBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-    
-    await sendFTs(funder, "5", keypomV3, ftContract1, dropId);
+    // ******************* Claiming *******************
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 1, true)
 
-    await assertFTBalance({
-        ftContract: ftContract1,
-        accountId: keypomV3.accountId,
-        amountOwned: '5'
-    });
+    //CAAC
+    try{
+        await claimWithRequiredGas({
+            keypom: keypomV3,
+            keyPair: keyPairs.keys[0],
+            root,
+            createAccount: true,
+            receiverId: "abcdefghijklmnopqrstuvwxyz1234567.keypom-args-linkdrop.test.near"
+        })
+    }catch{
+        t.fail()
+    }
 
-    await assertKeypomInternalAssets({
-        keypom: keypomV3,
-        dropId,
-        expectedFtData: [{
-                contract_id: ftContract1.accountId,
-                balance_avail: '5',
-            }]
-    })
-
-    let postSendBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-    let balChange = formatNearAmount((BigInt(preSendBal) - BigInt(postSendBal)).toString(), 5);
-    console.log(balChange)
-    // 0 CHANGE AFTER SENDING, IS THIS EXPECTED?
-    t.is(balChange == "0", true)
-
-    let bal1: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-    
-    // Withdraw 2 FTs
-    let withdrawResponse = await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "withdraw_ft_balance",
-        args: {
-            drop_id: dropId, 
-            ft_contract_id: ftContract1.accountId, 
-            tokens_to_withdraw: '2'
-        },
-    }) 
-    t.is(withdrawResponse == "true", true)
-
-    await assertFTBalance({
-        ftContract: ftContract1,
-        accountId: keypomV3.accountId,
-        amountOwned: '3'
-    });
-
-    // Withdraw 3 FTs
-    withdrawResponse = await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "withdraw_ft_balance",
-        args: {
-            drop_id: dropId, 
-            ft_contract_id: ftContract1.accountId, 
-            tokens_to_withdraw: '3'
-        },
-    }) 
-    t.is(withdrawResponse == "true", true)
-
-    await assertFTBalance({
-        ftContract: ftContract1,
-        accountId: keypomV3.accountId,
-        amountOwned: '0'
-    });
-
-    let bal2: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-    balChange = formatNearAmount((BigInt(bal2) - BigInt(bal1)).toString(), 5);
-    // No balance change from simple withdraws, only once key is deleted
-    t.is(balChange == "0", true)
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+    let finalBal = await keypomV3.balance();
+    t.deepEqual(initialBal.stateStaked, finalBal.stateStaked)
 });
-

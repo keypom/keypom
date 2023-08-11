@@ -67,11 +67,12 @@ impl Keypom {
         near_sdk::log!("gas_for_callback: {}", gas_for_callback.0);
 
         log_events(event_logs);
+        near_sdk::log!("Keypom Args Before create_account: {:?}", account_creation_keypom_args);
         // First, create the zero-balance account and then, claim the assets
         ext_account_creation::ext(root_account_id)
             .with_static_gas(GAS_FOR_CREATE_ACCOUNT)
             .with_unused_gas_weight(0)
-            //.with_attached_deposit(10000000000000000000000) // TODO: remove (needed for sandbox testing)
+            .with_attached_deposit(10000000000000000000000) // TODO: remove (needed for sandbox testing)
             .create_account(
                 new_account_id.clone(),
                 new_public_key.clone(),

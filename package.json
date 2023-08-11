@@ -52,7 +52,8 @@
 		"test:nft-keys": "ava __tests__/nft-keys/nft-keys-basics.ava.ts",
 		"test:delete-keys": "ava __tests__/deletion/key-deletion.ava.ts",
 		"test:withdraw-nft": "ava __tests__/withdraw-assets/withdraw-nft.ava.ts",
-		"test:withdraw-ft": "ava __tests__/withdraw-assets/withdraw-ft.ava.ts"
+		"test:withdraw-ft": "ava __tests__/withdraw-assets/withdraw-ft.ava.ts",
+		"test:configs-usage": "ava __tests__/config-tests/usage-configs.ava.ts"
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",
