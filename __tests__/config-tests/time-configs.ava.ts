@@ -110,8 +110,8 @@ test('Start, End and Interval', async t => {
                     // Date.now() return ms, convert to ns
                     // 3s buffer added to allow drop creation to complete
                     start: (Date.now() * 1e6) + ONE_SECOND_NS * 13,
-                    end: (Date.now() * 1e6) + ONE_SECOND_NS * 60,
-                    interval: ONE_SECOND_NS * 10
+                    end: (Date.now() * 1e6) + ONE_SECOND_NS * 80,
+                    interval: ONE_SECOND_NS * 15
                 }
             }
         },
@@ -143,8 +143,19 @@ test('Start, End and Interval', async t => {
         receiverId: ali.accountId,
         shouldPanic: true
     })
-    // Estimate that creating drop + first claim has taken 15s, this should work
-    await delay(20*ONE_SECOND_MS)
+
+    // This should fail as start + interval are violated
+    await delay(10*ONE_SECOND_MS)
+    await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
+
+    // Start + Interval is Respected
+    await delay(10*ONE_SECOND_MS)
     await claimWithRequiredGas({
         keypom: keypomV3,
         keyPair: keyPairs.keys[0],
@@ -165,7 +176,7 @@ test('Start, End and Interval', async t => {
     })
 
     // Let multiple Intervals Pass, then claim multiple times
-    await delay(20*ONE_SECOND_MS);
+    await delay(30*ONE_SECOND_MS);
     await claimWithRequiredGas({
         keypom: keypomV3,
         keyPair: keyPairs.keys[0],
@@ -182,7 +193,7 @@ test('Start, End and Interval', async t => {
     t.is(keyInfo.uses_remaining == 1, true)
 
     // Wait out beyond end time
-    await delay(30*ONE_SECOND_MS);
+    await delay(40*ONE_SECOND_MS);
     await claimWithRequiredGas({
         keypom: keypomV3,
         keyPair: keyPairs.keys[0],
@@ -199,128 +210,194 @@ test('Start, End and Interval', async t => {
 });
     
 
-// test('Throttle', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, keypom_args_linkdrop} = t.context.accounts;
+test('Throttle', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
+    const ONE_SECOND_NS = 1e9
+    const ONE_SECOND_MS = 1e3
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "my-drop-id";
+    const numKeys = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
+
+    // ******************* Creating Drop *******************
+    const nearAsset1: ExtNearData = {
+        yoctonear: NEAR.parse("0.2").toString()
+    }
+
+    const asset_data_per_use = [
+        {
+            assets: [nearAsset1],
+            uses: 2,
+            config: {
+                time:{
+                    // Date.now() return ms, convert to ns
+                    // 3s buffer added to allow drop creation to complete
+                    throttle: 30 * ONE_SECOND_NS
+                }
+            }
+        },
+    ]
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: asset_data_per_use,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
+        },
+    }) 
     
-//     let initialBal = await keypomV3.balance();
+    // ******************* Claiming *******************
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 2, true)
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    // This should work
+    await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        receiverId: ali.accountId,
+    })
 
-//     // ******************* Creating Drop *******************
-//     const nearAsset1: ExtNearData = {
-//         yoctonear: NEAR.parse("0.2").toString()
-//     }
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 1, true)
 
-//     const asset_data_per_use = [
-//         {
-//             assets: [nearAsset1],
-//             uses: 1,
-//             config: {
-//                 account_creation_keypom_args: {
-//                     drop_id_field: "keypom_drop_id"
-//                 },
-//                 root_account_id: keypom_args_linkdrop.accountId
-//             }
-//         },
-//     ]
+    // This should fail as throttle is violated
+    await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
 
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data: asset_data_per_use,
-//             key_data: [{
-//                 public_key: keyPairs.publicKeys[0],
-//             }],
-//         },
-//     }) 
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 1, true)
 
-//     // ******************* Claiming *******************
-//     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining == 1, true)
+    // Throttle is respected, key should be depleted
+    await delay(30*ONE_SECOND_MS)
+    await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        receiverId: ali.accountId
+    })
+  
+    // Key and Drop should still exist here
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+});
 
-//     //CAAC
-//     try{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             createAccount: true,
-//             receiverId: "abcdefghijklmnopqrstuvwxyz1234567.keypom-args-linkdrop.test.near"
-//         })
-//     }catch{
-//         t.fail()
-//     }
+test('Interval Without Start', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
+    const ONE_SECOND_NS = 1e9
+    const ONE_SECOND_MS = 1e3
+    let initialBal = await keypomV3.balance();
 
-//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
-//     let finalBal = await keypomV3.balance();
-//     t.deepEqual(initialBal.stateStaked, finalBal.stateStaked)
-// });
+    const dropId = "my-drop-id";
+    const numKeys = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-// test('Interval without Start', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, keypom_args_linkdrop} = t.context.accounts;
+    // ******************* Creating Drop *******************
+    const nearAsset1: ExtNearData = {
+        yoctonear: NEAR.parse("0.2").toString()
+    }
+
+    const asset_data_per_use = [
+        {
+            assets: [nearAsset1],
+            uses: 3,
+            config: {
+                time:{
+                    interval: ONE_SECOND_NS * 15
+                }
+            }
+        },
+    ]
+
+    // Drop creation should fail... I feel like this should just allow creation and set start as drop creation time
+    try{
+        await functionCall({
+            signer: funder,
+            receiver: keypomV3,
+            methodName: 'create_drop',
+            args: {
+                drop_id: dropId,
+                asset_data: asset_data_per_use,
+                key_data: [{
+                    public_key: keyPairs.publicKeys[0],
+                }],
+            },
+        }) 
+        t.fail()
+    }
+    catch{
+        t.pass()
+    }
     
-//     let initialBal = await keypomV3.balance();
+    
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    // ******************* Claiming *******************
+    // let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    // t.is(keyInfo.uses_remaining == 3, true)
 
-//     // ******************* Creating Drop *******************
-//     const nearAsset1: ExtNearData = {
-//         yoctonear: NEAR.parse("0.2").toString()
-//     }
+    // // This should fail as interval will be 15s from drop creation
+    // await claimWithRequiredGas({
+    //     keypom: keypomV3,
+    //     keyPair: keyPairs.keys[0],
+    //     root,
+    //     receiverId: ali.accountId,
+    //     shouldPanic: true
+    // })
 
-//     const asset_data_per_use = [
-//         {
-//             assets: [nearAsset1],
-//             uses: 1,
-//             config: {
-//                 account_creation_keypom_args: {
-//                     drop_id_field: "keypom_drop_id"
-//                 },
-//                 root_account_id: keypom_args_linkdrop.accountId
-//             }
-//         },
-//     ]
+    // keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    // t.is(keyInfo.uses_remaining == 3, true)
 
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data: asset_data_per_use,
-//             key_data: [{
-//                 public_key: keyPairs.publicKeys[0],
-//             }],
-//         },
-//     }) 
+    // // This should work as interval would have been respected
+    // await delay(10*ONE_SECOND_MS)
+    // await claimWithRequiredGas({
+    //     keypom: keypomV3,
+    //     keyPair: keyPairs.keys[0],
+    //     root,
+    //     receiverId: ali.accountId,
+    // })
 
-//     // ******************* Claiming *******************
-//     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining == 1, true)
+    // keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    // t.is(keyInfo.uses_remaining == 2, true)
 
-//     //CAAC
-//     try{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             createAccount: true,
-//             receiverId: "abcdefghijklmnopqrstuvwxyz1234567.keypom-args-linkdrop.test.near"
-//         })
-//     }catch{
-//         t.fail()
-//     }
+    // // Will fail as interval is not respected
+    // await claimWithRequiredGas({
+    //     keypom: keypomV3,
+    //     keyPair: keyPairs.keys[0],
+    //     root,
+    //     receiverId: ali.accountId,
+    //     shouldPanic: true
+    // })
 
-//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
-//     let finalBal = await keypomV3.balance();
-//     t.deepEqual(initialBal.stateStaked, finalBal.stateStaked)
-// });
+    // keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    // t.is(keyInfo.uses_remaining == 2, true)
+
+    // // Wait Multiple Intervals, Claim x2
+    // await delay(30*ONE_SECOND_MS)
+    // await claimWithRequiredGas({
+    //     keypom: keypomV3,
+    //     keyPair: keyPairs.keys[0],
+    //     root,
+    //     receiverId: ali.accountId
+    // })
+    // await claimWithRequiredGas({
+    //     keypom: keypomV3,
+    //     keyPair: keyPairs.keys[0],
+    //     root,
+    //     receiverId: ali.accountId
+    // })
+  
+    // // Key should be done now
+    // t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+    // t.is(await doesDropExist(keypomV3, dropId), false)
+});
