@@ -15,7 +15,6 @@ impl Keypom {
     pub(crate) fn before_claim_logic(
         &mut self, 
         event_logs: &mut Vec<EventLog>, 
-        receiver_id: &AccountId, 
         new_public_key: Option<&PublicKey>,
         password: Option<String>
     ) -> BeforeClaimData {
@@ -145,9 +144,14 @@ impl Keypom {
         let mut idx = 0;
         for metadata in assets_metadata {
             let mut asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
-            
+            near_sdk::log!("Gas for get asset in loop: {}", (env::used_gas() - pre_gas).0);
+            pre_gas = env::used_gas();
+
             // For claim events
             assets_to_log.push(asset.to_external_events_asset(&metadata.tokens_per_use));
+
+            near_sdk::log!("Gas for asset log push: {}", (env::used_gas() - pre_gas).0);
+            pre_gas = env::used_gas();
 
             // We need to keep track of all the NFT token IDs in order to potentially perform refunds
             if let InternalAsset::nft(data) = &asset {
@@ -170,6 +174,9 @@ impl Keypom {
                 drop.funder_id.clone()
             ));
 
+            near_sdk::log!("Gas for claim asset promise push: {}", (env::used_gas() - pre_gas).0);
+            pre_gas = env::used_gas();
+
             // Increment the number of fc args we've seen
             if let InternalAsset::fc(_) = asset {
                 fc_arg_idx += 1;
@@ -177,10 +184,10 @@ impl Keypom {
             
             drop.asset_by_id.insert(&metadata.asset_id, &asset);
 
-            if idx % 5 == 0 {
-                near_sdk::log!("Gas for loop: {}", (env::used_gas() - pre_gas).0);
-            }
+            //if idx % 5 == 0 {
+            near_sdk::log!("Gas for insert: {}", (env::used_gas() - pre_gas).0);
             pre_gas = env::used_gas();
+            //}
             idx += 1;
         }
 
@@ -219,7 +226,7 @@ impl Keypom {
         if let Some(resolve) = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises") {
             PromiseOrValue::Promise(resolve.then(
                 Self::ext(env::current_account_id())
-                    .with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
+                    //.with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
                     .with_unused_gas_weight(1)
                     .on_assets_claimed(
                         token_id,

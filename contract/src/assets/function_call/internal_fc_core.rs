@@ -57,7 +57,7 @@ impl FCData {
         let mut total_gas = Gas(0);
         for method in self.methods.iter() {
             let arg_len = method.args.len() as u64;
-            total_gas += GAS_PER_ARG_LENGTH * arg_len * 2;
+            total_gas += GAS_PER_ARG_LENGTH * arg_len;
             total_gas += method.attached_gas;
             total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP + GAS_FOR_FC_CLAIM_LOGIC;
         }

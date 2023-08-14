@@ -81,8 +81,6 @@ pub(crate) fn get_total_costs_for_key(
             BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
         };
 
-        near_sdk::log!("Base gas for use: {}", base_gas_for_use.0);
-
         // Check and make sure that the time config is valid
         if let Some(time_config) = use_config.as_ref().and_then(|c| c.time.as_ref()) {
             assert_valid_time_config(time_config)
@@ -101,6 +99,7 @@ pub(crate) fn get_total_costs_for_key(
         }
 
         let total_claim_gas = required_asset_gas + base_gas_for_use;
+        require!(total_claim_gas <= MAX_GAS_ATTACHABLE, format!("Total gas {} exceeds the maximum 300 TGas limit", total_claim_gas.0));
         
         // Get the total allowance for this use
         let allowance_for_use = calculate_base_allowance(YOCTO_PER_GAS, total_claim_gas, false);

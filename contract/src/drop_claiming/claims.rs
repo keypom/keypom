@@ -22,7 +22,6 @@ impl Keypom {
         let initial_gas = env::used_gas();
         let BeforeClaimData { token_id, required_asset_gas, root_account_id: _, account_creation_keypom_args: _ } = self.before_claim_logic(
             &mut event_logs,
-            &account_id,
             None,
             password
         );
@@ -48,7 +47,6 @@ impl Keypom {
         let mut event_logs = Vec::new();
         let BeforeClaimData { token_id, required_asset_gas, root_account_id, account_creation_keypom_args } = self.before_claim_logic(
             &mut event_logs,
-            &new_account_id,
             Some(&new_public_key),
             password
         );
