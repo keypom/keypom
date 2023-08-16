@@ -1,16 +1,4 @@
 use crate::*;
-use near_sdk::ext_contract;
-
-/// Interface for account creation
-#[ext_contract(ext_account_creation)]
-trait ExtAccountCreation {
-    fn create_account(
-        &mut self, 
-        new_account_id: AccountId, 
-        new_public_key: PublicKey,
-        keypom_args: Option<KeypomInjectedArgs>
-    ) -> Promise;
-}
 
 #[near_bindgen]
 impl Keypom {
