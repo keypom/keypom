@@ -144,6 +144,9 @@ pub struct KeypomFees {
 
 /// Data returned from the `before_claim_logic` function
 pub struct BeforeClaimData {
+    pub drop_id: DropId,
+    pub key_id: u64,
+    pub funder_id: AccountId,
     /// What is the token ID for the key being claimed
     pub token_id: TokenId,
     /// How much gas the assets in the given use require

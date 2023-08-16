@@ -1,12 +1,6 @@
-use near_sdk::{PromiseResult, ext_contract, env::sha256};
+use near_sdk::{PromiseResult, env::sha256};
 
 use crate::*;
-
-/// Interface for account creation
-#[ext_contract(ext_account_creation)]
-trait ExtAccountCreation {
-    fn create_account(&mut self, new_account_id: AccountId, new_public_key: PublicKey) -> Promise;
-}
 
 #[near_bindgen]
 impl Keypom {
@@ -18,8 +12,6 @@ impl Keypom {
         new_public_key: Option<&PublicKey>,
         password: Option<String>
     ) -> BeforeClaimData {
-        near_sdk::log!("Gas at start of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
-
         let signer_pk = env::signer_account_pk();
         
 
@@ -29,25 +21,16 @@ impl Keypom {
         // This state will be written in the current block so prevents re-entrancy attacks.
         // We shouldn't just remove the public key mapping off the bat because there might be
         // Multi use keys that submit multiple txns in the same block. Only delete if empty.
-        let mut pre_gas = env::used_gas();
         let token_id = self
             .token_id_by_pk
             .get(&signer_pk)
             .expect("No drop ID found for PK");
-        near_sdk::log!("Gas to get token ID: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
         
-        let (drop_id, _) = parse_token_id(&token_id).unwrap();
+        let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        near_sdk::log!("Gas to get drop: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
         let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
-        near_sdk::log!("Gas to get key info: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata, required_asset_gas } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
-        near_sdk::log!("Gas to get InternalAssetDataForUses: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
+        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata: _, required_asset_gas } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
 
         assert_pre_claim_conditions(
             &key_info,
@@ -57,10 +40,6 @@ impl Keypom {
             &drop.max_key_uses,
             new_public_key.is_some()
         );
-
-        near_sdk::log!("Gas to assert pre claim: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
-        near_sdk::log!("Gas after gets: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
 
         key_info.remaining_uses -= 1;
         key_info.last_claimed = env::block_timestamp();
@@ -93,24 +72,20 @@ impl Keypom {
             });
         }
 
-        near_sdk::log!("Gas for remaining uses decrement: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
-
         drop.key_info_by_token_id.insert(&token_id, &key_info);
         self.drop_by_id.insert(&drop_id, &drop);
 
-        near_sdk::log!("Gas for insertions: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
-
         let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).unwrap_or(self.root_account.clone());
         let account_creation_keypom_args = use_config.as_ref().and_then(|c| c.account_creation_keypom_args.clone());
-        near_sdk::log!("Gas at end of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
-
+        
         BeforeClaimData {
             token_id,
             required_asset_gas,
             root_account_id,
             account_creation_keypom_args,
+            key_id,
+            drop_id,
+            funder_id: drop.funder_id
         }
 
     }
@@ -127,37 +102,24 @@ impl Keypom {
     ) -> PromiseOrValue<bool> {
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
 
-        let mut pre_gas = env::used_gas();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        near_sdk::log!("Gas to get drop: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
         
         let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
-        near_sdk::log!("Gas to get key info: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
 
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
         let InternalAssetDataForUses { uses: _, config: _, assets_metadata, required_asset_gas: _ } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
-        near_sdk::log!("Gas to get asset data: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
 
         //let promises;
         let mut promises = Vec::new();
         let mut token_ids_transferred = Vec::new();
         let mut fc_arg_idx = 0;
         let mut assets_to_log = Vec::new();
-        let mut idx = 0;
         for metadata in assets_metadata {
             let mut asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
-            near_sdk::log!("Gas for get asset in loop: {}", (env::used_gas() - pre_gas).0);
-            pre_gas = env::used_gas();
 
             // For claim events
             assets_to_log.push(asset.to_external_events_asset(&metadata.tokens_per_use));
-
-            near_sdk::log!("Gas for asset log push: {}", (env::used_gas() - pre_gas).0);
-            pre_gas = env::used_gas();
 
             // We need to keep track of all the NFT token IDs in order to potentially perform refunds
             if let InternalAsset::nft(data) = &asset {
@@ -180,27 +142,16 @@ impl Keypom {
                 drop.funder_id.clone()
             ));
 
-            near_sdk::log!("Gas for claim asset promise push: {}", (env::used_gas() - pre_gas).0);
-            pre_gas = env::used_gas();
-
             // Increment the number of fc args we've seen
             if let InternalAsset::fc(_) = asset {
                 fc_arg_idx += 1;
             }
             
             drop.asset_by_id.insert(&metadata.asset_id, &asset);
-
-            //if idx % 5 == 0 {
-            near_sdk::log!("Gas for insert: {}", (env::used_gas() - pre_gas).0);
-            pre_gas = env::used_gas();
-            //}
-            idx += 1;
         }
 
         // Put the modified drop back in storage
         self.drop_by_id.insert(&drop_id, &drop);
-        near_sdk::log!("Gas for insert: {}", (env::used_gas() - pre_gas).0);
-        pre_gas = env::used_gas();
 
         // Log either CAAC or claim events depending on whether or not a new public key was provided
         let event_log = if let Some(pk) = &new_public_key {
@@ -290,7 +241,7 @@ impl Keypom {
 }
 
 /// Returns whether or not the account was successfully created when firing the cross contract call to `create_account`
-pub(crate) fn was_account_created() -> bool {
+pub fn was_account_created() -> bool {
     if let PromiseResult::Successful(value) = env::promise_result(0) {
         if let Ok(account_created) = near_sdk::serde_json::from_slice::<bool>(&value) {
             //if we need don't need to return the token, we simply return true meaning everything went fine

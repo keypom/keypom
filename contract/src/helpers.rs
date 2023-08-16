@@ -179,3 +179,56 @@ pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAss
 
     return InternalAsset::none;
 }
+
+/// Add keypom args to output args for a function call
+pub(crate) fn add_keypom_args(
+    output_args: &mut String, 
+    keypom_args: Option<KeypomInjectedArgs>, 
+    account_id: &AccountId,
+    drop_id: &DropId,
+    key_id: &String,
+    funder_id: &AccountId
+) -> Result<(), String> {
+    // Add keypom args and set any user markers
+    let keypom_args = keypom_args.unwrap_or(KeypomInjectedArgs { 
+        account_id_field: None,
+        drop_id_field: None,
+        key_id_field: None,
+        funder_id_field: None
+    });
+    
+    insert_keypom_arg(
+        output_args,
+        &keypom_args.account_id_field,
+        account_id.to_string()
+    )?;
+    insert_keypom_arg(
+        output_args,
+        &keypom_args.drop_id_field,
+        drop_id.to_string()
+    )?;
+    insert_keypom_arg(
+        output_args,
+        &keypom_args.key_id_field,
+        key_id.to_string()
+    )?;
+    insert_keypom_arg(
+        output_args,
+        &keypom_args.funder_id_field,
+        funder_id.to_string()
+    )?;
+
+    if output_args.contains("\"keypom_args\"") {
+        return Err("Keypom Args detected in client args. Returning and decrementing keys".to_string());
+    }
+
+    output_args.insert_str(
+        output_args.len() - 1,
+        &format!(
+            ",\"keypom_args\":{}",
+            near_sdk::serde_json::to_string(&keypom_args).unwrap()
+        ),
+    );
+
+    return Ok(());
+}
