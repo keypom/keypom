@@ -18,7 +18,10 @@ impl Keypom {
         new_public_key: Option<&PublicKey>,
         password: Option<String>
     ) -> BeforeClaimData {
+        near_sdk::log!("Gas at start of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
+
         let signer_pk = env::signer_account_pk();
+        
 
         // Get the key info and decrement its remaining uses.
         // If there are zero remaining uses, break the connection between
@@ -57,6 +60,7 @@ impl Keypom {
 
         near_sdk::log!("Gas to assert pre claim: {}", (env::used_gas() - pre_gas).0);
         pre_gas = env::used_gas();
+        near_sdk::log!("Gas after gets: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
 
         key_info.remaining_uses -= 1;
         key_info.last_claimed = env::block_timestamp();
@@ -98,15 +102,17 @@ impl Keypom {
         near_sdk::log!("Gas for insertions: {}", (env::used_gas() - pre_gas).0);
         pre_gas = env::used_gas();
 
-        // For CAAC, there needs to be a root for all accounts. By default, this is the contract's global root account (i.e `near` or `testnet`) but if otherwise specified in the use or drop config, it will be that.
         let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).unwrap_or(self.root_account.clone());
         let account_creation_keypom_args = use_config.as_ref().and_then(|c| c.account_creation_keypom_args.clone());
+        near_sdk::log!("Gas at end of before_claim: {:?}", ((env::used_gas().0 as f64)/((1000000000000 as u64) as f64)));
+
         BeforeClaimData {
             token_id,
             required_asset_gas,
             root_account_id,
             account_creation_keypom_args,
         }
+
     }
 
     /// Internal function that loops through all assets for the given use and claims them.
@@ -358,8 +364,8 @@ pub(crate) fn assert_claim_timestamps(
         let desired_end_timestamp = time_data.end.unwrap_or(u64::MAX);
         require!(current_timestamp <= desired_end_timestamp, format!("Key {} is no longer claimable. It was claimable up until {}. Current timestamp {}", signer_pk, desired_end_timestamp, current_timestamp));
 
-        let throttle = time_data.throttle.unwrap_or(u64::MAX);
-        require!((current_timestamp - key_info.last_claimed) >= throttle, format!("Key {} was used too recently. It must be used ever {}. Time since last use {}", signer_pk, throttle, current_timestamp - key_info.last_claimed));
+        let throttle = time_data.throttle.unwrap_or(0);
+        require!((current_timestamp - key_info.last_claimed) >= throttle, format!("Key {} was used too recently. It must be used every {}. Time since last use {}", signer_pk, throttle, current_timestamp - key_info.last_claimed));
 
 
         // Ensure the key is within the claim interval if specified

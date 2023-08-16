@@ -66,7 +66,7 @@ pub struct ExtDrop {
 }
 
 /// Data for each key coming in (public key, password, metadata, owner etc.)
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtKeyData {
     /// What is the public key?

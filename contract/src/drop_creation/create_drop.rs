@@ -112,7 +112,6 @@ impl Keypom {
 
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);
-
         true
     }
 }

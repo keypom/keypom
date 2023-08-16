@@ -45,7 +45,16 @@
 		"test:failed": "ava __tests__/creation/failed-creation.ts",
 		"test:edge": "ava __tests__/creation/edge-creation.ava.ts",
 		"test:caac": "ava __tests__/claims/create-account-and-claim.ava.ts",
-		"test:utils-test": "ava __tests__/claims/testing-utils.ava.ts"
+		"test:utils-test": "ava __tests__/claims/testing-utils.ava.ts",
+		"test:constants": "ava __tests__/claims/constants-tweaking.ava.ts",
+		"test:payment": "ava __tests__/creation/drop-payment.ava.ts",
+		"test:nft-funding": "ava __tests__/creation/nft-funding.ava.ts",
+		"test:nft-keys": "ava __tests__/nft-keys/nft-keys-basics.ava.ts",
+		"test:delete-keys": "ava __tests__/deletion/key-deletion.ava.ts",
+		"test:withdraw-nft": "ava __tests__/withdraw-assets/withdraw-nft.ava.ts",
+		"test:withdraw-ft": "ava __tests__/withdraw-assets/withdraw-ft.ava.ts",
+		"test:configs-usage": "ava __tests__/config-tests/usage-configs.ava.ts",
+		"test:configs-time": "ava __tests__/config-tests/time-configs.ava.ts"
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",

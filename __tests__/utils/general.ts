@@ -3,7 +3,7 @@ import { Near } from "near-api-js";
 import { InMemoryKeyStore } from "near-api-js/lib/key_stores";
 import { AccountBalance, BN, KeyPair, NEAR, NearAccount, PublicKey, TransactionResult } from "near-workspaces";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
-import { ExtDrop, InternalFTData, InternalNFTData, PickOnly, UserProvidedFCArgs } from "./types";
+import { ExtDrop, InternalFTData, InternalNFTData, PickOnly, UserProvidedFCArgs, TokenMetadata } from "./types";
 
 export const DEFAULT_GAS: string = "30000000000000";
 export const LARGE_GAS: string = "300000000000000";
@@ -14,6 +14,10 @@ export const DEFAULT_TERRA_IN_NEAR: string = "3000000000000000000000";
 export const CONTRACT_METADATA = {
   "version": "1.0.0",
   "link": "https://github.com/mattlockyer/proxy/commit/71a943ea8b7f5a3b7d9e9ac2208940f074f8afba",
+}
+
+export async function delay(ms: number) {
+  return new Promise( resolve => setTimeout(resolve, ms) );
 }
 
 export async function functionCall({
@@ -39,8 +43,6 @@ export async function functionCall({
   parseExecutionResults(methodName, receiver.accountId, rawValue, shouldLog, shouldPanic);
 
   if (rawValue.SuccessValue) {
-    console.log(`Start Time: ${rawValue.startMs}`)
-    console.log(`End Time: ${rawValue.endMs}`)
     return atob(rawValue.SuccessValue);
   } else {
     return rawValue.Failure?.error_message
@@ -196,6 +198,9 @@ export async function assertKeypomInternalAssets({
   expectedFtData = expectedFtData || [];
   let dropInfo: ExtDrop = await keypom.view('get_drop_information', {drop_id: dropId});
   console.log('dropInfo: ', dropInfo)
+  // for(let i = 0; i < expectedNftData.length; i++){
+  //   console.log(expectedNftData[i].token_ids)
+  // }
   
   if (expectedNftData.length != dropInfo.nft_asset_data.length) {
     throw new Error(`Expected ${expectedNftData.length} NFTs but found ${dropInfo.nft_asset_data.length}`);
@@ -203,19 +208,17 @@ export async function assertKeypomInternalAssets({
     let count = 0;
     for (let expectedAsset of expectedNftData) {
       // Check if the NFT data matches one from the list
+      console.log(expectedAsset.token_ids)
       let matches = dropInfo.nft_asset_data.find((foundAsset) => {
-        let sameTokens = expectedAsset.token_ids.sort().join(',') === foundAsset.token_ids.sort().join(',')
+        let sameTokens = expectedAsset.token_ids.join(',') === foundAsset.token_ids.join(',')
         console.log('sameTokens: ', sameTokens)
         return foundAsset.contract_id == expectedAsset.contract_id && sameTokens
       });
 
       if (!matches) {
-        console.log(`Expected Contract ID: ${expectedAsset.contract_id}`)
-        console.log(`Expected Tokens: ${expectedAsset.token_ids.sort().join(',')}`)
-
         console.log(`Found Contract ID: ${dropInfo.nft_asset_data[count].contract_id}`)
-        console.log(`Found Tokens: ${dropInfo.nft_asset_data[count].token_ids.sort().join(',')}`)
-        throw new Error(`Expected NFT Data ${expectedAsset} not found`);
+        console.log(`Found Tokens: ${dropInfo.nft_asset_data[count].token_ids.join(',')}`)
+        throw new Error(`Expected NFT Data [${expectedAsset.contract_id}, ${expectedAsset.token_ids}] not found`);
       }
 
       count += 1;
@@ -239,7 +242,7 @@ export async function assertKeypomInternalAssets({
         console.log(`Found Balance: ${dropInfo.ft_asset_data[count].balance_avail}`);
 
 
-        throw new Error(`Expected NFT Data ${expectedAsset} not found`);
+        throw new Error(`Expected FT Data [${expectedAsset.contract_id}, ${expectedAsset.balance_avail}] not found`);
       }
       count += 1;
     }
@@ -262,6 +265,102 @@ export async function assertNFTBalance({
   if (!sameTokens) {
     throw new Error(`Expected NFTs for ${accountId} to be ${tokensOwned}. Got ${nftTokens} instead.`)
   }
+}
+
+// Ensure tokens have been added to proper contract storage
+// tokens_per_owner and token_id_by_pk
+export async function assertProperStorage({
+  keypom,
+  expectedTokenId,
+  keyPair,
+  expectedOwner,
+  ownerlessDelete=false
+}: {
+  keypom: NearAccount,
+  expectedTokenId: string,
+  keyPair: KeyPair,
+  expectedOwner: NearAccount,
+  ownerlessDelete?: boolean
+}) {
+  // Check tokens_per_owner - ownerless keys not included by design
+  let tokens_per_owner_check: boolean = false
+  try{
+    let nft_tokens: {
+      token_id: string,
+      owner_id: string, 
+    }[] = await keypom.view("nft_tokens_for_owner", {account_id: expectedOwner.accountId})
+    expectedOwner.accountId == "keypom.test.near" && nft_tokens.length == 0 && !ownerlessDelete ? tokens_per_owner_check = true : {}
+    for(let i = 0; i < nft_tokens.length; i++){
+      nft_tokens[i].token_id == expectedTokenId && nft_tokens[i].owner_id == expectedOwner.accountId ? tokens_per_owner_check = true : {}
+    }
+  }catch(e){
+    // Account doesn't own any NFTs, do nothing and boolean stays false
+  }
+  
+  // Check token_id_by_pk
+  let token_id_by_pk_check = false
+  try{
+    let key_info: {token_id: string} = await keypom.view("get_key_information", {key: keyPair.getPublicKey().toString()})
+    key_info.token_id == expectedTokenId ? token_id_by_pk_check = true : {};
+  }catch(e){
+    // Key doesn't exist, do nothing and boolean stays false
+  }
+
+  return{tokens_per_owner_check, token_id_by_pk_check}
+}
+
+// expected royalties, metadata, token_id, keypom
+export async function assertNFTKeyData({
+  keypom,
+  tokenId,
+  expectedRoyalties=undefined,
+  expectedMetadata=undefined,
+}: {
+  keypom: NearAccount,
+  tokenId: string,
+  expectedRoyalties?: Record<string, number>,
+  expectedMetadata?: TokenMetadata
+}) {
+  // Get values and setup booleans
+  let found_nft_info: {
+    owner_id: string, 
+    approved_account_ids: Record<string, string>, 
+    royalty: Record<string, number>,
+    metadata: TokenMetadata
+  } = await keypom.view("nft_token", {token_id: tokenId})
+  let royaltySame = true;
+  let metadataSame = false;
+
+  // Bootleg royalty records length checking
+  let expectedRoyaltiesLength: number = 0
+  for (const key in expectedRoyalties) {
+    expectedRoyaltiesLength++
+  }
+  let receivedRoyaltiesLength: number = 0
+  for (const key in found_nft_info.royalty) {
+    receivedRoyaltiesLength++
+  }
+  if(expectedRoyaltiesLength != receivedRoyaltiesLength){
+    royaltySame = false
+  }
+  
+  // Ensure entries of both royalty records are the same
+  for (const key in expectedRoyalties) {
+    // console.log(`Key: ${key} and Expected Value: ${expectedRoyalties[key]}`)
+    // console.log(`Key: ${key} and Received Value: ${found_nft_info.royalty[key]}`)
+    if(found_nft_info.royalty[key] != expectedRoyalties[key]){
+      royaltySame = false
+    }
+  }
+
+  // PARSE METADATA AND COMPARE
+  let metadataWithoutNull = JSON.stringify(found_nft_info.metadata, (key, value) => {
+    if (value !== null && value !== "null") return value
+  })
+  if(JSON.stringify(expectedMetadata) == metadataWithoutNull){
+    metadataSame = true
+  }
+  return {royaltySame, metadataSame}
 }
 
 export async function assertFTBalance({
@@ -396,13 +495,14 @@ export async function doesDropExist(
   keypomV3: NearAccount,
   dropId: String
 ){
-    let response = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    if(response !== null){
-      return true
-    }
+  try{
+    await keypomV3.view('get_drop_information', {drop_id: dropId});
+    console.log(`Drop Exists`)
+    return true
+  }catch{
     return false
+  }
 }
-
 
 export async function generateKeyPairs(
   numKeys: number,

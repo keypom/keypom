@@ -41,9 +41,8 @@ impl Keypom {
                 token_ids
             } else {
                 let mut token_ids = vec![];
-
-                // The number of tokens to transfer is either what was specified or the length of the vector
                 let limit = limit.unwrap_or(nft_data.token_ids.len() as u8);
+                // The number of tokens to transfer is either what was specified or the length of the vector
                 let max_idx = nft_data.token_ids.len() - 1;
                 for idx in 0..limit {
                     if let Some(token_id) = nft_data.token_ids.get(max_idx - idx as usize) {
@@ -53,7 +52,7 @@ impl Keypom {
                     }
                 }
 
-                token_ids
+                token_ids.into_iter().rev().collect()
             };
 
             batch_transfer = nft_data.nft_refund(

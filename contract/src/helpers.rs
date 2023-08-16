@@ -64,7 +64,7 @@ pub(crate) fn get_total_costs_for_key(
 ) {
     // Get the remaining asset data
     let remaining_asset_data = get_remaining_asset_data(asset_data_for_uses, remaining_uses);
-    
+
     // For every remaining asset data, we should query the costs and multiply it by the number of uses left
     for asset_data in remaining_asset_data {
         let InternalAssetDataForUses { uses, config: use_config, assets_metadata, required_asset_gas } = asset_data;
