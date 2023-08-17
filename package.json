@@ -49,6 +49,7 @@
 		"test:constants": "ava __tests__/claims/constants-tweaking.ava.ts",
 		"test:payment": "ava __tests__/creation/drop-payment.ava.ts",
 		"test:nft-funding": "ava __tests__/creation/nft-funding.ava.ts",
+		"test:ft-funding": "ava __tests__/creation/ft-funding.ava.ts",
 		"test:nft-keys": "ava __tests__/nft-keys/nft-keys-basics.ava.ts",
 		"test:delete-keys": "ava __tests__/deletion/key-deletion.ava.ts",
 		"test:withdraw-nft": "ava __tests__/withdraw-assets/withdraw-nft.ava.ts",

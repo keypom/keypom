@@ -107,7 +107,8 @@ test('Really Long TokenID', async t => {
 
     const asset_data_per_use = [
         {
-            assets: [nftAsset1]
+            assets: [nftAsset1],
+            uses: 1
         },
     ]
 
@@ -118,7 +119,9 @@ test('Really Long TokenID', async t => {
         args: {
             drop_id: dropId,
             asset_data: asset_data_per_use,
-            public_keys: [keyPairs.publicKeys[0]]
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
         },
     }) 
 
@@ -167,10 +170,10 @@ test('A bunch of TokenIDs', async t => {
         nft_contract_id: nftContract1.accountId
     }
 
-    const asset_data_per_use = {
+    const asset_data_per_use = [{
         assets: Array(17).fill(nftAsset1),
-        num_uses: 10
-    };
+        uses: 10
+    }];
     
     await functionCall({
         signer: funder,
@@ -179,7 +182,9 @@ test('A bunch of TokenIDs', async t => {
         args: {
             drop_id: dropId,
             asset_data: asset_data_per_use,
-            public_keys: [keyPairs.publicKeys[0]]
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
         },
     }) 
 
@@ -235,10 +240,10 @@ test('Tokens to a non-NFT drop', async t => {
         yoctonear: NEAR.parse("1").toString()
     }
 
-    const asset_data = {
+    const asset_data = [{
         assets: [nearAsset1],
-        num_uses: 1
-    };
+        uses: 1
+    }];
 
 
     await functionCall({
@@ -248,7 +253,9 @@ test('Tokens to a non-NFT drop', async t => {
         args: {
             drop_id: dropId,
             asset_data,
-            public_keys: [keyPairs.publicKeys[0]]
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
         },
     }) 
 
@@ -321,7 +328,8 @@ test('Tokens to the Wrong Drop - Others with Same Assets', async t => {
 
     const asset_data = [
         {
-            assets: [nftAsset1]
+            assets: [nftAsset1],
+            uses: 1
         },
     ]
 
@@ -332,7 +340,9 @@ test('Tokens to the Wrong Drop - Others with Same Assets', async t => {
         args: {
             drop_id: wrongDropId,
             asset_data,
-            public_keys: [keyPairs.publicKeys[0]]
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
         },
     }) 
 
