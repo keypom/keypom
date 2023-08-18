@@ -36,6 +36,7 @@
 		"test:deletion:nft": "ava __tests__/deletion/nft-deletion.ava.ts",
 		"test:creation": "ava __tests__/creation/create-and-add.ava.ts",
 		"test:creation:near": "ava __tests__/creation/create-and-add.ava.ts",
+		"test:creation:fc": "ava __tests__/creation/fc-creation.ava.ts",
 		"test:creation:nft": "ava __tests__/creation/nft-creation.ts",
 		"test:claim:null": "ava __tests__/claims/null-claim.ava.ts",
 		"test:claim:ft": "ava __tests__/claims/ft-claim.ava.ts",

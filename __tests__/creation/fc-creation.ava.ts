@@ -1,6 +1,7 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { claimWithRequiredGas, displayBalances, functionCall, generateKeyPairs } from "../utils/general";
+import { FCData } from "@keypom/core";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -36,7 +37,7 @@ test.beforeEach(async (t) => {
     console.log('Deployed contracts: ', keypomV3.accountId)
     
     await root.call(root, 'new', {});
-    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId });
+    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId, owner_id: keypomV3.accountId, contract_metadata: {version: "3.0.0", link: "hello"} });
     
     // Save state for test runs
     t.context.worker = worker;
@@ -257,22 +258,33 @@ test('Initial Test', async t => {
     const {funder, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
+    // will pass
     let method1 = {
         receiver_id: keypomV3.accountId,
         method_name: 'create_drop',
+        args: JSON.stringify({
+
+        }),
+        attached_deposit: NEAR.parse("1").toNumber(),
+        attached_gas: "10000000000000",
+    }
+    // will fail
+    let method2 = {
+        receiver_id: keypomV3.accountId,
+        method_name: 'create_drop',
         args: JSON.stringify({}),
-        attached_deposit: NEAR.parse("1").toString(),
+        attached_deposit: NEAR.parse("1"),
         attached_gas: "10000000000000",
     }
 
-    const fcAsset1 = {
-        methods: [method1, method1, method1, method1]
-    }
+    const fcAsset1 = [method1, method1, method1, method1]
+    
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [fcAsset1, fcAsset1, fcAsset1]
-    }
+    const asset_data = [{
+        assets: [fcAsset1, fcAsset1, fcAsset1],
+        uses: 1
+    }]
 
     let keyPairs = await generateKeyPairs(1);
     await functionCall({
@@ -281,18 +293,22 @@ test('Initial Test', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
-            public_keys: keyPairs.publicKeys
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0]
+            }]
         },
         attachedDeposit: NEAR.parse("100").toString()
     })
 
-    await claimWithRequiredGas({
-        keypomV3,
+    let result: {response: string | undefined, actualReceiverId: string | undefined} 
+    = await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
         root,
-        key: keyPairs.keys[0],
-        publicKey: keyPairs.publicKeys[0]
+        createAccount: true
     })
+    t.is(result.response == "true", true)
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);

@@ -26,7 +26,7 @@ test.beforeEach(async (t) => {
     
     const keypomV3 = await root.createSubAccount('keypom');
     
-    await keypomV3.deploy(`./out/mapping.wasm`);
+    await keypomV3.deploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
 
     await keypomV3.call(keypomV3, 'new', {root_account: root.accountId});
