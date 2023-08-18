@@ -88,62 +88,62 @@ test.afterEach(async t => {
 });
 
 // ************** This covers case of asset ID not being present **************
-// test('Tokens to a non-FT drop', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
+test('Tokens to a non-FT drop', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
     
-//     let initialBal = await keypomV3.balance();
+    let initialBal = await keypomV3.balance();
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 2;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    const dropId = "my-drop-id";
+    const numKeys = 2;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-//     // ******************* Creating Drop *******************
-//     const nearAsset1: ExtNearData = {
-//         yoctonear: NEAR.parse("1").toString()
-//     }
+    // ******************* Creating Drop *******************
+    const nearAsset1: ExtNearData = {
+        yoctonear: NEAR.parse("1").toString()
+    }
 
-//     const asset_data_per_use = [
-//         {
-//             assets: [nearAsset1],
-//             uses: 1,
-//         },
-//     ]
+    const asset_data_per_use = [
+        {
+            assets: [nearAsset1],
+            uses: 1,
+        },
+    ]
 
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data: asset_data_per_use,
-//             key_data: [{
-//                 public_key: keyPairs.publicKeys[0],
-//             }],
-//         },
-//     }) 
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: asset_data_per_use,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
+        },
+    }) 
 
-//     // ******************* Adding Assets *******************
-//     let preCreateBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+    // ******************* Adding Assets *******************
+    let preCreateBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
 
-//     try{
-//         await sendFTs(funder, "5", keypomV3, ftContract1, dropId)
-//     }catch(e){
-//         console.log(e)
-//     }
+    try{
+        await sendFTs(funder, "5", keypomV3, ftContract1, dropId)
+    }catch(e){
+        console.log(e)
+    }
     
-//     let postCreateBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-//     let balChange = formatNearAmount((BigInt(preCreateBal) - BigInt(postCreateBal)).toString(), 5);
-//     console.log(balChange)
-//     // No asset transfer thus no balance change
-//     t.is(balChange == "0", true)
+    let postCreateBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+    let balChange = formatNearAmount((BigInt(preCreateBal) - BigInt(postCreateBal)).toString(), 5);
+    console.log(balChange)
+    // No asset transfer thus no balance change
+    t.is(balChange == "0", true)
 
-//     // Token should NOT show up in expected assets
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedFtData: [],
-//     })
-// });
+    // Token should NOT show up in expected assets
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedFtData: [],
+    })
+});
 
 // ************** This covers case of sending assets to not your drop **************
 test('Tokens to the Wrong Drop - Others with Same Assets', async t => {

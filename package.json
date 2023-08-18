@@ -42,7 +42,7 @@
 		"test:claim:near": "ava __tests__/claims/near-claim.ava.ts",
 		"test:claim:nft": "ava __tests__/claims/nft-claim.ava.ts",
 		"test:general": "ava __tests__/v3-tests.ava.ts",
-		"test:failed": "ava __tests__/creation/failed-creation.ts",
+		"test:creation:failed": "ava __tests__/creation/failed-creation.ava.ts",
 		"test:edge": "ava __tests__/creation/edge-creation.ava.ts",
 		"test:caac": "ava __tests__/claims/create-account-and-claim.ava.ts",
 		"test:utils-test": "ava __tests__/claims/testing-utils.ava.ts",

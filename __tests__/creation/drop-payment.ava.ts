@@ -85,7 +85,8 @@ test('Paying all with Deposit', async t => {
 
     const asset_data_per_use = [
         {
-            assets: [nearAsset1]
+            assets: [nearAsset1],
+            uses: 1
         },
     ]
 
@@ -133,7 +134,8 @@ test('Paying all with Balance', async t => {
 
     const asset_data_per_use = [
         {
-            assets: [nearAsset1]
+            assets: [nearAsset1],
+            uses: 1
         },
     ]
 
@@ -184,7 +186,8 @@ test('Paying with Both', async t => {
 
     const asset_data_per_use = [
         {
-            assets: [nearAsset1]
+            assets: [nearAsset1],
+            uses: 1
         },
     ]
 

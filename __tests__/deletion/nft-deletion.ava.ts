@@ -1,5 +1,4 @@
 import anyTest, { TestFn } from "ava";
-import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, assertNFTBalance, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
@@ -28,12 +27,12 @@ test.beforeEach(async (t) => {
     // Test users
     const funder = await root.createSubAccount('funder');
     
-    await keypomV3.deploy(`./out/mapping.wasm`);
+    await keypomV3.deploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
     const nftContract = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
     
     await root.call(root, 'new', {});
-    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId });
+    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId, owner_id: keypomV3.accountId, contract_metadata: {version: "3.0.0", link: "hello"} });
     await nftContract.call(nftContract, 'new_default_meta', { owner_id: nftContract });
 
     await functionCall({
@@ -82,18 +81,22 @@ test('Delete a lot of NFTs with some invalid by passing in token IDs', async t =
     }
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [nftAsset1]
-    }
+    const assets_per_use = [{
+        assets: [nftAsset1],
+        uses: 1
+    }]
 
+    let keyPairs = await generateKeyPairs(1);
     await functionCall({
         signer: funder,
         receiver: keypomV3,
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
-            public_keys: [],
+            asset_data: assets_per_use,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
         },
         attachedDeposit: NEAR.parse("10").toString()
     })
@@ -180,9 +183,11 @@ test('Delete NFTs, some invalid using limit', async t => {
     }
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [nftAsset1]
-    }
+    const assets_per_use = [{
+        assets: [nftAsset1],
+        uses: 1
+    }]
+    let keyPairs = await generateKeyPairs(1);
 
     await functionCall({
         signer: funder,
@@ -190,8 +195,10 @@ test('Delete NFTs, some invalid using limit', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
-            public_keys: [],
+            asset_data: assets_per_use,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
         },
         attachedDeposit: NEAR.parse("10").toString()
     })
