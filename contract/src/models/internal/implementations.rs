@@ -2,17 +2,15 @@ use crate::*;
 
 impl InternalDrop {
     /// Convert an `InternalDrop` into an `ExtDrop`
-    pub fn to_external_drop(&self) -> ExtDrop {
+    pub fn to_external_drop(&self, drop_id: DropId) -> ExtDrop {
         let mut nft_list = vec![];
         let mut ft_list = vec![];
-        let mut fc_list = vec![];
 
         // Loop through all the values in the asset_by_id hashmap and add them to the corresponding vectors
         self.asset_by_id.values().for_each(|asset| {
             match asset {
                 InternalAsset::nft(nft_asset) => nft_list.push(nft_asset.clone()),
                 InternalAsset::ft(ft_asset) => ft_list.push(ft_asset.clone()),
-                InternalAsset::fc(fc_asset) => fc_list.push(fc_asset.clone()),
                 _ => {}
             }
         });
@@ -35,11 +33,14 @@ impl InternalDrop {
         }
 
         ExtDrop {
+            drop_id,
             asset_data,
             nft_asset_data: nft_list,
             ft_asset_data: ft_list,
-            fc_asset_data: fc_list,
-            drop_config: self.config.clone()
+            drop_config: self.config.clone(),
+            funder_id: self.funder_id.clone(),
+            max_key_uses: self.max_key_uses,
+            next_key_id: self.next_key_id
         }
     }
 }

@@ -13,7 +13,7 @@ impl Keypom {
     /// Returns the `ExtDrop` information
     pub fn get_drop_information(&self, drop_id: DropId) -> ExtDrop {
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        return drop.to_external_drop();
+        return drop.to_external_drop(drop_id);
     }
 
     /// Allows you to query for the number of live keys in a drop

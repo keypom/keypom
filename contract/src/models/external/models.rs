@@ -56,13 +56,23 @@ pub struct ExtNFTData {
 #[derive(BorshDeserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtDrop {
+    /// ID for this specific drop
+    pub drop_id: DropId,
+    /// Account ID who funded / owns the rights to this specific drop
+    pub funder_id: AccountId,
+    /// What is the maximum number of uses a given key can have in the drop?
+    pub max_key_uses: UseNumber,
+
     pub asset_data: Vec<ExtAssetDataForUses>,
 
     pub nft_asset_data: Vec<InternalNFTData>,
     pub ft_asset_data: Vec<InternalFTData>,
-    pub fc_asset_data: Vec<FCData>,
 
-    pub drop_config: Option<DropConfig>
+    /// Keep track of different configuration options for all the uses of a key in a given drop
+    pub drop_config: Option<DropConfig>,
+
+    /// Keep track of the next nonce to give out to a key
+    pub next_key_id: u64
 }
 
 /// Data for each key coming in (public key, password, metadata, owner etc.)

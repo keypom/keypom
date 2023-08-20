@@ -47,7 +47,7 @@ impl Keypom {
         
         // Keep track of the total cost for the key & the required allowance to be refunded
         let mut total_cost_for_keys: Balance = 0;
-        let mut total_allowance_for_keys: Balance = 0;
+        let mut total_allowance_for_keys: Balance = drop.config.as_ref().and_then(|config| config.extra_allowance_per_key).unwrap_or(U128(0)).0 * public_keys.len() as u128;
 
         let mut delete_key_logs = Vec::new();
         let mut nft_burn_logs = Vec::new();
@@ -98,7 +98,7 @@ impl Keypom {
         ];
         
         // Drop is empty, keep_empty_drop is false and delete_empty_drop is true
-        if drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(false) && drop.config.clone().unwrap_or(DropConfig { metadata: (None), nft_keys_config: (None), add_key_allowlist: (None), delete_empty_drop: (Some(true)) }).delete_empty_drop.unwrap_or(true){
+        if drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(false) && drop.config.clone().unwrap_or(DropConfig { metadata: (None), nft_keys_config: (None), add_key_allowlist: (None), delete_empty_drop: (Some(true)), extra_allowance_per_key: (None) }).delete_empty_drop.unwrap_or(true){
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
             internal_clear_drop_storage(&mut drop, &mut event_logs, &drop_id);
