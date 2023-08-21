@@ -23,3 +23,12 @@ export function generatePasswordsForKey(
 
     return passwords;
 }
+
+export function generatePasswordsForClaim(
+    pubKey: string,
+    use: number,
+    basePassword: string
+): string {
+    let pw: string = hash(basePassword + pubKey + use.toString());
+    return pw;
+}
