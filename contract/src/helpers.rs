@@ -81,7 +81,7 @@ pub(crate) fn get_total_costs_for_key(
             BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
         };
 
-        near_sdk::log!("Base gas for use: {}", base_gas_for_use.0);
+        // near_sdk::log!("Base gas for use: {}", base_gas_for_use.0);
 
         // Check and make sure that the time config is valid
         if let Some(time_config) = use_config.as_ref().and_then(|c| c.time.as_ref()) {
