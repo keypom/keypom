@@ -6,7 +6,6 @@ use crate::*;
 impl Keypom {
     #[private]
     pub fn on_new_account_created(&mut self, token_id: TokenId, receiver_id: AccountId, fc_args: UserProvidedFCArgs, new_public_key: PublicKey) -> PromiseOrValue<bool> {
-        near_sdk::log!("Made it to on_new_account_created");
         let successful_creation = was_account_created();
 
         // If the account was successfully created, we should claim the assets

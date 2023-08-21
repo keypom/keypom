@@ -5,16 +5,13 @@ use crate::*;
 /// Gas needed to execute any logic in the ft claim function
 /// 2 TGas + 2 * CCC gas (since there are 2 CCCs)
 /// 12 TGas
-pub const GAS_FOR_FT_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + 2 * MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.0);
+pub const GAS_FOR_FT_CLAIM_LOGIC: Gas = Gas(9_000_000_000_000);
 /// Minimum Gas required to perform a simple transfer of fungible tokens.
 /// 5 TGas
 pub const MIN_GAS_FOR_FT_TRANSFER: Gas = Gas(5_000_000_000_000);
 /// Minimum Gas required to register a user on the FT contract
 /// 5 TGas
 pub const MIN_GAS_FOR_STORAGE_DEPOSIT: Gas = Gas(5_000_000_000_000);
-/// Minimum Gas required to execute any callback logic after the claim is complete
-/// 2 TGas
-pub const MIN_GAS_FOR_FT_CALLBACK_LOGIC: Gas = Gas(2_000_000_000_000);
 
 impl InternalFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).
@@ -40,7 +37,7 @@ impl InternalFTData {
             json!({ "account_id": receiver_id }).to_string().into(),
             self.registration_cost,
             MIN_GAS_FOR_STORAGE_DEPOSIT,
-            GasWeight(1),
+            GasWeight(0),
         );
 
         // Send the fungible tokens (after the storage attached_deposit is finished since these run sequentially)
@@ -50,7 +47,7 @@ impl InternalFTData {
             json!({ "receiver_id": receiver_id, "amount": transfer_amount.to_string(), "memo": "Keypom FT Tokens" }).to_string().into(),
             1,
             MIN_GAS_FOR_FT_TRANSFER,
-            GasWeight(1)
+            GasWeight(0)
         );
 
         Some(batch_transfer)

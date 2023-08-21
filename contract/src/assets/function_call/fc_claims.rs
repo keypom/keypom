@@ -14,7 +14,7 @@ pub const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
 /// 2 TGas
 pub const GAS_FOR_FC_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000);
 /// For every length of the args, add this much gas
-pub const GAS_PER_ARG_LENGTH: Gas = Gas(500_000_000);
+pub const GAS_PER_ARG_LENGTH: Gas = Gas(200_000_000);
 
 impl FCData {
     /// Loop through each method and create a promise to call the method
@@ -70,12 +70,6 @@ impl FCData {
                     continue;
                 }
             };
-
-            near_sdk::log!("Final Receiver ID: {}", receiver_id);
-            near_sdk::log!("Final Method Name: {}", method.method_name);
-            //near_sdk::log!("Final Args: {}", actual_args);
-            near_sdk::log!("Final Attached Deposit: {}", method.attached_deposit.0);
-            near_sdk::log!("Final Attached Gas: {}", method.attached_gas.0);
             
             let promise = Promise::new(receiver_id)
                 .function_call_weight(

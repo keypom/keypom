@@ -172,7 +172,7 @@ impl Keypom {
 
         // Get the allowance that should be transferred to the new key
         let mut total_cost_for_key: Balance = 0;
-        let mut total_allowance_for_key: Balance = 0;
+        let mut total_allowance_for_key: Balance = drop.config.as_ref().and_then(|config| config.extra_allowance_per_key).unwrap_or(U128(0)).0;
         get_total_costs_for_key(
             &mut total_cost_for_key,
             &mut total_allowance_for_key,

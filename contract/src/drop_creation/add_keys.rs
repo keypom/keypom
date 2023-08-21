@@ -44,7 +44,7 @@ impl Keypom {
         let max_key_uses = drop.max_key_uses;
 
         let mut total_cost_per_key = 0;
-        let mut total_allowance_per_key = 0;
+        let mut total_allowance_per_key = drop.config.as_ref().and_then(|config| config.extra_allowance_per_key).unwrap_or(U128(0)).0;
 
         // Get the total cost and allowance required for a key that has all its uses remaining
         // We'll then multiply this by the number of keys we want to add and charge the user
