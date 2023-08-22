@@ -1,7 +1,6 @@
 import anyTest, { TestFn } from "ava";
-import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, claimWithRequiredGas, displayBalances, doesDropExist, doesKeyExist, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop } from "../utils/types";
@@ -52,9 +51,12 @@ test('Single Null Claim', async t => {
     let initialBal = await keypomV3.balance();
 
     const dropId = "Null Claim";
-    const assets_per_use = {
-        1: [null],
-    }
+    const asset_data = [
+        {
+            assets: [null],
+            uses: 1
+        }
+    ]
     let keyPairs = await generateKeyPairs(1);
     await functionCall({
         signer: funder,
@@ -62,54 +64,34 @@ test('Single Null Claim', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
-            public_keys: keyPairs.publicKeys
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0]
+            }]
         },
         attachedDeposit: NEAR.parse("10").toString()
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is(dropInfo.internal_assets_data[0], null);
+    t.is(Object.keys(dropInfo.asset_data).length, 1);
+    t.deepEqual(dropInfo.asset_data[0].assets, asset_data[0].assets)
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
     t.is(keysForDrop, 1)
-    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 2);
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), true)
 
-    await keypomV3.setKey(keyPairs.keys[0]);
-    let newAccountId = `new-account.${root.accountId}`;
-    let keyPk = keyPairs.publicKeys[0];
-    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    
-    await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'create_account_and_claim',
-        args: {new_account_id: newAccountId, new_public_key: keyPk},
-        gas: keyInfo.required_gas
+    let result: {response: string | undefined, actualReceiverId: string | undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        createAccount: true
     })
+    t.is(result.response == "true", true)
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 1);
-
-    let doesExist = await (keypomV3.getAccount(newAccountId)).exists();
-    console.log('doesExist: ', doesExist)
-    t.is(doesExist, true);
-
-    try {
-        const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-        console.log('keyInfo (Should have panicked): ', keyInfo)
-        t.fail('Key should have been deleted');
-    } catch (e) {
-        t.pass();
-    }
-
-    let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
-    t.is(endingDropInfo, null);
+    t.is(await (keypomV3.getAccount(claimingAccount)).exists(), true);
+    t.is(await doesDropExist(keypomV3, dropId), false)
     
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
@@ -120,11 +102,12 @@ test('Multi Null Claim', async t => {
     let initialBal = await keypomV3.balance();
 
     const dropId = "Null Claim";
-    const assets_per_use = {
-        1: [null, null, null, null, null, null, null, null, null],
-        2: [null, null, null, null, null, null, null, null, null],
-        3: [null, null, null, null, null, null, null, null, null],
-    }
+    const asset_data = [
+        {
+            assets: [null, null, null, null, null, null, null, null, null],
+            uses: 3
+        }
+    ]
     let keyPairs = await generateKeyPairs(1);
     await functionCall({
         signer: funder,
@@ -132,82 +115,73 @@ test('Multi Null Claim', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
-            public_keys: keyPairs.publicKeys
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0]
+            }]
         },
         attachedDeposit: NEAR.parse("10").toString()
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is(dropInfo.internal_assets_data[0], null);
+    t.is(Object.keys(dropInfo.asset_data).length, 1);
+    t.is(dropInfo.asset_data[0].uses, 3);
+    t.deepEqual(dropInfo.asset_data[0].assets, asset_data[0].assets)
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
     t.is(keysForDrop, 1)
-    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 2);
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), true)
 
-    await keypomV3.setKey(keyPairs.keys[0]);
-    let newAccountId = `new-account.${root.accountId}`;
-    let keyPk = keyPairs.publicKeys[0];
-    let keyInfo: {required_gas: string, uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    t.is(keyInfo.uses_remaining, 3);
-    
-    await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'claim',
-        args: {account_id: newAccountId},
-        gas: keyInfo.required_gas
+    // FIRST KEY USE
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 3, true)
+
+    let result: {response: string | undefined, actualReceiverId: string | undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        createAccount: true
     })
+    t.is(result.response == "true", true)
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-    keyInfo = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    t.is(keyInfo.uses_remaining, 2);
+    t.is(await (keypomV3.getAccount(claimingAccount)).exists(), true);
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-    await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'claim',
-        args: {account_id: newAccountId},
-        gas: keyInfo.required_gas
+    // SECOND KEY USE
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 2, true)
+
+    result = await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        createAccount: true
     })
-    
-    keyInfo = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    t.is(keyInfo.uses_remaining, 1);
-    
-    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 2);
+    t.is(result.response == "true", true)
+    claimingAccount = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-    await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'create_account_and_claim',
-        args: {new_account_id: newAccountId, new_public_key: keyPk},
-        gas: keyInfo.required_gas
+    t.is(await (keypomV3.getAccount(claimingAccount)).exists(), true);
+    t.is(await doesDropExist(keypomV3, dropId), true)
+
+    // THIRD AND FINAL KEY USE
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 1, true)
+
+    result = await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        createAccount: true
     })
+    t.is(result.response == "true", true)
+    claimingAccount = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 1);
-
-    let doesExist = await (keypomV3.getAccount(newAccountId)).exists();
-    console.log('doesExist: ', doesExist)
-    t.is(doesExist, true);
-
-    try {
-        const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-        console.log('keyInfo (Should have panicked): ', keyInfo)
-        t.fail('Key should have been deleted');
-    } catch (e) {
-        t.pass();
-    }
-
-    let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
-    t.is(endingDropInfo, null);
+    // Drop should be depleted and deleted
+    t.is(await (keypomV3.getAccount(claimingAccount)).exists(), true);
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]) ,false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
     
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
@@ -218,64 +192,61 @@ test('Tons of null claims', async t => {
     let initialBal = await keypomV3.balance();
 
     const dropId = "Null Claim";
-    const assets_per_use = {
-        1: [
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-        ],
-    }
+    const asset_data = [
+        {
+            assets: [
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
+            ],
+            uses: 1
+        }
+    ]
     let keyPairs = await generateKeyPairs(1);
     await functionCall({
         signer: funder,
@@ -283,54 +254,35 @@ test('Tons of null claims', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
-            public_keys: keyPairs.publicKeys
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0]
+            }]
         },
         attachedDeposit: NEAR.parse("10").toString()
     })
     let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
     console.log('dropInfo: ', dropInfo)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is(dropInfo.internal_assets_data[0], null);
+    t.is(Object.keys(dropInfo.asset_data).length, 1);
+    t.deepEqual(dropInfo.asset_data[0].assets, asset_data[0].assets);
 
     let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
     console.log('keysForDrop: ', keysForDrop)
     t.is(keysForDrop, 1)
-    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 2);
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), true)
 
-    await keypomV3.setKey(keyPairs.keys[0]);
-    let newAccountId = `new-account.${root.accountId}`;
-    let keyPk = keyPairs.publicKeys[0];
-    let keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    
-    await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'create_account_and_claim',
-        args: {new_account_id: newAccountId, new_public_key: keyPk},
-        gas: keyInfo.required_gas
+    let result: {response: string | undefined, actualReceiverId: string | undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        keyPair: keyPairs.keys[0],
+        root,
+        createAccount: true
     })
+    t.is(result.response == "true", true)
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-    keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 1);
 
-    let doesExist = await (keypomV3.getAccount(newAccountId)).exists();
-    console.log('doesExist: ', doesExist)
-    t.is(doesExist, true);
-
-    try {
-        const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-        console.log('keyInfo (Should have panicked): ', keyInfo)
-        t.fail('Key should have been deleted');
-    } catch (e) {
-        t.pass();
-    }
-
-    let endingDropInfo = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log('dropInfo (after drop is deleted): ', endingDropInfo)
-    t.is(endingDropInfo, null);
+    t.is(await (keypomV3.getAccount(claimingAccount)).exists(), true);
+    t.is(await doesDropExist(keypomV3, dropId), false)
     
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);

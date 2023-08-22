@@ -87,7 +87,7 @@ impl Keypom {
             .function_call_weight(
                 "create_account".to_string(), 
                 create_account_args.into(), 
-                0,
+                10000000000000000000000, // TODO: remove (needed for sandbox testing)
                 GAS_FOR_CREATE_ACCOUNT,
                 GasWeight(0)
             ).then(
