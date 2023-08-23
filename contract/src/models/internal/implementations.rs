@@ -126,7 +126,7 @@ impl InternalAsset {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 let ft_to_refund = &tokens_per_use.as_ref().unwrap().parse::<u128>().unwrap();
-                near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, ft_to_refund);
+                near_sdk::log!("Failed claim for FT asset: {}. Refunding {} to the user's balance and incrementing balance available by {}",ft_data.contract_id, ft_data.registration_cost, ft_to_refund);
                 ft_data.add_to_balance_avail(ft_to_refund);
                 ft_data.registration_cost
             },
