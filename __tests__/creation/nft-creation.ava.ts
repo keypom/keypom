@@ -91,6 +91,135 @@ test.afterEach(async t => {
 // Ensure tokens are being added to drop info
 // Ensure that if the internal vector gets really long for token IDs, there isn’t a gas hit (measure gas for the case of a ton of token IDs)
 
+test('Simple NFT Creation', async t => {
+    const {funder, keypomV3, root} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
+
+    const nftAsset1 = {
+        nft_contract_id: "foobar.test.near"
+    }
+
+    const dropId = "drop-id";
+    const asset_data = [
+        {
+            assets: [nftAsset1],
+            uses: 1
+        }
+    ]
+
+    let keyPairs = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
+        },
+        attachedDeposit: NEAR.parse("10").toString()
+    })
+
+    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 1)
+
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: "foobar.test.near",
+            token_ids: []
+        }],
+    })
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+});
+
+test('Add NFTs to created drop', async t => {
+    const {funder, keypomV3, nftContract1, root} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
+
+    const nftAsset1 = {
+        nft_contract_id: nftContract1.accountId
+    }
+
+    const dropId = "drop-id";
+    const asset_data = [
+        {
+            assets: [nftAsset1],
+            uses: 1
+        }
+    ]
+
+    let userBal1: string = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
+    let keyPairs = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
+        },
+        attachedDeposit: NEAR.parse("10").toString()
+    })
+
+    await functionCall({
+        signer: funder,
+        receiver: nftContract1,
+        methodName: 'nft_mint',
+        args: {
+            token_id: "token1",
+            metadata: {
+                title: "my token"
+            },
+            receiver_id: funder.accountId
+        },
+        attachedDeposit: NEAR.parse("1").toString(),
+        shouldLog: false
+    })
+
+    await functionCall({
+        signer: funder,
+        receiver: nftContract1,
+        methodName: 'nft_transfer_call',
+        args: {
+            receiver_id: keypomV3.accountId,
+            token_id: "token1",
+            msg: dropId
+        },
+        attachedDeposit: "1"
+    })
+
+    let userBal2: string = await keypomV3.view('get_user_balance', {account_id: funder.accountId});
+    let balChange = formatNearAmount((BigInt(userBal1) - BigInt(userBal2)).toString(), 5);
+
+    t.is(balChange > "0", true)
+
+    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 1)
+
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract1.accountId,
+            token_ids: ["token1"]
+        }],
+    })
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+});
+
 test('Really Long TokenID', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
     

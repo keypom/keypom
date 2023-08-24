@@ -5,7 +5,7 @@ import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop, ExtFTData, InternalNFTData } from "../utils/types";
 import { formatNearAmount } from "near-api-js/lib/utils/format";
-import { generatePasswordsForClaim, generatePasswordsForKey } from "../profiling/utils/pwUtils";
+import { generatePasswordsForClaim, generatePasswordsForKey } from "../utils/pwUtils";
 
 const test = anyTest as TestFn<{
     worker: Worker;
