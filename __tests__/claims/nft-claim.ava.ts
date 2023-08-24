@@ -1,7 +1,6 @@
 import anyTest, { TestFn } from "ava";
-import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, claimWithRequiredGas, displayBalances, doesDropExist, doesKeyExist, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop, ExtNearData, InternalNFTData } from "../utils/types";
@@ -82,9 +81,17 @@ test('Lots of Failed Claims', async t => {
     }
 
     const dropId = "drop-id";
-    const assets_per_use = {
-        1: [nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1, nftAsset1]
-    }
+    const asset_data = [
+        {
+        assets: [nftAsset1, nftAsset1, nftAsset1, nftAsset1, 
+            nftAsset1, nftAsset1, nftAsset1],
+            uses: 1
+        },
+        {
+            assets: [null],
+                uses: 1
+            }
+    ]
 
     let keyPairs = await generateKeyPairs(1);
     await functionCall({
@@ -93,10 +100,14 @@ test('Lots of Failed Claims', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            assets_per_use,
-            public_keys: keyPairs.publicKeys,
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }]
         }
     })
+
+    let token_ids: string[] = []
 
     // This token exists!!
     await functionCall({
@@ -111,6 +122,8 @@ test('Lots of Failed Claims', async t => {
         attachedDeposit: "1"
     })
 
+    token_ids.push("token1")
+
 
     // None of these tokens exist
     for (let i = 0; i < 5; i++) {
@@ -120,44 +133,50 @@ test('Lots of Failed Claims', async t => {
             methodName: 'nft_on_transfer',
             args: {
                 sender_id: funder.accountId,
-                token_id: `token${i+5}`,
+                token_id: `token${i+2}`,
                 msg: dropId
             }
         })
+
+        token_ids.push(`token${i+2}`)
     }
 
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids
+        }],
+    })
+
     // First transfer should succeed, next 5 should fail because token doesn't exist, the last should fail because there aren't enough tokens sent
-    await keypomV3.setKey(keyPairs.keys[0]);
-    let keyPk = keyPairs.publicKeys[0];
-    const keyInfo: {required_gas: string} = await keypomV3.view('get_key_information', {key: keyPk});
-    console.log('keyInfo: ', keyInfo)
-    
-    let response = await functionCall({
-        signer: keypomV3,
-        receiver: keypomV3,
-        methodName: 'claim',
-        args: {account_id: nftContract.accountId},
-        gas: keyInfo.required_gas,
+    // Claim drop
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        createAccount: true,
         shouldPanic: true
     })
-    console.log('response: ', response)
-    t.is(response, "false");
+    t.is(result.response, "true")
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
+    t.is(await (keypomV3.getAccount(claimingAccount)).exists(), true);
 
-    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
-    console.log('keysForDrop: ', keysForDrop)
-    t.is(keysForDrop, 0)
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), true)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 1);
+    let token: {token_id: string, owner_id: string} = await nftContract.view('nft_token', {token_id: token_ids[0]});
+    t.is(token.owner_id == claimingAccount, true)
 
-    let dropInfo: ExtDrop = await keypomV3.view('get_drop_information', {drop_id: dropId});
-    console.log(`dropInfo: ${JSON.stringify(dropInfo)}`)
-    t.is(dropInfo.internal_assets_data.length, 1);
-    t.is((dropInfo.internal_assets_data[0] as InternalNFTData).nft.token_ids.length, 5);
-
-    let tokensForOwner = await nftContract.view('nft_supply_for_owner', {account_id: nftContract.accountId});
-    console.log('tokensForOwner: ', tokensForOwner)
-    t.is(tokensForOwner, '1');
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids: token_ids.slice(1, -1)
+        }],
+    })
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
