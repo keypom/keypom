@@ -289,7 +289,7 @@ test('Failed Single and Multi Claim', async t => {
             uses: 1
         },
         {
-            assets: [ftAsset2],
+            assets: [ftAsset1],
             uses: 1
         }
     ]
@@ -420,4 +420,125 @@ test('Failed Single and Multi Claim', async t => {
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
 });
+
+// test('Failed Claim due to FT Balance', async t => {
+//     const {funder, ftContract1, ftContract2, ftContract3, keypomV3, root} = t.context.accounts;
+//     let initialBal = await keypomV3.balance();
+
+//     // Create drop and load assets
+//     const ftAsset1: ExtFTData = {
+//         ft_contract_id: ftContract1.accountId,
+//         registration_cost: NEAR.parse("1").toString(),
+//         ft_amount: "2"
+//     }
+
+//     const dropId = "failed-multiclaim";
+//     const asset_data = [
+//         {
+//             assets: [ftAsset1],
+//             uses: 2
+//         },
+//     ]
+//     let keyPairs = await generateKeyPairs(1);
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId, 
+//             asset_data, 
+//             key_data: [
+//                 {
+//                     public_key: keyPairs.publicKeys[0]
+//                 }
+//             ]
+//         },
+//         attachedDeposit: NEAR.parse("10").toString()
+//     })
+
+//     await assertKeypomInternalAssets({
+//         keypom: keypomV3,
+//         dropId,
+//         expectedFtData: [{
+//                 contract_id: ftContract1.accountId,
+//                 balance_avail: '0',
+//             }]
+//     })
+
+//     await sendFTs(funder, "3", keypomV3, ftContract1, dropId);
+   
+
+//     await assertFTBalance({
+//         ftContract: ftContract1,
+//         accountId: keypomV3.accountId,
+//         amountOwned: '3'
+//     });
+
+
+//     await assertKeypomInternalAssets({
+//         keypom: keypomV3,
+//         dropId,
+//         expectedFtData: [{
+//                 contract_id: ftContract1.accountId,
+//                 balance_avail: '3',
+//             }]
+//     })
+
+//     let keyInfo: ExtKeyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+//     t.is(keyInfo.uses_remaining, 2);
+
+//     // Claim drop
+//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+//         keypom: keypomV3,
+//         root,
+//         keyPair: keyPairs.keys[0],
+//         createAccount: true,
+//     })
+//     t.is(result.response, "true")
+//     let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
+
+//     await assertFTBalance({
+//         ftContract: ftContract1,
+//         accountId: claimingAccount,
+//         amountOwned: '2'
+//     });
+
+//     // Ensure Assets Stayed the Same
+//     await assertKeypomInternalAssets({
+//         keypom: keypomV3,
+//         dropId,
+//         expectedFtData: [{
+//                 contract_id: ftContract1.accountId,
+//                 balance_avail: '1',
+//             }]
+//     })
+
+//      // Insufficient balance will just skip asset claim
+//      result = await claimWithRequiredGas({
+//         keypom: keypomV3,
+//         root,
+//         keyPair: keyPairs.keys[0],
+//         createAccount: true,
+//     })
+//     // Not sure the reasoning why I should expect this to still return true but alas
+//     t.is(result.response, "true")
+//     claimingAccount = result.actualReceiverId == undefined ? "" : result.actualReceiverId
+
+//     // Drop should exist but key should be deleted
+//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
+
+//     // Ensure Assets Stayed the Same
+//     await assertKeypomInternalAssets({
+//         keypom: keypomV3,
+//         dropId,
+//         expectedFtData: [{
+//                 contract_id: ftContract1.accountId,
+//                 balance_avail: '1',
+//             }]
+//     })
+    
+//     let finalBal = await keypomV3.balance();
+//     displayBalances(initialBal, finalBal);
+// });
 
