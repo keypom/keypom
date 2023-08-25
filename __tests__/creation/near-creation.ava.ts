@@ -147,9 +147,9 @@ test('Adding Keys', async t => {
 
 
     const ftAsset: ExtFTData = {
-        contract_id: "foo.bar",
+        ft_contract_id: "foo.bar",
         registration_cost: NEAR.parse("1").toString(),
-        amount: NEAR.parse("1").toString()
+        ft_amount: NEAR.parse("1").toString()
     }
 
     const dropId = "drop-id";
