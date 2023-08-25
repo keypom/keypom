@@ -28,7 +28,6 @@
 		"test:ft-drops": "ava __tests__/ft-drops/ft-drops.ava.ts",
 		"test:profiling": "ava __tests__/profiling/profiling.ava.ts",
 		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts",
-		"test:sales": "ava __tests__/pub-sales/pub-sales.ava.ts",
 		
 		"test:v3": "ava __tests__/v3-tests.ava.ts",
 		"test:deletion:ft-single": "ava __tests__/deletion/ft-single-use-delete.ava.ts",
@@ -57,6 +56,7 @@
 		"test:withdraw:ft": "ava __tests__/withdraw-assets/withdraw-ft.ava.ts",
 		"test:configs:usage": "ava __tests__/config-tests/usage-configs.ava.ts",
 		"test:configs:time": "ava __tests__/config-tests/time-configs.ava.ts",
+		"test:configs:sales": "ava __tests__/config-tests/sale-config.ava.ts",
 		"test:internals": "ava __tests__/internals/test-internals.ava.ts"
 	},
 	"dependencies": {
