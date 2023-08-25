@@ -82,9 +82,8 @@ test('All Funder Tests', async t => {
         },
     }
 
-    const fcAsset1 = {
-        methods: [method1]
-    }
+    const fcAsset1 = [method1]
+    
 
     const dropId = "drop-id";
 
@@ -95,11 +94,15 @@ test('All Funder Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            asset_data_for_all_uses: {
+            asset_data: [{
                 assets: [fcAsset1],
-                num_uses: 3
-            },
-            public_keys: publicKeys
+                uses: 3
+            }],
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
         },
         attachedDeposit: NEAR.parse("21").toString()
     })
@@ -135,9 +138,8 @@ test('User Preferred Tests', async t => {
         },
     }
 
-    const fcAsset1 = {
-        methods: [method1]
-    }
+    const fcAsset1 = [method1]
+    
 
     const dropId = "drop-id";
     let {keys, publicKeys} = await generateKeyPairs(1);
@@ -147,11 +149,15 @@ test('User Preferred Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            asset_data_for_all_uses: {
+            asset_data: [{
                 assets: [fcAsset1],
-                num_uses: 4
-            },
-            public_keys: publicKeys
+                uses: 4
+            }],
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
         },
         attachedDeposit: NEAR.parse("21").toString()
     })
@@ -228,9 +234,7 @@ test('Funder Preferred Tests', async t => {
         },
     }
 
-    const fcAsset1 = {
-        methods: [method1]
-    }
+    const fcAsset1 = [method1]
 
     const dropId = "drop-id";
     let {keys, publicKeys} = await generateKeyPairs(1);
@@ -240,11 +244,15 @@ test('Funder Preferred Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            asset_data_for_all_uses: {
+            asset_data: [{
                 assets: [fcAsset1],
-                num_uses: 4
-            },
-            public_keys: publicKeys
+                uses: 4
+            }],
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
         },
         attachedDeposit: NEAR.parse("21").toString()
     })
@@ -313,16 +321,15 @@ test('User Marker Tests', async t => {
         user_args_rule: "UserPreferred"
     }
 
-    const fcAsset1 = {
-        methods: [method1]
-    }
+    const fcAsset1 = [method1]
 
     const dropId = "drop-id";
-    const asset_data_per_use = {
-        1: {
-            assets: [fcAsset1]
+    const asset_data = [
+        {
+            assets: [fcAsset1],
+            uses: 1
         }
-    }
+    ]
 
     let {keys, publicKeys} = await generateKeyPairs(1);
     await functionCall({
@@ -331,8 +338,12 @@ test('User Marker Tests', async t => {
         methodName: 'create_drop',
         args: {
             drop_id: dropId,
-            asset_data_per_use,
-            public_keys: publicKeys
+            asset_data,
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
         },
         attachedDeposit: NEAR.parse("21").toString()
     })
