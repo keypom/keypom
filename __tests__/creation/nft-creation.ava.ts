@@ -509,6 +509,102 @@ test('Tokens to the Wrong Drop - Others with Same Assets', async t => {
     })
 });
 
+// ************** Over-Registration, covers the case of adding keys later **************
+test('Over-Registration', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, nftContract2, ali} = t.context.accounts;
+    
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "my-drop-id";
+    const wrongDropId = "wrong-drop-id";
+    const numKeys = 25;
+    let keyPairs = await generateKeyPairs(numKeys);
+    let key_data: {public_key: string}[] = []
+    for(let i = 0; i < numKeys; i++){
+        key_data.push({public_key: keyPairs.publicKeys[i]})
+    }
+
+    // ******************* Creating Drop *******************
+    const nftAsset1 = {
+        nft_contract_id: nftContract1.accountId
+    }
+
+    const asset_data_per_use = [
+        {
+            assets: [nftAsset1],
+            uses: 1
+        }
+    ]
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: asset_data_per_use,
+            key_data: [],
+        },
+    }) 
+
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId: dropId,
+        expectedNftData: [{
+            contract_id: nftContract1.accountId,
+            token_ids: []
+        }]
+    })
+
+    // ******************* Adding Assets *******************
+    let preSendBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+
+    let token_ids: string[] = []
+    for(let i = 0; i < numKeys; i++){
+        let token_id = `my-token-${i}`
+
+        await functionCall({
+            signer: nftContract1,
+            receiver: keypomV3,
+            methodName: 'nft_on_transfer',
+            args: {
+                sender_id: funder.accountId,
+                token_id,
+                msg: dropId
+            }
+        })
+
+        token_ids.push(token_id)
+    }
+
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId: dropId,
+        expectedNftData: [{
+            contract_id: nftContract1.accountId,
+            token_ids
+        }]
+    })
+
+    let keysForDrop: number = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 0)
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'add_keys',
+        args: {
+            drop_id: dropId,
+            key_data
+        },
+    })
+
+    keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 25)
+});
+
 
 
 

@@ -134,6 +134,65 @@ test('Insufficient Balance + Deposit', async t => {
     t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
 });
 
+// Add keys insufficient balance
+test('Add Keys - Insufficient Balance + Deposit', async t => {
+    const {funder, keypomV3, root} = t.context.accounts;
+
+    const dropId = "drop-id";
+    let numKeys = 90
+    let keyPairs = await generateKeyPairs(numKeys);
+    let key_data: {public_key: string}[] = []
+    for(let i = 0; i < numKeys; i++){
+        key_data.push({public_key: keyPairs.publicKeys[i]})
+    }
+
+    const nearAsset1 = {
+        yoctonear: NEAR.parse("10").toString()
+    }
+    const asset_data = [{
+        assets: [nearAsset1],
+        uses: 1
+    }]
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: []
+        },
+        attachedDeposit: "0",
+    })
+
+    // State should not change when trying to add these keys, use balance to assert this
+    let initialBal = await keypomV3.balance();
+
+    // 90*10NEAR per use; balance + deposit must be more than 900 NEAR. This will panic
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'add_keys',
+        args: {
+            drop_id: dropId,
+            key_data
+        },
+        shouldPanic: true
+    })
+
+
+
+    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 0)
+
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+    t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
+});
+
 // Conflicting public keys
 test('Conflicting Keys', async t => {
     const {funder, keypomV3, root} = t.context.accounts;

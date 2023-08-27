@@ -188,9 +188,9 @@ test('Nested One Level Down', async t => {
     let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
     console.log('aliTokens: ', aliTokens)
     t.is(aliTokens.length, 1);
+    t.is(aliTokens[0].metadata.drop_id, dropId);
     t.is(aliTokens[0].metadata.funder_id, ali.accountId);
     t.is(aliTokens[0].metadata.key_id, "0");
-    t.is(aliTokens[0].metadata.drop_id, dropId);
     t.is(aliTokens[0].metadata.account_id, claimingAccount);
 });
 

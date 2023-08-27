@@ -217,6 +217,89 @@ test('Tokens to the Wrong Drop - Others with Same Assets', async t => {
     })
 });
 
+// ************** Over-Registration, covers the case of adding keys later **************
+test('Over-Registration', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, nftContract2, ali} = t.context.accounts;
+    
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "my-drop-id";
+    const wrongDropId = "wrong-drop-id";
+    const numKeys = 25;
+    let keyPairs = await generateKeyPairs(numKeys);
+    let key_data: {public_key: string}[] = []
+    for(let i = 0; i < numKeys; i++){
+        key_data.push({public_key: keyPairs.publicKeys[i]})
+    }
+
+    // ******************* Creating Drop *******************
+    const ftAsset1: ExtFTData = {
+        ft_contract_id: ftContract1.accountId,
+        registration_cost:NEAR.parse("0.01").toString(),
+        ft_amount: NEAR.parse("1").toString(), 
+    }
+
+    const asset_data_per_use = [
+        {
+            assets: [ftAsset1],
+            uses: 1
+        }
+    ]
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: asset_data_per_use,
+            key_data: [],
+        },
+    }) 
+
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId: dropId,
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: "0"
+        }]
+    })
+
+    // ******************* Adding Assets *******************
+    let preSendBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+
+    await sendFTs(funder, "25", keypomV3, ftContract1, dropId)
+
+    // Should succeed - ANYBODY can fund your drops...
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId: dropId,
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: "25"
+        }]
+    })
+
+    let keysForDrop: number = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 0)
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'add_keys',
+        args: {
+            drop_id: dropId,
+            key_data
+        },
+    })
+
+    keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
+    console.log('keysForDrop: ', keysForDrop)
+    t.is(keysForDrop, 25)
+});
+
 
 
 
