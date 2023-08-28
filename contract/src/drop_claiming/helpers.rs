@@ -180,19 +180,16 @@ impl Keypom {
         };
         log_events(vec![event_log]);
 
-        if let Some(resolve) = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises") {
-            PromiseOrValue::Promise(resolve.then(
-                Self::ext(env::current_account_id())
-                    //.with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
-                    .with_unused_gas_weight(1)
-                    .on_assets_claimed(
-                        token_id,
-                        token_ids_transferred
-                    )
-            ))
-        } else {
-            self.on_assets_claimed(token_id, token_ids_transferred)
-        }
+        let resolve = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises");
+        PromiseOrValue::Promise(resolve.then(
+            Self::ext(env::current_account_id())
+                //.with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
+                .with_unused_gas_weight(1)
+                .on_assets_claimed(
+                    token_id,
+                    token_ids_transferred
+                )
+        ))
     }
 
     /// Check if key is empty and perform cleanup if it is
