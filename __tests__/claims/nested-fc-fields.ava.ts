@@ -375,7 +375,25 @@ test('Nested Fields That Are Not an Object', async t => {
             drop_id_field: "token_id.drop_id",
         },
     }
-    const fcAsset1 = [method1]
+
+    const method2 = {
+        receiver_id: nftContract.accountId,
+        method_name: 'nft_mint',
+        args: JSON.stringify({
+            receiver_id: bob.accountId,
+            token_id: '1',
+            metadata: {}
+        }),
+        attached_deposit: NEAR.parse("1").toString(),
+        attached_gas: (20 * TERA_GAS).toString(),
+        keypom_args:{
+            account_id_field: "metadata.account_id",
+            key_id_field: "metadata.key_id",
+            funder_id_field: "metadata.funder_id",
+            drop_id_field: "metadata.drop_id",
+        },
+    }
+    const fcAsset1 = [method1, method2]
 
 
     const dropId = "drop-id";
@@ -409,10 +427,18 @@ test('Nested Fields That Are Not an Object', async t => {
     t.is(result.response, "true")
     let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-    // Function call will fail
+    // method1, minting to Ali should have failed
     let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
     console.log('aliTokens: ', aliTokens)
     t.is(aliTokens.length, 0);
+
+    let bobTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: bob.accountId});
+    console.log('bobTokens: ', bobTokens)
+    t.is(bobTokens.length, 1);
+    t.is(bobTokens[0].metadata.drop_id, dropId);
+    t.is(bobTokens[0].metadata.funder_id, funder.accountId);
+    t.is(bobTokens[0].metadata.key_id, "0");
+    t.is(bobTokens[0].metadata.account_id, claimingAccount);
 
     t.is(await doesKeyExist(keypomV3, publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
