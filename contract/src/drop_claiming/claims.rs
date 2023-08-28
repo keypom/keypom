@@ -78,7 +78,8 @@ impl Keypom {
             &new_account_id,
             &drop_id,
             &key_id.to_string(),
-            &funder_id
+            &funder_id,
+            true
         ).expect("Unable to add keypom args");
         
         // First, create the zero-balance account and then, claim the assets

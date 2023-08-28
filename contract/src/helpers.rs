@@ -1,3 +1,5 @@
+use serde_json::{Value, to_string, from_str};
+
 use crate::*;
 
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
@@ -187,7 +189,8 @@ pub(crate) fn add_keypom_args(
     account_id: &AccountId,
     drop_id: &DropId,
     key_id: &String,
-    funder_id: &AccountId
+    funder_id: &AccountId,
+    can_nest: bool
 ) -> Result<(), String> {
     // Add keypom args and set any user markers
     let keypom_args = keypom_args.unwrap_or(KeypomInjectedArgs { 
@@ -196,27 +199,58 @@ pub(crate) fn add_keypom_args(
         key_id_field: None,
         funder_id_field: None
     });
-    
-    insert_keypom_arg(
-        output_args,
-        &keypom_args.account_id_field,
-        account_id.to_string()
-    )?;
-    insert_keypom_arg(
-        output_args,
-        &keypom_args.drop_id_field,
-        drop_id.to_string()
-    )?;
-    insert_keypom_arg(
-        output_args,
-        &keypom_args.key_id_field,
-        key_id.to_string()
-    )?;
-    insert_keypom_arg(
-        output_args,
-        &keypom_args.funder_id_field,
-        funder_id.to_string()
-    )?;
+
+    if can_nest {
+        let try_json: Result<Value, _> = from_str(&output_args);
+        if try_json.is_err() {
+            return Err("Cannot cast args to JSON. Returning and decrementing keys".to_string());
+        }
+        let mut output_args_json = try_json.unwrap();
+
+        insert_nested_keypom_arg(
+            &mut output_args_json,
+            &keypom_args.account_id_field,
+            account_id.to_string()
+        )?;
+        insert_nested_keypom_arg(
+            &mut output_args_json,
+            &keypom_args.drop_id_field,
+            drop_id.to_string()
+        )?;
+        insert_nested_keypom_arg(
+            &mut output_args_json,
+            &keypom_args.key_id_field,
+            key_id.to_string()
+        )?;
+        insert_nested_keypom_arg(
+            &mut output_args_json,
+            &keypom_args.funder_id_field,
+            funder_id.to_string()
+        )?;
+
+        *output_args = to_string(&output_args_json).unwrap();
+    } else {
+        insert_top_level_keypom_arg(
+            output_args,
+            &keypom_args.account_id_field,
+            account_id.to_string()
+        )?;
+        insert_top_level_keypom_arg(
+            output_args,
+            &keypom_args.drop_id_field,
+            drop_id.to_string()
+        )?;
+        insert_top_level_keypom_arg(
+            output_args,
+            &keypom_args.key_id_field,
+            key_id.to_string()
+        )?;
+        insert_top_level_keypom_arg(
+            output_args,
+            &keypom_args.funder_id_field,
+            funder_id.to_string()
+        )?;
+    }
 
     if output_args.contains("\"keypom_args\"") {
         return Err("Keypom Args detected in client args. Returning and decrementing keys".to_string());
