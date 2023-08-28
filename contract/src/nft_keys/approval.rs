@@ -38,7 +38,7 @@ impl Keypom {
             Promise::new(account_id)
                 .function_call_weight(
                     "nft_on_approve".to_string(),
-                    json!({ "token_id": token_id, "owner_id": key_info.owner_id, "approval_id": approval_id, "msg": msg }).to_string().into(),
+                    json!({ "token_id": token_id, "owner_id": key_info.owner_id.unwrap_or(env::current_account_id()), "approval_id": approval_id, "msg": msg }).to_string().into(),
                     0,
                     Gas(0),
                     GasWeight(1),
