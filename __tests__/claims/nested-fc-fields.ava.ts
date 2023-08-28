@@ -1,6 +1,6 @@
 import anyTest, { TestFn } from "ava";
-import { ExecutionStatusBasic, NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, WALLET_GAS, claimWithRequiredGas, functionCall } from "../utils/general";
+import { ExecutionStatusBasic, KeyPair, NEAR, NearAccount, Worker } from "near-workspaces";
+import { CONTRACT_METADATA, generateKeyPairs, LARGE_GAS, WALLET_GAS, claimWithRequiredGas, functionCall, doesKeyExist, doesDropExist, displayBalances } from "../utils/general";
 import { DropConfig } from "../utils/types";
 
 const test = anyTest as TestFn<{
@@ -61,76 +61,83 @@ test.afterEach(async t => {
 
 const TERA_GAS = 1000000000000;
 
-// test('Top Level Fields', async t => {
-//     const { keypomV3, nftContract, funder, ali, bob, root } = t.context.accounts;
+test('Top Level Fields', async t => {
+    const { keypomV3, nftContract, funder, ali, bob, root } = t.context.accounts;
+    let initialBal = await keypomV3.balance()
 
-//     let method1 = {
-//         receiver_id: nftContract.accountId,
-//         method_name: 'nft_mint',
-//         args: JSON.stringify({
-//             receiver_id: ali.accountId,
-//             token_id: '1',
-//             metadata: {}
-//         }),
-//         attached_deposit: NEAR.parse("1").toString(),
-//         attached_gas: (20 * TERA_GAS).toString(),
-//         keypom_args: {
-//             account_id_field: "account_id",
-//             key_id_field: "key_id",
-//             funder_id_field: "funder_id",
-//             drop_id_field: "drop_id",
-//         },
-//     }
+    let method1 = {
+        receiver_id: nftContract.accountId,
+        method_name: 'nft_mint',
+        args: JSON.stringify({
+            receiver_id: ali.accountId,
+            token_id: '1',
+            metadata: {}
+        }),
+        attached_deposit: NEAR.parse("1").toString(),
+        attached_gas: (20 * TERA_GAS).toString(),
+        keypom_args: {
+            account_id_field: "account_id",
+            key_id_field: "key_id",
+            funder_id_field: "funder_id",
+            drop_id_field: "drop_id",
+        },
+    }
 
-//     const fcAsset1 = [method1]
-//     // const fcAsset1 = null
-
-
-//     const dropId = "drop-id";
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data: [{
-//                 assets: [fcAsset1],
-//                 uses: 1
-//             }],
-//             key_data: [
-//                 {
-//                     public_key: publicKeys[0]
-//                 }
-//             ],
-//         },
-//         attachedDeposit: NEAR.parse("21").toString()
-//     })
-
-//     // This should pass and none of the user provided args should be used.
-//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keys[0],
-//         createAccount: true,
-//     })
-//     t.is(result.response, "true")
-//     let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
+    const fcAsset1 = [method1]
+    // const fcAsset1 = null
 
 
-//     let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('aliTokens: ', aliTokens)
-//     t.is(aliTokens.length, 1);
-//     t.is(aliTokens[0].account_id, claimingAccount);
-//     t.is(aliTokens[0].funder_id, funder.accountId);
-//     t.is(aliTokens[0].key_id, "0");
-//     t.is(aliTokens[0].drop_id, dropId);
-// });
+    const dropId = "drop-id";
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: [{
+                assets: [fcAsset1],
+                uses: 1
+            }],
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
+        },
+        attachedDeposit: NEAR.parse("21").toString()
+    })
+
+    // This should pass and none of the user provided args should be used.
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keys[0],
+        createAccount: true,
+    })
+    t.is(result.response, "true")
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
+
+
+    let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('aliTokens: ', aliTokens)
+    t.is(aliTokens.length, 1);
+    t.is(aliTokens[0].account_id, claimingAccount);
+    t.is(aliTokens[0].funder_id, funder.accountId);
+    t.is(aliTokens[0].key_id, "0");
+    t.is(aliTokens[0].drop_id, dropId);
+
+    t.is(await doesKeyExist(keypomV3, publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+    // t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
+});
 
 test('Nested One Level Down', async t => {
-    
-    
     const { keypomV3, nftContract, funder, ali, bob, root } = t.context.accounts;
+    let initialBal = await keypomV3.balance()
 
     const method1 = {
         receiver_id: nftContract.accountId,
@@ -189,139 +196,228 @@ test('Nested One Level Down', async t => {
     console.log('aliTokens: ', aliTokens)
     t.is(aliTokens.length, 1);
     t.is(aliTokens[0].metadata.drop_id, dropId);
-    t.is(aliTokens[0].metadata.funder_id, ali.accountId);
+    t.is(aliTokens[0].metadata.funder_id, funder.accountId);
     t.is(aliTokens[0].metadata.key_id, "0");
     t.is(aliTokens[0].metadata.account_id, claimingAccount);
+
+    t.is(await doesKeyExist(keypomV3, publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+    // t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
 });
 
-// test('Nested Two Levels Down', async t => {
-//     const { keypomV3, nftContract, funder, ali, bob } = t.context.accounts;
 
-//     const fcData: FCData = {
-//         methods: [
-//             [
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: JSON.stringify({
-//                         receiver_id: ali.accountId,
-//                         token_id: '1',
-//                         metadata: {
-//                             nested: {}
-//                         }
-//                     }),
-//                     account_id_field: "metadata.nested.account_id",
-//                     key_id_field: "metadata.nested.key_id",
-//                     funder_id_field: "metadata.nested.funder_id",
-//                     drop_id_field: "metadata.nested.drop_id",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 }
-//             ]
-//         ]
-//     }
+test('Nested Two Levels Down', async t => {
+    const { keypomV3, nftContract, funder, ali, bob, root } = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-//     const config: DropConfig = { 
-//         uses_per_key: 1
-//     }
+    const method1 = {
+        receiver_id: nftContract.accountId,
+        method_name: 'nft_mint',
+        args: JSON.stringify({
+            receiver_id: ali.accountId,
+            token_id: '1',
+            metadata: {}
+        }),
+        attached_deposit: NEAR.parse("1").toString(),
+        attached_gas: (20 * TERA_GAS).toString(),
+        keypom_args:{
+            account_id_field: "metadata.nested.account_id",
+            key_id_field: "metadata.nested.key_id",
+            funder_id_field: "metadata.nested.funder_id",
+            drop_id_field: "metadata.nested.drop_id",
+        },
+    }
+    const fcAsset1 = [method1]
 
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await ali.call(keypomV3, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
-//     await keypomV3.setKey(keys[0]);
 
-//     // This should pass and none of the user provided args should be used.
-//     const res = await keypomV3.callRaw(keypomV3, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
-//     displayFailureLog(res);
+    const dropId = "drop-id";
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: [{
+                assets: [fcAsset1],
+                uses: 1
+            }],
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
+        },
+        attachedDeposit: NEAR.parse("21").toString()
+    })
 
-//     let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('aliTokens: ', aliTokens)
-//     t.is(aliTokens.length, 1);
-//     t.is(aliTokens[0].metadata.nested.account_id, bob.accountId);
-//     t.is(aliTokens[0].metadata.nested.funder_id, ali.accountId);
-//     t.is(aliTokens[0].metadata.nested.key_id, "0");
-//     t.is(aliTokens[0].metadata.nested.drop_id, "0");
-// });
+    // This should pass and none of the user provided args should be used.
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keys[0],
+        createAccount: true,
+    })
+    t.is(result.response, "true")
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-// test('Nested Fields that Dont Exist', async t => {
-//     const { keypomV3, nftContract, funder, ali, bob } = t.context.accounts;
 
-//     const fcData: FCData = {
-//         methods: [
-//             [
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: JSON.stringify({
-//                         receiver_id: ali.accountId,
-//                         token_id: '1',
-//                     }),
-//                     account_id_field: "metadata.nested.account_id",
-//                     key_id_field: "metadata.nested.key_id",
-//                     funder_id_field: "metadata.nested.funder_id",
-//                     drop_id_field: "metadata.nested.drop_id",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 }
-//             ]
-//         ]
-//     }
 
-//     const config: DropConfig = { 
-//         uses_per_key: 1
-//     }
+    let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('aliTokens: ', aliTokens)
+    t.is(aliTokens.length, 1);
+    t.is(aliTokens[0].metadata.nested.account_id, claimingAccount);
+    t.is(aliTokens[0].metadata.nested.funder_id, funder.accountId);
+    t.is(aliTokens[0].metadata.nested.key_id, "0");
+    t.is(aliTokens[0].metadata.nested.drop_id, dropId);
 
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await ali.call(keypomV3, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
-//     await keypomV3.setKey(keys[0]);
+    t.is(await doesKeyExist(keypomV3, publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
-//     // This should pass and none of the user provided args should be used.
-//     const res = await keypomV3.callRaw(keypomV3, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
-//     displayFailureLog(res);
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+    // t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
+});
 
-//     let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('aliTokens: ', aliTokens)
-//     t.is(aliTokens.length, 1);
-//     t.is(aliTokens[0].metadata.nested.account_id, bob.accountId);
-//     t.is(aliTokens[0].metadata.nested.funder_id, ali.accountId);
-//     t.is(aliTokens[0].metadata.nested.key_id, "0");
-//     t.is(aliTokens[0].metadata.nested.drop_id, "0");
-// });
+test('Nested Fields that Dont Exist', async t => {
+    const { keypomV3, nftContract, funder, ali, bob, root } = t.context.accounts;
+    let initialBal = await keypomV3.balance()
 
-// test('Nested Fields That Are Not an Object', async t => {
-//     const { keypomV3, nftContract, funder, ali, bob } = t.context.accounts;
+    const method1 = {
+        receiver_id: nftContract.accountId,
+        method_name: 'nft_mint',
+        args: JSON.stringify({
+            receiver_id: ali.accountId,
+            token_id: '1',
+        }),
+        attached_deposit: NEAR.parse("1").toString(),
+        attached_gas: (20 * TERA_GAS).toString(),
+        keypom_args:{
+            account_id_field: "metadata.nested.account_id",
+            key_id_field: "metadata.nested.key_id",
+            funder_id_field: "metadata.nested.funder_id",
+            drop_id_field: "metadata.nested.drop_id",
+        },
+    }
+    const fcAsset1 = [method1]
 
-//     const fcData: FCData = {
-//         methods: [
-//             [
-//                 {
-//                     receiver_id: nftContract.accountId,
-//                     method_name: 'nft_mint',
-//                     args: JSON.stringify({
-//                         receiver_id: ali.accountId,
-//                         token_id: '1',
-//                         metadata: {}
-//                     }),
-//                     account_id_field: "token_id.account_id",
-//                     key_id_field: "token_id.key_id",
-//                     funder_id_field: "token_id.funder_id",
-//                     drop_id_field: "token_id.drop_id",
-//                     attached_deposit: NEAR.parse("1").toString(),
-//                 }
-//             ]
-//         ]
-//     }
 
-//     const config: DropConfig = { 
-//         uses_per_key: 1
-//     }
+    const dropId = "drop-id";
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: [{
+                assets: [fcAsset1],
+                uses: 1
+            }],
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
+        },
+        attachedDeposit: NEAR.parse("21").toString()
+    })
 
-//     let {keys, publicKeys} = await generateKeyPairs(1);
-//     await ali.call(keypomV3, 'create_drop', {public_keys: publicKeys, deposit_per_use: NEAR.parse('1').toString(), fc: fcData, config}, {gas: LARGE_GAS, attachedDeposit: NEAR.parse('21').toString()});
-//     await keypomV3.setKey(keys[0]);
+    // This should pass and none of the user provided args should be used.
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keys[0],
+        createAccount: true,
+    })
+    t.is(result.response, "true")
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
 
-//     // This should pass and none of the user provided args should be used.
-//     await keypomV3.call(keypomV3, 'claim', {account_id: bob.accountId}, {gas: WALLET_GAS});
-//     //displayFailureLog(res);
 
-//     let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
-//     console.log('aliTokens: ', aliTokens)
-//     t.is(aliTokens.length, 0);
-// });
+
+    let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('aliTokens: ', aliTokens)
+    t.is(aliTokens.length, 1);
+    t.is(aliTokens[0].metadata.nested.account_id, claimingAccount);
+    t.is(aliTokens[0].metadata.nested.funder_id, funder.accountId);
+    t.is(aliTokens[0].metadata.nested.key_id, "0");
+    t.is(aliTokens[0].metadata.nested.drop_id, dropId);
+
+    t.is(await doesKeyExist(keypomV3, publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+    // t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
+});
+
+test('Nested Fields That Are Not an Object', async t => {
+    const { keypomV3, nftContract, funder, ali, bob, root } = t.context.accounts;
+    let initialBal = await keypomV3.balance();
+
+    const method1 = {
+        receiver_id: nftContract.accountId,
+        method_name: 'nft_mint',
+        args: JSON.stringify({
+            receiver_id: ali.accountId,
+            token_id: '1',
+            metadata: {}
+        }),
+        attached_deposit: NEAR.parse("1").toString(),
+        attached_gas: (20 * TERA_GAS).toString(),
+        keypom_args:{
+            account_id_field: "token_id.account_id",
+            key_id_field: "token_id.key_id",
+            funder_id_field: "token_id.funder_id",
+            drop_id_field: "token_id.drop_id",
+        },
+    }
+    const fcAsset1 = [method1]
+
+
+    const dropId = "drop-id";
+    let {keys, publicKeys} = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: [{
+                assets: [fcAsset1],
+                uses: 1
+            }],
+            key_data: [
+                {
+                    public_key: publicKeys[0]
+                }
+            ],
+        },
+        attachedDeposit: NEAR.parse("21").toString()
+    })
+
+    // This should pass and none of the user provided args should be used.
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keys[0],
+        createAccount: true,
+    })
+    t.is(result.response, "true")
+    let claimingAccount: string = result.actualReceiverId == undefined ? "" : result.actualReceiverId
+
+    // Function call will fail
+    let aliTokens: any = await nftContract.view('nft_tokens_for_owner', {account_id: ali.accountId});
+    console.log('aliTokens: ', aliTokens)
+    t.is(aliTokens.length, 0);
+
+    t.is(await doesKeyExist(keypomV3, publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+    // t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
+});
