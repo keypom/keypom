@@ -23,17 +23,20 @@
 		"test:nested-fc-fields": "ava __tests__/nested-fc-fields/nested-fc-fields.ava.ts",
 		"test:ticketing": "ava __tests__/ticketing/ticketing-tests.ava.ts",
 		"test:poaps": "ava __tests__/poaps/poap-tests.ava.ts",
-		"test:configs": "ava __tests__/config-tests/config-tests.ava.ts",
 		"test:nft-drops": "ava __tests__/nft-drops/nft-drops.ava.ts",
 		"test:ft-drops": "ava __tests__/ft-drops/ft-drops.ava.ts",
 		"test:profiling": "ava __tests__/profiling/profiling.ava.ts",
 		"test:passwords": "ava __tests__/passwords/password-tests.ava.ts",
 		
 		"test:v3": "ava __tests__/v3-tests.ava.ts",
+
+		"test:deletion": "yarn test:deletion:ft-single && yarn test:deletion:ft-single && yarn test:deletion:nft && yarn test:deletion:keys",
 		"test:deletion:ft-single": "ava __tests__/deletion/ft-single-use-delete.ava.ts",
 		"test:deletion:ft-multi": "ava __tests__/deletion/ft-multi-use-delete.ava.ts",
 		"test:deletion:nft": "ava __tests__/deletion/nft-deletion.ava.ts",
 		"test:deletion:keys": "ava __tests__/deletion/key-deletion.ava.ts",
+
+		"test:creation": "yarn test:creation:near && yarn test:creation:fc && yarn test:creation:ft && yarn test:creation:nft && yarn test:creation:failed && yarn test:creation:payment",
 		"test:creation:near": "ava __tests__/creation/near-creation.ava.ts",
 		"test:creation:fc": "ava __tests__/creation/fc-creation.ava.ts",
 		"test:creation:nft": "ava __tests__/creation/nft-creation.ava.ts",
@@ -41,6 +44,8 @@
 		"test:creation:failed": "ava __tests__/creation/failed-creation.ava.ts",
 		"test:creation:edge": "ava __tests__/creation/edge-creation.ava.ts",
 		"test:creation:payment": "ava __tests__/creation/drop-payment.ava.ts",
+
+		"test:claim": "yarn test:claim:ft && yarn test:claim:near && yarn test:claim:nft && yarn test:claim:fc && yarn test:claim:fc:nested && yarn test:claim:caac && yarn test:claim:max",
 		"test:claim:null": "ava __tests__/claims/null-claim.ava.ts",
 		"test:claim:ft": "ava __tests__/claims/ft-claim.ava.ts",
 		"test:claim:near": "ava __tests__/claims/near-claim.ava.ts",
@@ -51,9 +56,14 @@
 		"test:claim:utils": "ava __tests__/claims/testing-utils.ava.ts",
 		"test:claim:constants": "ava __tests__/claims/constants-tweaking.ava.ts",
 		"test:claim:max": "ava __tests__/claims/max-asset-claim.ava.ts",
+
 		"test:nft-keys": "ava __tests__/nft-keys/nft-keys-basics.ava.ts",
+
+		"test:withdraw": "yarn test:withdraw:nft && yarn withdraw:ft",
 		"test:withdraw:nft": "ava __tests__/withdraw-assets/withdraw-nft.ava.ts",
 		"test:withdraw:ft": "ava __tests__/withdraw-assets/withdraw-ft.ava.ts",
+
+		"test:configs": "yarn test:configs:usage && yarn test:configs:time && yarn test:configs:sales",
 		"test:configs:usage": "ava __tests__/config-tests/usage-configs.ava.ts",
 		"test:configs:time": "ava __tests__/config-tests/time-configs.ava.ts",
 		"test:configs:sales": "ava __tests__/config-tests/sale-config.ava.ts",

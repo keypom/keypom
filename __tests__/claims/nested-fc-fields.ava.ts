@@ -208,7 +208,6 @@ test('Nested One Level Down', async t => {
     // t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
 });
 
-
 test('Nested Two Levels Down', async t => {
     const { keypomV3, nftContract, funder, ali, bob, root } = t.context.accounts;
     let initialBal = await keypomV3.balance();

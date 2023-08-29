@@ -258,9 +258,6 @@ test('Successful Single and Multi Claim', async t => {
     displayBalances(initialBal, finalBal);
 });
 
-// TEST THIS AFTER REFUND FIX!
-
-// THIS FAILS SINCE THE CONTRACT DOESNT THINK FTS HAVE BEEN TRANSFERRED BUT THE PROMISE ACTUALLY COMPLETES
 test('Failed Single and Multi Claim', async t => {
     const {funder, ftContract1, ftContract2, ftContract3, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
