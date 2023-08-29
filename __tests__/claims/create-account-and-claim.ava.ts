@@ -129,272 +129,271 @@ test.afterEach(async t => {
  //- account creation succeeded but asset claims failed -> should refund assets that failed and do nothing for ones that weren’t
 
 // account creation failed -> should refund ALL assets & key is decremented (NFT version)
-// test('Account Creation Fail in CAAC - drop still contains NFTs', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract1, nftContract2, ali} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
+test('Account Creation Fail in CAAC - drop still contains NFTs', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2, nftContract1, nftContract2, ali} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    const dropId = "my-drop-id";
+    const numKeys = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-//     const nftAsset1: ExtNFTData = {
-//         nft_contract_id: nftContract1.accountId
-//     }
+    const nftAsset1: ExtNFTData = {
+        nft_contract_id: nftContract1.accountId
+    }
 
-//     const asset_data = [
-//         {
-//             assets: [nftAsset1],
-//             uses: 1
-//         },
-//         {
-//             assets: [null],
-//             uses: 1
-//         }
-//     ]
+    const asset_data = [
+        {
+            assets: [nftAsset1],
+            uses: 1
+        },
+        {
+            assets: [null],
+            uses: 1
+        }
+    ]
     
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data,
-//             key_data: [{
-//                 public_key: keyPairs.publicKeys[0]
-//             }]
-//         },
-//         attachedDeposit: NEAR.parse("1").toString(),
-//     })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0]
+            }]
+        },
+        attachedDeposit: NEAR.parse("1").toString(),
+    })
 
-//     // 12TGas for NFT asset, 20 tokens + other gas = 293TGas
-//     let tokenIds: string[]= [];
-//     let numTokens = 1;
-//     for (let i = 1; i < numTokens+1; i++) {
-//         let tokenId = `token-1-${i}`
+    // 12TGas for NFT asset, 20 tokens + other gas = 293TGas
+    let tokenIds: string[]= [];
+    let numTokens = 1;
+    for (let i = 1; i < numTokens+1; i++) {
+        let tokenId = `token-1-${i}`
 
-//         await functionCall({
-//             signer: funder,
-//             receiver: nftContract1,
-//             methodName: 'nft_mint',
-//             args: {
-//                 token_id: tokenId,
-//                 metadata: {
-//                     title: "my token"
-//                 },
-//                 receiver_id: funder.accountId
-//             },
-//             attachedDeposit: NEAR.parse("0.01").toString(),
-//             shouldLog: true
-//         })
+        await functionCall({
+            signer: funder,
+            receiver: nftContract1,
+            methodName: 'nft_mint',
+            args: {
+                token_id: tokenId,
+                metadata: {
+                    title: "my token"
+                },
+                receiver_id: funder.accountId
+            },
+            attachedDeposit: NEAR.parse("0.01").toString(),
+            shouldLog: true
+        })
 
-//         await functionCall({
-//             signer: funder,
-//             receiver: nftContract1,
-//             methodName: 'nft_transfer_call',
-//             args: {
-//                 receiver_id: keypomV3.accountId,
-//                 token_id: tokenId,
-//                 msg: dropId
-//             },
-//             attachedDeposit: "1"
-//         })
+        await functionCall({
+            signer: funder,
+            receiver: nftContract1,
+            methodName: 'nft_transfer_call',
+            args: {
+                receiver_id: keypomV3.accountId,
+                token_id: tokenId,
+                msg: dropId
+            },
+            attachedDeposit: "1"
+        })
 
-//         tokenIds.push(tokenId)
-//     }
+        tokenIds.push(tokenId)
+    }
 
-//     // Assert Assets
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedNftData: [{
-//             contract_id: nftContract1.accountId,
-//             token_ids: tokenIds
-//         },],
-//     })
+    // Assert Assets
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract1.accountId,
+            token_ids: tokenIds
+        },],
+    })
 
-//     // 2 uses at the start
-//     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining, 2)
+    // 2 uses at the start
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 2)
 
-//     // First failed claim
-//     let result: {response: string|undefined, actualReceiverId: string | undefined} = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         createAccount: true,
-//         receiverId: ali.accountId,
-//         shouldPanic: true
-//     })
-//     t.is(result.response, "false")
+    // First failed claim
+    let result: {response: string|undefined, actualReceiverId: string | undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        createAccount: true,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
+    t.is(result.response, "false")
 
-//     // Key uses should have decremented
-//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining, 1)
+    // Key uses should have decremented
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 1)
 
-//     // Second failed claim
-//     result = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         createAccount: true,
-//         receiverId: ali.accountId,
-//         shouldPanic: true
-//     })
-//     t.is(result.response, "false")
+    // Second failed claim
+    result = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        createAccount: true,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
+    t.is(result.response, "false")
 
-//     // Token should still be owned by Keypom
-//     let token: {token_id: string, owner_id: string} = await nftContract1.view('nft_token', {token_id: tokenIds[0]});
-//     console.log(`${token.token_id} is owned by ${token.owner_id}`)
-//     t.is(token.owner_id, keypomV3.accountId)
+    // Token should still be owned by Keypom
+    let token: {token_id: string, owner_id: string} = await nftContract1.view('nft_token', {token_id: tokenIds[0]});
+    console.log(`${token.token_id} is owned by ${token.owner_id}`)
+    t.is(token.owner_id, keypomV3.accountId)
 
-//     // Key should be deleted but drop should still exist since asset is still there
-//     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+    // Key should be deleted but drop should still exist since asset is still there
+    t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-//     // Drop should still have assets
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedNftData: [{
-//             contract_id: nftContract1.accountId,
-//             token_ids: tokenIds
-//         },],
-//     })
+    // Drop should still have assets
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract1.accountId,
+            token_ids: tokenIds
+        },],
+    })
 
-// });
+});
 
 // account creation failed -> should refund ALL assets & key is decremented (FT and NEAR asset version)
-// test('Account Creation Fail in CAAC - drop still contains FTs, refund NEAR from FT and NEAR assets', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
+test('Account Creation Fail in CAAC - drop still contains FTs, refund NEAR from FT and NEAR assets', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-//     const nearAssetAmount: number = 1
-//     const ftRegistrationCost: number =  1
+    const nearAssetAmount: number = 1
+    const ftRegistrationCost: number =  1
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 2;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    const dropId = "my-drop-id";
+    const numKeys = 2;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-//     const ftAsset1: ExtFTData = {
-//         ft_contract_id: ftContract1.accountId,
-//         registration_cost: NEAR.parse(ftRegistrationCost.toString()).toString(),
-//         ft_amount: "1"
-//     }
+    const ftAsset1: ExtFTData = {
+        ft_contract_id: ftContract1.accountId,
+        registration_cost: NEAR.parse(ftRegistrationCost.toString()).toString(),
+        ft_amount: "1"
+    }
 
-//     const nearAsset1 = {
-//         yoctonear: NEAR.parse(nearAssetAmount.toString()).toString()
-//     }
+    const nearAsset1 = {
+        yoctonear: NEAR.parse(nearAssetAmount.toString()).toString()
+    }
 
-//     const asset_data = [
-//         {
-//             assets: [ftAsset1, nearAsset1],
-//             uses: 1
-//         },
-//         {
-//             assets: [null],
-//             uses: 1
-//         }
-//     ]
+    const asset_data = [
+        {
+            assets: [ftAsset1, nearAsset1],
+            uses: 1
+        },
+        {
+            assets: [null],
+            uses: 1
+        }
+    ]
     
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data,
-//             key_data: [{
-//                 public_key: keyPairs.publicKeys[0]
-//             }]
-//         },
-//         attachedDeposit: NEAR.parse("1").toString(),
-//     })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0]
+            }]
+        },
+        attachedDeposit: NEAR.parse("1").toString(),
+    })
 
-//     await sendFTs(funder, "1", keypomV3, ftContract1, dropId)
+    await sendFTs(funder, "1", keypomV3, ftContract1, dropId)
     
 
-//     // Assert Assets
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedFtData: [{
-//             contract_id: ftContract1.accountId,
-//             balance_avail: '1',
-//         }]
-//     })
+    // Assert Assets
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: '1',
+        }]
+    })
 
-//     // 2 uses at the start
-//     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining, 2)
+    // 2 uses at the start
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 2)
 
-//     // starting claim NEAR and FT balance
-//     let preClaimFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+    // starting claim NEAR and FT balance
+    let preClaimFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
 
-//     // First failed claim
-//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         createAccount: true,
-//         receiverId: ali.accountId,
-//         shouldPanic: true
-//     })
-//     t.is(result.response, "false")
+    // First failed claim
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        createAccount: true,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
+    t.is(result.response, "false")
 
-//     // Key uses should have decremented
-//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining, 1)
+    // Key uses should have decremented
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining, 1)
 
-//     // Ensure no asset transfer
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedFtData: [{
-//             contract_id: ftContract1.accountId,
-//             balance_avail: '1',
-//         }]
-//     })
+    // Ensure no asset transfer
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: '1',
+        }]
+    })
 
-//     // NEAR asset and FT registration cost should have been refunded here
-//     let refundedFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-//     let refund = formatNearAmount((BigInt(refundedFunderBal) - BigInt(preClaimFunderBal)).toString(), 5);
-//     const EXPECTED_REFUND_NEAR: number = ftRegistrationCost + nearAssetAmount;
-//     t.is(refund.toString() >= EXPECTED_REFUND_NEAR.toString(), true)
+    // NEAR asset and FT registration cost should have been refunded here
+    let refundedFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+    let refund = formatNearAmount((BigInt(refundedFunderBal) - BigInt(preClaimFunderBal)).toString(), 5);
+    const EXPECTED_REFUND_NEAR: number = ftRegistrationCost + nearAssetAmount;
+    t.is(refund.toString() >= EXPECTED_REFUND_NEAR.toString(), true)
 
-//     // Second failed claim
-//     result = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         createAccount: true,
-//         receiverId: ali.accountId,
-//         shouldPanic: true
-//     })
-//     t.is(result.response, "false")
+    // Second failed claim
+    result = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        createAccount: true,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
+    t.is(result.response, "false")
 
-//     // Key should be deleted but drop should still exist
-//     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), true)
+    // Key should be deleted but drop should still exist
+    t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
-//     // Drop should still have assets
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedFtData: [{
-//             contract_id: ftContract1.accountId,
-//             balance_avail: '1',
-//         }]
-//     })
+    // Drop should still have assets
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: '1',
+        }]
+    })
 
-// });
+});
 
-// FAILS RIGHT NOW
 // account creation succeeded but asset claims failed -> should refund assets that failed and do nothing for ones that weren’t
 test('Asset Claim Failure in CAAC', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2, nftContract, nftContract2, ali} = t.context.accounts;
     let initialBal = await keypomV3.balance();
 
-    const nearAssetAmount: number = 1
+    const nearAssetAmount: number = 2
     const ft1RegistrationCost: number =  5
     const ft2RegistrationCost: number =  1
 
@@ -483,26 +482,30 @@ test('Asset Claim Failure in CAAC', async t => {
     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
     t.is(keyInfo.uses_remaining, 1)
 
-    // Ensure proper asset transfer
+    // Ensure proper FT transfer
     let userPostClaimFTBal: number = await ftContract1.view("ft_balance_of", {account_id: result.actualReceiverId});
     console.log(`${result.actualReceiverId} FT bal on ${ftAsset1.ft_contract_id}: ${userPostClaimFTBal}`)
     // CAAC, starting FT bal was 0
     t.is(userPostClaimFTBal == 1, true)
 
+    // Ensure proper NEAR asset transfer
     let userBal: {available: NEAR} = await root.getAccount(result.actualReceiverId == undefined ? "" : result.actualReceiverId).balance()
     console.log('userBal: ', userBal.available.toString());
-    t.is(userBal.available.gte(NEAR.parse("1")), true)
+    t.is(userBal.available.gte(NEAR.parse(nearAssetAmount.toString())), true)
     
     //ensure refund from failed ft claim is sent back, but NOT near asset OR successful FT claim
     let refundedFunderBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
     let refund = formatNearAmount((BigInt(refundedFunderBal) - BigInt(preClaimFunderBal)).toString(), 5);
     console.log(`Refunded Amount: ${refund}`)
-    // ft2 failed, therefore storage should be refuned
+    // ft2 failed, therefore only ft2 deposit should be refuned
     const EXPECTED_REFUND_NEAR: number = ft2RegistrationCost;
     await assertKeypomInternalAssets({
         keypom: keypomV3,
         dropId,
-        expectedFtData: [
+        expectedFtData: [{
+            contract_id: ftContract1.accountId,
+            balance_avail: '0',
+        },
         {
             contract_id: "foo-contract",
             balance_avail: '0'
@@ -511,14 +514,12 @@ test('Asset Claim Failure in CAAC', async t => {
     })
     // Ensure NEAR asset was not refunded
     t.is(
-        // Failed FT2 asset registration cost
+        // Failed FT2 asset registration cost should be refunded
         refund.toString() >= EXPECTED_REFUND_NEAR.toString() 
         // Ensure NEAR asset was not refunded
-        && refund.toString() < (EXPECTED_REFUND_NEAR + nearAssetAmount).toString()
+        && refund.toString() < nearAssetAmount.toString()
         // Ensure successful FT1 asset registration cost is not refunded
-        && refund.toString() < (EXPECTED_REFUND_NEAR + ft1RegistrationCost).toString(), true)
-
-    // Keypom should still technically have FT2 asset
+        && refund.toString() < ft1RegistrationCost.toString(), true)
     
 
     // Second claim, check refund of next registration cost
@@ -531,17 +532,7 @@ test('Asset Claim Failure in CAAC', async t => {
     })
     t.is(result.response, "true")
 
-    // Should still have asset, key should be deleted but drop should still exist
+    // Assets all gone
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), true)
-    await assertKeypomInternalAssets({
-        keypom: keypomV3,
-        dropId,
-        expectedFtData: [
-        {
-            contract_id: "foo-contract",
-            balance_avail: '0'
-        }
-    ]
-    })
+    t.is(await doesDropExist(keypomV3, dropId), false)
 });
