@@ -133,7 +133,8 @@ impl InternalAsset {
             InternalAsset::nft(ref mut nft_data) => {
                 let token_id = &tokens_per_use.as_ref().unwrap();
                 near_sdk::log!("Failed claim NFT asset with Token ID {}", token_id);
-                nft_data.add_to_token_ids(token_id);
+                // Add to end of token_ids to maintain same order
+                nft_data.add_to_end_of_token_ids(token_id);
                 0
             },
             InternalAsset::near => {

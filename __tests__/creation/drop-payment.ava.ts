@@ -66,8 +66,8 @@ test.afterEach(async t => {
 // 1. Deposit can cover all
 // 2. Balance can cover all
 // 3. Deposit not enough, but with balance, it can be covered
-// 3.5. Balance is not enough, but with deposit, it can be covered
-// 4. Neither is enough
+
+// Not enough in both covered in failed-creation
 
 test('Paying all with Deposit', async t => {
     const {funder, keypomV3, root,

@@ -5,9 +5,15 @@ impl InternalNFTData {
     /// This should only ever be invoked in:
     /// * `nft_on_transfer` (when the transfer is successful).
     /// * `nft_resolve_refund` (when the refund failed).
-    /// * `on_assets_claimed` (when the NFT claim failed and we need to refund).
     pub fn add_to_token_ids(&mut self, token_id: &TokenId) {
         self.token_ids.push(token_id.clone());
+    }
+
+    /// Add to the END of a list of available token IDs that can be claimed. 
+    /// This should only ever be invoked in:
+    /// * `on_assets_claimed` (when the NFT claim failed and we need to refund). Reversed as tokens_ids_transferred is reverse of self.token_ids
+    pub fn add_to_end_of_token_ids(&mut self, token_id: &TokenId) {
+        self.token_ids.insert(0, token_id.clone());
     }
 }
 

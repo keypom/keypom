@@ -1,9 +1,9 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection, claimWithRequiredGas } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, displayBalances, functionCall, generateKeyPairs, initKeypomConnection, claimWithRequiredGas, doesDropExist } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
-import { ExtDrop, InternalNFTData } from "../utils/types";
+import { ExtDrop, ExtNFTData, InternalNFTData } from "../utils/types";
 const { readFileSync } = require('fs');
 
 const test = anyTest as TestFn<{
@@ -121,13 +121,7 @@ test('Insufficient Balance + Deposit', async t => {
     })
 
 
-    try {
-        let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
-        console.log('keysForDrop: ', keysForDrop)
-        t.fail('Should have panicked')
-    } catch (e) {
-        t.pass()
-    }
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
@@ -165,6 +159,8 @@ test('Add Keys - Insufficient Balance + Deposit', async t => {
         },
         attachedDeposit: "0",
     })
+
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
     // State should not change when trying to add these keys, use balance to assert this
     let initialBal = await keypomV3.balance();
@@ -227,13 +223,7 @@ test('Conflicting Keys', async t => {
         shouldPanic: true
     })
 
-    try {
-        let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
-        console.log('keysForDrop: ', keysForDrop)
-        t.fail('Should have panicked')
-    } catch (e) {
-        t.pass()
-    }
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
@@ -269,8 +259,7 @@ test('Conflicting DropIDs', async t => {
         attachedDeposit: "0",
         shouldPanic: false
     })
-    let keysForDrop = await keypomV3.view('get_key_supply_for_drop', {drop_id: dropId});
-    t.is(keysForDrop == 5, true)
+    t.is(await doesDropExist(keypomV3, dropId), true)
 
     let initialBadBal = await keypomV3.balance();
 
@@ -331,13 +320,62 @@ test('Really long DropIDs', async t => {
         attachedDeposit: "0",
         shouldPanic: true
     })
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
     let finalBal = await keypomV3.balance();
     displayBalances(initialBal, finalBal);
     t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
 });
 
-
 // Too many assets in a use leading to gas problems (try to force a panic as late down the road as possible i.e first 15 uses are fine but last one is not).
+test('Asset Overload in Late Use', async t => {
+    const {funder, keypomV3, nftContract, root} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-// Create function call drop with invalid permissions (pointing to keypom, invalid method names etc…)
+    const dropId = "drop-id";
+    let numKeys = 1
+    let keyPairs = await generateKeyPairs(numKeys);
+    let key_data: {public_key: string}[] = []
+    for(let i = 0; i < numKeys; i++){
+        key_data.push({public_key: keyPairs.publicKeys[i]})
+    }
+
+    const nftAsset1: ExtNFTData = {
+        nft_contract_id: nftContract.accountId
+    }
+    
+    const MAX_NUM_NFTS = 18
+    const asset_data = [
+        {
+        // 18 NFT assets - max!
+            assets: Array(MAX_NUM_NFTS).fill(nftAsset1),
+            uses: 15
+        },
+        {
+            // 19 should fail
+                assets: Array(MAX_NUM_NFTS + 1).fill(nftAsset1),
+                uses: 15
+            },
+    ]
+
+    // First 5 are good and the last is repeated. No keys should be added
+    // And the contract should panic
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data
+        },
+        attachedDeposit: NEAR.parse("10").toString(),
+        shouldPanic: true
+    })
+
+    t.is(await doesDropExist(keypomV3, dropId), false)
+
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+    t.deepEqual(finalBal.stateStaked, initialBal.stateStaked);
+});

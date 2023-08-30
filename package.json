@@ -36,7 +36,7 @@
 		"test:deletion:nft": "ava __tests__/deletion/nft-deletion.ava.ts",
 		"test:deletion:keys": "ava __tests__/deletion/key-deletion.ava.ts",
 
-		"test:creation": "yarn test:creation:near && yarn test:creation:fc && yarn test:creation:ft && yarn test:creation:nft && yarn test:creation:failed && yarn test:creation:payment",
+		"test:creation": "yarn test:creation:near && yarn test:creation:fc && yarn test:creation:nft && yarn test:creation:ft && yarn test:creation:failed && yarn test:creation:payment",
 		"test:creation:near": "ava __tests__/creation/near-creation.ava.ts",
 		"test:creation:fc": "ava __tests__/creation/fc-creation.ava.ts",
 		"test:creation:nft": "ava __tests__/creation/nft-creation.ava.ts",

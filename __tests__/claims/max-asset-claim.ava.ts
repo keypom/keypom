@@ -55,151 +55,151 @@ test.afterEach(async t => {
     });
 });
 
-// test('Maximum NFTs + Drop Persists Despite Failed Claims + Can Refund Max', async t => {
-//     const {funder, keypomV3, nftContract, root, ali} = t.context.accounts;
-//     let initialBal = await keypomV3.balance();
+test('Maximum NFTs + Drop Persists Despite Failed Claims + Can Refund Max', async t => {
+    const {funder, keypomV3, nftContract, root, ali} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
 
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'add_to_balance',
-//         args: {},
-//         attachedDeposit: NEAR.parse("10").toString(),
-//         shouldLog: false
-//     })
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'add_to_balance',
+        args: {},
+        attachedDeposit: NEAR.parse("10").toString(),
+        shouldLog: false
+    })
 
-//     const nftAsset1 = {
-//         nft_contract_id: nftContract.accountId
-//     }
+    const nftAsset1 = {
+        nft_contract_id: nftContract.accountId
+    }
 
-//     const dropId = "drop-id";
-//     // Max 18 assets
-//     const MAX_NUM_NFTS = 18
-//     const asset_data = [
-//         {
-//         // 18 NFT assets - max!
-//         assets: Array(MAX_NUM_NFTS).fill(nftAsset1),
-//             uses: 1
-//         },
-//     ]
+    const dropId = "drop-id";
+    // Max 18 assets
+    const MAX_NUM_NFTS = 18
+    const asset_data = [
+        {
+        // 18 NFT assets - max!
+        assets: Array(MAX_NUM_NFTS).fill(nftAsset1),
+            uses: 1
+        },
+    ]
 
-//     let keyPairs = await generateKeyPairs(1);
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data,
-//             key_data: [{
-//                 public_key: keyPairs.publicKeys[0],
-//             }]
-//         }
-//     })
+    let keyPairs = await generateKeyPairs(1);
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }]
+        }
+    })
 
-//     let token_ids: string[] = []
+    let token_ids: string[] = []
 
-//     for(let i = 0; i < MAX_NUM_NFTS; i++){
-//         let token_id = `token-${i + 1}`
+    for(let i = 0; i < MAX_NUM_NFTS; i++){
+        let token_id = `token-${i + 1}`
 
-//         await functionCall({
-//             signer: funder,
-//             receiver: nftContract,
-//             methodName: 'nft_mint',
-//             args: {
-//                 token_id,
-//                 metadata: {
-//                     title: "my token"
-//                 },
-//                 receiver_id: funder.accountId
-//             },
-//             attachedDeposit: NEAR.parse("1").toString(),
-//             shouldLog: false
-//         })
+        await functionCall({
+            signer: funder,
+            receiver: nftContract,
+            methodName: 'nft_mint',
+            args: {
+                token_id,
+                metadata: {
+                    title: "my token"
+                },
+                receiver_id: funder.accountId
+            },
+            attachedDeposit: NEAR.parse("1").toString(),
+            shouldLog: false
+        })
 
 
-//         // This token exists!!
-//         await functionCall({
-//             signer: funder,
-//             receiver: nftContract,
-//             methodName: 'nft_transfer_call',
-//             args: {
-//                 receiver_id: keypomV3.accountId,
-//                 token_id,
-//                 msg: dropId
-//             },
-//             attachedDeposit: "1"
-//         })
+        // This token exists!!
+        await functionCall({
+            signer: funder,
+            receiver: nftContract,
+            methodName: 'nft_transfer_call',
+            args: {
+                receiver_id: keypomV3.accountId,
+                token_id,
+                msg: dropId
+            },
+            attachedDeposit: "1"
+        })
 
-//         token_ids.push(token_id)
-//     }
+        token_ids.push(token_id)
+    }
     
 
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedNftData: [{
-//             contract_id: nftContract.accountId,
-//             token_ids
-//         }],
-//     })
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids
+        }],
+    })
 
-//     // Force fail CAAC, trigger asset transfer back to funder, then make sure refunds are all successful
-//     let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
-//         keypom: keypomV3,
-//         root,
-//         keyPair: keyPairs.keys[0],
-//         createAccount: true,
-//         receiverId: ali.accountId,
-//         shouldPanic: true
-//     })
-//     t.is(result.response, "false")
+    // Force fail CAAC, trigger asset transfer back to funder, then make sure refunds are all successful
+    let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+        keypom: keypomV3,
+        root,
+        keyPair: keyPairs.keys[0],
+        createAccount: true,
+        receiverId: ali.accountId,
+        shouldPanic: true
+    })
+    t.is(result.response, "false")
 
-//     // Key should be deleted but drop should persist as assets still exist
-//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), true)
-//     await assertKeypomInternalAssets({
-//         keypom: keypomV3,
-//         dropId,
-//         expectedNftData: [{
-//             contract_id: nftContract.accountId,
-//             token_ids
-//         }],
-//     })
+    // Key should be deleted but drop should persist as assets still exist
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), true)
+    await assertKeypomInternalAssets({
+        keypom: keypomV3,
+        dropId,
+        expectedNftData: [{
+            contract_id: nftContract.accountId,
+            token_ids
+        }],
+    })
 
-//     // Withdraw, then drop should be deleted
-//     let response = await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'withdraw_nft_tokens',
-//         args: {
-//             drop_id: dropId,
-//             nft_contract_id: nftContract.accountId,
-//             token_ids
-//         },
-//     })
-//     t.is(response, "true");
+    // Withdraw, then drop should be deleted
+    let response = await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'withdraw_nft_tokens',
+        args: {
+            drop_id: dropId,
+            nft_contract_id: nftContract.accountId,
+            token_ids
+        },
+    })
+    t.is(response, "true");
 
-//     for(let i = 0; i < MAX_NUM_NFTS; i++){
-//         // Ensure all refunded NFTs belong to original owner
-//         let token: {token_id: string, owner_id: string} = await nftContract.view('nft_token', {token_id: token_ids[i]});
-//         t.is(token.owner_id == funder.accountId && token.token_id == token_ids[i], true)
-//     }
+    for(let i = 0; i < MAX_NUM_NFTS; i++){
+        // Ensure all refunded NFTs belong to original owner
+        let token: {token_id: string, owner_id: string} = await nftContract.view('nft_token', {token_id: token_ids[i]});
+        t.is(token.owner_id == funder.accountId && token.token_id == token_ids[i], true)
+    }
 
-//     // Delete drop once assets are all back
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'delete_keys',
-//         args: {drop_id: dropId},
-//         gas: LARGE_GAS,
-//         attachedDeposit: "0"
-//     })
-//     t.is(await doesDropExist(keypomV3, dropId), false)
+    // Delete drop once assets are all back
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'delete_keys',
+        args: {drop_id: dropId},
+        gas: LARGE_GAS,
+        attachedDeposit: "0"
+    })
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
-//     let finalBal = await keypomV3.balance();
-//     displayBalances(initialBal, finalBal);
-// });
+    let finalBal = await keypomV3.balance();
+    displayBalances(initialBal, finalBal);
+});
 
 test('Maximum FTs + Drop Persists Despite Failed Claims + Can Refund Max', async t => {
     const {funder, keypomV3, nftContract, ftContract, root, ali} = t.context.accounts;
