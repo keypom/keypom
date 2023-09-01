@@ -274,6 +274,7 @@ export async function assertProperStorage({
   expectedTokenId,
   keyPair,
   expectedOwner,
+  // Ownerless is not stored in tokens_for_owner so need a way to manually fail the check when deleting
   ownerlessDelete=false
 }: {
   keypom: NearAccount,

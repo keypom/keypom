@@ -72,6 +72,7 @@ test.afterEach(async t => {
     });
 });
 
+// ******************** Assets Untouched if Invalid TokenIDs Refunded - By TokenID ********************
 test('Delete a lot of NFTs with some invalid by passing in token IDs', async t => {
     const {funder, keypomV3, nftContract, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
@@ -174,6 +175,7 @@ test('Delete a lot of NFTs with some invalid by passing in token IDs', async t =
     displayBalances(initialBal, finalBal);
 });
 
+// ********************  Assets Untouched if Invalid TokenIDs Refunded - By Limit ********************
 test('Delete NFTs, some invalid using limit', async t => {
     const {funder, keypomV3, nftContract, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();

@@ -216,7 +216,7 @@ test('Metadata and Royalties Helper Test', async t => {
     t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), false)
 
 
-    // **************** RECORD LENGTHS DIFFERENT ****************
+    // **************** METADATA DIFFERENT ****************
     let badMetadata: TokenMetadata = {
         title: "your token",
         description: 'abc',
@@ -329,7 +329,7 @@ test('NFT Supply', async t => {
     
     let initialBal = await keypomV3.balance();
 
-    const dropId = "my-drop-id";
+    const dropId = "drop1";
     const numKeys = 9;
     let keyPairs = await generateKeyPairs(numKeys);
     let key_data: {public_key: string, key_owner: NearAccount}[] = []
@@ -428,8 +428,8 @@ test('NFT Supply', async t => {
     num_tokens = await keypomV3.view("nft_supply_for_owner", {account_id: funder.accountId})
     t.is(num_tokens == 7, true)
 
-    // let all_found_tokens: {token_id: string, owner_id: string, metadata: TokenMetadata, royalty: Record<string, number>}[] = await keypomV3.view("nft_tokens_for_owner", {account_id: funder.accountId })
-    // console.log(all_found_tokens)
+    let all_found_tokens: {token_id: string, owner_id: string, metadata: TokenMetadata, royalty: Record<string, number>}[] = await keypomV3.view("nft_tokens_for_owner", {account_id: funder.accountId })
+    console.log(all_found_tokens)
 
     // royalty and storage check - order is all messed up in the array
         // for(let i = 0; i < all_found_tokens.length; i++){
@@ -526,6 +526,7 @@ test('Ownerless Keys', async t => {
     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
     t.is(found_key_info.owner_id == keypomV3.accountId, true)
 
+    // Ensure royalties and metadata properly added
     let royalties_and_metadata_same: {royaltySame: boolean, metadataSame: boolean} = await assertNFTKeyData({
         keypom: keypomV3,
         tokenId: found_key_info.token_id,
@@ -534,6 +535,7 @@ test('Ownerless Keys', async t => {
     })
     t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
 
+    // Ownerless keys belong to Keypom
     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
         keypom: keypomV3,
         expectedTokenId: found_key_info.token_id,
@@ -608,6 +610,7 @@ test('Owned Keys', async t => {
     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
     t.is(found_key_info.owner_id == funder.accountId, true)
 
+    // Royalties and Metadata correctly stored
     let royalties_and_metadata_same: {royaltySame: boolean, metadataSame: boolean} = await assertNFTKeyData({
         keypom: keypomV3,
         tokenId: found_key_info.token_id,
@@ -616,6 +619,7 @@ test('Owned Keys', async t => {
     })
     t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
 
+    // Owner is funder
     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
         keypom: keypomV3,
         expectedTokenId: found_key_info.token_id,
@@ -719,7 +723,7 @@ test('Owned key transfer, approval, revoking - with owner account', async t => {
         found_nft_info = await keypomV3.view("nft_token", {token_id: found_key_info.token_id});
         t.is(found_nft_info.approved_account_ids.hasOwnProperty(ali.accountId), false);
         
-        // This should throw
+        // This should throw as Ali is no longer approved
         let newKeyPair = await generateKeyPairs(1);
         await functionCall({
             signer: ali,
@@ -780,6 +784,7 @@ test('Owned key transfer, approval, revoking - with owner account', async t => {
          })
          t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
 
+         // **************** ENSURE STORAGE IS ACCURATE ****************
          let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
             keypom: keypomV3,
             expectedTokenId: found_key_info.token_id,
@@ -918,6 +923,7 @@ test('Owned key transfer, approval, revoking - with key', async t => {
         })
         t.is((royalties_and_metadata_same.royaltySame && royalties_and_metadata_same.metadataSame), true)
 
+        // **************** ENSURE STORAGE IS ACCURATE ****************
         let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
             keypom: keypomV3,
             expectedTokenId: found_key_info.token_id,

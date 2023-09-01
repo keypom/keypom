@@ -123,7 +123,7 @@ test('Password Claim', async t => {
     })
     t.is(result.response == "true", true)
 
-    // Key should be deleted but drop should still exist
+    // Key and drop should be deleted
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
@@ -199,7 +199,7 @@ test('Adding Keys with PW', async t => {
     })
     t.is(result.response == "true", true)
 
-    // Key should be deleted but drop should still exist
+    // Key and drop should be deleted
     t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
@@ -278,6 +278,112 @@ test('Adding a Bunch of Keys with PW', async t => {
 
         // Key should be deleted but drop should still exist
         t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[i]), false)
+    }
+    
+    t.is(await doesDropExist(keypomV3, dropId), false)
+});
+
+test('Adding Some Keys with PW and Some Without', async t => {
+    const {funder, keypomV3, root, ali} = t.context.accounts;
+    let initialBal = await keypomV3.balance();
+
+    const dropId = "my-drop-id";
+
+    const asset_data = [{
+        assets: [null],
+        uses: 1
+    }]
+    
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data,
+            key_data: []
+        },
+    })
+
+    t.is(await doesDropExist(keypomV3, dropId), true)
+
+    let numKeys = 100;
+    let useWithPw = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
+
+    let basePassword = 'mypassword1';
+    let key_data: {public_key: string, password_by_use?: Record<number, string>}[] = [];
+    let count: number = 1;
+    for (var pk of keyPairs.publicKeys) {
+        if(count%2){
+            // ODD USES HAVE PW
+            let password_by_use = generatePasswordsForKey(pk, [useWithPw], basePassword);
+        
+            key_data.push({
+                public_key: pk,
+                password_by_use
+            })
+        }else{
+            // EVEN USES DO NOT HAVE PW
+            key_data.push({
+                public_key: pk,
+            })
+        }
+        count++
+    }
+
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'add_keys',
+        args: {
+            drop_id: dropId,
+            key_data
+        },
+        attachedDeposit: NEAR.parse("10").toString(),
+    })
+
+    for(let i = 0; i < numKeys; i++){
+        console.log(`CLAIMING NUMBER ${i}`)
+        // ODD USES, WILL NEED PW
+        if((i+1)%2){
+            // No PW, should fail
+            let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+                keypom: keypomV3,
+                root,
+                keyPair: keyPairs.keys[i],
+                createAccount: true,
+                shouldPanic: true
+            })
+
+            t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[i]), true)
+            
+            // Claim with PW
+            result = await claimWithRequiredGas({
+                keypom: keypomV3,
+                root,
+                keyPair: keyPairs.keys[i],
+                createAccount: true,
+                password: generatePasswordsForClaim(keyPairs.publicKeys[i], 1, basePassword)
+            })
+            t.is(result.response == "true", true)
+
+            // Key should be deleted but drop should still exist
+            t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[i]), false)
+        }
+        else{
+            let result: {response: string|undefined, actualReceiverId: string|undefined} = await claimWithRequiredGas({
+                keypom: keypomV3,
+                root,
+                keyPair: keyPairs.keys[i],
+                createAccount: true,
+            })
+            t.is(result.response == "true", true)
+
+            // Key should be deleted but drop should still exist
+            t.is(await doesKeyExist(keypomV3,keyPairs.publicKeys[i]), false)
+        }
+        
     }
     
     t.is(await doesDropExist(keypomV3, dropId), false)

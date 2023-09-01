@@ -98,132 +98,132 @@ test.afterEach(async t => {
 //    Account creation fields being properly sent
 
 
-// test('Different Permission for Keys + Auto Delete when Empty', async t => {
-//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
+test('Different Permission for Keys + Auto Delete when Empty', async t => {
+    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
     
-//     let initialBal = await keypomV3.balance();
+    let initialBal = await keypomV3.balance();
 
-//     const dropId = "my-drop-id";
-//     const numKeys = 1;
-//     let keyPairs = await generateKeyPairs(numKeys);
+    const dropId = "my-drop-id";
+    const numKeys = 1;
+    let keyPairs = await generateKeyPairs(numKeys);
 
-//     // ******************* Creating Drop *******************
-//     const nearAsset1: ExtNearData = {
-//         yoctonear: NEAR.parse("0.2").toString()
-//     }
+    // ******************* Creating Drop *******************
+    const nearAsset1: ExtNearData = {
+        yoctonear: NEAR.parse("0.2").toString()
+    }
 
-//     const asset_data_per_use = [
-//         {
-//             assets: [nearAsset1],
-//             uses: 1,
-//             config: {
-//                 permissions: "claim"
-//             }
-//         },
-//         {
-//             assets: [nearAsset1],
-//             uses: 1,
-//             config: {
-//                 permissions: "create_account_and_claim"
-//             }
-//         },
-//         {
-//             assets: [nearAsset1],
-//             uses: 2
-//         },
-//     ]
+    const asset_data_per_use = [
+        {
+            assets: [nearAsset1],
+            uses: 1,
+            config: {
+                permissions: "claim"
+            }
+        },
+        {
+            assets: [nearAsset1],
+            uses: 1,
+            config: {
+                permissions: "create_account_and_claim"
+            }
+        },
+        {
+            assets: [nearAsset1],
+            uses: 2
+        },
+    ]
 
-//     await functionCall({
-//         signer: funder,
-//         receiver: keypomV3,
-//         methodName: 'create_drop',
-//         args: {
-//             drop_id: dropId,
-//             asset_data: asset_data_per_use,
-//             key_data: [{
-//                 public_key: keyPairs.publicKeys[0],
-//             }],
-//         },
-//     }) 
+    await functionCall({
+        signer: funder,
+        receiver: keypomV3,
+        methodName: 'create_drop',
+        args: {
+            drop_id: dropId,
+            asset_data: asset_data_per_use,
+            key_data: [{
+                public_key: keyPairs.publicKeys[0],
+            }],
+        },
+    }) 
 
-//     // ******************* Claiming *******************
-//     let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining == 4, true)
-//     // First claim is limited to claim, try CAAC
-//     try{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             createAccount: true
-//         })
-//         t.fail()
-//     }catch{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             receiverId: ali.accountId
-//         })
-//     }
+    // ******************* Claiming *******************
+    let keyInfo: {uses_remaining: number} = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 4, true)
+    // First claim is limited to claim, try CAAC
+    try{
+        await claimWithRequiredGas({
+            keypom: keypomV3,
+            keyPair: keyPairs.keys[0],
+            root,
+            createAccount: true
+        })
+        t.fail()
+    }catch{
+        await claimWithRequiredGas({
+            keypom: keypomV3,
+            keyPair: keyPairs.keys[0],
+            root,
+            receiverId: ali.accountId
+        })
+    }
 
-//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining == 3, true)
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 3, true)
 
-//     // Second Claim is limited to CAAC, try claim
-//     try{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             receiverId: ali.accountId
-//         })
-//         t.fail()
-//     }catch{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             createAccount: true
-//         })
-//     }
+    // Second Claim is limited to CAAC, try claim
+    try{
+        await claimWithRequiredGas({
+            keypom: keypomV3,
+            keyPair: keyPairs.keys[0],
+            root,
+            receiverId: ali.accountId
+        })
+        t.fail()
+    }catch{
+        await claimWithRequiredGas({
+            keypom: keypomV3,
+            keyPair: keyPairs.keys[0],
+            root,
+            createAccount: true
+        })
+    }
 
-//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining == 2, true)
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 2, true)
 
-//     // Next Two Claims not limited
-//     // Claim
-//     try{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             receiverId: ali.accountId
-//         })
-//     }catch{
-//         t.fail()
-//     }
+    // Next Two Claims not limited
+    // Claim
+    try{
+        await claimWithRequiredGas({
+            keypom: keypomV3,
+            keyPair: keyPairs.keys[0],
+            root,
+            receiverId: ali.accountId
+        })
+    }catch{
+        t.fail()
+    }
 
-//     keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
-//     t.is(keyInfo.uses_remaining == 1, true)
+    keyInfo = await keypomV3.view('get_key_information', {key: keyPairs.publicKeys[0]});
+    t.is(keyInfo.uses_remaining == 1, true)
 
-//     //CAAC
-//     try{
-//         await claimWithRequiredGas({
-//             keypom: keypomV3,
-//             keyPair: keyPairs.keys[0],
-//             root,
-//             createAccount: true
-//         })
-//     }catch{
-//         t.fail()
-//     }
+    //CAAC
+    try{
+        await claimWithRequiredGas({
+            keypom: keypomV3,
+            keyPair: keyPairs.keys[0],
+            root,
+            createAccount: true
+        })
+    }catch{
+        t.fail()
+    }
 
-//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-//     t.is(await doesDropExist(keypomV3, dropId), false)
-//     let finalBal = await keypomV3.balance();
-//     t.deepEqual(initialBal.stateStaked, finalBal.stateStaked)
-// });
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
+    let finalBal = await keypomV3.balance();
+    t.deepEqual(initialBal.stateStaked, finalBal.stateStaked)
+});
 
 test('Account creation fields being properly sent', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, keypom_args_linkdrop} = t.context.accounts;

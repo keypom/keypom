@@ -71,6 +71,7 @@ test.afterEach(async t => {
     });
 });
 
+// ******************** Underfunded Drop cannot be deleted until all is withdraw ********************
 test('Underpay, Withdraw, Delete', async t => {
     const {funder, ftContract1, keypomV3, root} = t.context.accounts;
     let initialBal = await keypomV3.balance();
@@ -220,6 +221,7 @@ test('Underpay, Withdraw, Delete', async t => {
     displayBalances(initialBal, finalBal);
 });
 
+// ******************** Overfunded Drop cannot be deleted until all is withdraw ********************
 test('Overpay, Withdraw, Delete', async t => {
     const {funder, ftContract1, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
@@ -365,6 +367,7 @@ test('Overpay, Withdraw, Delete', async t => {
     displayBalances(initialBal, finalBal);
 });
 
+// ******************** Empty Drop cannot be deleted until all is withdraw ********************
 test('Create & Delete Empty Drop', async t => {
     const {funder, ftContract1, keypomV3} = t.context.accounts;
     let initialBal = await keypomV3.balance();
