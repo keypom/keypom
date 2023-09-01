@@ -88,14 +88,6 @@ test.afterEach(async t => {
     });
 });
 
-// Time Config
-//     Start timestamp
-//     End Timestamp
-//     Throttle timestamp
-//     Interval (both with & without start specified)
-
-
-
 test('User in Add Keys Allowlist', async t => {
     const {funder, keypomV3, root, ali, bob} = t.context.accounts;
     const ONE_SECOND_NS = 1e9

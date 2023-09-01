@@ -101,17 +101,13 @@ pub(crate) fn insert_nested_keypom_arg(
         let split = field.split(".");
         let last_el = split.clone().count() - 1;
         
-        // near_sdk::log!("last_el: {}", last_el);
         for (i, e) in split.enumerate() {
-            // near_sdk::log!("i: {}, e: {}", i, e);
             
             if i == last_el {
                 temp.insert(e.to_string(), json!(value));
-                // near_sdk::log!("final insert {:?}", temp);
                 break;
             }
             
-            // near_sdk::log!("Setting temp");
             if temp.contains_key(e) {
                 if let Some(v) = temp.get_mut(e).unwrap().as_object_mut() {
                     temp = v; 
@@ -122,7 +118,6 @@ pub(crate) fn insert_nested_keypom_arg(
                 temp.insert(e.clone().to_string(), json!({})); 
                 temp = temp.get_mut(e).unwrap().as_object_mut().unwrap();
             }
-            // near_sdk::log!("temp outer {:?}", temp);
         }    
 
         near_sdk::log!("Args after: {}", output_args);

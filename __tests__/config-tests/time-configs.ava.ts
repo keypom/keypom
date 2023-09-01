@@ -84,8 +84,6 @@ test.afterEach(async t => {
 //     Throttle timestamp
 //     Interval (both with & without start specified)
 
-
-
 test('Start, End and Interval', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali} = t.context.accounts;
     const ONE_SECOND_NS = 1e9
