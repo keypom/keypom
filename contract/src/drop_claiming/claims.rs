@@ -63,7 +63,6 @@ impl Keypom {
             prepaid_gas.0)
         );
         let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + required_asset_gas;
-        near_sdk::log!("gas_for_callback: {}", gas_for_callback.0);
 
         log_events(event_logs);
         near_sdk::log!("Keypom Args Before create_account: {:?}", account_creation_keypom_args);

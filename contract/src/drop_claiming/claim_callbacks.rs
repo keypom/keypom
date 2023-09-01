@@ -69,33 +69,6 @@ impl Keypom {
         // Iterate through all the promises and get the results
         let mut was_successful = true;
         let mut drop_assets_empty = true;
-        near_sdk::log!("ALL ASSETS METADATA: {:?}", assets_metadata.clone());
-        near_sdk::log!("Number of Promise Results: {}", env::promise_results_count());
-        for i in 0..env::promise_results_count() {
-            match env::promise_result(i){
-                PromiseResult::NotReady => return PromiseOrValue::Promise(
-                    Self::ext(env::current_account_id())
-                        .on_assets_claimed(
-                            token_id,
-                            token_ids_transferred
-                        )
-                ),
-                PromiseResult::Successful(_) => {
-                    near_sdk::log!("Asset {}: {:?}", i + 1, assets_metadata[i as usize]);
-                    near_sdk::log!("Promise {} Result: {:?}", i + 1, env::promise_result(i)); 
-                },
-                PromiseResult::Failed => {
-                    near_sdk::log!("Asset {}: {:?}", i + 1, assets_metadata[i as usize]);
-                    near_sdk::log!("Promise {} Result: {:?}", i + 1, env::promise_result(i));
-                    // return PromiseOrValue::Promise(
-                    //     Self::ext(env::current_account_id())
-                    //         .on_assets_claimed(
-                    //             token_id,
-                    //             token_ids_transferred
-                    //         ))    
-                }
-            }
-        }
         for i in 0..num_promises {
             let promise_result = env::promise_result(i);
             let metadata = &assets_metadata[i as usize];
@@ -121,7 +94,6 @@ impl Keypom {
                 },
                 PromiseResult::Failed => {
                     was_successful = false;
-                    near_sdk::log!("Asset claim failed on asset number {}: {:?}", i + 1, metadata);
                     // If we're dealing with an FC asset, no need to perform any refunds
                     if is_fc_asset_id(&metadata.asset_id) {
                         near_sdk::log!("FC asset claimed");
