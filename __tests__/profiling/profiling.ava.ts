@@ -1,9 +1,9 @@
 import anyTest, { TestFn } from "ava";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
 import { CONTRACT_METADATA, claimWithRequiredGas, functionCall, generateKeyPairs } from "../utils/general";
-import { keypom_args, nftMetadata, nftSeriesMetadata } from "./utils/nft-utils";
-import { generatePasswordsForKey, hash } from "./utils/pwUtils";
-import { oneGtNear, totalSupply } from "../ft-drops/utils/ft-utils";
+import { keypom_args, nftMetadata, nftSeriesMetadata } from "../utils/nft-utils";
+import { generatePasswordsForKey, hash } from "../utils/pwUtils";
+import { oneGtNear, totalSupply } from "../utils/ft-utils";
 
 const test = anyTest as TestFn<{
     worker: Worker;

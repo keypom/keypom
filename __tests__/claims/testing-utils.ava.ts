@@ -41,7 +41,7 @@ test.beforeEach(async (t) => {
 
     
     await root.call(root, 'new', {});
-    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId });
+    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId, owner_id: keypomV3.accountId, contract_metadata: {version: "3.0.0", link: "hello"} });
     await nftContract.call(nftContract, 'new_default_meta', { owner_id: nftContract });
     // await nftContract2.call(nftContract2, 'new_default_meta', { owner_id: nftContract2 });
 

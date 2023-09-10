@@ -1,5 +1,5 @@
 import { NEAR, NearAccount } from "near-workspaces"
-import { LARGE_GAS } from "../../utils/general";
+import { LARGE_GAS } from "./general";
 
 export const nftSeriesMetadata = {
     "spec": "nft-1.0.99",

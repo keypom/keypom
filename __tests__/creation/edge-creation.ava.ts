@@ -1,7 +1,6 @@
 import anyTest, { TestFn } from "ava";
-import { claimTrialAccountDrop, createDrop, createTrialAccountDrop, getDrops, getUserBalance, parseNearAmount, trialCallMethod } from "keypom-js";
 import { NEAR, NearAccount, Worker } from "near-workspaces";
-import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection } from "../utils/general";
+import { CONTRACT_METADATA, LARGE_GAS, assertKeypomInternalAssets, displayBalances, claimWithRequiredGas, functionCall, generateKeyPairs, initKeypomConnection, doesKeyExist, doesDropExist } from "../utils/general";
 import { oneGtNear, sendFTs, totalSupply } from "../utils/ft-utils";
 import { BN } from "bn.js";
 import { ExtDrop, ExtFTData, InternalNFTData } from "../utils/types";
@@ -32,14 +31,14 @@ test.beforeEach(async (t) => {
     })
 
     
-    await keypomV3.deploy(`./out/mapping.wasm`);
+    await keypomV3.deploy(`./out/keypom.wasm`);
     await root.deploy(`./__tests__/ext-wasm/linkdrop.wasm`);
     const nftContract = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
     const nftContract2 = await root.devDeploy(`./__tests__/ext-wasm/nft-tutorial.wasm`);
 
     
     await root.call(root, 'new', {});
-    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId });
+    await keypomV3.call(keypomV3, 'new', { root_account: root.accountId, owner_id: keypomV3.accountId, contract_metadata: {version: "3.0.0", link: "hello"} });
     await nftContract.call(nftContract, 'new_default_meta', { owner_id: nftContract });
     await nftContract2.call(nftContract2, 'new_default_meta', { owner_id: nftContract2 });
 
@@ -202,16 +201,15 @@ test('Ensuring drop creation gas limit is accurate', async t => {
     console.log(`new PK: ${keyPairs.publicKeys[-1]}`)
     // CAAC
     await claimWithRequiredGas({
-        keypomV3,
+        keypom: keypomV3,
         root,
-        key: keyPairs.keys[0],
-        publicKey: keyPairs.publicKeys[0],
+        keyPair: keyPairs.keys[0],
         createAccount: true,
     })
 
     // After a succesful claim, Keypom keys should be back to just the one FAK
-    let keypomKeys = await keypomV3.viewAccessKeys(keypomV3.accountId);
-    t.is(keypomKeys.keys.length, 1);
+    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+    t.is(await doesDropExist(keypomV3, dropId), false)
 
 });
 

@@ -274,6 +274,7 @@ export async function assertProperStorage({
   expectedTokenId,
   keyPair,
   expectedOwner,
+  // Ownerless is not stored in tokens_for_owner so need a way to manually fail the check when deleting
   ownerlessDelete=false
 }: {
   keypom: NearAccount,
@@ -531,18 +532,18 @@ export function defaultCallOptions(
   };
 }
 
-// export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, precision: number) {
-//   console.log('expected change: ', expected_change.toString())
+export function assertBalanceChange(b1: NEAR, b2: NEAR, expected_change: NEAR, precision: number) {
+  console.log('expected change: ', expected_change.toString())
 
-//   let numToDivide = new BN(Math.ceil(1 / precision));
-//   let range = expected_change.abs().div(numToDivide);
-//   console.log('range addition: ', range.toString())
+  let numToDivide = new BN(Math.ceil(1 / precision));
+  let range = expected_change.abs().div(numToDivide);
+  console.log('range addition: ', range.toString())
 
-//   let acceptableRange = {
-//     upper: expected_change.abs().add(range), // 1 + .05 = 1.05
-//     lower: expected_change.abs().sub(range) // 1 - .05  = .95
-//   }
-//   let diff = b2.sub(b1).abs();
-//   console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
-//   return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
-// }
+  let acceptableRange = {
+    upper: expected_change.abs().add(range), // 1 + .05 = 1.05
+    lower: expected_change.abs().sub(range) // 1 - .05  = .95
+  }
+  let diff = b2.sub(b1).abs();
+  console.log(`diff: ${diff.toString()} range: ${JSON.stringify(acceptableRange)}`)
+  return diff.gte(acceptableRange.lower) && diff.lte(acceptableRange.upper)
+}

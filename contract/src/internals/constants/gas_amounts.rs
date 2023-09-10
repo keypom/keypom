@@ -42,5 +42,5 @@ pub const RECEIPT_GAS_COST: Gas = Gas(2_500_000_000_000); // 2.5 TGas
 
 
 // ------------------------ Assets ------------------------ //
-pub const GAS_FOR_NONE_ASSET: Gas = Gas(400_000_000_000); // 0.4 TGas
+pub const GAS_FOR_NONE_ASSET: Gas = Gas(550_000_000_000); // 0.4 TGas
 pub const GAS_FOR_NEAR_TRANSFER: Gas = Gas(9_000_000_000_000); // 9 TGas

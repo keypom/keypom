@@ -63,7 +63,6 @@ impl Keypom {
             prepaid_gas.0)
         );
         let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + required_asset_gas;
-        near_sdk::log!("gas_for_callback: {}", gas_for_callback.0);
 
         log_events(event_logs);
         near_sdk::log!("Keypom Args Before create_account: {:?}", account_creation_keypom_args);
@@ -78,7 +77,8 @@ impl Keypom {
             &new_account_id,
             &drop_id,
             &key_id.to_string(),
-            &funder_id
+            &funder_id,
+            true
         ).expect("Unable to add keypom args");
         
         // First, create the zero-balance account and then, claim the assets
@@ -87,7 +87,7 @@ impl Keypom {
             .function_call_weight(
                 "create_account".to_string(), 
                 create_account_args.into(), 
-                0,
+                10000000000000000000000, // TODO: remove (needed for sandbox testing)
                 GAS_FOR_CREATE_ACCOUNT,
                 GasWeight(0)
             ).then(

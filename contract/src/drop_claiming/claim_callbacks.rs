@@ -94,7 +94,6 @@ impl Keypom {
                 },
                 PromiseResult::Failed => {
                     was_successful = false;
-                    near_sdk::log!("Asset claim failed");
                     // If we're dealing with an FC asset, no need to perform any refunds
                     if is_fc_asset_id(&metadata.asset_id) {
                         near_sdk::log!("FC asset claimed");

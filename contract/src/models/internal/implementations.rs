@@ -99,24 +99,24 @@ impl InternalAsset {
         drop_id: DropId,
         key_id: String,
         funder_id: AccountId
-    ) -> Option<Promise> {
+    ) -> Promise {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
-                return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
+                ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
             },
             InternalAsset::nft(ref mut nft_data) => {
-                return nft_data.claim_nft_asset(receiver_id)
+                nft_data.claim_nft_asset(receiver_id)
             },
             InternalAsset::fc(ref mut fc_data) => {
-                return fc_data.claim_fc_asset(fc_args, receiver_id.clone(), drop_id, key_id, funder_id)
+                fc_data.claim_fc_asset(fc_args, receiver_id.clone(), drop_id, key_id, funder_id)
             },
             InternalAsset::near => {
-                return Some(Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap()));
+                Some(Promise::new(receiver_id.clone()).transfer(tokens_per_use.unwrap()))
             },
             InternalAsset::none => {
-                return None;
+                None
             }
-        }
+        }.unwrap_or(Promise::new(env::current_account_id()))
     }
 
     /// Standard function outlining what should happen if a specific claim failed
@@ -126,14 +126,15 @@ impl InternalAsset {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
                 let ft_to_refund = &tokens_per_use.as_ref().unwrap().parse::<u128>().unwrap();
-                near_sdk::log!("Failed claim for FT asset. Refunding {} to the user's balance and incrementing balance available by {}", 0, ft_to_refund);
+                near_sdk::log!("Failed claim for FT asset: {}. Refunding {} to the user's balance and incrementing balance available by {}",ft_data.contract_id, ft_data.registration_cost, ft_to_refund);
                 ft_data.add_to_balance_avail(ft_to_refund);
                 ft_data.registration_cost
             },
             InternalAsset::nft(ref mut nft_data) => {
                 let token_id = &tokens_per_use.as_ref().unwrap();
                 near_sdk::log!("Failed claim NFT asset with Token ID {}", token_id);
-                nft_data.add_to_token_ids(token_id);
+                // Add to end of token_ids to maintain same order
+                nft_data.add_to_end_of_token_ids(token_id);
                 0
             },
             InternalAsset::near => {

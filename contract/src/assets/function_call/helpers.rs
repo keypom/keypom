@@ -76,7 +76,57 @@ pub(crate) fn set_user_markers(
     Ok(())
 }
 
-pub(crate) fn insert_keypom_arg(
+
+pub(crate) fn insert_nested_keypom_arg(
+    output_args: &mut Value,
+    optional_field: &Option<String>,
+    value: String
+) -> Result<(), String> {
+    // Add the account ID that claimed the linkdrop as part of the args to the function call in the key specified by the user
+    if let Some(field) = optional_field {
+        near_sdk::log!(
+            "Attempting to add Value {} into {} For Keypom Args.",
+            value,
+            field
+        );
+        near_sdk::log!("Args before: {}", output_args);
+
+        let temp_option = output_args.as_object_mut();
+        if temp_option.is_none() {
+            return Err("Cannot convert args to json object".to_string());
+        } 
+        
+        // Temp is a map now
+        let mut temp = temp_option.unwrap();
+        let split = field.split(".");
+        let last_el = split.clone().count() - 1;
+        
+        for (i, e) in split.enumerate() {
+            
+            if i == last_el {
+                temp.insert(e.to_string(), json!(value));
+                break;
+            }
+            
+            if temp.contains_key(e) {
+                if let Some(v) = temp.get_mut(e).unwrap().as_object_mut() {
+                    temp = v; 
+                } else {
+                    return Err(format!("Key {} present in args already. Skipping method.", e));
+                }
+            } else {
+                temp.insert(e.clone().to_string(), json!({})); 
+                temp = temp.get_mut(e).unwrap().as_object_mut().unwrap();
+            }
+        }    
+
+        near_sdk::log!("Args after: {}", output_args);
+    }
+
+    Ok(())
+}
+
+pub(crate) fn insert_top_level_keypom_arg(
     output_args: &mut String,
     optional_field: &Option<String>,
     value: String
@@ -111,6 +161,7 @@ pub(crate) fn insert_keypom_arg(
     Ok(())
 }
 
+/// Takes the args, and adds the user arguments depending on the rules
 pub(crate) fn handle_user_args_rules (
     output_args: &mut String, 
     user_args_rule: &Option<UserArgsRule>,
@@ -195,7 +246,8 @@ pub fn handle_fc_args(
         account_id,
         drop_id,
         key_id,
-        funder_id
+        funder_id,
+        output_args.len() <= 4096
     )?;
 
     return Ok(());
