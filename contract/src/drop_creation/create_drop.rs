@@ -14,6 +14,7 @@ impl Keypom {
         keep_excess_deposit: Option<bool>
     ) -> bool {
         self.assert_no_global_freeze();
+        require!(!drop_id.contains(":"), "Drop ID cannot contain a colon (:)");
 
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
