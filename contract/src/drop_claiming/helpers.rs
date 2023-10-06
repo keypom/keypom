@@ -274,6 +274,7 @@ pub(crate) fn assert_pre_claim_conditions(
     // Ensure any timestamps in the configs have been fulfilled
     assert_claim_timestamps(use_config, key_info, &String::from(&env::signer_account_pk()), max_uses_per_key);
 
+    near_sdk::log!("Pre-PW check");
     // If there is some password for the current key use, assert that it matches the one provided
     if let Some(pw_by_use) = &key_info.pw_by_use {
         if let Some(pw) = pw_by_use.get(cur_key_use) {

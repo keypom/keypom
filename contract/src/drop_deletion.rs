@@ -97,8 +97,15 @@ impl Keypom {
             }
         ];
         
-        // Drop is empty, keep_empty_drop is false and delete_empty_drop is true
-        if drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(false) && drop.config.clone().unwrap_or(DropConfig { metadata: (None), nft_keys_config: (None), add_key_allowlist: (None), delete_empty_drop: (Some(true)), extra_allowance_per_key: (None) }).delete_empty_drop.unwrap_or(true){
+        
+        let should_delete_on_empty = drop.config.as_ref().and_then(|c| c.delete_empty_drop).unwrap_or(true);
+       
+        // If drop config is delete empty
+        let delete_delete_empty = drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(false) && should_delete_on_empty;
+        // If drop config is keep empty
+        let delete_keep_empty = drop.key_info_by_token_id.is_empty() && !keep_empty_drop.unwrap_or(true) && !should_delete_on_empty;
+        
+        if delete_delete_empty || delete_keep_empty {
             // Now that the drop is empty, we can delete the assets by use and asset by ID
             // The drop has already been removed from storage, so we can just clear the maps
             internal_clear_drop_storage(&mut drop, &mut event_logs, &drop_id);

@@ -4,6 +4,7 @@ use crate::*;
 impl Keypom {
     #[private]
     pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs, password: Option<String>) -> PromiseOrValue<bool> {
+        near_sdk::log!("Made it to claim");
         self.assert_no_global_freeze();
 
         let mut event_logs: Vec<EventLog> = Vec::new();
@@ -20,6 +21,7 @@ impl Keypom {
             None,
             password
         );
+        near_sdk::log!("Claim Before");
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CLAIM + required_asset_gas;
         // Use to check prepaid == required. Changed to >= for the sake of simplicity for now

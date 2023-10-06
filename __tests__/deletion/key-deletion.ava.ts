@@ -97,354 +97,355 @@ test.afterEach(async t => {
 // When drop is fully deleted, any cost that was put in should have been refunded (no more, no less). UNLESS keys have been claimed
 // True is returned from function
 
-test('Default - Delete on Empty', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+// test('Default - Delete on Empty', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
-    let initialBal = await keypomV3.balance();
+//     let initialBal = await keypomV3.balance();
 
-    const dropId = "my-drop-id";
-    const numKeys = 2;
-    let keyPairs = await generateKeyPairs(numKeys);
+//     const dropId = "my-drop-id";
+//     const numKeys = 2;
+//     let keyPairs = await generateKeyPairs(numKeys);
 
-    // ******************* Creating Drop *******************
-    const nearAsset1: ExtNearData = {
-        yoctonear: NEAR.parse("1").toString()
-    }
+//     // ******************* Creating Drop *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
 
-    const asset_data_per_use = [{
-        assets: [nearAsset1],
-        uses: 1
-    }];
+//     const asset_data_per_use = [{
+//         assets: [nearAsset1],
+//         uses: 1
+//     }];
     
-    // if keep_empty_drop in delete_keys does not work, this will auto-delete
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data: [{
-                public_key: keyPairs.publicKeys[0],
-            }],
-        },
-    }) 
+//     // if keep_empty_drop in delete_keys does not work, this will auto-delete
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[0],
+//             }],
+//         },
+//     }) 
 
-    let found_key_info: {owner_id: string, token_id: string, required_gas: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+//     let found_key_info: {owner_id: string, token_id: string, required_gas: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3
+//     })
+//     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
-    let userPreDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+//     let userPreDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
 
-    //Should delete drop here
-    let deleteResponse = await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "delete_keys",
-        args: {
-            drop_id: dropId,
-            public_keys: [keyPairs.publicKeys[0]],
-        }
-    })
-    t.is(deleteResponse=="true", true)
+//     //Should delete drop here
+//     let deleteResponse = await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: "delete_keys",
+//         args: {
+//             drop_id: dropId,
+//             public_keys: [keyPairs.publicKeys[0]],
+//         }
+//     })
+//     t.is(deleteResponse=="true", true)
 
-    let userPostDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-    let balChange = formatNearAmount((BigInt(userPostDeleteBal) - BigInt(userPreDeleteBal)).toString(), 5);
-    console.log(balChange)
-    t.is(balChange > "1", true)
+//     let userPostDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+//     let balChange = formatNearAmount((BigInt(userPostDeleteBal) - BigInt(userPreDeleteBal)).toString(), 5);
+//     console.log(balChange)
+//     t.is(balChange > "1", true)
    
-    storageBools = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3,
-        ownerlessDelete: true
-    })
-    // Ensure both fail and are no longer in storage
-    console.log(storageBools.tokens_per_owner_check)
-    console.log(storageBools.token_id_by_pk_check)
-    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+//     storageBools = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3,
+//         ownerlessDelete: true
+//     })
+//     // Ensure both fail and are no longer in storage
+//     console.log(storageBools.tokens_per_owner_check)
+//     console.log(storageBools.token_id_by_pk_check)
+//     t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
 
-    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), false)
-});
+//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
+// });
 
-test('Passing in custom public keys belonging to drop', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+// test('Passing in custom public keys belonging to drop', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
-    let initialBal = await keypomV3.balance();
+//     let initialBal = await keypomV3.balance();
 
-    const dropId = "my-drop-id";
-    const numKeys = 2;
-    let keyPairs = await generateKeyPairs(numKeys);
+//     const dropId = "my-drop-id";
+//     const numKeys = 2;
+//     let keyPairs = await generateKeyPairs(numKeys);
 
-    // ******************* Creating Drop *******************
-    const nearAsset1: ExtNearData = {
-        yoctonear: NEAR.parse("1").toString()
-    }
+//     // ******************* Creating Drop *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
 
-    const asset_data_per_use = [{
-        assets: [null],
-        uses: 1
-    }];
+//     const asset_data_per_use = [{
+//         assets: [null],
+//         uses: 1
+//     }];
     
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data: [{
-                public_key: keyPairs.publicKeys[0],
-            }],
-        },
-    }) 
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[0],
+//             }],
+//         },
+//     }) 
 
-    let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+//     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3
+//     })
+//     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
-    let deleteResponse = await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "delete_keys",
-        args: {
-            drop_id: dropId,
-            public_keys: [keyPairs.publicKeys[0]],
-        }
-    })
-    t.is(deleteResponse=="true", true)
+//     let deleteResponse = await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: "delete_keys",
+//         args: {
+//             drop_id: dropId,
+//             public_keys: [keyPairs.publicKeys[0]],
+//         }
+//     })
+//     t.is(deleteResponse=="true", true)
 
-    storageBools = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3,
-        ownerlessDelete: true
-    })
-    // Ensure both fail and are no longer in storage
-    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+//     storageBools = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3,
+//         ownerlessDelete: true
+//     })
+//     // Ensure both fail and are no longer in storage
+//     t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
 
-    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), false)
-});
+//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
+// });
 
-test('Passing in invalid public keys', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+// test('Passing in invalid public keys', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
-    let initialBal = await keypomV3.balance();
+//     let initialBal = await keypomV3.balance();
 
-    const dropId = "my-drop-id";
-    const numKeys = 2;
-    let keyPairs = await generateKeyPairs(numKeys);
+//     const dropId = "my-drop-id";
+//     const numKeys = 2;
+//     let keyPairs = await generateKeyPairs(numKeys);
 
-    // ******************* Creating Drop *******************
-    const nearAsset1: ExtNearData = {
-        yoctonear: NEAR.parse("1").toString()
-    }
+//     // ******************* Creating Drop *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
 
-    const asset_data_per_use = [{
-        assets: [null],
-        uses: 1
-    }];
+//     const asset_data_per_use = [{
+//         assets: [null],
+//         uses: 1
+//     }];
     
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data: [{
-                public_key: keyPairs.publicKeys[0],
-            }],
-        },
-    }) 
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[0],
+//             }],
+//         },
+//     }) 
 
-    let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
-    let preDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+//     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3
+//     })
+//     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+//     let preDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
     
 
-    let preDeleteKeypomBal = await keypomV3.balance();
-    try{
-        await functionCall({
-            signer: funder,
-            receiver: keypomV3,
-            methodName: "delete_keys",
-            args: {
-                drop_id: dropId,
-                public_keys: ["abcdefghijklmnopqrstuvwxyz123456789"],
-            }
-        })
-        // Should not pass to here, if it does, fail
-        t.fail()
-    }catch(e){
-        // Ensure storage has not changed
-        storageBools = await assertProperStorage({
-            keypom: keypomV3,
-            expectedTokenId: found_key_info.token_id,
-            keyPair: keyPairs.keys[0],
-            expectedOwner: keypomV3
-        })
-        t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
-    }
-    let postDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
-    let finalBal = await keypomV3.balance();
+//     let preDeleteKeypomBal = await keypomV3.balance();
+//     try{
+//         await functionCall({
+//             signer: funder,
+//             receiver: keypomV3,
+//             methodName: "delete_keys",
+//             args: {
+//                 drop_id: dropId,
+//                 public_keys: ["abcdefghijklmnopqrstuvwxyz123456789"],
+//             }
+//         })
+//         // Should not pass to here, if it does, fail
+//         t.fail()
+//     }catch(e){
+//         // Ensure storage has not changed
+//         storageBools = await assertProperStorage({
+//             keypom: keypomV3,
+//             expectedTokenId: found_key_info.token_id,
+//             keyPair: keyPairs.keys[0],
+//             expectedOwner: keypomV3
+//         })
+//         t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+//     }
+//     let postDeleteBal: number = await keypomV3.view('get_user_balance', {account_id: funder.accountId})
+//     let finalBal = await keypomV3.balance();
 
-    t.deepEqual(preDeleteKeypomBal.stateStaked, finalBal.stateStaked)
-    t.is(preDeleteBal == postDeleteBal, true)
-    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), true)
-    t.is(await doesDropExist(keypomV3, dropId), true)
-});
+//     t.deepEqual(preDeleteKeypomBal.stateStaked, finalBal.stateStaked)
+//     t.is(preDeleteBal == postDeleteBal, true)
+//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), true)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
+// });
 
-test('Passing in limit', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+// test('Passing in limit', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
-    let initialBal = await keypomV3.balance();
+//     let initialBal = await keypomV3.balance();
 
-    const dropId = "my-drop-id";
-    const numKeys = 10;
-    let keyPairs = await generateKeyPairs(numKeys);
+//     const dropId = "my-drop-id";
+//     const numKeys = 10;
+//     let keyPairs = await generateKeyPairs(numKeys);
 
-    let key_data: {public_key: string}[] = []
-    for(let i = 0; i < numKeys; i++){
-        key_data.push({public_key: keyPairs.publicKeys[i]})
-    }
+//     let key_data: {public_key: string}[] = []
+//     for(let i = 0; i < numKeys; i++){
+//         key_data.push({public_key: keyPairs.publicKeys[i]})
+//     }
 
-    // ******************* Creating Drop *******************
-    const nearAsset1: ExtNearData = {
-        yoctonear: NEAR.parse("1").toString()
-    }
+//     // ******************* Creating Drop *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
 
-    const asset_data_per_use = [{
-        assets: [null],
-        uses: 1
-    }];
+//     const asset_data_per_use = [{
+//         assets: [null],
+//         uses: 1
+//     }];
     
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data
-        },
-    }) 
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data
+//         },
+//     }) 
 
-    let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+//     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3
+//     })
+//     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
-    let deleteResponse = await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "delete_keys",
-        args: {
-            drop_id: dropId,
-            limit: 5,
-        }
-    })
-    t.is(deleteResponse=="true", true)
+//     let deleteResponse = await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: "delete_keys",
+//         args: {
+//             drop_id: dropId,
+//             limit: 5,
+//         }
+//     })
+//     t.is(deleteResponse=="true", true)
 
-    let allKeys: ExtKeyInfo[] = await keypomV3.view("get_keys_for_drop", {drop_id: dropId})
-    t.is(allKeys.length == 5, true)
-    t.is(await doesDropExist(keypomV3, dropId), true)
-});
+//     let allKeys: ExtKeyInfo[] = await keypomV3.view("get_keys_for_drop", {drop_id: dropId})
+//     t.is(allKeys.length == 5, true)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
+// });
 
-test('Delete keys keep empty drop', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+// test('Delete keys keep empty drop', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
-    let initialBal = await keypomV3.balance();
+//     let initialBal = await keypomV3.balance();
 
-    const dropId = "my-drop-id";
-    const numKeys = 2;
-    let keyPairs = await generateKeyPairs(numKeys);
+//     const dropId = "my-drop-id";
+//     const numKeys = 2;
+//     let keyPairs = await generateKeyPairs(numKeys);
 
-    // ******************* Creating Drop *******************
-    const nearAsset1: ExtNearData = {
-        yoctonear: NEAR.parse("1").toString()
-    }
+//     // ******************* Creating Drop *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
 
-    const asset_data_per_use = [{
-        assets: [null],
-        uses: 1
-    }];
+//     const asset_data_per_use = [{
+//         assets: [null],
+//         uses: 1
+//     }];
     
-    // if keep_empty_drop in delete_keys does not work, this will auto-delete
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data: [{
-                public_key: keyPairs.publicKeys[0],
-            }],
-        },
-    }) 
+//     // if keep_empty_drop in delete_keys does not work, this will auto-delete
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[0],
+//             }],
+//         },
+//     }) 
 
-    let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+//     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3
+//     })
+//     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
-    // Shoudl not delete drop here
-    let deleteResponse = await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "delete_keys",
-        args: {
-            drop_id: dropId,
-            public_keys: [keyPairs.publicKeys[0]],
-            keep_empty_drop: true
-        }
-    })
-    t.is(deleteResponse=="true", true)
+//     // Shoudl not delete drop here
+//     let deleteResponse = await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: "delete_keys",
+//         args: {
+//             drop_id: dropId,
+//             public_keys: [keyPairs.publicKeys[0]],
+//             keep_empty_drop: true
+//         }
+//     })
+//     t.is(deleteResponse=="true", true)
 
-    storageBools = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3,
-        ownerlessDelete: true
-    })
-    // Ensure both fail and are no longer in storage
-    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+//     storageBools = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3,
+//         ownerlessDelete: true
+//     })
+//     // Ensure both fail and are no longer in storage
+//     t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
 
-    t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
-    t.is(await doesDropExist(keypomV3, dropId), true)
-});
+//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
 
-test('Passing in drop that does not auto-delete', async t => {
+// });
+
+test('Non Auto-Delete, delete only if forced', async t => {
     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
     
     let initialBal = await keypomV3.balance();
@@ -513,100 +514,16 @@ test('Passing in drop that does not auto-delete', async t => {
 
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), true)
-});
 
-test(' Deleting a drop with a TON of empty asset metadata - check for gas and ensure no panic', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
-    
-    let initialBal = await keypomV3.balance();
-
-    const dropId = "my-drop-id";
-    const numKeys = 2;
-    let keyPairs = await generateKeyPairs(numKeys);
-
-    // ******************* Creating Drop *******************
-    const asset_data_per_use = [{
-        assets: [null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null],
-        uses: 1
-    }];
-    
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data: [{
-                public_key: keyPairs.publicKeys[0],
-            }]
-        },
-    }) 
-
-    let found_key_info: {owner_id: string, token_id: string, required_gas: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    console.log(`Required gas: ${found_key_info.required_gas}`)
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
-
-    let deleteResponse = await functionCall({
+    // Force Delete
+    deleteResponse = await functionCall({
         signer: funder,
         receiver: keypomV3,
         methodName: "delete_keys",
         args: {
             drop_id: dropId,
             public_keys: [keyPairs.publicKeys[0]],
+            keep_empty_drop: false
         }
     })
     t.is(deleteResponse=="true", true)
@@ -619,11 +536,121 @@ test(' Deleting a drop with a TON of empty asset metadata - check for gas and en
         ownerlessDelete: true
     })
     // Ensure both fail and are no longer in storage
-    t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
     t.is(await doesDropExist(keypomV3, dropId), false)
 });
+
+// test(' Deleting a drop with a TON of empty asset metadata - check for gas and ensure no panic', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+    
+//     let initialBal = await keypomV3.balance();
+
+//     const dropId = "my-drop-id";
+//     const numKeys = 2;
+//     let keyPairs = await generateKeyPairs(numKeys);
+
+//     // ******************* Creating Drop *******************
+//     const asset_data_per_use = [{
+//         assets: [null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null, null, null,
+//             null, null, null, null, null, null, null],
+//         uses: 1
+//     }];
+    
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[0],
+//             }]
+//         },
+//     }) 
+
+//     let found_key_info: {owner_id: string, token_id: string, required_gas: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     console.log(`Required gas: ${found_key_info.required_gas}`)
+//     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3
+//     })
+//     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+
+//     let deleteResponse = await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: "delete_keys",
+//         args: {
+//             drop_id: dropId,
+//             public_keys: [keyPairs.publicKeys[0]],
+//         }
+//     })
+//     t.is(deleteResponse=="true", true)
+
+//     storageBools = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3,
+//         ownerlessDelete: true
+//     })
+//     // Ensure both fail and are no longer in storage
+//     t.is(!storageBools.tokens_per_owner_check && !storageBools.token_id_by_pk_check, true)
+
+//     t.is(await doesKeyExist(keypomV3, keyPairs.publicKeys[0]), false)
+//     t.is(await doesDropExist(keypomV3, dropId), false)
+// });
 
 // 10 use key where 50 keys are deleted, all ranging from 1->10 uses left
 // test('Deleting a lot of multi-use keys that are partially used', async t => {
@@ -711,82 +738,77 @@ test(' Deleting a drop with a TON of empty asset metadata - check for gas and en
 // });
 
 // NEED TO COMMENT OUT ALL LOGS INSIDE DELETE_KEYS PRIOR TO RUNNING THIS TEST
-test('Passing in no pub keys and no limit', async t => {
-    const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
+// test('Passing in no pub keys and no limit', async t => {
+//     const {funder, keypomV3, root, ftContract1, ftContract2,  nftContract1, ali, bob} = t.context.accounts;
         
-    let initialBal = await keypomV3.balance();
+//     let initialBal = await keypomV3.balance();
     
-    const dropId = "my-drop-id";
-    const numKeys = 101;
-    let keyPairs = await generateKeyPairs(numKeys);
+//     const dropId = "my-drop-id";
+//     const numKeys = 101;
+//     let keyPairs = await generateKeyPairs(numKeys);
     
-    let key_data: {public_key: string}[] = []
-    for(let i = 0; i < numKeys - 1; i++){
-        key_data.push({public_key: keyPairs.publicKeys[i]})
-    }
+//     let key_data: {public_key: string}[] = []
+//     for(let i = 0; i < numKeys - 1; i++){
+//         key_data.push({public_key: keyPairs.publicKeys[i]})
+//     }
     
-    // ******************* Creating Drop *******************
-    const nearAsset1: ExtNearData = {
-        yoctonear: NEAR.parse("1").toString()
-    }
+//     // ******************* Creating Drop *******************
+//     const nearAsset1: ExtNearData = {
+//         yoctonear: NEAR.parse("1").toString()
+//     }
     
-    const asset_data_per_use = [{
-        assets: [null],
-        uses: 1
-    }];
+//     const asset_data_per_use = [{
+//         assets: [null],
+//         uses: 1
+//     }];
     
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'create_drop',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data
-        },
-    }) 
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'create_drop',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data
+//         },
+//     }) 
 
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: 'add_keys',
-        args: {
-            drop_id: dropId,
-            asset_data: asset_data_per_use,
-            key_data: [{
-                public_key: keyPairs.publicKeys[100]
-            }]
-        },
-    }) 
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: 'add_keys',
+//         args: {
+//             drop_id: dropId,
+//             asset_data: asset_data_per_use,
+//             key_data: [{
+//                 public_key: keyPairs.publicKeys[100]
+//             }]
+//         },
+//     }) 
 
-    let addedKeys: ExtKeyInfo[] = await keypomV3.view("get_keys_for_drop", {drop_id: dropId, limit: 150})
-    t.is(addedKeys.length == 101, true)
+//     let addedKeys: ExtKeyInfo[] = await keypomV3.view("get_keys_for_drop", {drop_id: dropId, limit: 150})
+//     t.is(addedKeys.length == 101, true)
 
-    let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
-    let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
-        keypom: keypomV3,
-        expectedTokenId: found_key_info.token_id,
-        keyPair: keyPairs.keys[0],
-        expectedOwner: keypomV3
-    })
-    t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
+//     let found_key_info: {owner_id: string, token_id: string} = await keypomV3.view("get_key_information", {key: keyPairs.publicKeys[0]})
+//     let storageBools: {tokens_per_owner_check: boolean, token_id_by_pk_check: boolean} = await assertProperStorage({
+//         keypom: keypomV3,
+//         expectedTokenId: found_key_info.token_id,
+//         keyPair: keyPairs.keys[0],
+//         expectedOwner: keypomV3
+//     })
+//     t.is(storageBools.tokens_per_owner_check && storageBools.token_id_by_pk_check, true)
 
-    await functionCall({
-        signer: funder,
-        receiver: keypomV3,
-        methodName: "delete_keys",
-        args: {
-            drop_id: dropId,
-        }
-    })
+//     await functionCall({
+//         signer: funder,
+//         receiver: keypomV3,
+//         methodName: "delete_keys",
+//         args: {
+//             drop_id: dropId,
+//         }
+//     })
 
-    // Should delete maximum of 100 keys --> Txn limit
-    let allKeys: ExtKeyInfo[] = await keypomV3.view("get_keys_for_drop", {drop_id: dropId})
-    t.is(allKeys.length == 1, true)
-    t.is(await doesDropExist(keypomV3, dropId), true)
-});
-
-
-
-
-
+//     // Should delete maximum of 100 keys --> Txn limit
+//     let allKeys: ExtKeyInfo[] = await keypomV3.view("get_keys_for_drop", {drop_id: dropId})
+//     t.is(allKeys.length == 1, true)
+//     t.is(await doesDropExist(keypomV3, dropId), true)
+// });

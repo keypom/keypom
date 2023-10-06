@@ -79,7 +79,7 @@
 	"devDependencies": {
 		"@types/bn.js": "^5.1.0",
 		"ava": "^5.0.1",
-		"near-workspaces": "3.2.2",
+		"near-workspaces": "3.3.0",
 		"ts-node": "^10.8.0",
 		"typescript": "^4.6.4",
 		"@near-js/accounts": "^0.1.3",

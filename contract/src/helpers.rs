@@ -103,6 +103,7 @@ pub(crate) fn get_total_costs_for_key(
         }
 
         let total_claim_gas = required_asset_gas + base_gas_for_use;
+        near_sdk::log!("TOTAL GAS CALCULATED IN CREATION: {:?}", total_claim_gas);
         require!(total_claim_gas <= MAX_GAS_ATTACHABLE, format!("Total gas {} exceeds the maximum 300 TGas limit", total_claim_gas.0));
         
         // Get the total allowance for this use
