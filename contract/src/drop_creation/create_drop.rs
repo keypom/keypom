@@ -15,6 +15,7 @@ impl Keypom {
     ) -> bool {
         self.assert_no_global_freeze();
         require!(!drop_id.contains(":"), "Drop ID cannot contain a colon (:)");
+        require!(self.drop_by_id.get(&drop_id).is_none(), format!("Drop with ID {} already exists", drop_id));
 
         // Before anything, measure storage usage so we can net the cost and charge the funder
         let initial_storage = env::storage_usage();
