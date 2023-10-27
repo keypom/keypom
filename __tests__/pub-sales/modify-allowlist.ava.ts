@@ -120,6 +120,22 @@ test('Modifying Allowlist', async t => {
     console.log('dropInfo: ', dropInfo)
     t.deepEqual(dropInfo.drop_config?.add_key_allowlist, ["ali.test.near", "bob.test.near"])
 
+    console.log("NOW REMOVING")
+
+    await functionCall({
+        signer: funder,
+        receiver: keypom,
+        methodName: "remove_from_sale_allowlist",
+        args:{
+            drop_id: dropId,
+            account_ids: [bob.accountId]
+        },
+    })
+
+    dropInfo = await keypom.view('get_drop_information', {drop_id: dropId});
+    console.log('dropInfo: ', dropInfo)
+    t.deepEqual(dropInfo.drop_config?.add_key_allowlist, ["ali.test.near"])
+
     // // This should pass and none of the user provided args should be used.
     // let result: {response: string | undefined, actualReceiverId: string | undefined} = await claimWithRequiredGas({
     //     keypom,
