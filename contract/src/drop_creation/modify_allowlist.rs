@@ -101,10 +101,12 @@ impl Keypom {
                 if allowlist.contains(&account) {
                     //near_sdk::log!("Found account: {}", account);
                     allowlist.remove(&account);
+                }else{
+                    near_sdk::log!("Could not remove {} from allowlist, Account was not in allowlist", account);
                 }
             }
-        } else {
-            near_sdk::log!("Could not remove accounts from allowlist: Drop has no allowlist");
+        }else{
+            near_sdk::log!("No Allowlist Found");
         }
 
         // Write the updated drop data to storage
