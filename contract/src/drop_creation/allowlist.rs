@@ -69,8 +69,6 @@ impl Keypom {
             net_storage,
             None
         );
-
-        // test this, i doubt it will work
         
     }
 
@@ -112,15 +110,6 @@ impl Keypom {
         // Write the updated drop data to storage
         self.drop_by_id.insert(&drop_id, &drop);
 
-        // Measure final costs and charge user
-        // let net_storage = env::storage_usage() - initial_storage;
-        // self.determine_costs(
-        //     0,
-        //     false, // No drop was created
-        //     0,
-        //     0,
-        //     net_storage,
-        //     None
-        // );
+        // Refund user?
     }
 }
