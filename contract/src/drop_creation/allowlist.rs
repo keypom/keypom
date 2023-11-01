@@ -4,112 +4,92 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
-    /// Allows a user to add a list of account IDs to the sale's allowlist
+    /// Adds a list of account IDs to the sale's allowlist for a specific drop.
+    /// This function can only be called by the drop funder.
     #[payable]
     pub fn add_to_sale_allowlist(
         &mut self,
         drop_id: DropId,
         account_ids: Vec<AccountId>
     ) {
+        // Ensure that the global freeze is not active.
         self.assert_no_global_freeze();
 
-        // Before anything, measure storage usage so we can net the cost and charge the funder
+        // Measure the initial storage usage for cost calculation.
         let initial_storage = env::storage_usage();
-        near_sdk::log!("initial bytes {}", initial_storage);
 
-        // get the drop object (remove it and only re-insert at the end if it shouldn't be deleted)
+        // Retrieve the drop object by its ID or panic if not found.
         let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
-        
+
+        // Clone the funder's account ID and get the caller's account ID.
         let funder_id = drop.funder_id.clone();
         let caller_id = env::predecessor_account_id();
 
+        // Ensure that only the drop funder can add accounts to the allowlist.
         require!(caller_id == funder_id, "Only drop funder can add accounts to allowlist");
 
+        // Get a mutable reference to the drop configuration, creating a new one if it doesn't exist.
+        let mut config = drop.config.unwrap_or(DropConfig {
+            metadata: None,
+            nft_keys_config: None,
+            add_key_allowlist: Some(HashSet::new()),
+            delete_empty_drop: None,
+            extra_allowance_per_key: None,
+        });
 
-        // If there is an allowlist, append to existing one. Otherwise, create a new one. 
-        if let Some(allowlist) = drop.config.as_mut().and_then(|c| c.add_key_allowlist.as_mut()) {
-            for account in account_ids {
-                if !allowlist.contains(&account) {
-                    near_sdk::log!("existing allowlist");
-                    allowlist.insert(account);
-                }
-            }
-        } else {
-            let mut allowlist = HashSet::new();
-            for account in account_ids {
-                near_sdk::log!("no existing allowlist");
-                allowlist.insert(account);
-            }
-            near_sdk::log!("Allowlist to be freshly added: {:?}", allowlist);
-
-            if let Some(config) = &mut drop.config {
-                config.add_key_allowlist = Some(allowlist);
-            } else {
-                // If drop.config doesn't exist, create it with add_key_allowlist
-                drop.config = Some(DropConfig { 
-                    metadata: None, 
-                    nft_keys_config: None, 
-                    add_key_allowlist: Some(allowlist),
-                    delete_empty_drop: None, 
-                    extra_allowance_per_key: None,
-                });
-            }
+        let mut allowlist = config.add_key_allowlist.unwrap_or(HashSet::new());
+        // Insert the provided account IDs into the allowlist.
+        for account in account_ids {
+            allowlist.insert(account);
         }
 
-        // Write the updated drop data to storage
+        // Write the updated drop data back to storage.
+        config.add_key_allowlist = Some(allowlist);
+        drop.config = Some(config);
         self.drop_by_id.insert(&drop_id, &drop);
 
-        // Measure final costs and charge user
+        // Calculate the net storage usage and charge the user accordingly.
         let net_storage = env::storage_usage() - initial_storage;
-        self.determine_costs(
-            0,
-            false, // No drop was created
-            0,
-            0,
-            net_storage,
-            None
-        );
-        
+        let total_cost = net_storage as u128 * env::storage_byte_cost();
+        let keep_excess_costs = true;
+        self.charge_with_deposit_or_balance(total_cost, Some(keep_excess_costs));
     }
 
-    //#[payable]
-    /// Allows a user to remove a list of account IDs from the sale's allowlist
+    /// Allows a user to remove a list of account IDs from the sale's allowlist for a specific drop.
     pub fn remove_from_sale_allowlist(
         &mut self,
         drop_id: DropId,
         account_ids: Vec<AccountId>
     ) {
+        // Ensure that the global freeze is not active.
         self.assert_no_global_freeze();
 
-        // Before anything, measure storage usage so we can net the cost and charge the funder
+        // Measure the initial storage usage for cost calculation.
         let initial_storage = env::storage_usage();
-        near_sdk::log!("initial bytes {}", initial_storage);
 
-        // get the drop object (remove it and only re-insert at the end if it shouldn't be deleted)
+        // Get the drop object (remove it and only re-insert at the end if it shouldn't be deleted).
         let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
         
         let funder_id = drop.funder_id.clone();
         let caller_id = env::predecessor_account_id();
 
-        require!(caller_id == funder_id, "Only drop funder can remove accounts to allowlist");
+        // Ensure that only the drop funder can remove accounts from the allowlist.
+        require!(caller_id == funder_id, "Only drop funder can remove accounts from allowlist");
 
-        // If there is an allowlist, append to existing one. Otherwise, create a new one. 
-        if let Some(allowlist) = drop.config.as_mut().and_then(|c| c.add_key_allowlist.as_mut()) {
-            for account in account_ids {
-                if allowlist.contains(&account) {
-                    //near_sdk::log!("Found account: {}", account);
-                    allowlist.remove(&account);
-                }else{
-                    near_sdk::log!("Could not remove {} from allowlist, Account was not in allowlist", account);
-                }
-            }
-        }else{
-            near_sdk::log!("No Allowlist Found");
+        // If there is an allowlist, remove accounts, otherwise panic
+        let allowlist = drop.config.as_mut().and_then(|c| c.add_key_allowlist.as_mut()).expect("No allowlist found");
+        for account in account_ids {
+            allowlist.remove(&account);
         }
-
-        // Write the updated drop data to storage
+        
+        // Write the updated drop data to storage.
         self.drop_by_id.insert(&drop_id, &drop);
 
         // Refund user?
+        let storage_released = initial_storage - env::storage_usage();
+        let refund_amount = storage_released as u128 * env::storage_byte_cost();
+        let increment_balance = true;
+
+        self.internal_modify_user_balance(&caller_id, refund_amount, increment_balance);
     }
 }
