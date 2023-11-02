@@ -76,6 +76,10 @@ impl Keypom {
         // Ensure that only the drop funder can remove accounts from the allowlist.
         require!(caller_id == funder_id, "Only drop funder can remove accounts from allowlist");
 
+        if drop.config.as_ref().and_then(|c| c.add_key_allowlist.as_ref()).is_none(){
+            return
+        }
+
         // If there is an allowlist, remove accounts, otherwise panic
         let allowlist = drop.config.as_mut().and_then(|c| c.add_key_allowlist.as_mut()).expect("No allowlist found");
         for account in account_ids {
