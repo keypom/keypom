@@ -54,7 +54,8 @@
 		"test:withdraw-nft": "ava __tests__/withdraw-assets/withdraw-nft.ava.ts",
 		"test:withdraw-ft": "ava __tests__/withdraw-assets/withdraw-ft.ava.ts",
 		"test:configs-usage": "ava __tests__/config-tests/usage-configs.ava.ts",
-		"test:configs-time": "ava __tests__/config-tests/time-configs.ava.ts"
+		"test:configs-time": "ava __tests__/config-tests/time-configs.ava.ts",
+		"test:modify-allowlist": "ava __tests__/pub-sales/modify-allowlist.ava.ts"
 	},
 	"dependencies": {
 		"crypto": "^1.0.1",

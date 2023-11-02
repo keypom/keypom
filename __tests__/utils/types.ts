@@ -2,6 +2,11 @@ export type ExtDrop = {
     assets_by_use: Record<number, Array<ExtAsset>>;
     nft_asset_data: Array<InternalNFTData>;
     ft_asset_data: Array<InternalFTData>;
+    drop_config?: DropConfig|null;
+}
+
+export type DropConfig = {
+    add_key_allowlist?: Array<string>|null,
 }
 
 export type UserProvidedFCArgs = Array<AssetSpecificFCArgs>;
