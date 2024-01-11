@@ -21,7 +21,7 @@ export async function sendFTs(
         args: {
             receiver_id: keypom,
             amount,
-            msg: dropId 
+            msg: `${dropId}` 
         },
         gas: LARGE_GAS,
         attachedDeposit: "1"

@@ -193,7 +193,7 @@ test('Add NFTs to created drop', async t => {
         args: {
             receiver_id: keypomV3.accountId,
             token_id: "token1",
-            msg: dropId
+            msg: `${dropId}`
         },
         attachedDeposit: "1"
     })
