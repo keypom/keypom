@@ -1,6 +1,5 @@
 use crate::*;
 
-#[near_bindgen]
 #[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Clone)]
 #[borsh(crate = "near_sdk::borsh")]
 pub struct InternalFTData {
@@ -61,4 +60,3 @@ impl InternalFTData {
         )
     }
 }
-

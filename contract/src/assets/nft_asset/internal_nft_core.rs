@@ -1,6 +1,5 @@
 use crate::*;
 
-#[near_bindgen]
 #[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Debug, Serialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 #[borsh(crate = "near_sdk::borsh")]
@@ -49,4 +48,3 @@ impl InternalNFTData {
         )
     }
 }
-

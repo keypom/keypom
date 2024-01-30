@@ -1,13 +1,14 @@
-use near_units::{parse_gas, parse_near};
+use near_sdk::NearToken;
+use near_units::parse_near;
+use near_workspaces::{Account, Contract};
 use serde_json::json;
-use workspaces::{network::Sandbox, Account, Contract, Worker};
 
 const KEYPOM_WASM_PATH: &str = "./out/keypom.wasm";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // initiate environemnt
-    let worker = workspaces::sandbox().await?;
+    let worker = near_workspaces::sandbox().await?;
     println!("Current working directory: {:?}", std::env::current_dir());
 
     // deploy contracts
@@ -25,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
     let owner = worker.root_account().unwrap();
     let alice = owner
         .create_subaccount("alice")
-        .initial_balance(parse_near!("30 N"))
+        .initial_balance(NearToken::from_near(30))
         .transact()
         .await?
         .into_result()?;
@@ -57,7 +58,7 @@ async fn test_simple(
     let total_supply = keypom_contract
         .view("get_key_total_supply")
         .await?
-        .json::<u64j>()?;
+        .json::<u64>()?;
     println!("total_supply: {:?}", total_supply);
     println!("      Passed ✅ test_simple_approve");
     Ok(())

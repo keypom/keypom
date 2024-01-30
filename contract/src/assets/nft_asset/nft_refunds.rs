@@ -76,7 +76,6 @@ impl Keypom {
                 .resolve_nft_refund(
                     drop_id.to_string(),
                     nft_contract_id.to_string(),
-                    drop.funder_id,
                     tokens_to_transfer.to_vec(),
                     net_storage_released.into(),
                 ),
@@ -88,7 +87,6 @@ impl Keypom {
         &mut self,
         drop_id: DropId,
         asset_id: AssetId,
-        refund_to: AccountId,
         token_ids: Vec<TokenId>,
         storage_released: u128,
     ) -> PromiseOrValue<bool> {
@@ -127,9 +125,7 @@ impl Keypom {
         // Measure the final storage now that tokens have been added back to the vector
         // We'll then take the storage that was released and subtract this new storage that was added
         let net_storage_added = env::storage_usage() - initial_storage;
-        let total_refund = storage_released
-            .checked_sub(net_storage_added as u128)
-            .unwrap_or(0);
+        let total_refund = storage_released.saturating_sub(net_storage_added as u128);
         near_sdk::log!(
             "Net storage added in refund: {} bytes. Net storage released: {} bytes.",
             net_storage_added,
@@ -182,4 +178,3 @@ impl InternalNFTData {
         batch_promise
     }
 }
-

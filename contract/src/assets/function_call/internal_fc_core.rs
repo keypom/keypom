@@ -1,6 +1,5 @@
 use crate::*;
 
-#[near_bindgen]
 #[derive(
     BorshSerialize, BorshDeserialize, Serialize, Deserialize, PanicOnDefault, Clone, Debug,
 )]
@@ -80,4 +79,3 @@ impl FCData {
         Gas::from_gas(total_gas)
     }
 }
-
