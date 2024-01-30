@@ -1,4 +1,4 @@
-use near_sdk::{PromiseResult, env::sha256};
+use near_sdk::{env::sha256, PromiseResult};
 
 use crate::*;
 
@@ -7,13 +7,12 @@ impl Keypom {
     /// Ensure re-entry protection and decrement remaining uses on a key
     /// Returns the drop ID that the key is associated with
     pub(crate) fn before_claim_logic(
-        &mut self, 
-        event_logs: &mut Vec<EventLog>, 
+        &mut self,
+        event_logs: &mut Vec<EventLog>,
         new_public_key: Option<&PublicKey>,
-        password: Option<String>
+        password: Option<String>,
     ) -> BeforeClaimData {
         let signer_pk = env::signer_account_pk();
-        
 
         // Get the key info and decrement its remaining uses.
         // If there are zero remaining uses, break the connection between
@@ -25,12 +24,20 @@ impl Keypom {
             .token_id_by_pk
             .get(&signer_pk)
             .expect("No drop ID found for PK");
-        
+
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        let mut key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+        let mut key_info = drop
+            .key_info_by_token_id
+            .get(&token_id)
+            .expect("Key not found");
         let cur_key_use = get_key_cur_use(&drop, &key_info);
-        let InternalAssetDataForUses { uses: _, config: use_config, assets_metadata: _, required_asset_gas } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
+        let InternalAssetDataForUses {
+            uses: _,
+            config: use_config,
+            assets_metadata: _,
+            required_asset_gas,
+        } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
 
         assert_pre_claim_conditions(
             &key_info,
@@ -38,7 +45,7 @@ impl Keypom {
             &password,
             &cur_key_use,
             &drop.max_key_uses,
-            new_public_key.is_some()
+            new_public_key.is_some(),
         );
 
         key_info.remaining_uses -= 1;
@@ -51,12 +58,16 @@ impl Keypom {
 
             self.token_id_by_pk.remove(&signer_pk);
             Promise::new(env::current_account_id()).delete_key(signer_pk.clone());
-            
+
             event_logs.push(EventLog {
                 standard: NFT_STANDARD_NAME.to_string(),
                 version: NFT_METADATA_SPEC.to_string(),
                 event: EventLogVariant::NftBurn(vec![NftBurnLog {
-                    owner_id: key_info.owner_id.as_ref().unwrap_or(&env::current_account_id()).to_string(),
+                    owner_id: key_info
+                        .owner_id
+                        .as_ref()
+                        .unwrap_or(&env::current_account_id())
+                        .to_string(),
                     token_ids: vec![token_id.to_string()],
                     authorized_id: None,
                     memo: None,
@@ -67,7 +78,7 @@ impl Keypom {
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::DeleteKey(vec![AddOrDeleteKeyLog {
                     drop_id: drop_id.to_string(),
-                    public_key: (&signer_pk).into()
+                    public_key: (&signer_pk).into(),
                 }]),
             });
         }
@@ -75,9 +86,14 @@ impl Keypom {
         drop.key_info_by_token_id.insert(&token_id, &key_info);
         self.drop_by_id.insert(&drop_id, &drop);
 
-        let root_account_id = use_config.as_ref().and_then(|c| c.root_account_id.clone()).unwrap_or(self.root_account.clone());
-        let account_creation_keypom_args = use_config.as_ref().and_then(|c| c.account_creation_keypom_args.clone());
-        
+        let root_account_id = use_config
+            .as_ref()
+            .and_then(|c| c.root_account_id.clone())
+            .unwrap_or(self.root_account.clone());
+        let account_creation_keypom_args = use_config
+            .as_ref()
+            .and_then(|c| c.account_creation_keypom_args.clone());
+
         BeforeClaimData {
             token_id,
             required_asset_gas,
@@ -85,30 +101,37 @@ impl Keypom {
             account_creation_keypom_args,
             key_id,
             drop_id,
-            funder_id: drop.funder_id
+            funder_id: drop.funder_id,
         }
-
     }
 
     /// Internal function that loops through all assets for the given use and claims them.
     /// Should be executed in both `claim` or `create_account_and_claim`
     /// Once all assets are claimed, a cross-contract call is fired to `on_assets_claimed`
     pub(crate) fn internal_claim_assets(
-        &mut self, 
-        token_id: TokenId, 
-        receiver_id: AccountId, 
+        &mut self,
+        token_id: TokenId,
+        receiver_id: AccountId,
         fc_args: UserProvidedFCArgs,
-        new_public_key: Option<PublicKey>
+        new_public_key: Option<PublicKey>,
     ) -> PromiseOrValue<bool> {
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
 
         let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        
-        let key_info = drop.key_info_by_token_id.get(&token_id).expect("Key not found");
+
+        let key_info = drop
+            .key_info_by_token_id
+            .get(&token_id)
+            .expect("Key not found");
 
         // The uses were decremented before the claim, so we need to increment them back to get what use should be refunded
         let cur_key_use = get_key_cur_use(&drop, &key_info) - 1;
-        let InternalAssetDataForUses { uses: _, config: _, assets_metadata, required_asset_gas: _ } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
+        let InternalAssetDataForUses {
+            uses: _,
+            config: _,
+            assets_metadata,
+            required_asset_gas: _,
+        } = get_asset_data_for_specific_use(&drop.asset_data_for_uses, &cur_key_use);
 
         //let promises;
         let mut promises = Vec::new();
@@ -116,7 +139,10 @@ impl Keypom {
         let mut fc_arg_idx = 0;
         let mut assets_to_log = Vec::new();
         for metadata in assets_metadata {
-            let mut asset = drop.asset_by_id.get(&metadata.asset_id).expect("Asset not found");
+            let mut asset = drop
+                .asset_by_id
+                .get(&metadata.asset_id)
+                .expect("Asset not found");
 
             // For claim events
             assets_to_log.push(asset.to_external_events_asset(&metadata.tokens_per_use));
@@ -130,23 +156,26 @@ impl Keypom {
 
             // Try to get the fc args for the asset. If the length of the fc_args outer vector is not the same as the number of FC assets
             // Meaning that the user didn't specify fc args (even as none) for each asset, just default it to None once it gets out of range
-            let fc_args_for_asset = fc_args.as_ref().and_then(|a| a.get(fc_arg_idx).cloned()).unwrap_or(None);
-            
+            let fc_args_for_asset = fc_args
+                .as_ref()
+                .and_then(|a| a.get(fc_arg_idx).cloned())
+                .unwrap_or(None);
+
             // Some cases may result in no promise index (i.e not enough balance)
             promises.push(asset.claim_asset(
-                &receiver_id, 
+                &receiver_id,
                 &metadata.tokens_per_use.map(|x| x.into()),
                 fc_args_for_asset,
                 drop_id.clone(),
                 key_id.to_string(),
-                drop.funder_id.clone()
+                drop.funder_id.clone(),
             ));
 
             // Increment the number of fc args we've seen
             if let InternalAsset::fc(_) = asset {
                 fc_arg_idx += 1;
             }
-            
+
             drop.asset_by_id.insert(&metadata.asset_id, &asset);
         }
 
@@ -158,38 +187,41 @@ impl Keypom {
             EventLog {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
                 version: KEYPOM_STANDARD_VERSION.to_string(),
-                event: EventLogVariant::CreateAccountAndClaim(CreateAccountAndClaimLog { 
-                    new_account_id: receiver_id.to_string(), 
-                    new_public_key: pk.into(), 
-                    public_key: env::signer_account_id().into(), 
-                    drop_id, 
-                    assets: assets_to_log
+                event: EventLogVariant::CreateAccountAndClaim(CreateAccountAndClaimLog {
+                    new_account_id: receiver_id.to_string(),
+                    new_public_key: pk.into(),
+                    public_key: env::signer_account_id().into(),
+                    drop_id,
+                    assets: assets_to_log,
                 }),
             }
         } else {
             EventLog {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
                 version: KEYPOM_STANDARD_VERSION.to_string(),
-                event: EventLogVariant::Claim(ClaimLog { 
-                    account_id: receiver_id.to_string(), 
-                    public_key: env::signer_account_id().into(), 
-                    drop_id, 
-                    assets: assets_to_log
+                event: EventLogVariant::Claim(ClaimLog {
+                    account_id: receiver_id.to_string(),
+                    public_key: env::signer_account_id().into(),
+                    drop_id,
+                    assets: assets_to_log,
                 }),
             }
         };
         log_events(vec![event_log]);
 
-        if let Some(resolve) = promises.into_iter().reduce(|a, b| a.and(b)).expect("empty promises") {
-            PromiseOrValue::Promise(resolve.then(
-                Self::ext(env::current_account_id())
-                    //.with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
-                    .with_unused_gas_weight(1)
-                    .on_assets_claimed(
-                        token_id,
-                        token_ids_transferred
-                    )
-            ))
+        if let Some(resolve) = promises
+            .into_iter()
+            .reduce(|a, b| a.and(b))
+            .expect("empty promises")
+        {
+            PromiseOrValue::Promise(
+                resolve.then(
+                    Self::ext(env::current_account_id())
+                        //.with_static_gas(MIN_GAS_FOR_RESOLVE_ASSET_CLAIM)
+                        .with_unused_gas_weight(1)
+                        .on_assets_claimed(token_id, token_ids_transferred),
+                ),
+            )
         } else {
             self.on_assets_claimed(token_id, token_ids_transferred)
         }
@@ -204,19 +236,28 @@ impl Keypom {
         token_id: &TokenId,
         drop_id: &DropId,
         drop_assets_withdrawn: bool,
-        initial_storage: u64
+        initial_storage: u64,
     ) {
         let mut event_logs = vec![];
         // Now that the callback is finished, we can remove the key info from the drop
         // Since no other functions need the key information
         if key_info.remaining_uses == 0 {
-            drop.key_info_by_token_id.remove(&token_id).expect("Key not found");
-    
-            let should_delete_on_empty = drop.config.as_ref().and_then(|c| c.delete_empty_drop).unwrap_or(true);
+            drop.key_info_by_token_id
+                .remove(&token_id)
+                .expect("Key not found");
+
+            let should_delete_on_empty = drop
+                .config
+                .as_ref()
+                .and_then(|c| c.delete_empty_drop)
+                .unwrap_or(true);
 
             // Now that we've removed the key info, check if the drop is empty
             // Otherwise, re-insert the drop into state
-            if drop.key_info_by_token_id.is_empty() && drop_assets_withdrawn && should_delete_on_empty {
+            if drop.key_info_by_token_id.is_empty()
+                && drop_assets_withdrawn
+                && should_delete_on_empty
+            {
                 near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
                 // Remove the drop from storage and clear the maps inside of it
                 self.drop_by_id.remove(&drop_id);
@@ -228,11 +269,12 @@ impl Keypom {
                 self.drop_by_id.insert(&drop_id, &drop);
             }
         }
-    
+
         let final_storage = env::storage_usage();
         // Some storage was freed so we should refund the user's balance
         if final_storage < initial_storage {
-            let storage_cost = (initial_storage - final_storage) as u128 * env::storage_byte_cost();
+            let storage_cost =
+                (initial_storage - final_storage) as u128 * env::storage_byte_cost().as_yoctonear();
             self.internal_modify_user_balance(&drop.funder_id, storage_cost, false);
         }
 
@@ -260,22 +302,27 @@ pub(crate) fn assert_pre_claim_conditions(
     user_password: &Option<String>,
     cur_key_use: &UseNumber,
     max_uses_per_key: &UseNumber,
-    creating_account: bool
+    creating_account: bool,
 ) {
     // Ensure that claim and create_account_and_claim are only called based on the key / drop's config
     if let Some(perm) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
         match perm {
             ClaimPermissions::claim => {
                 require!(creating_account == false, "Cannot call `create_account_and_claim` when key permission is set to only claim")
-            },
+            }
             ClaimPermissions::create_account_and_claim => {
                 require!(creating_account == true, "Cannot call `claim` when key permission is set to only create_account_and_claim")
-            },
+            }
         }
     }
 
     // Ensure any timestamps in the configs have been fulfilled
-    assert_claim_timestamps(use_config, key_info, &String::from(&env::signer_account_pk()), max_uses_per_key);
+    assert_claim_timestamps(
+        use_config,
+        key_info,
+        &String::from(&env::signer_account_pk()),
+        max_uses_per_key,
+    );
 
     // If there is some password for the current key use, assert that it matches the one provided
     if let Some(pw_by_use) = &key_info.pw_by_use {
@@ -286,13 +333,21 @@ pub(crate) fn assert_pre_claim_conditions(
 }
 
 /// Internal function to assert that the password for claim matches the one in the key info
-pub(crate) fn assert_key_password(
-    user_password: &Option<String>,
-    expected_password: Vec<u8>
-) {
-    let hashed_user_pw = sha256(&user_password.as_ref().and_then(|f| hex::decode(f).ok()).expect("Password expected."));
+pub(crate) fn assert_key_password(user_password: &Option<String>, expected_password: Vec<u8>) {
+    let hashed_user_pw = sha256(
+        &user_password
+            .as_ref()
+            .and_then(|f| hex::decode(f).ok())
+            .expect("Password expected."),
+    );
 
-    require!(hashed_user_pw == expected_password, format!("User provided password: {:?} does not match expected password: {:?}", hashed_user_pw, expected_password));
+    require!(
+        hashed_user_pw == expected_password,
+        format!(
+            "User provided password: {:?} does not match expected password: {:?}",
+            hashed_user_pw, expected_password
+        )
+    );
 }
 
 /// Internal function to assert that the predecessor is the contract owner
@@ -303,21 +358,40 @@ pub(crate) fn assert_claim_timestamps(
     max_uses_per_key: &UseNumber,
 ) {
     let time_config = use_config.as_ref().and_then(|c| c.time.as_ref());
-    
+
     if let Some(time_data) = time_config {
         // Ensure enough time has passed if a start timestamp was specified in the config.
         let current_timestamp = env::block_timestamp();
 
         let desired_start_timestamp = time_data.start.unwrap_or(0);
-        require!(current_timestamp >= desired_start_timestamp, format!("Key {} isn't claimable until {}. Current timestamp {}", signer_pk, desired_start_timestamp, current_timestamp));
+        require!(
+            current_timestamp >= desired_start_timestamp,
+            format!(
+                "Key {} isn't claimable until {}. Current timestamp {}",
+                signer_pk, desired_start_timestamp, current_timestamp
+            )
+        );
 
         // Ensure the end timestamp hasn't passed and the key is still usable
         let desired_end_timestamp = time_data.end.unwrap_or(u64::MAX);
-        require!(current_timestamp <= desired_end_timestamp, format!("Key {} is no longer claimable. It was claimable up until {}. Current timestamp {}", signer_pk, desired_end_timestamp, current_timestamp));
+        require!(
+            current_timestamp <= desired_end_timestamp,
+            format!(
+                "Key {} is no longer claimable. It was claimable up until {}. Current timestamp {}",
+                signer_pk, desired_end_timestamp, current_timestamp
+            )
+        );
 
         let throttle = time_data.throttle.unwrap_or(0);
-        require!((current_timestamp - key_info.last_claimed) >= throttle, format!("Key {} was used too recently. It must be used every {}. Time since last use {}", signer_pk, throttle, current_timestamp - key_info.last_claimed));
-
+        require!(
+            (current_timestamp - key_info.last_claimed) >= throttle,
+            format!(
+                "Key {} was used too recently. It must be used every {}. Time since last use {}",
+                signer_pk,
+                throttle,
+                current_timestamp - key_info.last_claimed
+            )
+        );
 
         // Ensure the key is within the claim interval if specified
         if let Some(interval) = time_data.interval {
@@ -325,7 +399,7 @@ pub(crate) fn assert_claim_timestamps(
 
             // At this moment, what is the maximum number of uses that COULD have been possibly claimed
             let total_possible_claims = (env::block_timestamp() - start_timestamp) / interval;
-            
+
             // How many claims given the interval and remaining uses does this key have left?
             // Take the current total claims possible, and subtract the number of uses the key has left
             // Example: If the interval is 1 day, and 4 days have passed, the key has 4 total claimable uses.
@@ -337,3 +411,4 @@ pub(crate) fn assert_claim_timestamps(
         }
     }
 }
+

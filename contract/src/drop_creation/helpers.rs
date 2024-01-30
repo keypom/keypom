@@ -12,7 +12,7 @@ impl Keypom {
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         key_data: &Vec<ExtKeyData>,
-        allowance: Balance
+        allowance: Balance,
     ) {
         let current_account_id = &env::current_account_id();
 
@@ -27,7 +27,12 @@ impl Keypom {
         // None of these promises will fire if there's a panic so it's
         // Fine to add them in the loop
         for data in key_data.iter() {
-            let ExtKeyData { public_key, password_by_use, metadata, key_owner } = data;
+            let ExtKeyData {
+                public_key,
+                password_by_use,
+                metadata,
+                key_owner,
+            } = data;
 
             let token_id = format!("{}:{}", drop_id, next_key_id);
             require!(
@@ -36,39 +41,42 @@ impl Keypom {
             );
 
             // Iterate through the key_data.password_by_use hash map (if there is one) and decode all the strings to hex
-            let pw_by_use: Option<HashMap<UseNumber, Vec<u8>>> = password_by_use.as_ref().map(|p| {
-                p.into_iter().map(|(k, v)| {
-                    let decoded = hex::decode(v).expect("Invalid hex string");
-                    (*k, decoded)
-                }).collect()
-            });
+            let pw_by_use: Option<HashMap<UseNumber, Vec<u8>>> =
+                password_by_use.as_ref().map(|p| {
+                    p.into_iter()
+                        .map(|(k, v)| {
+                            let decoded = hex::decode(v).expect("Invalid hex string");
+                            (*k, decoded)
+                        })
+                        .collect()
+                });
 
             if let Some(owner) = key_owner {
                 // Add the NFT key to the owner's list of tokens
-                self.internal_add_token_to_owner(
-                    &owner,
-                    &token_id
-                );
+                self.internal_add_token_to_owner(&owner, &token_id);
             }
-            key_info_by_token_id.insert(&token_id, &InternalKeyInfo { 
-                pub_key: public_key.clone(), 
-                remaining_uses: max_uses_per_key,
-                owner_id: key_owner.clone(), 
-                next_approval_id: 0,
-                last_claimed: 0, // Set to 0 since this will make the key always claimable.
-                approved_account_ids: Default::default(),
-                metadata: metadata.clone(),
-                pw_by_use,
-            });
+            key_info_by_token_id.insert(
+                &token_id,
+                &InternalKeyInfo {
+                    pub_key: public_key.clone(),
+                    remaining_uses: max_uses_per_key,
+                    owner_id: key_owner.clone(),
+                    next_approval_id: 0,
+                    last_claimed: 0, // Set to 0 since this will make the key always claimable.
+                    approved_account_ids: Default::default(),
+                    metadata: metadata.clone(),
+                    pw_by_use,
+                },
+            );
 
             // TODO: add to tokens_per_owner
-            
+
             // Add this key to the batch
             env::promise_batch_action_add_key_with_function_call(
                 promise,
                 public_key,
                 0, // Nonce
-                allowance,
+                NearToken::from_yoctonear(allowance),
                 current_account_id,
                 ACCESS_KEY_METHOD_NAMES,
             );
@@ -80,7 +88,7 @@ impl Keypom {
                 &key_owner,
                 &drop_id,
                 &public_key,
-                &token_id
+                &token_id,
             );
 
             *next_key_id += 1;
@@ -105,28 +113,39 @@ impl Keypom {
         env::promise_return(promise);
     }
 
-     /// Tally up all the costs for adding keys / creating a drop and refund any excess deposit
-     pub(crate) fn determine_costs(
+    /// Tally up all the costs for adding keys / creating a drop and refund any excess deposit
+    pub(crate) fn determine_costs(
         &mut self,
-        num_keys: usize, 
+        num_keys: usize,
         did_create_drop: bool,
-        asset_cost_per_key: Balance, 
+        asset_cost_per_key: Balance,
         allowance_per_key: Balance,
         net_storage: u64,
-        keep_excess_deposit: Option<bool>
+        keep_excess_deposit: Option<bool>,
     ) {
         let num_keys = num_keys as u128;
-        
-        let storage_cost = net_storage as Balance * env::storage_byte_cost();
+
+        let storage_cost = net_storage as Balance * env::storage_byte_cost().as_yoctonear();
         let total_asset_cost = asset_cost_per_key * num_keys;
         let total_allowance_cost = allowance_per_key * num_keys;
 
-        let fees_for_user = self.fees_per_user.get(&env::predecessor_account_id()).unwrap_or(self.fee_structure.clone());
-        let total_fees = num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
+        let fees_for_user = self
+            .fees_per_user
+            .get(&env::predecessor_account_id())
+            .unwrap_or(self.fee_structure.clone());
+        let total_fees =
+            num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
         self.fees_collected += total_fees;
         let total_cost = total_asset_cost + storage_cost + total_allowance_cost + total_fees;
-        
-        near_sdk::log!("total {} storage {} asset {} allowance {} keypom fees {}", total_cost, storage_cost, total_asset_cost, total_allowance_cost, total_fees);
+
+        near_sdk::log!(
+            "total {} storage {} asset {} allowance {} keypom fees {}",
+            total_cost,
+            storage_cost,
+            total_asset_cost,
+            total_allowance_cost,
+            total_fees
+        );
         self.charge_with_deposit_or_balance(total_cost, keep_excess_deposit);
     }
 
@@ -174,9 +193,9 @@ impl Keypom {
 }
 
 /// Helper function to ingest external assets and store them in the internal asset by ID map
-pub fn store_assets_by_id (
+pub fn store_assets_by_id(
     ext_assets: &Vec<Option<ExtAsset>>,
-    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>
+    asset_by_id: &mut UnorderedMap<AssetId, InternalAsset>,
 ) {
     let mut fc_idx = 0;
     for ext_asset in ext_assets {
@@ -186,7 +205,10 @@ pub fn store_assets_by_id (
             fc_idx += 1;
             format!("{}{}", FC_ASSET_PREFIX, fc_idx)
         } else {
-            ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
+            ext_asset
+                .as_ref()
+                .and_then(|a| Some(a.get_asset_id()))
+                .unwrap_or(NONE_ASSET_ID.to_string())
         };
 
         // Only insert into the asset ID map if it doesn't already exist
@@ -225,3 +247,4 @@ pub(crate) fn assert_valid_time_config(config: &TimeConfig) {
         );
     }
 }
+

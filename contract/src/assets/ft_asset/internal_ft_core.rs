@@ -2,6 +2,7 @@ use crate::*;
 
 #[near_bindgen]
 #[derive(BorshSerialize, BorshDeserialize, PanicOnDefault, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
 pub struct InternalFTData {
     /// Account ID of the token contract
     pub contract_id: AccountId,
@@ -9,14 +10,14 @@ pub struct InternalFTData {
     /// To make tokens available for transfer, you must send them via `ft_transfer_call`.
     pub balance_avail: Balance,
     /// How much it costs to register a new user on the FT contract
-    pub registration_cost: Balance
+    pub registration_cost: Balance,
 }
 
 // Implement a custom serialization that converts both `balance_avail` and `registration_cost` to a `U128` for the frontend
 impl Serialize for InternalFTData {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut state = serializer.serialize_struct("InternalFTData", 3)?;
         state.serialize_field("contract_id", &self.contract_id)?;
@@ -32,7 +33,7 @@ impl InternalFTData {
         Self {
             contract_id,
             balance_avail: 0,
-            registration_cost
+            registration_cost,
         }
     }
 
@@ -48,11 +49,16 @@ impl InternalFTData {
 
     /// Query how much gas is required for a single claim
     pub fn get_required_asset_gas(&self) -> Gas {
-        MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT
+        Gas::from_gas(MIN_GAS_FOR_FT_TRANSFER.as_gas() + MIN_GAS_FOR_STORAGE_DEPOSIT.as_gas())
     }
 
     /// Query how much gas is required for a single claim
     pub fn get_total_required_gas(&self) -> Gas {
-        GAS_FOR_FT_CLAIM_LOGIC + MIN_GAS_FOR_FT_TRANSFER + MIN_GAS_FOR_STORAGE_DEPOSIT
+        Gas::from_gas(
+            GAS_FOR_FT_CLAIM_LOGIC.as_gas()
+                + MIN_GAS_FOR_FT_TRANSFER.as_gas()
+                + MIN_GAS_FOR_STORAGE_DEPOSIT.as_gas(),
+        )
     }
 }
+

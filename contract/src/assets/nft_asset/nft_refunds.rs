@@ -1,10 +1,10 @@
-use near_sdk::{PromiseResult, serde_json::json, GasWeight};
+use near_sdk::{serde_json::json, GasWeight, PromiseResult};
 
 use crate::*;
 
 /// Minimum Gas required to resolve the refund's batch of transfer promises
 /// 5 TGas
-const MIN_GAS_FOR_RESOLVE_REFUND: Gas = Gas(5_000_000_000_000);
+const MIN_GAS_FOR_RESOLVE_REFUND: Gas = Gas::from_tgas(5);
 
 #[near_bindgen]
 impl Keypom {
@@ -15,10 +15,10 @@ impl Keypom {
         drop_id: DropId,
         nft_contract_id: AccountId,
         token_ids: Option<Vec<TokenId>>,
-        limit: Option<u8>
+        limit: Option<u8>,
     ) -> Promise {
         self.assert_no_global_freeze();
-        
+
         // get the drop object
         let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
         let funder_id = &drop.funder_id;
@@ -28,8 +28,11 @@ impl Keypom {
             "Only drop funder can delete keys"
         );
 
-        let mut asset: InternalAsset = drop.asset_by_id.get(&nft_contract_id.to_string()).expect("Asset not found");
-        
+        let mut asset: InternalAsset = drop
+            .asset_by_id
+            .get(&nft_contract_id.to_string())
+            .expect("Asset not found");
+
         let initial_storage = env::storage_usage();
         let mut batch_transfer = Promise::new(env::current_account_id());
         let mut tokens_to_transfer = vec![];
@@ -55,41 +58,39 @@ impl Keypom {
                 token_ids.into_iter().rev().collect()
             };
 
-            batch_transfer = nft_data.nft_refund(
-                &drop.funder_id, 
-                tokens_to_transfer.clone()
-            );
+            batch_transfer = nft_data.nft_refund(&drop.funder_id, tokens_to_transfer.clone());
         };
-        
-        drop.asset_by_id.insert(&nft_contract_id.to_string(), &asset);
+
+        drop.asset_by_id
+            .insert(&nft_contract_id.to_string(), &asset);
         self.drop_by_id.insert(&drop_id, &drop);
 
         near_sdk::log!("Tokens to transfer: {:?}", tokens_to_transfer);
-        
-        let net_storage_released = initial_storage - env::storage_usage();    
+
+        let net_storage_released = initial_storage - env::storage_usage();
         // We then resolve the batch and call nft_resolve_refund on our own contract
         batch_transfer.then(
             // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
             Keypom::ext(env::current_account_id())
                 .with_static_gas(MIN_GAS_FOR_RESOLVE_REFUND)
                 .resolve_nft_refund(
-                    drop_id.to_string(), 
-                    nft_contract_id.to_string(), 
+                    drop_id.to_string(),
+                    nft_contract_id.to_string(),
                     drop.funder_id,
                     tokens_to_transfer.to_vec(),
-                    net_storage_released.into()
-                )
+                    net_storage_released.into(),
+                ),
         )
     }
 
     #[private]
     pub fn resolve_nft_refund(
-        &mut self, 
-        drop_id: DropId, 
-        asset_id: AssetId, 
+        &mut self,
+        drop_id: DropId,
+        asset_id: AssetId,
         refund_to: AccountId,
         token_ids: Vec<TokenId>,
-        storage_released: u128
+        storage_released: u128,
     ) -> PromiseOrValue<bool> {
         // There will only ever be 1 promise because it was a batch
         let promise_result = env::promise_result(0);
@@ -100,31 +101,20 @@ impl Keypom {
 
         let mut was_successful = true;
         match promise_result {
-            PromiseResult::NotReady => return PromiseOrValue::Promise(
-                Self::ext(env::current_account_id())
-                    .resolve_nft_refund(
-                        drop_id,
-                        asset_id,
-                        refund_to,
-                        token_ids,
-                        storage_released
-                    )
-            ),
             PromiseResult::Successful(_) => {
                 near_sdk::log!("Refund successful.");
-            },
+            }
             PromiseResult::Failed => {
                 was_successful = false;
-                // Ensure asset is an NFT and then add the token back to the internal vector 
+                // Ensure asset is an NFT and then add the token back to the internal vector
                 if let InternalAsset::nft(nft_data) = &mut asset {
                     near_sdk::log!("Refund failed. Adding all tokens back: {:?}", token_ids);
                     // Loop through each token and add them
                     for token_id in token_ids {
                         nft_data.add_to_token_ids(&token_id);
-                    };
+                    }
                 };
             }
-
         }
 
         // If a transfer failed, we should re-insert the asset into storage
@@ -137,11 +127,21 @@ impl Keypom {
         // Measure the final storage now that tokens have been added back to the vector
         // We'll then take the storage that was released and subtract this new storage that was added
         let net_storage_added = env::storage_usage() - initial_storage;
-        let total_refund = storage_released.checked_sub(net_storage_added as u128).unwrap_or(0);
-        near_sdk::log!("Net storage added in refund: {} bytes. Net storage released: {} bytes.", net_storage_added, storage_released);
+        let total_refund = storage_released
+            .checked_sub(net_storage_added as u128)
+            .unwrap_or(0);
+        near_sdk::log!(
+            "Net storage added in refund: {} bytes. Net storage released: {} bytes.",
+            net_storage_added,
+            storage_released
+        );
 
         // Refund the storage to the user
-        self.internal_modify_user_balance(&drop.funder_id, total_refund * env::storage_byte_cost(), false);
+        self.internal_modify_user_balance(
+            &drop.funder_id,
+            total_refund * env::storage_byte_cost().as_yoctonear(),
+            false,
+        );
 
         PromiseOrValue::Value(was_successful)
     }
@@ -150,30 +150,36 @@ impl Keypom {
 impl InternalNFTData {
     /// Automatically refund a claim for fungible tokens
     /// This should refund the FTs & any storage deposits.
-    pub fn nft_refund(
-        &mut self,
-        refund_to: &AccountId,
-        token_ids: Vec<TokenId>
-    ) -> Promise {
+    pub fn nft_refund(&mut self, refund_to: &AccountId, token_ids: Vec<TokenId>) -> Promise {
         // Create the batch promise on the NFT contract
         let mut batch_promise = Promise::new(self.contract_id.clone());
 
         // Loop through all the token IDs, and add to the batch promise while removing them from the vector
         for token_id in token_ids.clone() {
-            let index = self.token_ids.iter().position(|x| *x == token_id).expect("token ID not found");
-            near_sdk::log!("Refunding token ID {}. Idx: {} vec: {:?}", token_id, index, self.token_ids);
+            let index = self
+                .token_ids
+                .iter()
+                .position(|x| *x == token_id)
+                .expect("token ID not found");
+            near_sdk::log!(
+                "Refunding token ID {}. Idx: {} vec: {:?}",
+                token_id,
+                index,
+                self.token_ids
+            );
             self.token_ids.remove(index);
 
             batch_promise = batch_promise
             .function_call_weight(
                 "nft_transfer".to_string(),
                 json!({ "receiver_id": refund_to, "token_id": token_id, "memo": "Keypom Linkdrop" }).to_string().into(),
-                1,
+                NearToken::from_yoctonear(1),
                 MIN_GAS_FOR_NFT_TRANSFER,
                 GasWeight(1),
             );
         }
 
-        batch_promise                      
+        batch_promise
     }
 }
+

@@ -1,14 +1,16 @@
 [package]
 name = "keypom"
 version = "3.0.0"
-authors = ["Ben Kurrek <bkurrek@uwaterloo.ca>, Matt Lockyer <mattdlockyer@gmail.com>"]
+authors = [
+  "Ben Kurrek <bkurrek@uwaterloo.ca>, Matt Lockyer <mattdlockyer@gmail.com>",
+]
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-near-sdk = "4.1.1"
+near-sdk = "5.0.0-alpha.2"
 serde_json = "1.0.91"
 hex = "0.4.3"
 
@@ -19,3 +21,4 @@ lto = true
 debug = false
 panic = "abort"
 overflow-checks = true
+

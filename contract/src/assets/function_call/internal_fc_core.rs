@@ -1,29 +1,42 @@
 use crate::*;
 
 #[near_bindgen]
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, PanicOnDefault, Clone, Debug)]
+#[derive(
+    BorshSerialize, BorshDeserialize, Serialize, Deserialize, PanicOnDefault, Clone, Debug,
+)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct FCData {
-    pub methods: Vec<MethodData>
+    pub methods: Vec<MethodData>,
 }
 
 impl FCData {
     /// Initialize a new instance of function call data.
     /// All checks such as prohibited methods and valid receivers are done here.
     pub fn new(methods: Vec<MethodData>) -> Self {
-        require!(methods.len() > 0, "Must have at least 1 method in FC assets");
+        require!(
+            methods.len() > 0,
+            "Must have at least 1 method in FC assets"
+        );
 
         for method in methods.iter() {
             // Check if the method is prohibited
-            require!(!DEFAULT_PROHIBITED_FC_METHODS.contains(&method.method_name.as_str()), format!("Method {} is prohibited from being called in an FC drop", method.method_name));
+            require!(
+                !DEFAULT_PROHIBITED_FC_METHODS.contains(&method.method_name.as_str()),
+                format!(
+                    "Method {} is prohibited from being called in an FC drop",
+                    method.method_name
+                )
+            );
 
             // Check if the receiver is valid
-            require!(method.receiver_id != env::current_account_id().to_string(), "Receiver ID cannot be current Keypom contract.");
+            require!(
+                method.receiver_id != env::current_account_id().to_string(),
+                "Receiver ID cannot be current Keypom contract."
+            );
         }
-        
-        Self {
-            methods
-        }
+
+        Self { methods }
     }
 
     /// Query how much $NEAR should be refunded for 1 claim
@@ -41,27 +54,30 @@ impl FCData {
     pub fn get_required_asset_gas(&self) -> Gas {
         // Loop through all the methods, tally up their attached gas and then:
         // Total Method Gas + MIN_BASE_GAS_FOR_ONE_CCC * num_methods + GAS_FOR_FC_CLAIM_LOGIC + num_methods + the length of the arguments
-        let mut total_gas = Gas(0);
+        let mut total_gas = 0;
         for method in self.methods.iter() {
-            total_gas += method.attached_gas;
-            total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP + GAS_FOR_FC_CLAIM_LOGIC;
+            total_gas += method.attached_gas.as_gas();
+            total_gas +=
+                MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.as_gas() + GAS_FOR_FC_CLAIM_LOGIC.as_gas();
         }
 
-        total_gas
+        Gas::from_gas(total_gas)
     }
 
     /// Query how much gas is required for a single claim
     pub fn get_total_required_gas(&self) -> Gas {
         // Loop through all the methods, tally up their attached gas and then:
         // Total Method Gas + MIN_BASE_GAS_FOR_ONE_CCC * num_methods + GAS_FOR_FC_CLAIM_LOGIC + num_methods + the length of the arguments
-        let mut total_gas = Gas(0);
+        let mut total_gas = 0;
         for method in self.methods.iter() {
             let arg_len = method.args.len() as u64;
-            total_gas += GAS_PER_ARG_LENGTH * arg_len;
-            total_gas += method.attached_gas;
-            total_gas += MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP + GAS_FOR_FC_CLAIM_LOGIC;
+            total_gas += GAS_PER_ARG_LENGTH.as_gas() * arg_len;
+            total_gas += method.attached_gas.as_gas();
+            total_gas +=
+                MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.as_gas() + GAS_FOR_FC_CLAIM_LOGIC.as_gas();
         }
 
-        total_gas
+        Gas::from_gas(total_gas)
     }
 }
+

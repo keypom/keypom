@@ -4,17 +4,19 @@ use crate::*;
 
 /// External data representing assets that should be logged as part of events
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 #[serde(untagged)]
 pub enum ExtAssetForEvents {
     FTAsset(ExtFTData),
     NearAsset(ExtNEARData),
     NFTAsset(ExtNFTData),
-    FCAsset(Vec<ExtFCDataForEvents>)
+    FCAsset(Vec<ExtFCDataForEvents>),
 }
 
 /// Data going into or out of the Keypom contract representing the presence of fungible tokens as an asset for a drop
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtFCDataForEvents {
     /// Contract that will be called
@@ -80,3 +82,4 @@ impl fmt::Display for EventLog {
         ))
     }
 }
+

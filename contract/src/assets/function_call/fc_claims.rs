@@ -12,9 +12,9 @@ pub const DEFAULT_PROHIBITED_FC_METHODS: [&str; 6] = [
 
 /// Gas needed to execute any logic in the fc claim function
 /// 2 TGas
-pub const GAS_FOR_FC_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000);
+pub const GAS_FOR_FC_CLAIM_LOGIC: Gas = Gas::from_tgas(2);
 /// For every length of the args, add this much gas
-pub const GAS_PER_ARG_LENGTH: Gas = Gas(200_000_000);
+pub const GAS_PER_ARG_LENGTH: Gas = Gas::from_gas(200000000);
 
 impl FCData {
     /// Loop through each method and create a promise to call the method
@@ -26,10 +26,13 @@ impl FCData {
         account_id: AccountId,
         drop_id: DropId,
         key_id: String,
-        funder_id: AccountId
-    ) -> Option<Promise> {  
+        funder_id: AccountId,
+    ) -> Option<Promise> {
         let mut promises = Vec::new();
-        let num_fc_args = fc_args.as_ref().and_then(|a| Some(a.len())).unwrap_or(self.methods.len());
+        let num_fc_args = fc_args
+            .as_ref()
+            .and_then(|a| Some(a.len()))
+            .unwrap_or(self.methods.len());
         if num_fc_args != self.methods.len() {
             near_sdk::log!("User provided FC args does not match methods length. Found {} Expected {} Skipping all FC args.", num_fc_args, self.methods.len());
             fc_args = None;
@@ -40,19 +43,19 @@ impl FCData {
             if actual_args.len() == 0 {
                 actual_args = "{}".to_string();
             }
-            
+
             match handle_fc_args(
-                &mut actual_args, 
-                method.keypom_args.clone(), 
-                &method.user_args_rule, 
-                &fc_args, 
-                &account_id, 
-                &drop_id, 
-                &key_id, 
-                &funder_id, 
-                idx
+                &mut actual_args,
+                method.keypom_args.clone(),
+                &method.user_args_rule,
+                &fc_args,
+                &account_id,
+                &drop_id,
+                &key_id,
+                &funder_id,
+                idx,
             ) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     near_sdk::log!("Error handling FC args: {:?}", e);
                     continue;
@@ -62,7 +65,7 @@ impl FCData {
             let receiver_id = match determine_receiver_id(
                 &method.receiver_to_claimer,
                 &method.receiver_id,
-                &account_id
+                &account_id,
             ) {
                 Ok(receiver_id) => receiver_id,
                 Err(e) => {
@@ -70,18 +73,18 @@ impl FCData {
                     continue;
                 }
             };
-            
-            let promise = Promise::new(receiver_id)
-                .function_call_weight(
-                    method.method_name.clone(), 
-                    actual_args.into(), 
-                    method.attached_deposit.0,
-                    method.attached_gas,
-                    GasWeight(1)
-                );
+
+            let promise = Promise::new(receiver_id).function_call_weight(
+                method.method_name.clone(),
+                actual_args.into(),
+                NearToken::from_yoctonear(method.attached_deposit.0),
+                method.attached_gas,
+                GasWeight(1),
+            );
             promises.push(promise);
         }
 
         promises.into_iter().reduce(|a, b| a.then(b))
     }
 }
+
