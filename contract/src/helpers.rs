@@ -1,5 +1,31 @@
 use crate::*;
 
+pub(crate) fn string_to_64_byte_array(s: &String) -> Option<&[u8; 64]> {
+    // Check if the string is exactly 64 bytes
+    if s.as_bytes().len() != 64 {
+        return None;
+    }
+
+    // Explicitly import TryInto trait
+    use std::convert::TryInto;
+
+    // Attempt to convert
+    s.as_bytes()[0..64].try_into().ok()
+}
+
+pub(crate) fn string_to_32_byte_array(s: &String) -> Option<&[u8; 32]> {
+    // Check if the string is exactly 64 bytes
+    if s.as_bytes().len() != 32 {
+        return None;
+    }
+
+    // Explicitly import TryInto trait
+    use std::convert::TryInto;
+
+    // Attempt to convert
+    s.as_bytes()[0..32].try_into().ok()
+}
+
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn hash_string(string: &String) -> CryptoHash {
     env::sha256_array(string.as_bytes())
@@ -245,4 +271,3 @@ pub(crate) fn add_keypom_args(
 
     return Ok(());
 }
-

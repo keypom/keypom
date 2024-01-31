@@ -3,6 +3,21 @@ use near_sdk::promise_result_as_success;
 
 #[near_bindgen]
 impl Keypom {
+    pub fn verify_sig(&self, signature: String, message: String, pk: String) {
+        let is_valid = env::ed25519_verify(
+            string_to_64_byte_array(&signature).unwrap(),
+            message.as_bytes(),
+            string_to_32_byte_array(&pk).unwrap(),
+        );
+        near_sdk::log!(
+            "Is Valid: {}, Signature: {}, Message: {}, PK: {}",
+            is_valid,
+            signature,
+            message,
+            pk
+        );
+    }
+
     /// Set the desired linkdrop contract to interact with
     pub fn set_root_account(&mut self, root_account: AccountId) {
         self.assert_owner();
@@ -76,4 +91,3 @@ impl Keypom {
         );
     }
 }
-

@@ -55,6 +55,10 @@ async fn test_simple(
     user: &Account,
     keypom_contract: &Contract,
 ) -> anyhow::Result<()> {
+    let message = "keypom_is_lit".to_string();
+    let pub_key = "ed25519:4WvV8m9bKg7a6b6XnQ5u7L2yQ4nV9P4Uq1G6WZtM5X6k";
+    let sk = "ed25519:v9j3b9F1Yh5KZr7Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m";
+
     let total_supply = keypom_contract
         .view("get_key_total_supply")
         .await?
