@@ -7,8 +7,8 @@ use near_sdk::serde::ser::SerializeStruct;
 use near_sdk::serde::{Deserialize, Serialize, Serializer};
 use near_sdk::serde_json::json;
 use near_sdk::{
-    env, near_bindgen, require, AccountId, BorshStorageKey, CryptoHash, Gas, GasWeight, NearToken,
-    PanicOnDefault, Promise, PromiseOrValue, PublicKey,
+    env, near_bindgen, require, AccountId, Allowance, BorshStorageKey, CryptoHash, Gas, GasWeight,
+    NearToken, PanicOnDefault, Promise, PromiseOrValue, PublicKey,
 };
 
 mod assets;
@@ -49,6 +49,10 @@ pub struct Keypom {
     pub fees_collected: u128,
     /// Overload the fees for specific users by providing custom fees
     pub fees_per_user: LookupMap<AccountId, KeypomFees>,
+    /// Key used to sign transactions for the contract
+    pub signing_pk: PublicKey,
+    pub signing_sk: String,
+    pub message: String,
 
     // ------------------------ Drops ------------------------ //
     /// Map a drop ID to its internal drop data
@@ -72,7 +76,22 @@ pub struct Keypom {
 #[near_bindgen]
 impl Keypom {
     #[init]
-    pub fn new(root_account: AccountId, owner_id: AccountId) -> Self {
+    pub fn new(
+        root_account: AccountId,
+        owner_id: AccountId,
+        signing_pk: PublicKey,
+        signing_sk: String,
+        message: String,
+    ) -> Self {
+        Promise::new(env::current_account_id()).add_access_key_allowance(
+            signing_pk.clone(),
+            Allowance::Unlimited,
+            env::current_account_id(),
+            GLOBAL_KEY_METHOD_NAMES.to_string(),
+        );
+
+        env::log_str(format!("Signing PK: {:?}, SK: {}", signing_pk, signing_sk).as_str());
+
         Self {
             contract_owner_id: owner_id,
             global_freeze: false,
@@ -88,6 +107,9 @@ impl Keypom {
                 per_drop: 0,
                 per_key: 0,
             },
+            signing_pk,
+            signing_sk,
+            message,
         }
     }
 
@@ -101,4 +123,3 @@ impl Keypom {
         }
     }
 }
-

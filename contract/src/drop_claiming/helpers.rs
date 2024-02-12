@@ -411,4 +411,3 @@ pub(crate) fn assert_claim_timestamps(
         }
     }
 }
-

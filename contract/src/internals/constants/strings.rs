@@ -1,5 +1,8 @@
 // ------------------------ Access Key Method Names ------------------------ //
-pub const ACCESS_KEY_METHOD_NAMES: &str = "claim,create_account_and_claim,nft_transfer,nft_approve,nft_revoke";
+pub const ACCESS_KEY_METHOD_NAMES: &str =
+    "claim,create_account_and_claim,nft_transfer,nft_approve,nft_revoke";
+pub const GLOBAL_KEY_METHOD_NAMES: &str =
+    "claim,create_account_and_claim,nft_transfer,nft_approve,nft_revoke,verify_signature";
 
 // ------------------------ NFT Standard Stuff ------------------------ //
 /// This spec can be treated like a version of the standard.
@@ -12,7 +15,6 @@ pub const NFT_STANDARD_NAME: &str = "nep171";
 pub const KEYPOM_STANDARD_VERSION: &str = "1.0.0";
 /// What is the Keypom standard name? This is for keypom event logging
 pub const KEYPOM_STANDARD_NAME: &str = "keypom";
-
 
 // ------------------------ Asset IDs ------------------------ //
 /// Asset ID for the fc assets (this should never be used though and is just a fallback)

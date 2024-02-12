@@ -3,19 +3,40 @@ use near_sdk::promise_result_as_success;
 
 #[near_bindgen]
 impl Keypom {
-    pub fn verify_sig(&self, signature: String, message: String, pk: String) {
+    pub fn verify_signature(&mut self, signature: String, pk: PublicKey) -> bool {
+        near_sdk::log!("Signature: {}, PK: {:?}", signature, pk);
+        self.assert_contract_key();
+        let token_id = self
+            .token_id_by_pk
+            .get(&pk)
+            .expect("No drop ID found for PK");
+
+        let (drop_id, _) = parse_token_id(&token_id).unwrap();
+        let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        let mut key_info = drop
+            .key_info_by_token_id
+            .get(&token_id)
+            .expect("Key not found");
+
+        let expected_message = format!("{}{}", self.message, key_info.nonce);
         let is_valid = env::ed25519_verify(
             string_to_64_byte_array(&signature).unwrap(),
-            message.as_bytes(),
-            string_to_32_byte_array(&pk).unwrap(),
+            expected_message.as_bytes(),
+            pk_to_32_byte_array(&pk).unwrap(),
         );
+
+        key_info.nonce += 1;
+        drop.key_info_by_token_id.insert(&token_id, &key_info);
+        self.drop_by_id.insert(&drop_id, &drop);
+
         near_sdk::log!(
-            "Is Valid: {}, Signature: {}, Message: {}, PK: {}",
+            "Is Valid: {}, Signature: {}, Message: {}, PK: {:?}",
             is_valid,
             signature,
-            message,
+            expected_message,
             pk
         );
+        is_valid
     }
 
     /// Set the desired linkdrop contract to interact with
@@ -88,6 +109,15 @@ impl Keypom {
             env::predecessor_account_id(),
             self.contract_owner_id,
             "Only the contract owner can call this function"
+        );
+    }
+
+    /// Ensure that the contract key is the one that signed the message
+    pub(crate) fn assert_contract_key(&self) {
+        assert_eq!(
+            env::signer_account_pk(),
+            self.signing_pk,
+            "Only Contract Key Can Call This Method"
         );
     }
 }

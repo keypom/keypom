@@ -13,7 +13,7 @@ pub(crate) fn string_to_64_byte_array(s: &String) -> Option<&[u8; 64]> {
     s.as_bytes()[0..64].try_into().ok()
 }
 
-pub(crate) fn string_to_32_byte_array(s: &String) -> Option<&[u8; 32]> {
+pub(crate) fn pk_to_32_byte_array(s: &PublicKey) -> Option<&[u8; 32]> {
     // Check if the string is exactly 64 bytes
     if s.as_bytes().len() != 32 {
         return None;

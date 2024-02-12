@@ -100,4 +100,3 @@ pub struct ExtKeyData {
     /// What account ID owns the given key (if any)
     pub key_owner: Option<AccountId>,
 }
-

@@ -2,6 +2,11 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
+    /// Query for the global secret key info to sign transactions with
+    pub fn get_global_secret_key(&self) -> String {
+        self.signing_sk.to_string()
+    }
+
     /// Returns how many fees the contract has collected
     pub fn get_fees_collected(&self) -> U128 {
         U128(self.fees_collected)

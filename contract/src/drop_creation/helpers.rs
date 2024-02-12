@@ -20,9 +20,6 @@ impl Keypom {
         let mut add_key_logs = Vec::new();
         let mut nft_mint_logs = Vec::new();
 
-        // Create a new promise batch to create all the access keys
-        let promise = env::promise_batch_create(current_account_id);
-
         // Loop through the public keys and add them to the contract.
         // None of these promises will fire if there's a panic so it's
         // Fine to add them in the loop
@@ -58,6 +55,7 @@ impl Keypom {
             key_info_by_token_id.insert(
                 &token_id,
                 &InternalKeyInfo {
+                    nonce: 0,
                     pub_key: public_key.clone(),
                     remaining_uses: max_uses_per_key,
                     owner_id: key_owner.clone(),
@@ -67,18 +65,6 @@ impl Keypom {
                     metadata: metadata.clone(),
                     pw_by_use,
                 },
-            );
-
-            // TODO: add to tokens_per_owner
-
-            // Add this key to the batch
-            env::promise_batch_action_add_key_with_function_call(
-                promise,
-                public_key,
-                0, // Nonce
-                NearToken::from_yoctonear(allowance),
-                current_account_id,
-                ACCESS_KEY_METHOD_NAMES,
             );
 
             // Construct the nft mint and add key logs to be added as events later
@@ -109,8 +95,6 @@ impl Keypom {
                 event: EventLogVariant::AddKey(add_key_logs),
             });
         }
-
-        env::promise_return(promise);
     }
 
     /// Tally up all the costs for adding keys / creating a drop and refund any excess deposit
@@ -247,4 +231,3 @@ pub(crate) fn assert_valid_time_config(config: &TimeConfig) {
         );
     }
 }
-
