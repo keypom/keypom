@@ -4,11 +4,11 @@ use crate::*;
 impl Keypom {
     #[payable]
     pub fn add_keys(
-        &mut self, 
-        drop_id: DropId, 
+        &mut self,
+        drop_id: DropId,
         key_data: Vec<ExtKeyData>,
         // Should any excess attached deposit be deposited to the user's balance?
-        keep_excess_deposit: Option<bool>
+        keep_excess_deposit: Option<bool>,
     ) -> bool {
         self.assert_no_global_freeze();
 
@@ -18,20 +18,24 @@ impl Keypom {
 
         // get the drop object (remove it and only re-insert at the end if it shouldn't be deleted)
         let mut drop = self.drop_by_id.get(&drop_id).expect("No drop found");
-        
+
         let funder_id = drop.funder_id.clone();
         let caller_id = env::predecessor_account_id();
 
         let num_keys_to_add = key_data.len();
-        require!(num_keys_to_add > 0 && num_keys_to_add <= 100, "Must provide between 1 and 100 keys at a time");
+        require!(
+            num_keys_to_add > 0 && num_keys_to_add <= 100,
+            "Must provide between 1 and 100 keys at a time"
+        );
 
         // If there is a public sale and the predecessor isn't the funder, perform checks and return revenue
-        if let Some(allowlist) = drop.config.as_ref().and_then(|c| c.add_key_allowlist.as_ref()) {
+        if let Some(allowlist) = drop
+            .config
+            .as_ref()
+            .and_then(|c| c.add_key_allowlist.as_ref())
+        {
             if funder_id != caller_id {
-                require!(
-                    allowlist.contains(&caller_id),
-                    "caller not on allowlist"
-                );
+                require!(allowlist.contains(&caller_id), "caller not on allowlist");
             }
         } else {
             require!(
@@ -44,16 +48,13 @@ impl Keypom {
         let max_key_uses = drop.max_key_uses;
 
         let mut total_cost_per_key = 0;
-        let mut total_allowance_per_key = drop.config.as_ref().and_then(|config| config.extra_allowance_per_key).unwrap_or(U128(0)).0;
-
         // Get the total cost and allowance required for a key that has all its uses remaining
         // We'll then multiply this by the number of keys we want to add and charge the user
         get_total_costs_for_key(
             &mut total_cost_per_key,
-            &mut total_allowance_per_key,
             max_key_uses,
             &drop.asset_by_id,
-            &drop.asset_data_for_uses
+            &drop.asset_data_for_uses,
         );
 
         // Keep track of all the events
@@ -66,7 +67,6 @@ impl Keypom {
             &drop_id,
             max_key_uses,
             &key_data,
-            total_allowance_per_key
         );
 
         // Write the updated drop data to storage
@@ -78,9 +78,8 @@ impl Keypom {
             key_data.len(),
             false, // No drop was created
             total_cost_per_key,
-            total_allowance_per_key,
             net_storage,
-            keep_excess_deposit
+            keep_excess_deposit,
         );
 
         // Now that everything is done (no more potential for panics), we can log the events
@@ -89,3 +88,4 @@ impl Keypom {
         true
     }
 }
+

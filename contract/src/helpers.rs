@@ -58,44 +58,10 @@ pub(crate) fn get_key_cur_use(drop: &InternalDrop, key_info: &InternalKeyInfo) -
     drop.max_key_uses - key_info.remaining_uses + 1
 }
 
-/// Used to calculate the base allowance needed given attached GAS
-pub(crate) fn calculate_base_allowance(
-    yocto_per_gas: Balance,
-    attached_gas: Gas,
-    should_log: bool,
-) -> Balance {
-    let prepaid: u64 = attached_gas.as_gas() + GAS_PER_CCC.as_gas();
-
-    // Get the number of CCCs you can make with the attached GAS
-    // 5 TGas GAS_PER_CCC
-    let calls_with_gas = (prepaid / GAS_PER_CCC.as_gas()) as f32;
-    // Get the constant used to pessimistically calculate the required allowance
-    let pow_outcome = 1.032_f32.powf(calls_with_gas);
-
-    // Get the required GAS based on the calculated constant
-    // 2.5 TGas receipt cost
-    let required_allowance = ((prepaid + RECEIPT_GAS_COST.as_gas()) as f32 * pow_outcome
-        + RECEIPT_GAS_COST.as_gas() as f32) as Balance
-        * yocto_per_gas;
-
-    if should_log {
-        near_sdk::log!(
-            "{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}",
-            calls_with_gas,
-            prepaid,
-            pow_outcome,
-            required_allowance
-        );
-    }
-
-    required_allowance
-}
-
 /// Helper function that returns the total cost for a given key as well as its allowance
 /// This key can be partially used or not
 pub(crate) fn get_total_costs_for_key(
     total_cost_for_keys: &mut Balance,
-    total_allowance_for_keys: &mut Balance,
     remaining_uses: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
     asset_data_for_uses: &Vec<InternalAssetDataForUses>,
@@ -149,11 +115,6 @@ pub(crate) fn get_total_costs_for_key(
                 total_claim_gas
             )
         );
-
-        // Get the total allowance for this use
-        let allowance_for_use =
-            calculate_base_allowance(YOCTO_PER_GAS, Gas::from_gas(total_claim_gas), false);
-        *total_allowance_for_keys += allowance_for_use * uses as u128;
     }
 }
 

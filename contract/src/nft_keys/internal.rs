@@ -177,33 +177,6 @@ impl Keypom {
             },
         ];
 
-        // Delete the original key
-        Promise::new(env::current_account_id()).delete_key(old_pub_key);
-
-        // Get the allowance that should be transferred to the new key
-        let mut total_cost_for_key: Balance = 0;
-        let mut total_allowance_for_key: Balance = drop
-            .config
-            .as_ref()
-            .and_then(|config| config.extra_allowance_per_key)
-            .unwrap_or(U128(0))
-            .0;
-        get_total_costs_for_key(
-            &mut total_cost_for_key,
-            &mut total_allowance_for_key,
-            key_info.remaining_uses,
-            &drop.asset_by_id,
-            &drop.asset_data_for_uses,
-        );
-
-        // Add the new key with the corresponding allowance
-        Promise::new(env::current_account_id()).add_access_key(
-            new_public_key.clone(),
-            NearToken::from_yoctonear(total_allowance_for_key),
-            env::current_account_id(),
-            ACCESS_KEY_METHOD_NAMES.to_string(),
-        );
-
         // Log the transfer events
         log_events(event_logs);
 

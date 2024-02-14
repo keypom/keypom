@@ -75,9 +75,4 @@ pub struct DropConfig {
     /// Should the drop be automatically deleted when all the keys are used? This is defaulted to true and
     /// Must be overwritten
     pub delete_empty_drop: Option<bool>,
-
-    /// How much extra allowance should be given to each key in the drop?
-    /// This allows keys to be used for extra functionalities such as `nft_transfer`, `nft_approve`, etc.
-    pub extra_allowance_per_key: Option<U128>,
 }
-

@@ -12,10 +12,7 @@ impl Keypom {
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
         key_data: &Vec<ExtKeyData>,
-        allowance: Balance,
     ) {
-        let current_account_id = &env::current_account_id();
-
         // Logs for add key and NFT mint events
         let mut add_key_logs = Vec::new();
         let mut nft_mint_logs = Vec::new();
@@ -103,7 +100,6 @@ impl Keypom {
         num_keys: usize,
         did_create_drop: bool,
         asset_cost_per_key: Balance,
-        allowance_per_key: Balance,
         net_storage: u64,
         keep_excess_deposit: Option<bool>,
     ) {
@@ -111,8 +107,6 @@ impl Keypom {
 
         let storage_cost = net_storage as Balance * env::storage_byte_cost().as_yoctonear();
         let total_asset_cost = asset_cost_per_key * num_keys;
-        let total_allowance_cost = allowance_per_key * num_keys;
-
         let fees_for_user = self
             .fees_per_user
             .get(&env::predecessor_account_id())
@@ -120,14 +114,13 @@ impl Keypom {
         let total_fees =
             num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
         self.fees_collected += total_fees;
-        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + total_fees;
+        let total_cost = total_asset_cost + storage_cost + total_fees;
 
         near_sdk::log!(
-            "total {} storage {} asset {} allowance {} keypom fees {}",
+            "total {} storage {} asset {} keypom fees {}",
             total_cost,
             storage_cost,
             total_asset_cost,
-            total_allowance_cost,
             total_fees
         );
         self.charge_with_deposit_or_balance(total_cost, keep_excess_deposit);
