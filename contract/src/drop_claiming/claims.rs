@@ -8,8 +8,14 @@ impl Keypom {
         account_id: AccountId,
         fc_args: UserProvidedFCArgs,
         password: Option<String>,
+        signature: Base64VecU8,
+        linkdrop_pk: PublicKey,
     ) -> PromiseOrValue<bool> {
         self.assert_no_global_freeze();
+        require!(
+            self.verify_signature(signature, linkdrop_pk.clone()),
+            "Invalid signature for public key"
+        );
 
         let mut event_logs: Vec<EventLog> = Vec::new();
         let BeforeClaimData {
@@ -20,7 +26,7 @@ impl Keypom {
             drop_id: _,
             key_id: _,
             funder_id: _,
-        } = self.before_claim_logic(&mut event_logs, None, password);
+        } = self.before_claim_logic(&mut event_logs, None, password, linkdrop_pk);
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas = BASE_GAS_FOR_CLAIM.as_gas() + required_asset_gas.as_gas();
         // Use to check prepaid == required. Changed to >= for the sake of simplicity for now
@@ -45,8 +51,14 @@ impl Keypom {
         new_public_key: PublicKey,
         fc_args: UserProvidedFCArgs,
         password: Option<String>,
+        signature: Base64VecU8,
+        linkdrop_pk: PublicKey,
     ) -> Promise {
         self.assert_no_global_freeze();
+        require!(
+            self.verify_signature(signature, linkdrop_pk.clone()),
+            "Invalid signature for public key"
+        );
 
         let mut event_logs = Vec::new();
         let BeforeClaimData {
@@ -57,7 +69,12 @@ impl Keypom {
             drop_id,
             key_id,
             funder_id,
-        } = self.before_claim_logic(&mut event_logs, Some(&new_public_key), password);
+        } = self.before_claim_logic(
+            &mut event_logs,
+            Some(&new_public_key),
+            password,
+            linkdrop_pk,
+        );
 
         let prepaid_gas = env::prepaid_gas();
         let total_required_gas =
@@ -114,4 +131,3 @@ impl Keypom {
             )
     }
 }
-

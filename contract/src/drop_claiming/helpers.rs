@@ -1,4 +1,4 @@
-use near_sdk::{env::sha256, PromiseResult};
+use near_sdk::{env::sha256, json_types::Base58PublicKey, PromiseResult};
 
 use crate::*;
 
@@ -11,9 +11,8 @@ impl Keypom {
         event_logs: &mut Vec<EventLog>,
         new_public_key: Option<&PublicKey>,
         password: Option<String>,
+        linkdrop_pk: PublicKey,
     ) -> BeforeClaimData {
-        let signer_pk = env::signer_account_pk();
-
         // Get the key info and decrement its remaining uses.
         // If there are zero remaining uses, break the connection between
         // The public key and token ID that way the key can't be used anymore.
@@ -22,7 +21,7 @@ impl Keypom {
         // Multi use keys that submit multiple txns in the same block. Only delete if empty.
         let token_id = self
             .token_id_by_pk
-            .get(&signer_pk)
+            .get(&linkdrop_pk)
             .expect("No drop ID found for PK");
 
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
@@ -56,8 +55,7 @@ impl Keypom {
                 self.internal_remove_token_from_owner(owner, &token_id);
             }
 
-            self.token_id_by_pk.remove(&signer_pk);
-            Promise::new(env::current_account_id()).delete_key(signer_pk.clone());
+            self.token_id_by_pk.remove(&linkdrop_pk);
 
             event_logs.push(EventLog {
                 standard: NFT_STANDARD_NAME.to_string(),
@@ -78,7 +76,7 @@ impl Keypom {
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::DeleteKey(vec![AddOrDeleteKeyLog {
                     drop_id: drop_id.to_string(),
-                    public_key: (&signer_pk).into(),
+                    public_key: (&linkdrop_pk).into(),
                 }]),
             });
         }

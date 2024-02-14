@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
-use near_sdk::json_types::U128;
+use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::serde::ser::SerializeStruct;
 use near_sdk::serde::{Deserialize, Serialize, Serializer};
 use near_sdk::serde_json::json;
@@ -121,5 +121,37 @@ impl Keypom {
                 "Contract is frozen and no new drops or keys can be created"
             );
         }
+    }
+
+    pub fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey) -> bool {
+        self.assert_contract_key();
+        let token_id = self
+            .token_id_by_pk
+            .get(&pk)
+            .expect("No drop ID found for PK");
+
+        let (drop_id, _) = parse_token_id(&token_id).unwrap();
+        let mut drop: InternalDrop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        let mut key_info = drop
+            .key_info_by_token_id
+            .get(&token_id)
+            .expect("Key not found");
+
+        let expected_message = format!("{}{}", self.message, key_info.message_nonce);
+
+        let pk_bytes = pk_to_32_byte_array(&pk).unwrap();
+        let sig_bytes = vec_to_64_byte_array(signature.into()).unwrap();
+        let is_valid = env::ed25519_verify(&sig_bytes, expected_message.as_bytes(), pk_bytes);
+
+        // Only increment the nonce if the signature is valid.
+        // Otherwise, someone could pass in a different public key and increment their nonce
+        // without needing their secret key
+        if is_valid {
+            key_info.message_nonce += 1;
+            drop.key_info_by_token_id.insert(&token_id, &key_info);
+            self.drop_by_id.insert(&drop_id, &drop);
+        }
+
+        is_valid
     }
 }
