@@ -123,7 +123,7 @@ impl Keypom {
         }
     }
 
-    pub fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey) -> bool {
+    pub(crate) fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey) -> bool {
         self.assert_contract_key();
         let token_id = self
             .token_id_by_pk
