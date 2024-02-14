@@ -87,7 +87,6 @@ pub struct ExtDrop {
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[borsh(crate = "near_sdk::borsh")]
-
 pub struct ExtKeyData {
     /// What is the public key?
     pub public_key: PublicKey,

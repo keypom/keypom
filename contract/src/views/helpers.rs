@@ -7,6 +7,10 @@ impl Keypom {
         self.signing_sk.to_string()
     }
 
+    pub fn get_signing_message(&self) -> String {
+        self.message.to_string()
+    }
+
     /// Returns how many fees the contract has collected
     pub fn get_fees_collected(&self) -> U128 {
         U128(self.fees_collected)

@@ -22,3 +22,7 @@ near-crypto = "0.20.1"
 [[example]]
 name = "integration-tests"
 path = "src/tests.rs"
+
+[dependencies]
+base64 = "0.21.7"
+ed25519-dalek = "2.1.1"

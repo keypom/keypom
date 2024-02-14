@@ -1,29 +1,37 @@
 use crate::*;
 
-pub(crate) fn string_to_64_byte_array(s: &String) -> Option<&[u8; 64]> {
+pub(crate) fn vec_to_64_byte_array(vec: Vec<u8>) -> Option<[u8; 64]> {
     // Check if the string is exactly 64 bytes
-    if s.as_bytes().len() != 64 {
+    if vec.len() != 64 {
         return None;
     }
 
     // Explicitly import TryInto trait
     use std::convert::TryInto;
 
-    // Attempt to convert
-    s.as_bytes()[0..64].try_into().ok()
+    let array: [u8; 64] = vec
+        .try_into() // Try to convert the Vec<u8> into a fixed-size array
+        .expect("Vec with incorrect length"); // This expect will never panic due to the above length check
+
+    Some(array)
 }
 
-pub(crate) fn pk_to_32_byte_array(s: &PublicKey) -> Option<&[u8; 32]> {
-    // Check if the string is exactly 64 bytes
-    if s.as_bytes().len() != 32 {
+pub(crate) fn pk_to_32_byte_array(pk: &PublicKey) -> Option<&[u8; 32]> {
+    let len = pk.as_bytes().len();
+    // Check if the string is exactly 32 or 33 bytes
+    if len != 32 && len != 33 {
         return None;
     }
 
     // Explicitly import TryInto trait
     use std::convert::TryInto;
 
-    // Attempt to convert
-    s.as_bytes()[0..32].try_into().ok()
+    // if the public key has the prefix appended, remove it to ensure it's 32 bytes
+    if len == 33 {
+        return pk.as_bytes()[1..33].try_into().ok();
+    }
+
+    pk.as_bytes()[0..32].try_into().ok()
 }
 
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)

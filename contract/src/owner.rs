@@ -1,10 +1,9 @@
 use crate::*;
-use near_sdk::promise_result_as_success;
+use near_sdk::{json_types::Base64VecU8, promise_result_as_success};
 
 #[near_bindgen]
 impl Keypom {
-    pub fn verify_signature(&mut self, signature: String, pk: PublicKey) -> bool {
-        near_sdk::log!("Signature: {}, PK: {:?}", signature, pk);
+    pub fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey) -> bool {
         self.assert_contract_key();
         let token_id = self
             .token_id_by_pk
@@ -19,23 +18,20 @@ impl Keypom {
             .expect("Key not found");
 
         let expected_message = format!("{}{}", self.message, key_info.nonce);
-        let is_valid = env::ed25519_verify(
-            string_to_64_byte_array(&signature).unwrap(),
-            expected_message.as_bytes(),
-            pk_to_32_byte_array(&pk).unwrap(),
-        );
 
-        key_info.nonce += 1;
-        drop.key_info_by_token_id.insert(&token_id, &key_info);
-        self.drop_by_id.insert(&drop_id, &drop);
+        let pk_bytes = pk_to_32_byte_array(&pk).unwrap();
+        let sig_bytes = vec_to_64_byte_array(signature.into()).unwrap();
+        let is_valid = env::ed25519_verify(&sig_bytes, expected_message.as_bytes(), pk_bytes);
 
-        near_sdk::log!(
-            "Is Valid: {}, Signature: {}, Message: {}, PK: {:?}",
-            is_valid,
-            signature,
-            expected_message,
-            pk
-        );
+        // Only increment the nonce if the signature is valid.
+        // Otherwise, someone could pass in a different public key and increment their nonce
+        // without needing their secret key
+        if is_valid {
+            key_info.nonce += 1;
+            drop.key_info_by_token_id.insert(&token_id, &key_info);
+            self.drop_by_id.insert(&drop_id, &drop);
+        }
+
         is_valid
     }
 

@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use helpers::*;
 use near_crypto::{KeyType, SecretKey, Signer};
-use near_sdk::NearToken;
+use near_sdk::{json_types::Base64VecU8, NearToken};
 use near_units::parse_near;
 use near_workspaces::{AccessKey, Account, Contract};
 use serde_json::json;
@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     // begin tests
-    test_global_key(&owner, &alice, keypom_contract).await?;
+    test_global_key(&alice, keypom_contract).await?;
     Ok(())
 }
 
@@ -66,7 +66,6 @@ async fn test_signatures(
     let mut kp_account = keypom_contract.as_account().clone();
 
     let keys = generate_keypairs(1);
-    println!("Keys: {:?}", keys);
     let res = user
         .call(keypom_contract.id(), "create_drop")
         .args_json(json!({"drop_id": "my_drop", "key_data": [{
@@ -112,11 +111,8 @@ async fn test_signatures(
     Ok(())
 }
 
-async fn test_global_key(
-    owner: &Account,
-    user: &Account,
-    keypom_contract: Contract,
-) -> anyhow::Result<()> {
+/// Test whether or not the global key works
+async fn test_global_key(user: &Account, keypom_contract: Contract) -> anyhow::Result<()> {
     let global_key_info = get_sig_meta(keypom_contract.clone()).await?;
     let mut kp_account = keypom_contract.as_account().clone();
 
@@ -132,34 +128,49 @@ async fn test_global_key(
         .await?;
 
     let signing_key: near_crypto::SecretKey = sk.to_string().parse().unwrap();
-    let signature = sign_kp_message(&signing_key, 0, &global_key_info.message);
-    verify_kp_signature(
-        &signing_key.public_key(),
-        &signature,
-        0,
-        &global_key_info.message,
-    );
+    let sig_0 = sign_kp_message(&signing_key, 0, &global_key_info.message);
+    let sig_1 = sign_kp_message(&signing_key, 1, &global_key_info.message);
 
-    // Try to call the contract with the wrong secret key
+    // Try to call the contract with the wrong global secret key
     let mut signature_result = kp_account
         .call(keypom_contract.id(), "verify_signature")
-        .args_json(json!({"signature": signature, "pk": sk.public_key()}))
+        .args_json(json!({"signature": sig_0, "pk": sk.public_key()}))
         .transact()
-        .await?;
-    assert!(!signature_result.is_success());
+        .await?
+        .into_result();
+    let mut error = signature_result.expect_err("Wrong global secret key");
+    assert!(format!("{error:?}").contains("Only Contract Key Can Call This Method"));
 
-    let drop_info = get_drop_info(keypom_contract.clone(), "my_drop".to_string()).await?;
-    println!("Drop Info: {:?}", drop_info);
-
-    // Set the global secret key and try again
+    // Set the global secret key but this time, sign the wrong message with a different public key
     kp_account.set_secret_key(global_key_info.secret_key);
-    signature_result = kp_account
+    let mut success_value = kp_account
         .call(keypom_contract.id(), "verify_signature")
-        .args_json(json!({"signature": signature, "pk": sk.public_key()}))
+        .args_json(json!({"signature": sig_1, "pk": sk.public_key()}))
         .transact()
-        .await?;
-    println!("Signature: {:?}", signature_result);
-    assert!(signature_result.is_success());
+        .await?
+        .json::<bool>()
+        .unwrap();
+
+    assert!(success_value == false);
+
+    // Now use the correct signature
+    success_value = kp_account
+        .call(keypom_contract.id(), "verify_signature")
+        .args_json(json!({"signature": sig_0, "pk": sk.public_key()}))
+        .transact()
+        .await?
+        .json::<bool>()
+        .unwrap();
+
+    assert!(success_value == true);
+    // Use the correct signature but with an incremented nonce
+    success_value = kp_account
+        .call(keypom_contract.id(), "verify_signature")
+        .args_json(json!({"signature": sig_1, "pk": sk.public_key()}))
+        .transact()
+        .await?
+        .json::<bool>()?;
+    assert!(success_value == true);
 
     println!("      Passed ✅ test_simple_approve");
     Ok(())

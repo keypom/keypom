@@ -3,13 +3,13 @@ use models::*;
 use near_workspaces::types::{KeyType, SecretKey};
 use near_workspaces::{AccessKey, Account, Contract};
 
-pub fn sign_kp_message(
-    sk: &near_crypto::SecretKey,
-    nonce: u32,
-    message: &String,
-) -> near_crypto::Signature {
-    println!("sk: {:?}, Signing message: {}", sk, message);
-    sk.sign(&format!("{}{}", message, nonce).as_bytes())
+pub fn sign_kp_message(sk: &near_crypto::SecretKey, nonce: u32, message: &String) -> Base64VecU8 {
+    let signature = match sk.sign(&format!("{}{}", message, nonce).as_bytes()) {
+        near_crypto::Signature::ED25519(sig) => sig,
+        _ => panic!("Invalid signature type"),
+    };
+
+    Base64VecU8(signature.to_bytes().to_vec())
 }
 
 pub fn verify_kp_signature(
@@ -17,10 +17,9 @@ pub fn verify_kp_signature(
     sig: &near_crypto::Signature,
     nonce: u32,
     message: &String,
-) {
+) -> bool {
     let msg = format!("{}{}", message, nonce);
-    let is_valid = sig.verify(msg.as_bytes(), pk);
-    println!("Is Valid: {}", is_valid);
+    sig.verify(msg.as_bytes(), pk)
 }
 
 pub async fn get_sig_meta(contract: Contract) -> Result<SignatureMeta, anyhow::Error> {
@@ -29,7 +28,7 @@ pub async fn get_sig_meta(contract: Contract) -> Result<SignatureMeta, anyhow::E
         .await?
         .json::<String>()?;
     let message = contract
-        .view("get_global_secret_key")
+        .view("get_signing_message")
         .await?
         .json::<String>()?;
 
