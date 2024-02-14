@@ -113,27 +113,17 @@ impl InternalAsset {
     ) -> Option<Promise> {
         match self {
             InternalAsset::ft(ref mut ft_data) => {
-                return ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
+                ft_data.claim_ft_asset(receiver_id, &tokens_per_use.unwrap())
             }
-            InternalAsset::nft(ref mut nft_data) => return nft_data.claim_nft_asset(receiver_id),
+            InternalAsset::nft(ref mut nft_data) => nft_data.claim_nft_asset(receiver_id),
             InternalAsset::fc(ref mut fc_data) => {
-                return fc_data.claim_fc_asset(
-                    fc_args,
-                    receiver_id.clone(),
-                    drop_id,
-                    key_id,
-                    funder_id,
-                )
+                fc_data.claim_fc_asset(fc_args, receiver_id.clone(), drop_id, key_id, funder_id)
             }
-            InternalAsset::near => {
-                return Some(
-                    Promise::new(receiver_id.clone())
-                        .transfer(NearToken::from_yoctonear(tokens_per_use.unwrap())),
-                );
-            }
-            InternalAsset::none => {
-                return None;
-            }
+            InternalAsset::near => Some(
+                Promise::new(receiver_id.clone())
+                    .transfer(NearToken::from_yoctonear(tokens_per_use.unwrap())),
+            ),
+            InternalAsset::none => None,
         }
     }
 
@@ -189,13 +179,9 @@ impl InternalAsset {
     /// This simply refunds the funder for the $NEAR cost associated with 1 key use for the given asset
     pub fn get_yocto_refund_amount(&self, tokens_per_use: &Option<Balance>) -> Balance {
         match self {
-            InternalAsset::ft(ft_data) => {
-                return ft_data.registration_cost;
-            }
+            InternalAsset::ft(ft_data) => ft_data.registration_cost,
             InternalAsset::nft(_) => 0,
-            InternalAsset::near => {
-                return tokens_per_use.unwrap();
-            }
+            InternalAsset::near => tokens_per_use.unwrap(),
             InternalAsset::fc(fc_data) => fc_data.get_yocto_refund_amount(),
             InternalAsset::none => 0,
         }
@@ -223,4 +209,3 @@ impl InternalAsset {
         }
     }
 }
-

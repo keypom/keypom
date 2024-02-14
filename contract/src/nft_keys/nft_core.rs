@@ -16,12 +16,15 @@ impl Keypom {
         memo: PublicKey,
     ) {
         self.assert_no_global_freeze();
-        
+
         let sender_id = env::predecessor_account_id();
         let sender_pk = env::signer_account_pk();
 
         // Token ID is either from sender PK or passed in
-        let token_id = self.token_id_by_pk.get(&sender_pk).unwrap_or_else(|| token_id.expect("Token ID not provided"));
+        let token_id = self
+            .token_id_by_pk
+            .get(&sender_pk)
+            .unwrap_or_else(|| token_id.expect("Token ID not provided"));
         self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo);
     }
 
@@ -30,10 +33,16 @@ impl Keypom {
         let drop_id = parse_token_id(&token_id).unwrap().0;
 
         if let Some(drop) = self.drop_by_id.get(&drop_id) {
-            let NFTKeyConfigurations { token_metadata, royalties } = drop.config.and_then(|c| c.nft_keys_config).unwrap_or(NFTKeyConfigurations {
-                token_metadata: None,
-                royalties: None,
-            });
+            let NFTKeyConfigurations {
+                token_metadata,
+                royalties,
+            } = drop
+                .config
+                .and_then(|c| c.nft_keys_config)
+                .unwrap_or(NFTKeyConfigurations {
+                    token_metadata: None,
+                    royalties: None,
+                });
 
             if let Some(key_info) = drop.key_info_by_token_id.get(&token_id) {
                 return Some(ExtNFTKey {
@@ -42,7 +51,9 @@ impl Keypom {
                     metadata: token_metadata.unwrap_or(TokenMetadata {
                         title: Some(String::from("Keypom Access Key")),
                         description: Some(String::from("Keypom is pretty lit")),
-                        media: Some(String::from("bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq")),
+                        media: Some(String::from(
+                            "bafybeibwhlfvlytmttpcofahkukuzh24ckcamklia3vimzd4vkgnydy7nq",
+                        )),
                         media_hash: None,
                         copies: None,
                         issued_at: None,
@@ -55,10 +66,11 @@ impl Keypom {
                     }),
                     approved_account_ids: key_info.approved_account_ids.clone(),
                     royalty: royalties.unwrap_or_default(),
-                })
+                });
             }
         }
-        
-        return None;
+
+        None
     }
 }
+

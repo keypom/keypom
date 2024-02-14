@@ -1,6 +1,4 @@
 // ------------------------ Access Key Method Names ------------------------ //
-pub const ACCESS_KEY_METHOD_NAMES: &str =
-    "claim,create_account_and_claim,nft_transfer,nft_approve,nft_revoke";
 pub const GLOBAL_KEY_METHOD_NAMES: &str =
     "claim,create_account_and_claim,nft_transfer,nft_approve,nft_revoke,verify_signature";
 

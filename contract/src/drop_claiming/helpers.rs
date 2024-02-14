@@ -1,4 +1,4 @@
-use near_sdk::{env::sha256, json_types::Base58PublicKey, PromiseResult};
+use near_sdk::{env::sha256, PromiseResult};
 
 use crate::*;
 
@@ -241,7 +241,7 @@ impl Keypom {
         // Since no other functions need the key information
         if key_info.remaining_uses == 0 {
             drop.key_info_by_token_id
-                .remove(&token_id)
+                .remove(token_id)
                 .expect("Key not found");
 
             let should_delete_on_empty = drop
@@ -258,13 +258,13 @@ impl Keypom {
             {
                 near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
                 // Remove the drop from storage and clear the maps inside of it
-                self.drop_by_id.remove(&drop_id);
-                self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
-                internal_clear_drop_storage(drop, &mut event_logs, &drop_id);
+                self.drop_by_id.remove(drop_id);
+                self.internal_remove_drop_for_funder(&drop.funder_id, drop_id);
+                internal_clear_drop_storage(drop, &mut event_logs, drop_id);
             } else {
                 near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {} Config specified to delete: {}", drop_id, !drop_assets_withdrawn, should_delete_on_empty);
                 // Put the modified drop back in storage
-                self.drop_by_id.insert(&drop_id, &drop);
+                self.drop_by_id.insert(drop_id, drop);
             }
         }
 
@@ -306,10 +306,10 @@ pub(crate) fn assert_pre_claim_conditions(
     if let Some(perm) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
         match perm {
             ClaimPermissions::claim => {
-                require!(creating_account == false, "Cannot call `create_account_and_claim` when key permission is set to only claim")
+                require!(!creating_account, "Cannot call `create_account_and_claim` when key permission is set to only claim")
             }
             ClaimPermissions::create_account_and_claim => {
-                require!(creating_account == true, "Cannot call `claim` when key permission is set to only create_account_and_claim")
+                require!(creating_account, "Cannot call `claim` when key permission is set to only create_account_and_claim")
             }
         }
     }

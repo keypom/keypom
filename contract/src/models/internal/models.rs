@@ -88,15 +88,13 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
             } else {
                 ext_asset
                     .as_ref()
-                    .and_then(|a| Some(a.get_asset_id()))
+                    .map(|a| a.get_asset_id())
                     .unwrap_or(NONE_ASSET_ID.to_string())
             };
 
             assets_metadata.push(AssetMetadata {
                 asset_id: asset_id.clone(),
-                tokens_per_use: ext_asset
-                    .as_ref()
-                    .and_then(|a| Some(a.get_tokens_per_use())),
+                tokens_per_use: ext_asset.as_ref().map(|a| a.get_tokens_per_use()),
             });
         }
 

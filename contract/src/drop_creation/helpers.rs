@@ -11,7 +11,7 @@ impl Keypom {
         event_logs: &mut Vec<EventLog>,
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
-        key_data: &Vec<ExtKeyData>,
+        key_data: &[ExtKeyData],
     ) {
         // Logs for add key and NFT mint events
         let mut add_key_logs = Vec::new();
@@ -37,7 +37,7 @@ impl Keypom {
             // Iterate through the key_data.password_by_use hash map (if there is one) and decode all the strings to hex
             let pw_by_use: Option<HashMap<UseNumber, Vec<u8>>> =
                 password_by_use.as_ref().map(|p| {
-                    p.into_iter()
+                    p.iter()
                         .map(|(k, v)| {
                             let decoded = hex::decode(v).expect("Invalid hex string");
                             (*k, decoded)
@@ -47,7 +47,7 @@ impl Keypom {
 
             if let Some(owner) = key_owner {
                 // Add the NFT key to the owner's list of tokens
-                self.internal_add_token_to_owner(&owner, &token_id);
+                self.internal_add_token_to_owner(owner, &token_id);
             }
             key_info_by_token_id.insert(
                 &token_id,
@@ -68,9 +68,9 @@ impl Keypom {
             add_new_key_logs(
                 &mut nft_mint_logs,
                 &mut add_key_logs,
-                &key_owner,
-                &drop_id,
-                &public_key,
+                key_owner,
+                drop_id,
+                public_key,
                 &token_id,
             );
 
@@ -78,14 +78,14 @@ impl Keypom {
         }
 
         // Construct the events themselves
-        if nft_mint_logs.len() > 0 {
+        if !nft_mint_logs.is_empty() {
             event_logs.push(EventLog {
                 standard: NFT_STANDARD_NAME.to_string(),
                 version: NFT_METADATA_SPEC.to_string(),
                 event: EventLogVariant::NftMint(nft_mint_logs),
             });
         }
-        if add_key_logs.len() > 0 {
+        if !add_key_logs.is_empty() {
             event_logs.push(EventLog {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
                 version: KEYPOM_STANDARD_VERSION.to_string(),
@@ -184,7 +184,7 @@ pub fn store_assets_by_id(
         } else {
             ext_asset
                 .as_ref()
-                .and_then(|a| Some(a.get_asset_id()))
+                .map(|a| a.get_asset_id())
                 .unwrap_or(NONE_ASSET_ID.to_string())
         };
 
@@ -202,7 +202,7 @@ pub fn store_assets_by_id(
 pub(crate) fn assert_valid_time_config(config: &TimeConfig) {
     // Assert that if the claim_interval is some, the start_timestamp is also some
     assert!(
-        (config.interval.is_some() && config.start.is_none()) == false,
+        !(config.interval.is_some() && config.start.is_none()),
         "If you want to set a claim interval, you must also set a start timestamp"
     );
 

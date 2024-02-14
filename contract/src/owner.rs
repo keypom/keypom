@@ -1,5 +1,5 @@
 use crate::*;
-use near_sdk::{json_types::Base64VecU8, promise_result_as_success};
+use near_sdk::promise_result_as_success;
 
 #[near_bindgen]
 impl Keypom {

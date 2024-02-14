@@ -84,14 +84,14 @@ impl Keypom {
             //if a specific approval_id was passed into the function
             if let Some(approval_id) = approval_id {
                 //return if the approval ID passed in matches the actual approval ID for the account
-                return approval_id == *approval;
+                approval_id == *approval
                 //if there was no approval_id passed into the function, we simply return true
             } else {
-                return true;
+                true
             }
             //if there was no approval ID found for the account ID, we simply return false
         } else {
-            return false;
+            false
         }
     }
 
@@ -143,4 +143,3 @@ pub(crate) fn check_key_owner(sender_id: AccountId, key_info: &InternalKeyInfo) 
         );
     }
 }
-

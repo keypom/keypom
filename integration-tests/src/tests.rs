@@ -151,7 +151,7 @@ async fn test_global_key(user: &Account, keypom_contract: Contract) -> anyhow::R
         .json::<bool>()
         .unwrap();
 
-    assert!(success_value == false);
+    assert!(!success_value);
 
     // Now use the correct signature
     success_value = kp_account
@@ -162,7 +162,7 @@ async fn test_global_key(user: &Account, keypom_contract: Contract) -> anyhow::R
         .json::<bool>()
         .unwrap();
 
-    assert!(success_value == true);
+    assert!(success_value);
     // Use the correct signature but with an incremented nonce
     success_value = kp_account
         .call(keypom_contract.id(), "verify_signature")
@@ -170,7 +170,7 @@ async fn test_global_key(user: &Account, keypom_contract: Contract) -> anyhow::R
         .transact()
         .await?
         .json::<bool>()?;
-    assert!(success_value == true);
+    assert!(success_value);
 
     println!("      Passed ✅ test_simple_approve");
     Ok(())

@@ -14,7 +14,7 @@ impl Keypom {
         keep_excess_deposit: Option<bool>,
     ) -> bool {
         self.assert_no_global_freeze();
-        require!(!drop_id.contains(":"), "Drop ID cannot contain a colon (:)");
+        require!(!drop_id.contains(':'), "Drop ID cannot contain a colon (:)");
         require!(
             self.drop_by_id.get(&drop_id).is_none(),
             format!("Drop with ID {} already exists", drop_id)

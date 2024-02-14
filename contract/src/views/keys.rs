@@ -83,7 +83,7 @@ impl Keypom {
                     });
                 }
                 InternalAsset::nft(nft) => {
-                    let last_idx = nft.token_ids.len().checked_sub(1).unwrap_or(0);
+                    let last_idx = nft.token_ids.len().saturating_sub(1);
                     let idx = last_idx
                         .checked_sub(num_nfts)
                         .unwrap_or(nft.token_ids.len());

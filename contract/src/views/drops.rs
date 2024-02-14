@@ -13,7 +13,7 @@ impl Keypom {
     /// Returns the `ExtDrop` information
     pub fn get_drop_information(&self, drop_id: DropId) -> ExtDrop {
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        return drop.to_external_drop(drop_id);
+        drop.to_external_drop(drop_id)
     }
 
     /// Allows you to query for the number of live keys in a drop
@@ -53,13 +53,11 @@ impl Keypom {
         limit: Option<u64>,
     ) -> Result<Vec<ExtKeyInfo>, String> {
         //iterate through each key using an iterator
-        let drop = self.drop_by_id
-            .get(&drop_id)
-            .expect("No drop for given ID");
+        let drop = self.drop_by_id.get(&drop_id).expect("No drop for given ID");
 
         //where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
         let start = u128::from(from_index.unwrap_or(U128(0)));
-        
+
         return drop
             .key_info_by_token_id
             .keys()
@@ -70,6 +68,7 @@ impl Keypom {
             //we'll map the public key which are strings into Drops
             .map(|token_id| self.get_key_information(token_id))
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
-            .collect()
+            .collect();
     }
 }
+

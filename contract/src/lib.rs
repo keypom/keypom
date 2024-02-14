@@ -117,7 +117,7 @@ impl Keypom {
     pub(crate) fn assert_no_global_freeze(&self) {
         if env::predecessor_account_id() != self.contract_owner_id {
             require!(
-                self.global_freeze == false,
+                !self.global_freeze,
                 "Contract is frozen and no new drops or keys can be created"
             );
         }

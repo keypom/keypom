@@ -82,4 +82,3 @@ impl fmt::Display for EventLog {
         ))
     }
 }
-

@@ -43,9 +43,7 @@ pub(crate) fn hash_string(string: &String) -> CryptoHash {
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^17 yoctoNEAR (1 NEAR would be 10_000_000). This is to give a precision of 7 decimal places.
     let formatted_near = yocto / 100_000_000_000_000_000;
-    let near = formatted_near as f64 / 10_000_000f64;
-
-    near
+    formatted_near as f64 / 10_000_000f64
 }
 
 /// Check whether an asset ID is function call or not
@@ -64,7 +62,7 @@ pub(crate) fn get_total_costs_for_key(
     total_cost_for_keys: &mut Balance,
     remaining_uses: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    asset_data_for_uses: &Vec<InternalAssetDataForUses>,
+    asset_data_for_uses: &[InternalAssetDataForUses],
 ) {
     // Get the remaining asset data
     let remaining_asset_data = get_remaining_asset_data(asset_data_for_uses, remaining_uses);
@@ -121,7 +119,7 @@ pub(crate) fn get_total_costs_for_key(
 /// Returns a vector of remaining asset datas given the remaining uses for a key.
 /// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=f11c6325055ed73fccd6b5c870dbccc2
 pub(crate) fn get_remaining_asset_data(
-    asset_data: &Vec<InternalAssetDataForUses>,
+    asset_data: &[InternalAssetDataForUses],
     remaining_uses: UseNumber,
 ) -> Vec<InternalAssetDataForUses> {
     let mut uses_traversed = 0;
@@ -151,7 +149,7 @@ pub(crate) fn get_remaining_asset_data(
 /// Helper function to get the internal key behavior for a given use number
 /// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=e60e0bd12e87b90d375040d3c2fad715
 pub(crate) fn get_asset_data_for_specific_use(
-    asset_data_for_uses: &Vec<InternalAssetDataForUses>,
+    asset_data_for_uses: &[InternalAssetDataForUses],
     use_number: &UseNumber,
 ) -> InternalAssetDataForUses {
     let mut cur_use = 0;
@@ -182,7 +180,7 @@ pub(crate) fn parse_token_id(token_id: &TokenId) -> Result<(DropId, u64), String
         return Err("Invalid key nonce".to_string());
     }
 
-    return Ok((drop_id.to_string(), key_nonce.unwrap()));
+    Ok((drop_id.to_string(), key_nonce.unwrap()))
 }
 
 /// Helper function to convert an external asset to an internal asset
@@ -191,7 +189,7 @@ pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAss
         return asset.to_internal_asset();
     }
 
-    return InternalAsset::none;
+    InternalAsset::none
 }
 
 /// Add keypom args to output args for a function call
@@ -238,5 +236,5 @@ pub(crate) fn add_keypom_args(
         ),
     );
 
-    return Ok(());
+    Ok(())
 }

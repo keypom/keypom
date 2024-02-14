@@ -83,12 +83,9 @@ impl Keypom {
                 &mut delete_key_logs,
                 &key_info.owner_id,
                 &drop_id,
-                &pk,
+                pk,
                 &token_id,
             );
-
-            // Add the delete key action to the batch promise
-            env::promise_batch_action_delete_key(key_deletion_promise, &pk);
         }
 
         // Keep track of all the events starting with the NFT burn and key deletion logs
