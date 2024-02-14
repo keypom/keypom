@@ -118,7 +118,7 @@ impl Keypom {
 
         // Generate new key info struct
         let new_key_info = InternalKeyInfo {
-            nonce: key_info.nonce, // TODO: Increment nonce?
+            message_nonce: key_info.message_nonce, // TODO: Increment nonce?
             owner_id: receiver_id.clone(),
             pub_key: new_public_key.clone(),
             approved_account_ids: Default::default(),

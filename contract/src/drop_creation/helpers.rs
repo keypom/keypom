@@ -55,7 +55,7 @@ impl Keypom {
             key_info_by_token_id.insert(
                 &token_id,
                 &InternalKeyInfo {
-                    nonce: 0,
+                    message_nonce: 0,
                     pub_key: public_key.clone(),
                     remaining_uses: max_uses_per_key,
                     owner_id: key_owner.clone(),

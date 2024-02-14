@@ -28,7 +28,7 @@ pub struct InternalDrop {
 #[borsh(crate = "near_sdk::borsh")]
 pub struct InternalKeyInfo {
     /// Everytime a signature is passed in, the nonce should be incremented by 1
-    pub nonce: u64,
+    pub message_nonce: u32,
     /// Current public key that is mapped to this key info
     pub pub_key: PublicKey,
 

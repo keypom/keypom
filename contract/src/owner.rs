@@ -17,7 +17,7 @@ impl Keypom {
             .get(&token_id)
             .expect("Key not found");
 
-        let expected_message = format!("{}{}", self.message, key_info.nonce);
+        let expected_message = format!("{}{}", self.message, key_info.message_nonce);
 
         let pk_bytes = pk_to_32_byte_array(&pk).unwrap();
         let sig_bytes = vec_to_64_byte_array(signature.into()).unwrap();
@@ -27,7 +27,7 @@ impl Keypom {
         // Otherwise, someone could pass in a different public key and increment their nonce
         // without needing their secret key
         if is_valid {
-            key_info.nonce += 1;
+            key_info.message_nonce += 1;
             drop.key_info_by_token_id.insert(&token_id, &key_info);
             self.drop_by_id.insert(&drop_id, &drop);
         }
