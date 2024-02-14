@@ -66,15 +66,18 @@ async fn test_signatures(
     let mut kp_account = keypom_contract.as_account().clone();
 
     let keys = generate_keypairs(1);
-    let res = user
-        .call(keypom_contract.id(), "create_drop")
-        .args_json(json!({"drop_id": "my_drop", "key_data": [{
-            "public_key": keys[0].public_key(),
-        }], "asset_data": [{"uses": 1, "assets": []}]
-        }))
-        .deposit(NearToken::from_near(1))
-        .transact()
-        .await?;
+    let mut args = json!({"drop_id": "my_drop", "key_data": [{
+        "public_key": keys[0].public_key(),
+    }], "asset_data": [{"uses": 1, "assets": []}]
+    });
+    let res = call_contract(
+        user,
+        keypom_contract.id(),
+        "create_drop",
+        Some(args),
+        Some(NearToken::from_near(1)),
+    )
+    .await;
 
     println!("Create Drop Res: {:?}", res);
 
@@ -83,11 +86,9 @@ async fn test_signatures(
     assert!(kp_keys.len() == 2);
 
     // Try to call the contract with the wrong secret key
-    let mut signature_result = kp_account
-        .call(keypom_contract.id(), "test")
-        .args_json(json!({"signature": owner.id(), "pk": keys[0].public_key()}))
-        .transact()
-        .await?;
+    args = json!({"signature": owner.id(), "pk": keys[0].public_key()});
+    let mut signature_result =
+        call_contract(&kp_account, keypom_contract.id(), "test", Some(args), None).await;
     assert!(!signature_result.is_success());
 
     let drop_info = get_drop_info(keypom_contract.clone(), "my_drop".to_string()).await?;
@@ -95,17 +96,10 @@ async fn test_signatures(
 
     // Set the global secret key and try again
     kp_account.set_secret_key(global_key_info.secret_key);
-    signature_result = kp_account
-        .call(keypom_contract.id(), "test")
-        .args_json(json!({"signature": owner.id(), "pk": keys[0].public_key()}))
-        .transact()
-        .await?;
-    println!("Signature: {:?}", signature_result);
+    args = json!({"signature": owner.id(), "pk": keys[0].public_key()});
+    signature_result =
+        call_contract(&kp_account, keypom_contract.id(), "test", Some(args), None).await;
     assert!(signature_result.is_success());
-
-    let message = "keypom_is_lit".to_string();
-    let pub_key = "ed25519:4WvV8m9bKg7a6b6XnQ5u7L2yQ4nV9P4Uq1G6WZtM5X6k";
-    let sk = "ed25519:v9j3b9F1Yh5KZr7Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m3R9h5Qh4R3j7v5Fj8y8Tb1m";
 
     println!("      Passed ✅ test_simple_approve");
     Ok(())

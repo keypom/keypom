@@ -14,7 +14,7 @@ impl Keypom {
         public_keys: Option<Vec<PublicKey>>,
         limit: Option<u8>,
         keep_empty_drop: Option<bool>,
-    ) -> PromiseOrValue<bool> {
+    ) -> bool {
         self.assert_no_global_freeze();
 
         // Measure initial storage before doing any operations
@@ -46,9 +46,6 @@ impl Keypom {
                 .map(|k| k.1.pub_key)
                 .collect()
         });
-
-        // Create the batch promise for deleting the keys
-        let key_deletion_promise = env::promise_batch_create(&env::current_account_id());
 
         // Keep track of the total cost for the key & the required allowance to be refunded
         let mut total_cost_for_keys: Balance = 0;
@@ -128,9 +125,7 @@ impl Keypom {
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);
 
-        env::promise_return(key_deletion_promise);
-
-        PromiseOrValue::Value(true)
+        true
     }
 }
 

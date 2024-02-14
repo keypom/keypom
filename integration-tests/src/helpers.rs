@@ -1,7 +1,25 @@
 use crate::*;
 use models::*;
+use near_sdk::AccountId;
+use near_workspaces::result::ExecutionFinalResult;
 use near_workspaces::types::{KeyType, SecretKey};
 use near_workspaces::{AccessKey, Account, Contract};
+
+pub async fn call_contract(
+    account: &Account,
+    contract: &AccountId,
+    method: &str,
+    args: Option<serde_json::Value>,
+    deposit: Option<NearToken>,
+) -> ExecutionFinalResult {
+    account
+        .call(contract, method)
+        .args_json(args.unwrap_or(serde_json::Value::Null))
+        .deposit(deposit.unwrap_or(NearToken::from_yoctonear(0)))
+        .transact()
+        .await
+        .unwrap()
+}
 
 pub fn sign_kp_message(sk: &near_crypto::SecretKey, nonce: u32, message: &String) -> Base64VecU8 {
     let signature = match sk.sign(&format!("{}{}", message, nonce).as_bytes()) {

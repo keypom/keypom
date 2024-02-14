@@ -11,6 +11,7 @@ impl Keypom {
         receiver_id: AccountId,
         fc_args: UserProvidedFCArgs,
         new_public_key: PublicKey,
+        old_public_key: PublicKey,
     ) -> PromiseOrValue<bool> {
         let successful_creation = was_account_created();
 
@@ -22,6 +23,7 @@ impl Keypom {
                 receiver_id,
                 fc_args,
                 Some(new_public_key),
+                old_public_key,
             );
         }
 
@@ -168,4 +170,3 @@ impl Keypom {
         PromiseOrValue::Value(was_successful)
     }
 }
-
