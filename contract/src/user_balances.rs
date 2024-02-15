@@ -61,7 +61,7 @@ impl Keypom {
             let mut balance: u128 = self.user_balances.get(account_id).unwrap_or(0);
 
             // Either add or subtract the amount from the balance depending on whether or not decrement was passed in
-            if !decrement {
+            if decrement {
                 require!(
                     balance >= amount,
                     format!("User balance {} is less than required {}", balance, amount)

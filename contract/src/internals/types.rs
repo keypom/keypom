@@ -10,6 +10,7 @@ pub type DropMetadata = String;
 pub type TokenId = String;
 
 /// Optionally, the user can pass in a set of asset specific FC args
-pub type UserProvidedFCArgs = Option<Vec<AssetSpecificFCArgs>>;
+pub type UserProvidedFCArgs = Vec<AssetSpecificFCArgs>;
 /// For each FC asset, there can be a set of user arguments for each method. Each method doesn't necessarily need to have user arguments.
 pub type AssetSpecificFCArgs = Option<Vec<Option<String>>>;
+

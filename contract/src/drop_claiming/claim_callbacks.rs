@@ -9,9 +9,9 @@ impl Keypom {
         &mut self,
         token_id: TokenId,
         receiver_id: AccountId,
-        fc_args: UserProvidedFCArgs,
         new_public_key: PublicKey,
         old_public_key: PublicKey,
+        fc_args: Option<UserProvidedFCArgs>,
     ) -> PromiseOrValue<bool> {
         let successful_creation = was_account_created();
 
@@ -21,9 +21,9 @@ impl Keypom {
             return self.internal_claim_assets(
                 token_id,
                 receiver_id,
+                old_public_key,
                 fc_args,
                 Some(new_public_key),
-                old_public_key,
             );
         }
 

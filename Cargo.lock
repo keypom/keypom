@@ -1675,6 +1675,7 @@ dependencies = [
  "ed25519-dalek",
  "maplit",
  "near-crypto",
+ "near-gas",
  "near-sdk",
  "near-units",
  "near-workspaces",

@@ -110,9 +110,9 @@ impl Keypom {
         &mut self,
         token_id: TokenId,
         receiver_id: AccountId,
-        fc_args: UserProvidedFCArgs,
-        new_public_key: Option<PublicKey>,
         old_public_key: PublicKey,
+        fc_args: Option<UserProvidedFCArgs>,
+        new_public_key: Option<PublicKey>,
     ) -> PromiseOrValue<bool> {
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
 

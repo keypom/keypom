@@ -125,6 +125,11 @@ impl Keypom {
 
     pub(crate) fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey) -> bool {
         self.assert_contract_key();
+        near_sdk::log!(
+            "Verifying PK: {}: {:?}",
+            serde_json::to_string(&pk).unwrap(),
+            pk
+        );
         let token_id = self
             .token_id_by_pk
             .get(&pk)

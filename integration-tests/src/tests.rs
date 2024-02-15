@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use helpers::*;
 use near_crypto::{KeyType, SecretKey, Signer};
+use near_gas::NearGas;
 use near_sdk::{json_types::Base64VecU8, NearToken};
 use near_units::parse_near;
 use near_workspaces::{AccessKey, Account, Contract};
@@ -53,118 +54,102 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     // begin tests
-    test_global_key(&alice, keypom_contract).await?;
-    Ok(())
-}
-
-async fn test_signatures(
-    owner: &Account,
-    user: &Account,
-    keypom_contract: Contract,
-) -> anyhow::Result<()> {
-    let global_key_info = get_sig_meta(keypom_contract.clone()).await?;
-    let mut kp_account = keypom_contract.as_account().clone();
-
-    let keys = generate_keypairs(1);
-    let mut args = json!({"drop_id": "my_drop", "key_data": [{
-        "public_key": keys[0].public_key(),
-    }], "asset_data": [{"uses": 1, "assets": []}]
-    });
-    let res = call_contract(
-        user,
-        keypom_contract.id(),
-        "create_drop",
-        Some(args),
-        Some(NearToken::from_near(1)),
-    )
-    .await;
-
-    println!("Create Drop Res: {:?}", res);
-
-    let kp_keys = keypom_contract.as_account().view_access_keys().await?;
-    println!("Keys: {:?}", kp_keys);
-    assert!(kp_keys.len() == 2);
-
-    // Try to call the contract with the wrong secret key
-    args = json!({"signature": owner.id(), "pk": keys[0].public_key()});
-    let mut signature_result =
-        call_contract(&kp_account, keypom_contract.id(), "test", Some(args), None).await;
-    assert!(!signature_result.is_success());
-
-    let drop_info = get_drop_info(keypom_contract.clone(), "my_drop".to_string()).await?;
-    println!("Drop Info: {:?}", drop_info);
-
-    // Set the global secret key and try again
-    kp_account.set_secret_key(global_key_info.secret_key);
-    args = json!({"signature": owner.id(), "pk": keys[0].public_key()});
-    signature_result =
-        call_contract(&kp_account, keypom_contract.id(), "test", Some(args), None).await;
-    assert!(signature_result.is_success());
-
-    println!("      Passed ✅ test_simple_approve");
+    claims_testing(&alice, keypom_contract).await?;
     Ok(())
 }
 
 /// Test whether or not the global key works
-async fn test_global_key(user: &Account, keypom_contract: Contract) -> anyhow::Result<()> {
+async fn claims_testing(user: &Account, keypom_contract: Contract) -> anyhow::Result<()> {
     let global_key_info = get_sig_meta(keypom_contract.clone()).await?;
     let mut kp_account = keypom_contract.as_account().clone();
 
     let keys = generate_keypairs(1);
     let sk = keys[0].clone();
-    user.call(keypom_contract.id(), "create_drop")
-        .args_json(json!({"drop_id": "my_drop", "key_data": [{
+    // Create a 1 $NEAR linkdrop
+    let args = json!(
+    {
+        "drop_id": "my_drop",
+        "key_data": [{
             "public_key": sk.public_key(),
-        }], "asset_data": [{"uses": 1, "assets": []}]
-        }))
-        .deposit(NearToken::from_near(1))
+        }],
+        "asset_data": [{
+            "uses": 2,
+            "assets": [{
+                "yoctonear": NearToken::from_near(1).as_yoctonear().to_string()
+            }]
+        }]
+    });
+    let res = user
+        .call(keypom_contract.id(), "create_drop")
+        .args_json(args)
+        .deposit(NearToken::from_near(3))
         .transact()
         .await?;
+    assert!(res.is_success());
 
     let signing_key: near_crypto::SecretKey = sk.to_string().parse().unwrap();
     let sig_0 = sign_kp_message(&signing_key, 0, &global_key_info.message);
     let sig_1 = sign_kp_message(&signing_key, 1, &global_key_info.message);
 
-    // Try to call the contract with the wrong global secret key
+    // Try to claim the drop with the wrong global secret key
     let mut signature_result = kp_account
-        .call(keypom_contract.id(), "verify_signature")
-        .args_json(json!({"signature": sig_0, "pk": sk.public_key()}))
+        .call(keypom_contract.id(), "claim")
+        .args_json(
+            json!({"account_id": user.id(), "signature": sig_0, "linkdrop_pk": sk.public_key()}),
+        )
         .transact()
         .await?
         .into_result();
-    let mut error = signature_result.expect_err("Wrong global secret key");
+    let mut error = signature_result.expect_err("Error expected: Wrong global secret key");
     assert!(format!("{error:?}").contains("Only Contract Key Can Call This Method"));
 
     // Set the global secret key but this time, sign the wrong message with a different public key
     kp_account.set_secret_key(global_key_info.secret_key);
-    let mut success_value = kp_account
-        .call(keypom_contract.id(), "verify_signature")
-        .args_json(json!({"signature": sig_1, "pk": sk.public_key()}))
+    signature_result = kp_account
+        .call(keypom_contract.id(), "claim")
+        .args_json(
+            json!({"account_id": user.id(), "signature": sig_1, "linkdrop_pk": sk.public_key()}),
+        )
         .transact()
         .await?
-        .json::<bool>()
-        .unwrap();
-
-    assert!(!success_value);
+        .into_result();
+    error = signature_result.expect_err("Err Expected: wrong signature ");
+    assert!(format!("{error:?}").contains("Invalid signature for public key"));
 
     // Now use the correct signature
-    success_value = kp_account
-        .call(keypom_contract.id(), "verify_signature")
-        .args_json(json!({"signature": sig_0, "pk": sk.public_key()}))
-        .transact()
+    let key_info = get_key_info(&keypom_contract, sk.public_key(), true)
         .await?
-        .json::<bool>()
         .unwrap();
-
-    assert!(success_value);
-    // Use the correct signature but with an incremented nonce
-    success_value = kp_account
-        .call(keypom_contract.id(), "verify_signature")
-        .args_json(json!({"signature": sig_1, "pk": sk.public_key()}))
+    let mut execution_res = kp_account
+        .call(keypom_contract.id(), "claim")
+        .args_json(
+            json!({"account_id": user.id(), "signature": sig_0, "linkdrop_pk": sk.public_key()}),
+        )
+        .gas(NearGas::from_gas(
+            key_info.required_gas.parse::<u64>().unwrap(),
+        ))
         .transact()
-        .await?
-        .json::<bool>()?;
-    assert!(success_value);
+        .await?;
+    let mut execution_val = execution_res.json::<bool>()?;
+    assert!(execution_val);
+    get_key_info(&keypom_contract, sk.public_key(), true).await?;
+
+    // Use the correct signature but with an incremented nonce
+    execution_res = kp_account
+        .call(keypom_contract.id(), "claim")
+        .args_json(
+            json!({"account_id": user.id(), "signature": sig_1, "linkdrop_pk": sk.public_key()}),
+        )
+        .gas(NearGas::from_gas(
+            key_info.required_gas.parse::<u64>().unwrap(),
+        ))
+        .transact()
+        .await?;
+
+    execution_val = execution_res.json::<bool>()?;
+    assert!(execution_val);
+
+    get_key_info(&keypom_contract, sk.public_key(), false).await?;
 
     println!("      Passed ✅ test_simple_approve");
     Ok(())

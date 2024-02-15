@@ -6,10 +6,10 @@ impl Keypom {
     pub fn claim(
         &mut self,
         account_id: AccountId,
-        fc_args: UserProvidedFCArgs,
-        password: Option<String>,
         signature: Base64VecU8,
         linkdrop_pk: PublicKey,
+        fc_args: Option<UserProvidedFCArgs>,
+        password: Option<String>,
     ) -> PromiseOrValue<bool> {
         self.assert_no_global_freeze();
         require!(
@@ -41,7 +41,7 @@ impl Keypom {
         );
 
         log_events(event_logs);
-        self.internal_claim_assets(token_id, account_id, fc_args, None, linkdrop_pk)
+        self.internal_claim_assets(token_id, account_id, linkdrop_pk, fc_args, None)
     }
 
     #[private]
@@ -49,10 +49,10 @@ impl Keypom {
         &mut self,
         new_account_id: AccountId,
         new_public_key: PublicKey,
-        fc_args: UserProvidedFCArgs,
-        password: Option<String>,
         signature: Base64VecU8,
         linkdrop_pk: PublicKey,
+        fc_args: Option<UserProvidedFCArgs>,
+        password: Option<String>,
     ) -> Promise {
         self.assert_no_global_freeze();
         require!(
@@ -130,9 +130,9 @@ impl Keypom {
                     .on_new_account_created(
                         token_id,
                         new_account_id,
-                        fc_args,
                         new_public_key,
                         linkdrop_pk,
+                        fc_args,
                     ),
             )
     }
