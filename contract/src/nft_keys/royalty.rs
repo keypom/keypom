@@ -156,4 +156,3 @@ pub(crate) fn calculate_payouts(
 pub(crate) fn royalty_to_payout(royalty_percentage: u32, amount_to_pay: Balance) -> U128 {
     U128(royalty_percentage as u128 * amount_to_pay / 10_000u128)
 }
-

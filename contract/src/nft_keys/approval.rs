@@ -44,11 +44,23 @@ impl Keypom {
             .get(&token_id)
             .expect("Key info not found");
 
+        // Check that if the drop config has a resale set, the approval ID is in that set
+        if let Some(resale_allowlist) = drop
+            .config
+            .as_ref()
+            .and_then(|c| c.transfer_key_allowlist.as_ref())
+        {
+            require!(
+                resale_allowlist.contains(&account_id),
+                "Approval ID not in resale allowlist"
+            );
+        }
+
         // Check that the sender is the owner of the token.
         // If the token is owned by keypom, decrement the key's allowance
         check_key_owner(sender_id, &key_info);
 
-        //get the next approval ID if we need a new approval
+        // Get the next approval ID if we need a new approval
         let approval_id: u64 = key_info.next_approval_id;
         key_info
             .approved_account_ids

@@ -70,6 +70,22 @@ impl Keypom {
         // Get drop in order to get key info (and royalties if applicable)
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
 
+        // Check that if the drop config has a resale set, the approval ID is in that set
+        if let Some(resale_allowlist) = drop
+            .config
+            .as_ref()
+            .and_then(|c| c.transfer_key_allowlist.as_ref())
+        {
+            // If the sender is not in the allowlist, make sure that the receiver is
+            if !resale_allowlist.contains(&sender_id) {
+                require!(
+                    resale_allowlist
+                        .contains(&receiver_id.clone().unwrap_or(env::current_account_id())),
+                    "Trying to transfer to an account that is not in the resale allowlist."
+                );
+            }
+        }
+
         // Get key info (will overwrite mapping to new key info after)
         let key_info = drop
             .key_info_by_token_id
