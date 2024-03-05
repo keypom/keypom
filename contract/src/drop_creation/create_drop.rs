@@ -3,6 +3,43 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     #[payable]
+    pub fn create_drop_batch(
+        &mut self,
+        drop_ids: Vec<DropId>,
+        asset_data: Vec<Vec<ExtAssetDataForUses>>,
+        drop_config: Vec<Option<DropConfig>>,
+        keep_excess_deposit: Option<bool>,
+
+        on_success: Option<OnSuccessCallData>,
+    ) -> bool {
+        // Check if all vectors are of the same length
+        require!(drop_ids.len() != asset_data.len() || drop_ids.len() != drop_config.len());
+
+        let mut attached_deposit = env::attached_deposit().as_yoctonear();
+
+        // Iterate over the inputs and call `create_drop` for each set of elements
+        for (i, drop_id) in drop_ids.into_iter().enumerate() {
+            let current_asset_data = asset_data[i].clone(); // Assuming `create_drop` can take Vec<ExtAssetDataForUses>
+            let current_drop_config = drop_config[i].clone();
+
+            require!(self.create_drop(
+                drop_id,
+                vec![],
+                current_asset_data,
+                current_drop_config,
+                keep_excess_deposit,
+            ));
+        }
+
+        // Fire cross-contract call if it exists
+        if let Some(success_data) = on_success {
+            // Charge for any attached deposit
+            self.charge_with_deposit_or_balance(success_data.attached_deposit, keep_excess_deposit)
+        }
+
+        true
+    }
+    #[payable]
     pub fn create_drop(
         &mut self,
         drop_id: DropId,
@@ -10,9 +47,49 @@ impl Keypom {
         asset_data: Vec<ExtAssetDataForUses>,
 
         drop_config: Option<DropConfig>,
+
         // Should any excess attached deposit be deposited to the user's balance?
         keep_excess_deposit: Option<bool>,
     ) -> bool {
+        self.assert_no_global_freeze();
+        // Get the amount of $NEAR that should be refunded out of the user's attached deposit
+        let refund_amount = self.internal_create_drop(
+            drop_id,
+            key_data,
+            asset_data,
+            drop_config,
+            env::attached_deposit().as_yoctonear(),
+            keep_excess_deposit,
+        );
+
+        if refund_amount > 0 {
+            let predecessor = env::predecessor_account_id();
+            // If the user wants to keep the excess deposit, just modify the user balance
+            if keep_excess_deposit.unwrap_or(false) {
+                self.internal_modify_user_balance(&predecessor, refund_amount, false);
+                return true;
+            }
+
+            near_sdk::log!("Refunding {} excess deposit", refund_amount);
+            Promise::new(predecessor).transfer(NearToken::from_yoctonear(refund_amount));
+            return true;
+        }
+
+        true
+    }
+
+    pub(crate) fn internal_create_drop(
+        &mut self,
+        drop_id: DropId,
+        key_data: Vec<ExtKeyData>,
+        asset_data: Vec<ExtAssetDataForUses>,
+
+        drop_config: Option<DropConfig>,
+        attached_deposit: Balance,
+
+        // Should any excess attached deposit be deposited to the user's balance?
+        keep_excess_deposit: Option<bool>,
+    ) -> Balance {
         self.assert_no_global_freeze();
         require!(!drop_id.contains(':'), "Drop ID cannot contain a colon (:)");
         require!(
@@ -97,7 +174,7 @@ impl Keypom {
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
-        self.determine_costs(
+        let refund_amount = self.determine_costs(
             key_data.len(),
             true, // We did create a drop here
             total_cost_per_key,
@@ -116,9 +193,11 @@ impl Keypom {
         };
         event_logs.push(drop_creation_event);
 
+        // Fire cross-contract call to all the accounts in the drop config's allowlist if it exists
+        // (and a message was passed in)
+
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);
-        true
+        refund_amount
     }
 }
-

@@ -16,6 +16,7 @@
     "nft-sdk-owned": "node deploy/nft/nft-create-sdk-owned",
     "fc": "node deploy/function-call/fc-create",
     "fc-sdk": "node deploy/function-call/fc-create-sdk",
+    "zombie": "ts-node deploy/eventZombie.ts",
     "test": "ava __tests__/basic.ava.ts"
   },
   "dependencies": {

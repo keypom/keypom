@@ -102,7 +102,7 @@ impl Keypom {
         asset_cost_per_key: Balance,
         net_storage: u64,
         keep_excess_deposit: Option<bool>,
-    ) {
+    ) -> Balance {
         let num_keys = num_keys as u128;
 
         let storage_cost = net_storage as Balance * env::storage_byte_cost().as_yoctonear();
@@ -124,6 +124,7 @@ impl Keypom {
             total_fees
         );
         self.charge_with_deposit_or_balance(total_cost, keep_excess_deposit);
+        total_cost
     }
 
     /// Internal method to add a drop ID the list of drops a funder has. If they don't have any, instantiate

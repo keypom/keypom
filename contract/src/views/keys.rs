@@ -112,6 +112,7 @@ impl Keypom {
             ft_list,
             nft_list,
             fc_list,
+            metadata: key_info.metadata,
             required_gas: required_gas.as_gas().to_string(),
             uses_remaining: key_info.remaining_uses,
             drop_id,

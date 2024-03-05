@@ -16,6 +16,25 @@ impl Keypom {
         drop.to_external_drop(drop_id)
     }
 
+    /// Allows you to query for the information about a batch of drops all at once with 1 function.
+    ///
+    ///
+    /// Arguments:
+    /// * `id` either the ID for the drop as a string or a public key currently part of the drop.
+    ///
+    /// Returns a vector of optional `ExtDrop` objects representing the information about the drops. If
+    /// Any of the drops do not exist, the corresponding index in the vector will be `None`
+    pub fn get_drop_information_batch(&self, drop_ids: Vec<DropId>) -> Vec<Option<ExtDrop>> {
+        drop_ids
+            .iter()
+            .map(|id| {
+                self.drop_by_id
+                    .get(id)
+                    .map(|internal_drop| internal_drop.to_external_drop(id.clone()))
+            })
+            .collect()
+    }
+
     /// Allows you to query for the number of live keys in a drop
     ///
     /// Requirements:
@@ -71,4 +90,3 @@ impl Keypom {
             .collect();
     }
 }
-

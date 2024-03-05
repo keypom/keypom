@@ -4,6 +4,21 @@ use crate::*;
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
+pub struct OnSuccessCallData {
+    /// The contract ID that the call should be made to
+    pub receiver_id: AccountId,
+    /// The method name to call on the receiver_id
+    pub method_name: String,
+    /// Any arguments that are stringified JSON
+    pub args: String,
+    /// How much yoctoNEAR should be attached to the call
+    pub attached_deposit: U128,
+}
+
+/// Represents the asset data including configs for a set amount of uses.
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
+#[serde(crate = "near_sdk::serde")]
 pub struct ExtAssetDataForUses {
     /// How many uses does this asset data apply to?
     pub uses: UseNumber,

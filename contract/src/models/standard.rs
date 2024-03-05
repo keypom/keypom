@@ -28,6 +28,7 @@ pub struct ExtKeyInfo {
     pub pub_key: PublicKey,
     pub token_id: TokenId,
     pub owner_id: AccountId,
+    pub metadata: Option<String>,
     pub fc_list: Vec<FCData>,
 
     pub uses_remaining: UseNumber,
