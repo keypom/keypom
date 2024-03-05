@@ -74,13 +74,26 @@ impl Keypom {
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
-        self.determine_costs(
+        let refund_amount = self.determine_costs(
             key_data.len(),
             false, // No drop was created
             total_cost_per_key,
             net_storage,
-            keep_excess_deposit,
+            env::attached_deposit().as_yoctonear(),
         );
+
+        if refund_amount > 0 {
+            let predecessor = env::predecessor_account_id();
+            // If the user wants to keep the excess deposit, just modify the user balance
+            if keep_excess_deposit.unwrap_or(false) {
+                self.internal_modify_user_balance(&predecessor, refund_amount, false);
+                return true;
+            }
+
+            near_sdk::log!("Refunding {} excess deposit", refund_amount);
+            Promise::new(predecessor).transfer(NearToken::from_yoctonear(refund_amount));
+            return true;
+        }
 
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);

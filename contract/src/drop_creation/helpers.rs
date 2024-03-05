@@ -101,7 +101,7 @@ impl Keypom {
         did_create_drop: bool,
         asset_cost_per_key: Balance,
         net_storage: u64,
-        keep_excess_deposit: Option<bool>,
+        attached_deposit: Balance,
     ) -> Balance {
         let num_keys = num_keys as u128;
 
@@ -123,7 +123,7 @@ impl Keypom {
             total_asset_cost,
             total_fees
         );
-        self.charge_with_deposit_or_balance(total_cost, keep_excess_deposit);
+        self.charge_with_deposit_or_balance(total_cost, attached_deposit);
         total_cost
     }
 

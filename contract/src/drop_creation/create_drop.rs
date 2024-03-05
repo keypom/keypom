@@ -15,26 +15,44 @@ impl Keypom {
         // Check if all vectors are of the same length
         require!(drop_ids.len() != asset_data.len() || drop_ids.len() != drop_config.len());
 
-        let mut attached_deposit = env::attached_deposit().as_yoctonear();
+        // Start with the full attached deposit
+        let mut deposit_left = env::attached_deposit().as_yoctonear();
 
         // Iterate over the inputs and call `create_drop` for each set of elements
         for (i, drop_id) in drop_ids.into_iter().enumerate() {
             let current_asset_data = asset_data[i].clone(); // Assuming `create_drop` can take Vec<ExtAssetDataForUses>
             let current_drop_config = drop_config[i].clone();
 
-            require!(self.create_drop(
+            // Set the new deposit for the next iteration
+            deposit_left = self.internal_create_drop(
                 drop_id,
                 vec![],
                 current_asset_data,
                 current_drop_config,
-                keep_excess_deposit,
-            ));
+                deposit_left,
+            );
         }
 
-        // Fire cross-contract call if it exists
-        if let Some(success_data) = on_success {
-            // Charge for any attached deposit
-            self.charge_with_deposit_or_balance(success_data.attached_deposit, keep_excess_deposit)
+        // Now that all the drops are created, check refund amounts
+        if deposit_left > 0 {
+            // Only fire cross-contract call if it exists and the attached deposit is sufficient
+            if let Some(success_data) = on_success {
+                if deposit_left >= success_data.attached_deposit.0 {
+                    // Decrement the attached deposit by the amount used in the call
+                    deposit_left -= success_data.attached_deposit.0;
+                }
+            }
+
+            // Refund the excess deposit
+            let predecessor = env::predecessor_account_id();
+            // If the user wants to keep the excess deposit, just modify the user balance
+            if keep_excess_deposit.unwrap_or(false) {
+                self.internal_modify_user_balance(&predecessor, deposit_left, false);
+                return true;
+            }
+            near_sdk::log!("Refunding {} excess deposit", deposit_left);
+            Promise::new(predecessor).transfer(NearToken::from_yoctonear(deposit_left));
+            return true;
         }
 
         true
@@ -59,7 +77,6 @@ impl Keypom {
             asset_data,
             drop_config,
             env::attached_deposit().as_yoctonear(),
-            keep_excess_deposit,
         );
 
         if refund_amount > 0 {
@@ -86,9 +103,6 @@ impl Keypom {
 
         drop_config: Option<DropConfig>,
         attached_deposit: Balance,
-
-        // Should any excess attached deposit be deposited to the user's balance?
-        keep_excess_deposit: Option<bool>,
     ) -> Balance {
         self.assert_no_global_freeze();
         require!(!drop_id.contains(':'), "Drop ID cannot contain a colon (:)");
@@ -179,7 +193,7 @@ impl Keypom {
             true, // We did create a drop here
             total_cost_per_key,
             net_storage,
-            keep_excess_deposit,
+            attached_deposit,
         );
 
         // Construct the drop creation log and push it to the event logs

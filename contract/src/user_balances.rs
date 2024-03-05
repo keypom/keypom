@@ -94,20 +94,19 @@ impl Keypom {
     pub(crate) fn charge_with_deposit_or_balance(
         &mut self,
         required_deposit: Balance,
-        attached_deposit: Option<Balance>,
-        keep_excess_deposit: Option<bool>,
+        attached_deposit: Balance,
     ) -> Balance {
         let predecessor = env::predecessor_account_id();
-        let can_deposit_cover = attached_deposit.unwrap_or(0) >= required_deposit;
+        let can_deposit_cover = attached_deposit >= required_deposit;
 
         // In the case that the attached deposit covers what is required, refund the excess
         if can_deposit_cover {
-            let amount_to_refund = attached_deposit.unwrap_or(0) - required_deposit;
+            let amount_to_refund = attached_deposit - required_deposit;
             return amount_to_refund;
         }
 
         // In the case that the attached deposit is less than the required, check user balance
-        let required_deposit_left = required_deposit - attached_deposit.unwrap_or(0);
+        let required_deposit_left = required_deposit - attached_deposit;
         self.internal_modify_user_balance(&predecessor, required_deposit_left, true);
         return 0;
     }
