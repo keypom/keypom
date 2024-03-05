@@ -40,6 +40,30 @@ impl Keypom {
                 if deposit_left >= success_data.attached_deposit.0 {
                     // Decrement the attached deposit by the amount used in the call
                     deposit_left -= success_data.attached_deposit.0;
+
+                    // Check if the method is prohibited
+                    require!(
+                        !DEFAULT_PROHIBITED_FC_METHODS.contains(&success_data.method_name.as_str()),
+                        format!(
+                            "Method {} is prohibited from being called in an FC drop",
+                            success_data.method_name
+                        )
+                    );
+
+                    // Check if the receiver is valid
+                    require!(
+                        success_data.receiver_id != env::current_account_id().to_string(),
+                        "Receiver ID cannot be current Keypom contract."
+                    );
+
+                    // Fire the cross-contract call
+                    Promise::new(success_data.receiver_id).function_call_weight(
+                        success_data.method_name.clone(),
+                        success_data.args.into(),
+                        NearToken::from_yoctonear(success_data.attached_deposit.0),
+                        GAS_FOR_CREATE_ACCOUNT,
+                        GasWeight(1),
+                    );
                 }
             }
 
