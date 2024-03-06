@@ -1,12 +1,19 @@
 import { EventInfo, DropMetadata } from "./interfaces";
 import {
   createAccount,
+  decryptPrivateKey,
+  decryptWithPrivateKey,
   deployEventContract,
+  deriveKeyFromPassword,
+  encryptPrivateKey,
+  encryptWithPublicKey,
   generateEvents,
+  generateKeyPair,
   initNear,
   sendTransaction,
 } from "./utils";
 const { KeyPair } = require("near-api-js");
+import * as crypto from "crypto";
 
 // Delay function
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -126,8 +133,54 @@ const createTicket = async ({
 
 const main = async () => {
   const near = await initNear();
+
   const signerAccount = await near.account("benjiman.testnet");
   const keypomAccountId = `${Date.now().toString()}-kp-ticketing.testnet`;
+  const saltHex = crypto.randomBytes(16).toString("hex");
+  const masterKey = "MASTER_KEY";
+  const dataToEncrypt = JSON.stringify({
+    questions: {
+      "What is your favorite color?": "Blue",
+      "What is your favorite animal?": "Dog",
+    },
+  });
+
+  // Generate a random key pair
+  const { publicKey, privateKey } = await generateKeyPair();
+
+  // Step 2: Encrypt data using the public key
+  const encryptedData = await encryptWithPublicKey(dataToEncrypt, publicKey);
+  console.log("Encrypted Data:", encryptedData);
+
+  // Step 3: Derive a symmetric key from the password
+  const symmetricKey = await deriveKeyFromPassword(masterKey, saltHex);
+
+  // Step 4: Encrypt the private key using the symmetric key
+  const { encryptedPrivateKeyBase64, ivBase64 } = await encryptPrivateKey(
+    privateKey,
+    symmetricKey,
+  );
+  console.log("Encrypted Private Key:", encryptedPrivateKeyBase64);
+
+  // Simulate storing and later retrieving the encrypted private key and iv
+  const storedEncryptedPrivateKey = encryptedPrivateKeyBase64;
+  const storedIv = ivBase64;
+
+  // Step 5: Decrypt the private key using the symmetric key
+  const decryptedPrivateKey = await decryptPrivateKey(
+    storedEncryptedPrivateKey,
+    storedIv,
+    symmetricKey,
+  );
+
+  // Step 6: Decrypt the encrypted data using the decrypted private key
+  const decryptedData = await decryptWithPrivateKey(
+    encryptedData,
+    decryptedPrivateKey,
+  );
+  console.log("Decrypted Data:", decryptedData);
+
+  return;
   console.log("Deploying Keypom contract to: ", keypomAccountId);
   await deployEventContract({
     signerAccount,

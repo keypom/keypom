@@ -132,6 +132,17 @@ pub struct AssetMetadata {
     pub tokens_per_use: Option<U128>,
 }
 
+/// Contains information about the funder such as their user_balance and any metadata they might
+/// have
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
+#[borsh(crate = "near_sdk::borsh")]
+pub struct FunderInfo {
+    /// The internal balance that the funder has deposited
+    pub balance: Balance,
+    /// Any stringified JSON that the funder has set as metadata
+    pub metadata: Option<String>,
+}
+
 /// Contract metadata structure
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[borsh(crate = "near_sdk::borsh")]
@@ -181,5 +192,5 @@ pub enum StorageKeys {
     TokensPerOwner,
     DropById,
     TokenIdByPk,
-    UserBalances,
+    FunderInfoById,
 }

@@ -70,7 +70,7 @@ pub struct Keypom {
 
     // ------------------------ Utility ------------------------ //
     /// Keep track of the balances for each user. This is to prepay for drop creations
-    pub user_balances: LookupMap<AccountId, Balance>,
+    pub funder_info_by_id: LookupMap<AccountId, FunderInfo>,
 }
 
 #[near_bindgen]
@@ -98,7 +98,7 @@ impl Keypom {
             drop_by_id: LookupMap::new(StorageKeys::DropById),
             token_id_by_pk: UnorderedMap::new(StorageKeys::TokenIdByPk),
             tokens_per_owner: LookupMap::new(StorageKeys::TokensPerOwner),
-            user_balances: LookupMap::new(StorageKeys::UserBalances),
+            funder_info_by_id: LookupMap::new(StorageKeys::FunderInfoById),
             root_account,
             fees_per_user: LookupMap::new(StorageKeys::FeesPerUser),
             drop_ids_by_funder: LookupMap::new(StorageKeys::DropIdsByFunder),

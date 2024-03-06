@@ -23,7 +23,11 @@ impl Keypom {
         let owner_id = env::predecessor_account_id();
         // Get the amount that the user has by removing them from the map. If they're not in the map, default to 0
         // Possible re-entrency attack if we don't remove the user from the map before transferring
-        let mut cur_balance = self.user_balances.remove(&owner_id).unwrap_or(0);
+        let mut funder_info = self
+            .funder_info_by_id
+            .remove(&owner_id)
+            .expect("User not found");
+        let mut cur_balance: u128 = funder_info.balance;
 
         // If the amount to withdraw is specified, we withdraw the min of the amount to withdraw and the amount the user has
         let amount = amount_to_withdraw.map(|x| x.0).unwrap_or(cur_balance);
@@ -37,16 +41,20 @@ impl Keypom {
         }
 
         // re-insert the balance into the map if it's greater than 0
-        if cur_balance > 0 {
-            self.user_balances.insert(&owner_id, &cur_balance);
-        }
+        funder_info.balance = cur_balance;
+        self.funder_info_by_id.insert(&owner_id, &funder_info);
 
         true
     }
 
     /// Return the current balance for a given account
     pub fn get_user_balance(&self, account_id: AccountId) -> U128 {
-        U128(self.user_balances.get(&account_id).unwrap_or(0))
+        U128(
+            self.funder_info_by_id
+                .get(&account_id)
+                .map(|x| x.balance)
+                .unwrap_or(0),
+        )
     }
 
     /// Internal function to modify the user's balance. Defaults to adding the amount but decrement can also be specified
@@ -58,7 +66,14 @@ impl Keypom {
     ) {
         if amount > 0 {
             // Get the balance of the account (if the account isn't in the map we default to a balance of 0)
-            let mut balance: u128 = self.user_balances.get(account_id).unwrap_or(0);
+            let mut funder_info = self
+                .funder_info_by_id
+                .get(account_id)
+                .unwrap_or(FunderInfo {
+                    metadata: None,
+                    balance: 0,
+                });
+            let mut balance: u128 = funder_info.balance;
 
             // Either add or subtract the amount from the balance depending on whether or not decrement was passed in
             if decrement {
@@ -83,8 +98,9 @@ impl Keypom {
                 balance += amount;
             }
 
+            funder_info.balance = balance;
             // Insert the balance back into the map for that account ID
-            self.user_balances.insert(account_id, &balance);
+            self.funder_info_by_id.insert(account_id, &funder_info);
         }
     }
 

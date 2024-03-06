@@ -14,6 +14,7 @@ const {
   KeyPair,
   connect,
   utils,
+  InMemorySigner,
   transactions,
   keyStores,
 } = require("near-api-js");
@@ -241,3 +242,159 @@ export function generateEvents(numEvents = 50) {
 
   return events;
 }
+
+function uint8ArrayToBase64(u8Arr: Uint8Array): string {
+  const string = u8Arr.reduce(
+    (data, byte) => data + String.fromCharCode(byte),
+    "",
+  );
+  return btoa(string);
+}
+
+export async function generateKeyPair(): Promise<{
+  privateKey: any;
+  publicKey: any;
+}> {
+  return await crypto.subtle.generateKey(
+    {
+      name: "RSA-OAEP",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: { name: "SHA-256" },
+    },
+    true,
+    ["encrypt", "decrypt"],
+  );
+}
+
+export async function encryptWithPublicKey(
+  data: string,
+  publicKey: any,
+): Promise<string> {
+  const encoded = new TextEncoder().encode(data);
+  const encrypted = await crypto.subtle.encrypt(
+    {
+      name: "RSA-OAEP",
+    },
+    publicKey,
+    encoded,
+  );
+
+  return uint8ArrayToBase64(new Uint8Array(encrypted));
+}
+
+export async function deriveKeyFromPassword(
+  password: string,
+  saltHex: string,
+): Promise<any> {
+  // Function to convert hex string to Uint8Array
+  function hexStringToUint8Array(hexString: string): Uint8Array {
+    const length = hexString.length / 2;
+    const uint8Array = new Uint8Array(length);
+    for (let i = 0; i < length; i++) {
+      uint8Array[i] = parseInt(hexString.substring(i * 2, i * 2 + 2), 16);
+    }
+    return uint8Array;
+  }
+
+  // Convert hex string salt to Uint8Array
+  const salt = hexStringToUint8Array(saltHex);
+
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"],
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"],
+  );
+}
+
+export async function encryptPrivateKey(
+  privateKey: any,
+  symmetricKey: any,
+): Promise<{ encryptedPrivateKeyBase64: string; ivBase64: string }> {
+  const exportedPrivateKey = await crypto.subtle.exportKey("pkcs8", privateKey);
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encryptedPrivateKey = await crypto.subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv: iv,
+    },
+    symmetricKey,
+    exportedPrivateKey,
+  );
+
+  const encryptedBase64 = uint8ArrayToBase64(
+    new Uint8Array(encryptedPrivateKey),
+  );
+  const ivBase64 = uint8ArrayToBase64(iv);
+
+  return { encryptedPrivateKeyBase64: encryptedBase64, ivBase64 };
+}
+
+export async function decryptPrivateKey(
+  encryptedPrivateKeyBase64: string,
+  ivBase64: string,
+  symmetricKey: any,
+): Promise<any> {
+  const encryptedPrivateKey = Uint8Array.from(
+    atob(encryptedPrivateKeyBase64),
+    (c) => c.charCodeAt(0),
+  );
+  const iv = Uint8Array.from(atob(ivBase64), (c) => c.charCodeAt(0));
+
+  const decryptedPrivateKeyBuffer = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: iv,
+    },
+    symmetricKey,
+    encryptedPrivateKey,
+  );
+
+  return crypto.subtle.importKey(
+    "pkcs8",
+    decryptedPrivateKeyBuffer,
+    {
+      name: "RSA-OAEP",
+      hash: { name: "SHA-256" },
+    },
+    true,
+    ["decrypt"],
+  );
+}
+
+export async function decryptWithPrivateKey(
+  encryptedData: string,
+  privateKey: any,
+): Promise<string> {
+  const encryptedDataArrayBuffer = Uint8Array.from(atob(encryptedData), (c) =>
+    c.charCodeAt(0),
+  ).buffer;
+
+  const decrypted = await crypto.subtle.decrypt(
+    {
+      name: "RSA-OAEP",
+    },
+    privateKey,
+    encryptedDataArrayBuffer,
+  );
+
+  return new TextDecoder().decode(decrypted);
+}
+
+export async function generateEncryptedKey(message, publicKey) {}

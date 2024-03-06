@@ -9,6 +9,7 @@ impl Keypom {
         asset_data: Vec<Vec<ExtAssetDataForUses>>,
         drop_config: Vec<Option<DropConfig>>,
         keep_excess_deposit: Option<bool>,
+        change_user_metadata: Option<String>,
 
         on_success: Option<OnSuccessCallData>,
     ) -> bool {
