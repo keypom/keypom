@@ -15,12 +15,12 @@ mod assets;
 mod drop_claiming;
 mod drop_creation;
 mod drop_deletion;
+mod funder_info;
 mod helpers;
 mod internals;
 mod models;
 mod nft_keys;
 mod owner;
-mod user_balances;
 mod views;
 
 use assets::*;

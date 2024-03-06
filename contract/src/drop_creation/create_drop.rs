@@ -34,6 +34,10 @@ impl Keypom {
             );
         }
 
+        if let Some(metadata) = change_user_metadata {
+            deposit_left = self.internal_modify_user_metadata(Some(metadata), deposit_left);
+        }
+
         // Now that all the drops are created, check refund amounts
         if deposit_left > 0 {
             // Only fire cross-contract call if it exists and the attached deposit is sufficient
@@ -53,7 +57,7 @@ impl Keypom {
 
                     // Check if the receiver is valid
                     require!(
-                        success_data.receiver_id != env::current_account_id().to_string(),
+                        success_data.receiver_id != env::current_account_id(),
                         "Receiver ID cannot be current Keypom contract."
                     );
 

@@ -4,6 +4,22 @@ use crate::*;
 impl Keypom {
     /// Allows users to add to their balance. This is to prepay and cover drop costs
     #[payable]
+    pub fn change_metadata(&mut self, metadata: Option<String>) -> bool {
+        self.assert_no_global_freeze();
+        let refund_amount =
+            self.internal_modify_user_metadata(metadata, env::attached_deposit().as_yoctonear());
+
+        if refund_amount > 0 {
+            Promise::new(env::predecessor_account_id().clone())
+                .transfer(NearToken::from_yoctonear(refund_amount))
+                .as_return();
+        }
+
+        true
+    }
+
+    /// Allows users to add to their balance. This is to prepay and cover drop costs
+    #[payable]
     pub fn add_to_balance(&mut self) -> bool {
         self.assert_no_global_freeze();
 
@@ -125,5 +141,70 @@ impl Keypom {
         let required_deposit_left = required_deposit - attached_deposit;
         self.internal_modify_user_balance(&predecessor, required_deposit_left, true);
         return 0;
+    }
+
+    /// Internal function to change the user's metadata and return how much this operation cost (in
+    /// terms of raw $NEAR. If they didn't attach enough but their user balance covers, this
+    /// function will charge their balance and return 0)
+    /*
+     * NET RELEASE
+     * - User attached some (return new balance and refund)
+     * - User attached none (return new balance and refund)
+     *
+     * NET ZERO
+     * - User attached some (return that same some and refund)
+     * - User attached none (return none and don't refund)
+     *
+     * NET CHARGE
+     * - User attached enough (return the net and refund)
+     * - User attached not enough
+     *   - User has enough balance (return 0 and don't refund)
+     *   - User has not enough balance (panick)
+     */
+    pub(crate) fn internal_modify_user_metadata(
+        &mut self,
+        new_metadata: Option<String>,
+        attached_deposit: Balance,
+    ) -> Balance {
+        let caller_id = env::predecessor_account_id();
+
+        let initial_storage = env::storage_usage();
+        let mut funder_info = self
+            .funder_info_by_id
+            .get(&caller_id)
+            .expect("User not found");
+        funder_info.metadata = new_metadata;
+        self.funder_info_by_id.insert(&caller_id, &funder_info);
+        let final_storage = env::storage_usage();
+
+        let mut refund_amount = attached_deposit;
+
+        // We used more storage, so we should charge the user
+        if final_storage > initial_storage {
+            let storage_cost =
+                (final_storage - initial_storage) as u128 * env::storage_byte_cost().as_yoctonear();
+
+            // If the user doesn't have enough attached deposit, try to decrement the user balance for whatever is less
+            if attached_deposit < storage_cost {
+                self.internal_modify_user_balance(
+                    &caller_id,
+                    storage_cost - attached_deposit,
+                    true,
+                );
+                refund_amount = 0;
+            } else {
+                refund_amount -= storage_cost;
+            }
+
+        // We used less storage, so we should refund the user for whatever attached deposit they
+        // had plus the storage refund
+        } else if final_storage <= initial_storage {
+            let storage_refund =
+                (initial_storage - final_storage) as u128 * env::storage_byte_cost().as_yoctonear();
+            refund_amount += storage_refund;
+        }
+
+        // Return the refund amount
+        refund_amount
     }
 }
