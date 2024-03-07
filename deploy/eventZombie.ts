@@ -20,8 +20,10 @@ import {
   sendTransaction,
   uint8ArrayToBase64,
 } from "./utils";
-const { KeyPair } = require("near-api-js");
+const { KeyPair, utils } = require("near-api-js");
 import * as crypto from "crypto";
+
+
 
 const fs = require("fs");
 const path = require("path");
@@ -35,7 +37,7 @@ const main = async () => {
   const masterKey = "MASTER_KEY";
 
   let keypomContractId = `1709832679459-kp-ticketing.testnet`;
-  let marketplaceContractId = `1709832679459-marketplace.testnet`;
+  let marketplaceContractId = `1709145202470-marketplace.testnet`;
   if (createAccounts) {
     keypomContractId = `${Date.now().toString()}-kp-ticketing.testnet`;
     marketplaceContractId = `${Date.now().toString()}-marketplace.testnet`;
@@ -85,9 +87,19 @@ const main = async () => {
     let drop_ids: string[] = [];
     let drop_configs: any = [];
     let asset_datas: any = [];
+    let ticket_information: any = [];
+    let base_price: number = 1;
+    
     for (const ticket of event.tickets) {
       nonce += 1;
       const dropId = `${Date.now().toString()}-${ticket.name}-${nonce}`;
+      ticket_information.push({
+        [`${dropId}`]: {
+          max_tickets: Math.floor(Math.random() * 20) + 10,
+          price: utils.format.parseNearAmount(base_price.toString())
+        }
+      })
+      base_price += 1;
       allTickets.push({
         dropId,
         ticket,
@@ -122,8 +134,18 @@ const main = async () => {
         drop_configs,
         asset_datas,
         change_user_metadata: JSON.stringify(funderMetadata),
+        on_success: {
+          receiver_id: marketplaceContractId,
+          method_name: "create_event",
+          args: {
+            event_id: event.eventMeta.id,
+            funder_id: signerAccount.accountId,
+            ticket_information
+          },
+          attached_deposit: "5",
+        }
       },
-      deposit: "10",
+      deposit: "15",
       gas: "300000000000000",
     });
 
