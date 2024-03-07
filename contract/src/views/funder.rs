@@ -2,6 +2,10 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
+    pub fn get_funder_info(&self, account_id: AccountId) -> Option<FunderInfo> {
+        self.funder_info_by_id.get(&account_id)
+    }
+
     /// Allows you to query for the total number of drops currently owned by a given funder
     ///
     ///
@@ -55,4 +59,3 @@ impl Keypom {
         }
     }
 }
-

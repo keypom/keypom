@@ -1,250 +1,180 @@
-import { EventInfo, DropMetadata } from "./interfaces";
 import {
+  DropMetadata,
+  FunderEventMetadata,
+  FunderMetadata,
+  QuestionInfo,
+} from "./interfaces";
+import {
+  addTickets,
   createAccount,
+  createContracts,
   decryptPrivateKey,
   decryptWithPrivateKey,
-  deployEventContract,
   deriveKeyFromPassword,
   encryptPrivateKey,
   encryptWithPublicKey,
+  exportPublicKeyToBase64,
   generateEvents,
   generateKeyPair,
   initNear,
   sendTransaction,
+  uint8ArrayToBase64,
 } from "./utils";
 const { KeyPair } = require("near-api-js");
 import * as crypto from "crypto";
 
-// Delay function
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const fs = require("fs");
 const path = require("path");
 let allKeyData: { [key: string]: string[] } = {};
 
-const createTicket = async ({
-  signerAccount,
-  keypomAccountId,
-  marketplaceAccount,
-  marketplaceAccountId,
-  dropId,
-  ticket,
-  event,
-  nonce,
-}: {
-  signerAccount: any;
-  keypomAccountId: string;
-  marketplaceAccount: any;
-  marketplaceAccountId: string;
-  dropId: string;
-  ticket: DropMetadata;
-  event: EventInfo;
-  nonce: number;
-}) => {
-  console.log(ticket);
-  // Create a new drop
-  try {
-    await sendTransaction({
-      signerAccount,
-      receiverId: keypomAccountId,
-      methodName: "create_drop",
-      args: {
-        drop_id: dropId,
-        drop_config: {
-          metadata: JSON.stringify(ticket),
-          add_key_allowlist: [marketplaceAccountId],
-          transfer_key_allowlist: [marketplaceAccountId],
-        },
-        key_data: [],
-        asset_data: [
-          {
-            uses: 2,
-            assets: [null],
-            config: {
-              permissions: "claim",
-            },
-          },
-        ],
-      },
-      deposit: "1",
-      gas: "300000000000000",
-    });
-    console.log(
-      "Deployed Ticket: ",
-      ticket.ticketInfo.name,
-      " with Drop ID: ",
-      dropId,
-    );
-  } catch (e) {
-    console.log("(Create Tix) ERROR!!!: ", e);
-  }
-
-  let numTickets = Math.floor(Math.random() * 25) + 1; // Number of tickets to mint
-  const maxSupply = ticket.ticketInfo.maxSupply || 100;
-  numTickets = Math.min(numTickets, maxSupply); // Ensure we don't mint more than the max supply
-
-  let keyData: {
-    public_key: string;
-    metadata: string;
-    key_owner?: string;
-  }[] = [];
-  let keyPairs: string[] = [];
-  for (let i = 0; i < numTickets; i++) {
-    const keyPair = KeyPair.fromRandom("ed25519");
-    keyPairs.push(keyPair);
-    const publicKey = keyPair.publicKey.toString();
-    const questions = event.questions || [];
-    let answers: { [key: string]: string } = {};
-
-    for (const question of questions) {
-      if (question.required && Math.random() > 0.5) {
-        answers[question.question] = `My Answer To: ${question.question}`;
-      }
-    }
-    keyData.push({
-      public_key: publicKey,
-      metadata: JSON.stringify({
-        questions: answers,
-      }),
-      key_owner: Math.random() > 0.5 ? "owner.testnet" : undefined,
-    });
-  }
-
-  await delay(1000); // Delay to prevent nonce retries exceeded error
-
-  try {
-    await sendTransaction({
-      signerAccount: marketplaceAccount,
-      receiverId: keypomAccountId,
-      methodName: "add_keys",
-      args: {
-        drop_id: dropId,
-        key_data: keyData,
-      },
-      deposit: "5",
-      gas: "300000000000000",
-    });
-    allKeyData[dropId] = keyPairs.map((kp) => kp.toString()); // Assuming keyPairs needs to be converted to string
-    console.log("Added Keys: ", keyPairs);
-    console.log("All Keys: ", allKeyData);
-  } catch (e) {
-    console.log("(Add Tix) ERROR!!!: ", e);
-  }
-};
-
 const main = async () => {
   const near = await initNear();
+  const createAccounts = true;
 
   const signerAccount = await near.account("benjiman.testnet");
-  const keypomAccountId = `${Date.now().toString()}-kp-ticketing.testnet`;
-  const saltHex = crypto.randomBytes(16).toString("hex");
   const masterKey = "MASTER_KEY";
-  const dataToEncrypt = JSON.stringify({
-    questions: {
-      "What is your favorite color?": "Blue",
-      "What is your favorite animal?": "Dog",
-    },
-  });
 
-  // Generate a random key pair
-  const { publicKey, privateKey } = await generateKeyPair();
+  let keypomContractId = `1709832679459-kp-ticketing.testnet`;
+  let marketplaceContractId = `1709832679459-marketplace.testnet`;
+  if (createAccounts) {
+    keypomContractId = `${Date.now().toString()}-kp-ticketing.testnet`;
+    marketplaceContractId = `${Date.now().toString()}-marketplace.testnet`;
+    await createContracts({
+      signerAccount,
+      near,
+      marketplaceContractId,
+      keypomContractId,
+    });
+  }
 
-  // Step 2: Encrypt data using the public key
-  const encryptedData = await encryptWithPublicKey(dataToEncrypt, publicKey);
-  console.log("Encrypted Data:", encryptedData);
+  const marketAccount = await near.account(marketplaceContractId);
 
-  // Step 3: Derive a symmetric key from the password
-  const symmetricKey = await deriveKeyFromPassword(masterKey, saltHex);
+  //  Create Events (and generate keypair if necessary / update user metadata)
+  // To store: public key, encrypted private key, iv, salt
+  const events = generateEvents(1);
+  let nonce = 0;
+  let funderMetadata: FunderMetadata = {};
 
-  // Step 4: Encrypt the private key using the symmetric key
-  const { encryptedPrivateKeyBase64, ivBase64 } = await encryptPrivateKey(
-    privateKey,
-    symmetricKey,
-  );
-  console.log("Encrypted Private Key:", encryptedPrivateKeyBase64);
-
-  // Simulate storing and later retrieving the encrypted private key and iv
-  const storedEncryptedPrivateKey = encryptedPrivateKeyBase64;
-  const storedIv = ivBase64;
-
-  // Step 5: Decrypt the private key using the symmetric key
-  const decryptedPrivateKey = await decryptPrivateKey(
-    storedEncryptedPrivateKey,
-    storedIv,
-    symmetricKey,
-  );
-
-  // Step 6: Decrypt the encrypted data using the decrypted private key
-  const decryptedData = await decryptWithPrivateKey(
-    encryptedData,
-    decryptedPrivateKey,
-  );
-  console.log("Decrypted Data:", decryptedData);
-
-  return;
-  console.log("Deploying Keypom contract to: ", keypomAccountId);
-  await deployEventContract({
-    signerAccount,
-    newAccountId: keypomAccountId,
-    amount: "15",
-    near,
-    wasmPath: "./out/keypom.wasm",
-  });
-  const marketplaceAccountId = `${Date.now().toString()}-marketplace.testnet`;
-  console.log("Creating marketplace: ", marketplaceAccountId);
-  await createAccount({
-    signerAccount,
-    newAccountId: marketplaceAccountId,
-    amount: "200",
-  });
-  const marketplaceAccount = await near.account(marketplaceAccountId);
-
-  const events = generateEvents(50);
-  let nonce = 0; // Initialize a nonce variable
-
-  // Process each event sequentially
+  let allTickets: Array<{
+    dropId: string;
+    ticket: DropMetadata;
+    eventId: string;
+    eventQuestions?: QuestionInfo[];
+  }> = [];
   for (const event of events) {
-    console.log("Deploying Event: ", event.eventInfo.name);
+    console.log("Deploying Event: ", event.eventMeta.name);
+    if ((event.eventMeta.questions || []).length > 0) {
+      console.log("Event has questions. Generate keypairs");
+      const { publicKey, privateKey } = await generateKeyPair();
+      const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+      const saltBase64 = uint8ArrayToBase64(saltBytes);
+      const symmetricKey = await deriveKeyFromPassword(masterKey, saltBase64);
+      const { encryptedPrivateKeyBase64, ivBase64 } = await encryptPrivateKey(
+        privateKey,
+        symmetricKey,
+      );
 
-    // Sequentially process each ticket with a delay
-    for (const ticket of event.tickets) {
-      nonce += 1;
-      const dropId = `${Date.now().toString()}-${
-        ticket.ticketInfo.name
-      }-${nonce}`;
-      // Call createTicket and wait for it to complete with a delay afterwards
-      await createTicket({
-        // Parameters for createTicket
-        signerAccount,
-        keypomAccountId,
-        marketplaceAccount,
-        marketplaceAccountId,
-        dropId,
-        ticket,
-        event: event.eventInfo,
-        nonce,
-      });
-      await delay(1000); // Delay to prevent nonce retries exceeded error
+      event.eventMeta.pubKey = await exportPublicKeyToBase64(publicKey);
+      event.eventMeta.encPrivKey = encryptedPrivateKeyBase64;
+      event.eventMeta.iv = ivBase64;
+      event.eventMeta.salt = saltBase64;
     }
 
-    console.log("Deployed Event: ", event.eventInfo.name);
+    funderMetadata[event.eventMeta.id] = event.eventMeta;
+
+    let drop_ids: string[] = [];
+    let drop_configs: any = [];
+    let asset_datas: any = [];
+    for (const ticket of event.tickets) {
+      nonce += 1;
+      const dropId = `${Date.now().toString()}-${ticket.name}-${nonce}`;
+      allTickets.push({
+        dropId,
+        ticket,
+        eventId: event.eventMeta.id,
+        eventQuestions: event.eventMeta.questions,
+      });
+      const dropConfig = {
+        metadata: JSON.stringify(ticket),
+        add_key_allowlist: [marketplaceContractId],
+        transfer_key_allowlist: [marketplaceContractId],
+      };
+      const assetData = [
+        {
+          uses: 2,
+          assets: [null],
+          config: {
+            permissions: "claim",
+          },
+        },
+      ];
+      drop_ids.push(dropId);
+      asset_datas.push(assetData);
+      drop_configs.push(dropConfig);
+    }
+
+    await sendTransaction({
+      signerAccount,
+      receiverId: keypomContractId,
+      methodName: "create_drop_batch",
+      args: {
+        drop_ids,
+        drop_configs,
+        asset_datas,
+        change_user_metadata: JSON.stringify(funderMetadata),
+      },
+      deposit: "10",
+      gas: "300000000000000",
+    });
+
+    console.log("Deployed Event: ", event.eventMeta.name);
+  }
+
+  let allKeyData: { [key: string]: string[] } = {};
+  for (const curTicket of allTickets) {
+    const { dropId, eventId, ticket, eventQuestions } = curTicket;
+    const keyPairs = await addTickets({
+      signerAccount,
+      funderAccountId: "benjiman.testnet",
+      keypomAccountId: keypomContractId,
+      marketplaceAccount: marketAccount,
+      dropId,
+      ticket,
+      eventId,
+      eventQuestions,
+    });
+    allKeyData[dropId] = keyPairs;
   }
 
   for (const event of events) {
     console.log(
-      `Event ${event.eventInfo.id} ( ${event.eventInfo.name} has ${event.tickets.length} tickets)`,
+      `Event ( ${event.eventMeta.name} has ${event.tickets.length} tickets)`,
     );
   }
-  // Log completion and provide a link to the contract
+
   console.log(
-    `All events deployed. Check them out at: https://testnet.nearblocks.io/address/${keypomAccountId}`,
+    `All events deployed. Check them out at: https://testnet.nearblocks.io/address/${keypomContractId}`,
   );
 
-  // Write the accumulated key data to a file
-  console.log("Writing key pairs to file...", allKeyData);
-  const filePath = path.join(__dirname, "keyPairs.json");
-  await fs.writeFileSync(filePath, JSON.stringify(allKeyData), "utf-8");
-  console.log(`Key pairs written to ${filePath}`);
+  return;
 };
 
-// test();
-main().catch(console.error);
+async function test() {
+  const near = await initNear();
+  let keypomContractId = `1709834705601-kp-ticketing.testnet`;
+  const signerAccount = await near.account("benjiman.testnet");
+  const eventId = "29f2f55e-be89-43e8-aa27-da49cbbed43b";
+
+  const funderInfo = await signerAccount.viewFunction(
+    keypomContractId,
+    "get_funder_info",
+    { account_id: signerAccount.accountId },
+  );
+
+  const funderMeta: FunderMetadata = JSON.parse(funderInfo.metadata);
+  const eventInfo = funderMeta[eventId];
+  console.log("Event Info: ", eventInfo);
+}
+
+test();
+// main().catch(console.error);

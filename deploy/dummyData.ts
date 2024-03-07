@@ -55,7 +55,6 @@ export const questions: QuestionInfo[] = [
     required: false,
   },
   { question: "How many people are in your company?", required: false },
-  { question: "Did you attend previously?", required: false },
 ];
 export const artworkUrls: string[] = [
   "https://media.istockphoto.com/id/1001928116/photo/empty-vintage-seat-in-auditorium-or-theater-with-lights-on-stage.webp?s=612x612&w=is&k=20&c=EOlmMqR60cPQILZVrIXIntn24z-k3QlJMkERKqzgPWY=",

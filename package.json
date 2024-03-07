@@ -20,14 +20,11 @@
     "test": "ava __tests__/basic.ava.ts"
   },
   "dependencies": {
-    "gh-pages": "^4.0.0",
-    "@keypom/core": "^1.0.1",
-    "@keypom/selector": "^1.1.0"
+    "gh-pages": "^4.0.0"
   },
   "devDependencies": {
+    "near-api-js": "0.44.0",
     "@types/bn.js": "^5.1.0",
-    "ava": "^5.0.1",
-    "near-workspaces": "3.4.1",
     "ts-node": "^10.8.0",
     "typescript": "^4.6.4",
     "@near-js/accounts": "^0.1.3",

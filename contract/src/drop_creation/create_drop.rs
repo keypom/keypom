@@ -6,23 +6,27 @@ impl Keypom {
     pub fn create_drop_batch(
         &mut self,
         drop_ids: Vec<DropId>,
-        asset_data: Vec<Vec<ExtAssetDataForUses>>,
-        drop_config: Vec<Option<DropConfig>>,
+        asset_datas: Vec<Vec<ExtAssetDataForUses>>,
+        drop_configs: Vec<Option<DropConfig>>,
         keep_excess_deposit: Option<bool>,
         change_user_metadata: Option<String>,
 
         on_success: Option<OnSuccessCallData>,
     ) -> bool {
         // Check if all vectors are of the same length
-        require!(drop_ids.len() != asset_data.len() || drop_ids.len() != drop_config.len());
+        require!(
+            drop_ids.len() == asset_datas.len() && drop_ids.len() == drop_configs.len(),
+            "All vectors must be of the same length"
+        );
 
         // Start with the full attached deposit
         let mut deposit_left = env::attached_deposit().as_yoctonear();
+        near_sdk::log!("Initial deposit: {}", deposit_left);
 
         // Iterate over the inputs and call `create_drop` for each set of elements
         for (i, drop_id) in drop_ids.into_iter().enumerate() {
-            let current_asset_data = asset_data[i].clone(); // Assuming `create_drop` can take Vec<ExtAssetDataForUses>
-            let current_drop_config = drop_config[i].clone();
+            let current_asset_data = asset_datas[i].clone(); // Assuming `create_drop` can take Vec<ExtAssetDataForUses>
+            let current_drop_config = drop_configs[i].clone();
 
             // Set the new deposit for the next iteration
             deposit_left = self.internal_create_drop(
@@ -32,10 +36,15 @@ impl Keypom {
                 current_drop_config,
                 deposit_left,
             );
+            near_sdk::log!("Deposit left after drop {}: {}", i, deposit_left);
         }
 
         if let Some(metadata) = change_user_metadata {
             deposit_left = self.internal_modify_user_metadata(Some(metadata), deposit_left);
+            near_sdk::log!(
+                "Deposit left after changing user metadata: {}",
+                deposit_left
+            );
         }
 
         // Now that all the drops are created, check refund amounts

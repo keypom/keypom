@@ -134,8 +134,9 @@ pub struct AssetMetadata {
 
 /// Contains information about the funder such as their user_balance and any metadata they might
 /// have
-#[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, Serialize)]
 #[borsh(crate = "near_sdk::borsh")]
+#[serde(crate = "near_sdk::serde")]
 pub struct FunderInfo {
     /// The internal balance that the funder has deposited
     pub balance: Balance,

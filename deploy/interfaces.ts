@@ -13,22 +13,10 @@ export interface QuestionInfo {
   question: string;
 }
 
-export interface EventInfo {
-  // Stage 1
+export interface DropMetadata {
+  dateCreated: string;
   name: string;
-  id: string;
-  description: string;
-  location: string;
-  date: EventDateInfo;
-  artwork: string;
-
-  // Stage 2
-  questions?: QuestionInfo[];
-}
-
-interface TicketInfo {
-  name: string;
-  eventId: string;
+  eventId: string; // UUID
   description: string;
   salesValidThrough: string;
   passValidThrough: string;
@@ -37,14 +25,29 @@ interface TicketInfo {
   maxSupply?: number;
 }
 
-export interface DropMetadata {
+/// Maps UUID to Event Metadata
+export type FunderMetadata = Record<string, FunderEventMetadata>;
+
+export interface FunderEventMetadata {
+  name: string;
+  description: string;
+  location: string;
+  date: EventDateInfo;
+  artwork: string;
+  id: string; // UUID
   dateCreated: string;
-  dropName: string;
-  ticketInfo: TicketInfo;
-  eventInfo?: EventInfo;
+
+  // Stage 2
+  questions?: QuestionInfo[];
+
+  // If there are some questions, then we need to encrypt the answers
+  pubKey?: string;
+  encPrivKey?: string;
+  iv?: string;
+  salt?: string;
 }
 
-export interface Event {
-  eventInfo: EventInfo;
+export interface ZombieReturnedEvent {
+  eventMeta: FunderEventMetadata;
   tickets: DropMetadata[];
 }

@@ -4,7 +4,7 @@ use crate::*;
 impl Keypom {
     /// Allows users to add to their balance. This is to prepay and cover drop costs
     #[payable]
-    pub fn change_metadata(&mut self, metadata: Option<String>) -> bool {
+    pub fn set_funder_metadata(&mut self, metadata: Option<String>) -> bool {
         self.assert_no_global_freeze();
         let refund_amount =
             self.internal_modify_user_metadata(metadata, env::attached_deposit().as_yoctonear());
@@ -172,7 +172,10 @@ impl Keypom {
         let mut funder_info = self
             .funder_info_by_id
             .get(&caller_id)
-            .expect("User not found");
+            .unwrap_or(FunderInfo {
+                metadata: None,
+                balance: 0,
+            });
         funder_info.metadata = new_metadata;
         self.funder_info_by_id.insert(&caller_id, &funder_info);
         let final_storage = env::storage_usage();
@@ -183,6 +186,11 @@ impl Keypom {
         if final_storage > initial_storage {
             let storage_cost =
                 (final_storage - initial_storage) as u128 * env::storage_byte_cost().as_yoctonear();
+            near_sdk::log!(
+                "Charging user for storage: {} (deposit: {})",
+                storage_cost,
+                refund_amount
+            );
 
             // If the user doesn't have enough attached deposit, try to decrement the user balance for whatever is less
             if attached_deposit < storage_cost {

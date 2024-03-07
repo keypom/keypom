@@ -123,8 +123,7 @@ impl Keypom {
             total_asset_cost,
             total_fees
         );
-        self.charge_with_deposit_or_balance(total_cost, attached_deposit);
-        total_cost
+        self.charge_with_deposit_or_balance(total_cost, attached_deposit)
     }
 
     /// Internal method to add a drop ID the list of drops a funder has. If they don't have any, instantiate

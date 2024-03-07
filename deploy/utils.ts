@@ -7,7 +7,13 @@ import {
   ticketArtworkUrls,
   ticketTypes,
 } from "./dummyData";
-import { DropMetadata, Event } from "./interfaces";
+import {
+  DropMetadata,
+  FunderEventMetadata,
+  FunderMetadata,
+  QuestionInfo,
+  ZombieReturnedEvent,
+} from "./interfaces";
 import * as crypto from "crypto";
 
 const {
@@ -37,6 +43,9 @@ export async function initNear() {
   return near;
 }
 
+// Delay function
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function sendTransaction({
   signerAccount,
   receiverId,
@@ -54,6 +63,10 @@ export async function sendTransaction({
   gas: string;
   wasmPath?: string;
 }) {
+  console.log(
+    "Sending transaction... with deposit",
+    utils.format.parseNearAmount(deposit),
+  );
   const result = await signerAccount.signAndSendTransaction({
     receiverId: receiverId,
     actions: [
@@ -72,38 +85,85 @@ export async function sendTransaction({
   console.log(result);
 }
 
-export async function deployEventContract({
+export async function createContracts({
   signerAccount,
-  newAccountId,
-  amount,
   near,
-  wasmPath,
+  marketplaceContractId,
+  keypomContractId,
 }: {
   signerAccount: any;
-  newAccountId: string;
-  amount: string;
   near: any;
-  wasmPath: string;
+  marketplaceContractId: string;
+  keypomContractId: string;
 }) {
-  console.log("Creating account: ", newAccountId);
-  await createAccount({ signerAccount, newAccountId, amount });
-  console.log("Deploying contract: ", newAccountId);
   const keyPair = KeyPair.fromRandom("ed25519");
   const publicKey = keyPair.publicKey.toString();
-  const keypomAccount = await near.account(newAccountId);
-  await sendTransaction({
-    signerAccount: keypomAccount,
-    receiverId: newAccountId,
+  await createAccountDeployContract({
+    signerAccount,
+    newAccountId: keypomContractId,
+    amount: "15",
+    near,
+    wasmPath: "./out/keypom.wasm",
     methodName: "new",
     args: {
       root_account: "testnet",
-      owner_id: newAccountId,
+      owner_id: keypomContractId,
       signing_pk: publicKey,
       signing_sk: keyPair.secretKey,
       message: "Keypom is lit!",
     },
     deposit: "0",
     gas: "300000000000000",
+  });
+
+  await createAccountDeployContract({
+    signerAccount,
+    newAccountId: marketplaceContractId,
+    amount: "15",
+    near,
+    wasmPath: "./out/marketplace.wasm",
+    methodName: "new",
+    args: {
+      contract_owner: marketplaceContractId,
+      keypom_contract: keypomContractId,
+    },
+    deposit: "0",
+    gas: "300000000000000",
+  });
+}
+
+export async function createAccountDeployContract({
+  signerAccount,
+  newAccountId,
+  amount,
+  near,
+  wasmPath,
+  methodName,
+  args,
+  deposit = "0",
+  gas = "300000000000000",
+}: {
+  signerAccount: any;
+  newAccountId: string;
+  amount: string;
+  near: any;
+  wasmPath: string;
+  methodName: string;
+  args: any;
+  deposit?: string;
+  gas?: string;
+}) {
+  console.log("Creating account: ", newAccountId);
+  await createAccount({ signerAccount, newAccountId, amount });
+  console.log("Deploying contract: ", newAccountId);
+  const accountObj = await near.account(newAccountId);
+  await sendTransaction({
+    signerAccount: accountObj,
+    receiverId: newAccountId,
+    methodName,
+    args,
+    deposit,
+    gas,
     wasmPath,
   });
   console.log("Deployed.");
@@ -164,18 +224,15 @@ export function generateEvents(numEvents = 50) {
   }
 
   function generateQuestions() {
-    if (Math.random() > 0.5) {
+    if (Math.random() > 0) {
       // Single day event
-      return questions.slice(
-        0,
-        Math.floor(Math.random() * questions.length) + 1,
-      );
+      return questions.slice(0, 5);
     } else {
       return undefined;
     }
   }
 
-  let events: Event[] = [];
+  let events: ZombieReturnedEvent[] = [];
   for (let i = 0; i < numEvents; i++) {
     const themeIndex = Math.floor(Math.random() * eventThemes.length);
     const eventName = `${eventThemes[themeIndex]} ${
@@ -187,6 +244,7 @@ export function generateEvents(numEvents = 50) {
     const eventDate = generateEventDate();
     const eventInfo = {
       name: eventName,
+      dateCreated: Date.now().toString(),
       id: eventId,
       description: `A unique ${eventThemes[
         themeIndex
@@ -225,17 +283,13 @@ export function generateEvents(numEvents = 50) {
           Math.random() > 0.5
             ? Math.floor(Math.random() * 1000) + 1
             : undefined, // 1 to 100 tickets
-      };
-      tickets.push({
         dateCreated: new Date().toISOString(),
-        dropName: `${ticketType} Ticket for ${eventName}`,
-        ticketInfo: ticketInfo,
-        eventInfo: j === 0 ? eventInfo : undefined, // Include event info only in the first ticket
-      });
+      };
+      tickets.push(ticketInfo);
     }
 
     events.push({
-      eventInfo: eventInfo,
+      eventMeta: eventInfo,
       tickets: tickets,
     });
   }
@@ -243,7 +297,7 @@ export function generateEvents(numEvents = 50) {
   return events;
 }
 
-function uint8ArrayToBase64(u8Arr: Uint8Array): string {
+export function uint8ArrayToBase64(u8Arr: Uint8Array): string {
   const string = u8Arr.reduce(
     (data, byte) => data + String.fromCharCode(byte),
     "",
@@ -258,7 +312,7 @@ export async function generateKeyPair(): Promise<{
   return await crypto.subtle.generateKey(
     {
       name: "RSA-OAEP",
-      modulusLength: 2048,
+      modulusLength: 4096,
       publicExponent: new Uint8Array([1, 0, 1]),
       hash: { name: "SHA-256" },
     },
@@ -285,20 +339,10 @@ export async function encryptWithPublicKey(
 
 export async function deriveKeyFromPassword(
   password: string,
-  saltHex: string,
+  saltBase64: string,
 ): Promise<any> {
-  // Function to convert hex string to Uint8Array
-  function hexStringToUint8Array(hexString: string): Uint8Array {
-    const length = hexString.length / 2;
-    const uint8Array = new Uint8Array(length);
-    for (let i = 0; i < length; i++) {
-      uint8Array[i] = parseInt(hexString.substring(i * 2, i * 2 + 2), 16);
-    }
-    return uint8Array;
-  }
-
-  // Convert hex string salt to Uint8Array
-  const salt = hexStringToUint8Array(saltHex);
+  // Convert Base64-encoded salt back to Uint8Array
+  const salt = Uint8Array.from(atob(saltBase64), (c) => c.charCodeAt(0));
 
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -397,4 +441,177 @@ export async function decryptWithPrivateKey(
   return new TextDecoder().decode(decrypted);
 }
 
-export async function generateEncryptedKey(message, publicKey) {}
+export async function exportPublicKeyToBase64(publicKey: any) {
+  // Export the key to the SPKI format
+  const exportedKey = await crypto.subtle.exportKey("spki", publicKey);
+
+  // Convert the exported key to a Base64 string
+  const base64Key = arrayBufferToBase64(exportedKey);
+
+  return base64Key;
+}
+
+export function arrayBufferToBase64(buffer: any) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+async function base64ToPublicKey(base64Key: string) {
+  // Decode the Base64 string to an ArrayBuffer
+  const binaryString = atob(base64Key);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  // Import the key from the ArrayBuffer
+  const publicKey = await crypto.subtle.importKey(
+    "spki",
+    bytes.buffer,
+    {
+      name: "RSA-OAEP",
+      hash: { name: "SHA-256" },
+    },
+    true,
+    ["encrypt"],
+  );
+
+  return publicKey;
+}
+
+export const addTickets = async ({
+  signerAccount,
+  funderAccountId,
+  keypomAccountId,
+  marketplaceAccount,
+  dropId,
+  ticket,
+  eventId,
+  eventQuestions,
+}: {
+  signerAccount: any;
+  funderAccountId: string;
+  keypomAccountId: string;
+  marketplaceAccount: any;
+  dropId: string;
+  ticket: DropMetadata;
+  eventId: string;
+  eventQuestions?: QuestionInfo[];
+}): Promise<string[]> => {
+  let numTickets = Math.floor(Math.random() * 100) + 1; // Number of tickets to mint
+  const maxSupply = ticket.maxSupply || 100;
+  numTickets = Math.min(numTickets, maxSupply); // Ensure we don't mint more than the max supply
+
+  let keyData: {
+    public_key: string;
+    metadata: string;
+    key_owner?: string;
+  }[] = [];
+  let keyPairs: string[] = [];
+
+  const funderInfo = await signerAccount.viewFunction(
+    keypomAccountId,
+    "get_funder_info",
+    { account_id: funderAccountId },
+  );
+
+  const funderMeta: FunderMetadata = JSON.parse(funderInfo.metadata);
+  console.log("Funder Metadata: ", funderMeta);
+  const eventInfo = funderMeta[eventId];
+
+  let pubKey;
+  if (eventInfo.pubKey !== undefined) {
+    pubKey = await base64ToPublicKey(eventInfo.pubKey);
+    console.log("Public Key: ", pubKey);
+  }
+
+  for (let i = 0; i < numTickets; i++) {
+    const keyPair = KeyPair.fromRandom("ed25519");
+    keyPairs.push(keyPair.toString());
+    const publicKey = keyPair.publicKey.toString();
+    const questions = eventQuestions || [];
+
+    let answers: { [key: string]: string } = {};
+    for (const question of questions) {
+      if (question.required || Math.random() > 0.8) {
+        answers[question.question] = `${question.question}`;
+      }
+    }
+
+    let metadata = JSON.stringify({ questions: answers });
+    if (pubKey !== undefined) {
+      metadata = await encryptWithPublicKey(metadata, pubKey);
+      console.log("Encrypted Metadata: ", metadata);
+    }
+
+    keyData.push({
+      public_key: publicKey,
+      metadata,
+      key_owner: Math.random() > 0.5 ? "owner.testnet" : undefined,
+    });
+  }
+
+  await delay(1000); // Delay to prevent nonce retries exceeded error
+
+  try {
+    await sendTransaction({
+      signerAccount: marketplaceAccount,
+      receiverId: keypomAccountId,
+      methodName: "add_keys",
+      args: {
+        drop_id: dropId,
+        key_data: keyData,
+      },
+      deposit: "5",
+      gas: "300000000000000",
+    });
+    return keyPairs;
+  } catch (e) {
+    console.log("(Add Tix) ERROR!!!: ", e);
+  }
+  return [];
+};
+
+// async function foo() {
+//   // Generate a random key pair
+//   const { publicKey, privateKey } = await generateKeyPair();
+//
+//   // Step 2: Encrypt data using the public key
+//   const encryptedData = await encryptWithPublicKey(dataToEncrypt, publicKey);
+//   console.log("Encrypted Data:", encryptedData);
+//
+//   // Step 3: Derive a symmetric key from the password
+//   const saltHex = crypto.randomBytes(16).toString("hex");
+//   const symmetricKey = await deriveKeyFromPassword(masterKey, saltHex);
+//
+//   // Step 4: Encrypt the private key using the symmetric key
+//   const { encryptedPrivateKeyBase64, ivBase64 } = await encryptPrivateKey(
+//     privateKey,
+//     symmetricKey,
+//   );
+//   console.log("Encrypted Private Key:", encryptedPrivateKeyBase64);
+//
+//   // Simulate storing and later retrieving the encrypted private key and iv
+//   const storedEncryptedPrivateKey = encryptedPrivateKeyBase64;
+//   const storedIv = ivBase64;
+//
+//   // Step 5: Decrypt the private key using the symmetric key
+//   const decryptedPrivateKey = await decryptPrivateKey(
+//     storedEncryptedPrivateKey,
+//     storedIv,
+//     symmetricKey,
+//   );
+//
+//   // Step 6: Decrypt the encrypted data using the decrypted private key
+//   const decryptedData = await decryptWithPrivateKey(
+//     encryptedData,
+//     decryptedPrivateKey,
+//   );
+//   console.log("Decrypted Data:", decryptedData);
+// }
