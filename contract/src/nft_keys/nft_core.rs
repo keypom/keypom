@@ -5,7 +5,7 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 pub struct NftTransferMemo {
     pub linkdrop_pk: PublicKey,
-    pub signature: Base64VecU8,
+    pub signature: Option<Base64VecU8>,
     pub new_public_key: PublicKey,
 }
 
@@ -32,12 +32,15 @@ impl Keypom {
             signature,
             new_public_key: new_pk,
         } = nft_transfer_memo;
-        require!(
-            self.verify_signature(signature, linkdrop_pk.clone()),
-            "Invalid signature for public key"
-        );
 
         let sender_id = env::predecessor_account_id();
+
+        if env::signer_account_pk() == linkdrop_pk {
+            require!(
+                self.verify_signature(signature.expect("Missing signature"), linkdrop_pk.clone()),
+                "Invalid signature for public key"
+            );
+        }
 
         // Token ID is either from sender PK or passed in
         let token_id = self
@@ -92,4 +95,3 @@ impl Keypom {
         None
     }
 }
-
