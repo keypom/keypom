@@ -101,7 +101,7 @@ export async function createContracts({
   await createAccountDeployContract({
     signerAccount,
     newAccountId: keypomContractId,
-    amount: "15",
+    amount: "20",
     near,
     wasmPath: "./out/keypom.wasm",
     methodName: "new",
@@ -119,13 +119,13 @@ export async function createContracts({
   await createAccountDeployContract({
     signerAccount,
     newAccountId: marketplaceContractId,
-    amount: "15",
+    amount: "10",
     near,
     wasmPath: "./out/marketplace.wasm",
     methodName: "new",
     args: {
-      contract_owner: marketplaceContractId,
       keypom_contract: keypomContractId,
+      owner_id: "minqi.testnet"
     },
     deposit: "0",
     gas: "300000000000000",
@@ -178,7 +178,8 @@ export async function createAccount({
   newAccountId: string;
   amount: string;
 }) {
-  const keyPair = KeyPair.fromRandom("ed25519");
+  // const keyPair = KeyPair.fromRandom("ed25519");
+  const keyPair = KeyPair.fromString("ed25519:2vQcYHvPqBrzTnAyeWVConoYVRR25dwj2UNqPXkWrU88L47B1FoWZaXXwWtr7hBFBge5pFwTdYzjtrUN8pTKpsxY");
   const publicKey = keyPair.publicKey.toString();
   await keyStore.setKey(config.networkId, newAccountId, keyPair);
 
@@ -272,17 +273,15 @@ export function generateEvents(numEvents = 50) {
           new Date(2024, 0, 1),
           new Date(2024, 11, 31),
         ),
-        price: `${utils.format.parseNearAmount(
-          (Math.floor(Math.random() * 451) + 25).toString(),
-        )}`, // $25 to $500
+        // price: `${utils.format.parseNearAmount(
+        //   (Math.floor(Math.random() * 150) + 1).toString(),
+        // )}`, // $25 to $500
+        price: `0`,
         artwork:
           ticketArtworkUrls[
             Math.floor(Math.random() * ticketArtworkUrls.length)
           ],
-        maxSupply:
-          Math.random() > 0.5
-            ? Math.floor(Math.random() * 1000) + 1
-            : undefined, // 1 to 100 tickets
+        maxSupply: Math.floor(Math.random() * 20) + 1,
         dateCreated: new Date().toISOString(),
       };
       tickets.push(ticketInfo);
@@ -504,9 +503,8 @@ export const addTickets = async ({
   eventId: string;
   eventQuestions?: QuestionInfo[];
 }): Promise<string[]> => {
-  let numTickets = Math.floor(Math.random() * 100) + 1; // Number of tickets to mint
   const maxSupply = ticket.maxSupply || 100;
-  numTickets = Math.min(numTickets, maxSupply); // Ensure we don't mint more than the max supply
+  let numTickets = Math.floor(Math.random() * maxSupply) + 1; // Number of tickets to mint
 
   let keyData: {
     public_key: string;
@@ -522,7 +520,7 @@ export const addTickets = async ({
   );
 
   const funderMeta: FunderMetadata = JSON.parse(funderInfo.metadata);
-  console.log("Funder Metadata: ", funderMeta);
+  // console.log("Funder Metadata: ", funderMeta);
   const eventInfo = funderMeta[eventId];
 
   let pubKey;
@@ -547,7 +545,7 @@ export const addTickets = async ({
     let metadata = JSON.stringify({ questions: answers });
     if (pubKey !== undefined) {
       metadata = await encryptWithPublicKey(metadata, pubKey);
-      console.log("Encrypted Metadata: ", metadata);
+      // console.log("Encrypted Metadata: ", metadata);
     }
 
     keyData.push({

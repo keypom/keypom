@@ -31,13 +31,13 @@ let allKeyData: { [key: string]: string[] } = {};
 
 const main = async () => {
   const near = await initNear();
-  const createAccounts = true;
+  const createAccounts = false;
 
-  const signerAccount = await near.account("benjiman.testnet");
+  const signerAccount = await near.account("minqi.testnet");
   const masterKey = "MASTER_KEY";
 
-  let keypomContractId = `1709832679459-kp-ticketing.testnet`;
-  let marketplaceContractId = `1709145202470-marketplace.testnet`;
+  let keypomContractId = `1710351544642-kp-ticketing.testnet`;
+  let marketplaceContractId = `1710351544642-marketplace.testnet`;
   if (createAccounts) {
     keypomContractId = `${Date.now().toString()}-kp-ticketing.testnet`;
     marketplaceContractId = `${Date.now().toString()}-marketplace.testnet`;
@@ -50,13 +50,19 @@ const main = async () => {
   }
 
   const marketAccount = await near.account(marketplaceContractId);
+  const keypomAccount = await near.account(keypomContractId);
 
   //  Create Events (and generate keypair if necessary / update user metadata)
   // To store: public key, encrypted private key, iv, salt
   const events = generateEvents(1);
   let nonce = 0;
-  let funderMetadata: FunderMetadata = {};
+  const funderInfo = await signerAccount.viewFunction(
+    keypomContractId,
+    "get_funder_info",
+    { account_id: signerAccount.accountId },
+  );
 
+  const funderMetadata: FunderMetadata = funderInfo == undefined ? {} : JSON.parse(funderInfo.metadata);// initialize this to whatever the funder metadata currently is
   let allTickets: Array<{
     dropId: string;
     ticket: DropMetadata;
@@ -87,19 +93,19 @@ const main = async () => {
     let drop_ids: string[] = [];
     let drop_configs: any = [];
     let asset_datas: any = [];
-    let ticket_information: any = [];
+    let ticket_information: { [key: string]: any } = {};
     let base_price: number = 1;
     
     for (const ticket of event.tickets) {
       nonce += 1;
       const dropId = `${Date.now().toString()}-${ticket.name}-${nonce}`;
-      ticket_information.push({
-        [`${dropId}`]: {
-          max_tickets: Math.floor(Math.random() * 20) + 10,
-          price: utils.format.parseNearAmount(base_price.toString())
-        }
-      })
+      
+      ticket_information[`${dropId}`] = {
+        max_tickets: ticket.maxSupply,
+        price: ticket.price
+      }
       base_price += 1;
+
       allTickets.push({
         dropId,
         ticket,
@@ -125,6 +131,12 @@ const main = async () => {
       drop_configs.push(dropConfig);
     }
 
+    console.log(`Creating event with ticket information: ${JSON.stringify(ticket_information)}`)
+
+    const funderMetadataString = JSON.stringify(funderMetadata);
+    fs.writeFileSync("funder_metadata.txt", funderMetadataString);
+    console.log("Funder Metadata written to file: funder_metadata.txt");
+
     await sendTransaction({
       signerAccount,
       receiverId: keypomContractId,
@@ -137,12 +149,12 @@ const main = async () => {
         on_success: {
           receiver_id: marketplaceContractId,
           method_name: "create_event",
-          args: {
+          args: JSON.stringify({
             event_id: event.eventMeta.id,
             funder_id: signerAccount.accountId,
             ticket_information
-          },
-          attached_deposit: "5",
+          }),
+          attached_deposit: utils.format.parseNearAmount("1"),
         }
       },
       deposit: "15",
@@ -157,7 +169,7 @@ const main = async () => {
     const { dropId, eventId, ticket, eventQuestions } = curTicket;
     const keyPairs = await addTickets({
       signerAccount,
-      funderAccountId: "benjiman.testnet",
+      funderAccountId: signerAccount.accountId,
       keypomAccountId: keypomContractId,
       marketplaceAccount: marketAccount,
       dropId,
@@ -198,5 +210,5 @@ async function test() {
   console.log("Event Info: ", eventInfo);
 }
 
-test();
-// main().catch(console.error);
+//test();
+main().catch(console.error);
