@@ -1,7 +1,8 @@
 import {
   artworkUrls,
   descriptions,
-  eventThemes,
+  eventDescriptions,
+  eventNames,
   locations,
   questions,
   ticketArtworkUrls,
@@ -198,7 +199,7 @@ export async function createAccount({
   });
 }
 
-export function generateEvents(numEvents = 50) {
+export function generateEvents(numEvents = 40) {
   // Assume necessary context (like eventThemes, locations, etc.) is defined elsewhere
 
   function randomDate(start: Date, end: Date): Date {
@@ -259,20 +260,16 @@ export function generateEvents(numEvents = 50) {
 
   let events: ZombieReturnedEvent[] = [];
   for (let i = 0; i < numEvents; i++) {
-    const themeIndex = Math.floor(Math.random() * eventThemes.length);
-    const eventName = `${eventThemes[themeIndex]} ${
-      ["Festival", "Conference", "Exhibition", "Carnival", "Workshop"][
-        Math.floor(Math.random() * 5)
-      ]
-    }`;
+    const themeIndex = Math.floor(Math.random() * (eventNames.length <= eventDescriptions.length?
+      eventNames.length : eventDescriptions.length));
+
+    const eventName = `${eventNames[themeIndex]}`;
     const eventId = crypto.randomUUID().toString();
     const eventInfo = {
       name: eventName,
       dateCreated: Date.now().toString(),
       id: eventId,
-      description: `A unique ${eventThemes[
-        themeIndex
-      ].toLowerCase()} experience bringing together the best in the field.`,
+      description: `${eventDescriptions[themeIndex]}`,
       location: `${locations[Math.floor(Math.random() * locations.length)]}`,
       date: generateDateInfo(),
       artwork: artworkUrls[Math.floor(Math.random() * artworkUrls.length)],
