@@ -123,6 +123,7 @@ const main = async () => {
           passValidThrough: ticket.passValidThrough,
           price: ticket.price,
           maxSupply: ticket.maxSupply,
+          limitPerUser: Math.floor(Math.random() * 10) + 1,
         };
         const nftMetadata: TicketInfoMetadata = {
           title: ticket.name,
@@ -137,6 +138,7 @@ const main = async () => {
           add_key_allowlist: [marketplaceContractId],
           transfer_key_allowlist: [marketplaceContractId],
         };
+
         const assetData = [
           {
             uses: 2,
@@ -183,6 +185,7 @@ const main = async () => {
               event_id: event.eventMeta.id,
               funder_id: signerAccount.accountId,
               ticket_information,
+              stripe_status: false,
             }),
             attached_deposit: utils.format.parseNearAmount("1"),
           },

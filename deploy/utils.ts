@@ -260,8 +260,12 @@ export function generateEvents(numEvents = 40) {
 
   let events: ZombieReturnedEvent[] = [];
   for (let i = 0; i < numEvents; i++) {
-    const themeIndex = Math.floor(Math.random() * (eventNames.length <= eventDescriptions.length?
-      eventNames.length : eventDescriptions.length));
+    const themeIndex = Math.floor(
+      Math.random() *
+        (eventNames.length <= eventDescriptions.length
+          ? eventNames.length
+          : eventDescriptions.length),
+    );
 
     const eventName = `${eventNames[themeIndex]}`;
     const eventId = crypto.randomUUID().toString();
@@ -274,6 +278,7 @@ export function generateEvents(numEvents = 40) {
       date: generateDateInfo(),
       artwork: artworkUrls[Math.floor(Math.random() * artworkUrls.length)],
       questions: generateQuestions(),
+      nearCheckout: true,
     };
 
     let tickets: ZombieDropMetadata[] = [];

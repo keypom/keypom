@@ -23,6 +23,7 @@ export interface TicketMetadataExtra {
   salesValidThrough: DateAndTimeInfo;
   passValidThrough: DateAndTimeInfo;
   price: string;
+  limitPerUser: number;
   maxSupply?: number;
 }
 
@@ -37,6 +38,8 @@ export interface TicketInfoMetadata {
 export type FunderMetadata = Record<string, FunderEventMetadata>;
 
 export interface FunderEventMetadata {
+  // Stage 0
+  nearCheckout: boolean;
   // Stage 1
   name: string;
   id: string;
