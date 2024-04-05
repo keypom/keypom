@@ -1,17 +1,18 @@
 import {
   artworkUrls,
   descriptions,
-  eventThemes,
+  eventDescriptions,
+  eventNames,
   locations,
   questions,
   ticketArtworkUrls,
   ticketTypes,
 } from "./dummyData";
 import {
-  DropMetadata,
-  FunderEventMetadata,
+  DateAndTimeInfo,
   FunderMetadata,
   QuestionInfo,
+  ZombieDropMetadata,
   ZombieReturnedEvent,
 } from "./interfaces";
 import * as crypto from "crypto";
@@ -101,7 +102,7 @@ export async function createContracts({
   await createAccountDeployContract({
     signerAccount,
     newAccountId: keypomContractId,
-    amount: "20",
+    amount: "200",
     near,
     wasmPath: "./out/keypom.wasm",
     methodName: "new",
@@ -119,13 +120,14 @@ export async function createContracts({
   await createAccountDeployContract({
     signerAccount,
     newAccountId: marketplaceContractId,
-    amount: "10",
+    amount: "200",
     near,
     wasmPath: "./out/marketplace.wasm",
     methodName: "new",
     args: {
       keypom_contract: keypomContractId,
-      owner_id: "minqi.testnet"
+      owner_id: "minqi.testnet",
+      v2_keypom_contract: "v2.keypom.testnet",
     },
     deposit: "0",
     gas: "300000000000000",
@@ -179,7 +181,9 @@ export async function createAccount({
   amount: string;
 }) {
   // const keyPair = KeyPair.fromRandom("ed25519");
-  const keyPair = KeyPair.fromString("ed25519:2vQcYHvPqBrzTnAyeWVConoYVRR25dwj2UNqPXkWrU88L47B1FoWZaXXwWtr7hBFBge5pFwTdYzjtrUN8pTKpsxY");
+  const keyPair = KeyPair.fromString(
+    "ed25519:2vQcYHvPqBrzTnAyeWVConoYVRR25dwj2UNqPXkWrU88L47B1FoWZaXXwWtr7hBFBge5pFwTdYzjtrUN8pTKpsxY",
+  );
   const publicKey = keyPair.publicKey.toString();
   await keyStore.setKey(config.networkId, newAccountId, keyPair);
 
@@ -195,32 +199,53 @@ export async function createAccount({
   });
 }
 
-export function generateEvents(numEvents = 50) {
-  // Helper functions
-  function randomDate(start: Date, end: Date) {
+export function generateEvents(numEvents = 40) {
+  // Assume necessary context (like eventThemes, locations, etc.) is defined elsewhere
+
+  function randomDate(start: Date, end: Date): Date {
     return new Date(
       start.getTime() + Math.random() * (end.getTime() - start.getTime()),
-    )
-      .toISOString()
-      .split("T")[0];
+    );
   }
 
-  function formatDate(date: Date) {
-    return date.toISOString().split("T")[0];
+  function formatDateToEpoch(date: Date): number {
+    return date.getTime();
   }
 
-  function generateEventDate() {
+  function formatTime(date: Date): string {
+    let hours = date.getHours();
+    let minutes = date.getMinutes();
+    let ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    minutes = minutes < 10 ? 0 + minutes : minutes;
+    let strTime = hours + ":" + minutes + " " + ampm;
+    return strTime;
+  }
+
+  function generateDateInfo(): DateAndTimeInfo {
     const startDate = new Date(2023, 0, 1);
     const endDate = new Date(2024, 11, 31);
+    const start = randomDate(startDate, endDate);
+
     if (Math.random() > 0.5) {
       // Single day event
-      return { date: randomDate(startDate, endDate) };
+      return {
+        startDate: formatDateToEpoch(start),
+        startTime: formatTime(start), // Optional
+      };
     } else {
       // Multi-day event
-      const start = new Date(randomDate(startDate, endDate));
-      const end = new Date(start);
+      const end = new Date(
+        start.getTime() + Math.random() * (endDate.getTime() - start.getTime()),
+      );
       end.setDate(end.getDate() + Math.floor(Math.random() * 4) + 1); // 1 to 5 days duration
-      return { date: { from: formatDate(start), to: formatDate(end) } };
+      return {
+        startDate: formatDateToEpoch(start),
+        startTime: formatTime(start), // Optional
+        endDate: formatDateToEpoch(end),
+        endTime: formatTime(end), // Optional
+      };
     }
   }
 
@@ -235,29 +260,29 @@ export function generateEvents(numEvents = 50) {
 
   let events: ZombieReturnedEvent[] = [];
   for (let i = 0; i < numEvents; i++) {
-    const themeIndex = Math.floor(Math.random() * eventThemes.length);
-    const eventName = `${eventThemes[themeIndex]} ${
-      ["Festival", "Conference", "Exhibition", "Carnival", "Workshop"][
-        Math.floor(Math.random() * 5)
-      ]
-    }`;
+    const themeIndex = Math.floor(
+      Math.random() *
+        (eventNames.length <= eventDescriptions.length
+          ? eventNames.length
+          : eventDescriptions.length),
+    );
+
+    const eventName = `${eventNames[themeIndex]}`;
     const eventId = crypto.randomUUID().toString();
-    const eventDate = generateEventDate();
     const eventInfo = {
       name: eventName,
       dateCreated: Date.now().toString(),
       id: eventId,
-      description: `A unique ${eventThemes[
-        themeIndex
-      ].toLowerCase()} experience bringing together the best in the field.`,
+      description: `${eventDescriptions[themeIndex]}`,
       location: `${locations[Math.floor(Math.random() * locations.length)]}`,
-      date: eventDate,
+      date: generateDateInfo(),
       artwork: artworkUrls[Math.floor(Math.random() * artworkUrls.length)],
       questions: generateQuestions(),
+      nearCheckout: true,
     };
 
-    let tickets: DropMetadata[] = [];
-    const numTickets = Math.floor(Math.random() * 5) + 1; // 1 to 5 tickets
+    let tickets: ZombieDropMetadata[] = [];
+    const numTickets = Math.floor(Math.random() * 6) + 1;
     for (let j = 0; j < numTickets; j++) {
       const ticketType: string =
         ticketTypes[Math.floor(Math.random() * ticketTypes.length)];
@@ -265,23 +290,19 @@ export function generateEvents(numEvents = 50) {
         name: `${ticketType} Ticket`,
         eventId,
         description: descriptions[ticketType],
-        salesValidThrough: randomDate(
-          new Date(2024, 0, 1),
-          new Date(2024, 11, 31),
-        ),
-        passValidThrough: randomDate(
-          new Date(2024, 0, 1),
-          new Date(2024, 11, 31),
-        ),
-        // price: `${utils.format.parseNearAmount(
-        //   (Math.floor(Math.random() * 150) + 1).toString(),
-        // )}`, // $25 to $500
-        price: `0`,
+        salesValidThrough: generateDateInfo(),
+        passValidThrough: generateDateInfo(),
+        price:
+          Math.random() > 0.5
+            ? `${utils.format.parseNearAmount(
+                (Math.floor(Math.random() * 150) + 1).toString(),
+              )}`
+            : "0", // $25 to $500
         artwork:
           ticketArtworkUrls[
             Math.floor(Math.random() * ticketArtworkUrls.length)
           ],
-        maxSupply: Math.floor(Math.random() * 20) + 1,
+        maxSupply: Math.floor(Math.random() * 50) + 1,
         dateCreated: new Date().toISOString(),
       };
       tickets.push(ticketInfo);
@@ -499,12 +520,13 @@ export const addTickets = async ({
   keypomAccountId: string;
   marketplaceAccount: any;
   dropId: string;
-  ticket: DropMetadata;
+  ticket: ZombieDropMetadata;
   eventId: string;
   eventQuestions?: QuestionInfo[];
 }): Promise<string[]> => {
   const maxSupply = ticket.maxSupply || 100;
-  let numTickets = Math.floor(Math.random() * maxSupply) + 1; // Number of tickets to mint
+  let numTickets = Math.floor(Math.random() * maxSupply) + 1;
+  numTickets = Math.min(numTickets, maxSupply);
 
   let keyData: {
     public_key: string;
@@ -551,7 +573,6 @@ export const addTickets = async ({
     keyData.push({
       public_key: publicKey,
       metadata,
-      key_owner: Math.random() > 0.5 ? "owner.testnet" : undefined,
     });
   }
 
