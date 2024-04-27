@@ -31,7 +31,7 @@ const main = async () => {
   const near = await initNear();
   const createAccounts = true;
 
-  const signerAccount = await near.account("benjiman.testnet");
+  const signerAccount = await near.account("minqi.testnet");
   const masterKey = "MASTER_KEY";
 
   let keypomContractId = `1710351544642-kp-ticketing.testnet`;
@@ -52,7 +52,7 @@ const main = async () => {
 
   //  Create Events (and generate keypair if necessary / update user metadata)
   // To store: public key, encrypted private key, iv, salt
-  const events = generateEvents(20);
+  const events = generateEvents(3);
   let nonce = 0;
   const funderInfo = await signerAccount.viewFunction(
     keypomContractId,
@@ -60,8 +60,7 @@ const main = async () => {
     { account_id: signerAccount.accountId },
   );
 
-  const funderMetadata: FunderMetadata =
-    funderInfo == undefined ? {} : JSON.parse(funderInfo.metadata); // initialize this to whatever the funder metadata currently is
+  
   let allTickets: Array<{
     dropId: string;
     ticket: ZombieDropMetadata;
@@ -69,6 +68,8 @@ const main = async () => {
     eventQuestions?: QuestionInfo[];
   }> = [];
   for (const event of events) {
+    const funderMetadata: FunderMetadata = {}; // initialize this to whatever the funder metadata currently is
+    //JSON.parse(funderInfo.metadata)
     try {
       console.log("Deploying Event: ", event.eventMeta.name);
       if ((event.eventMeta.questions || []).length > 0) {
@@ -84,6 +85,8 @@ const main = async () => {
 
         event.eventMeta.pubKey = await exportPublicKeyToBase64(publicKey);
         event.eventMeta.encPrivKey = encryptedPrivateKeyBase64;
+        // event.eventMeta.pubKey = "pubKeyPlaceholder";
+        // event.eventMeta.encPrivKey = "encPrivKeyPlaceholder";
         event.eventMeta.iv = ivBase64;
         event.eventMeta.salt = saltBase64;
       }
