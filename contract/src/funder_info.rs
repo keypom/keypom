@@ -181,47 +181,29 @@ impl Keypom {
             });
         // Check if new_metadata is valid JSON
         if let Some(metadata_str) = &new_metadata {
-            if let Err(err) = serde_json::from_str::<serde_json::Value>(metadata_str) {
-                panic!("New funder metadata is not valid JSON: {}", err);
-            }
+            let result = serde_json::from_str::<serde_json::Value>(metadata_str);
+            require!(result.is_ok(), format!("New funder metadata is not valid JSON: {:?}", result.as_ref().err().unwrap()).to_string());
         }
 
         // Overwrite if specified, otherwise, append (default)
         if append_to_metadata.unwrap_or(true) {
             // Append to existing metadata
             if let Some(existing_metadata) = &funder_info.metadata {
-                let mut existing_metadata_obj: Value = serde_json::from_str(&existing_metadata).expect("Previous funder metadata was not valid object");
-                
-                // Attempt to parse new metadata
-                let new_metadata_json_str = new_metadata.clone().unwrap_or_default();
-                let new_metadata_obj: Value =
-                    serde_json::from_str(&new_metadata_json_str)
-                        .expect("New funder metadata is not valid JSON");
-                // Merge existing metadata with new metadata
-                for (key, value) in new_metadata_obj.as_object().unwrap() {
-                    existing_metadata_obj[key] = value.clone();
-                }
+                let modified_existing_metadata = &existing_metadata[..&existing_metadata.len() - 1];
+                let modified_input_metadata = &new_metadata.unwrap()[1..];
+                let new_metadata = format!("{},{}", modified_existing_metadata, modified_input_metadata);
 
-                // Serialize merged metadata back to string
-                near_sdk::log!(
-                    "New metadata: {:?}",
-                    serde_json::to_string(&existing_metadata_obj).unwrap()
-                );
-                funder_info.metadata = Some(serde_json::to_string(&existing_metadata_obj).unwrap());
+                // ensure new metadata is still JSON
+                let result = serde_json::from_str::<serde_json::Value>(&new_metadata);
+                require!(result.is_ok(), format!("New funder metadata is not valid JSON: {:?}", result.as_ref().err().unwrap()).to_string());
+
+                funder_info.metadata = Some(new_metadata);
             } else {
                 // Old metadata was empty
-                near_sdk::log!(
-                    "New metadata: {:?}",
-                    new_metadata.clone()
-                );
                 funder_info.metadata = new_metadata;
             }
         } else {
             // Overwrite current metadata
-            near_sdk::log!(
-                "New metadata: {:?}",
-                new_metadata.clone()
-            );
             funder_info.metadata = new_metadata;
             
         }
@@ -267,166 +249,3 @@ impl Keypom {
         refund_amount
     }
 }
-/*
-Existing Metadata: "{\"5597e3a7-d37b-4dc7-bad8-75793aa04133\":{\"name\":\"Winter Wonderland Gala\",\"dateCreated\":\"1714195219351\",\"id\":\"5597e3a7-d37b-4dc7-bad8-75793aa04133\",\"description\":\"\",\"location\":\"\",\"date\":{\"startDate\":1675643656571,\"startTime\":\"7:34 PM\",\"endDate\":1712162835367,\"endTime\":\"12:47 PM\"},\"artwork\":\"\",\"questions\":[{\"question\":\"First Name\",\"required\":true},{\"question\":\"Last Name\",\"required\":true},{\"question\":\"How did you find out about this event?\",\"required\":true},{\"question\":\"How many events have you attended in the past year?\",\"required\":false},{\"question\":\"How many people are in your company?\",\"required\":false}],\"nearCheckout\":true,\"pubKey\":\"pubKeyPlaceholder\",\"encPrivKey\":\"encPrivKeyPlaceholder\",\"iv\":\"MfFmwJ1qVqdXdvuF\",\"salt\":\"Bsw6DPgfURbzQ9YqmzXy1A==\"}}"
-Existing Metadata JSON parsed:
-{
-  '5597e3a7-d37b-4dc7-bad8-75793aa04133': {
-    name: 'Winter Wonderland Gala',
-    dateCreated: '1714195219351',
-    id: '5597e3a7-d37b-4dc7-bad8-75793aa04133',
-    description: '',
-    location: '',
-    date: {
-      startDate: 1675643656571,
-      startTime: '7:34 PM',
-      endDate: 1712162835367,
-      endTime: '12:47 PM'
-    },
-    artwork: '',
-    questions: [ [Object], [Object], [Object], [Object], [Object] ],
-    nearCheckout: true,
-    pubKey: 'pubKeyPlaceholder',
-    encPrivKey: 'encPrivKeyPlaceholder',
-    iv: 'MfFmwJ1qVqdXdvuF',
-    salt: 'Bsw6DPgfURbzQ9YqmzXy1A=='
-  }
-}
-new_metadata_obj: {
-    "84099380-fa99-4794-bcd8-81bbc495c282": {
-        "artwork": String(""), 
-        "date": {
-            "endDate": Number(1725092279010), 
-            "endTime": String("4:17 AM"), 
-            "startDate": Number(1721626571961), 
-            "startTime": String("1:36 AM")
-        }, 
-        "dateCreated": String("1714195219353"), 
-        "description": String(""), 
-        "encPrivKey": String("encPrivKeyPlaceholder"), 
-        "id": String("84099380-fa99-4794-bcd8-81bbc495c282"), 
-        "iv": String("zfBaRsEN7M77cnT8"), 
-        "location": String(""), 
-        "name": String("Automotive Expo and Car Show"), 
-        "nearCheckout": Bool(true), 
-        "pubKey": String("pubKeyPlaceholder"), 
-        "questions": Array [Object {"question": String("First Name"), "required": Bool(true)}, Object {"question": String("Last Name"), "required": Bool(true)}, Object {"question": String("How did you find out about this event?"), "required": Bool(true)}, Object {"question": String("How many events have you attended in the past year?"), "required": Bool(false)}, Object {"question": String("How many people are in your company?"), "required": Bool(false)}], 
-        "salt": String("40NOGhtn9tnuG0BimTebJg==")
-    }
-}
-key: "84099380-fa99-4794-bcd8-81bbc495c282"
-value: Object {"artwork": String(""), "date": Object {"endDate": Number(1725092279010), "endTime": String("4:17 AM"), "startDate": Number(1721626571961), "startTime": String("1:36 AM")}, "dateCreated": String("1714195219353"), "description": String(""), "encPrivKey": String("encPrivKeyPlaceholder"), "id": String("84099380-fa99-4794-bcd8-81bbc495c282"), "iv": String("zfBaRsEN7M77cnT8"), "location": String(""), "name": String("Automotive Expo and Car Show"), "nearCheckout": Bool(true), "pubKey": String("pubKeyPlaceholder"), "questions": Array [Object {"question": String("First Name"), "required": Bool(true)}, Object {"question": String("Last Name"), "required": Bool(true)}, Object {"question": String("How did you find out about this event?"), "required": Bool(true)}, Object {"question": String("How many events have you attended in the past year?"), "required": Bool(false)}, Object {"question": String("How many people are in your company?"), "required": Bool(false)}], "salt": String("40NOGhtn9tnuG0BimTebJg==")}
-
-Merged Metadata: Object {
-    "5597e3a7-d37b-4dc7-bad8-75793aa04133": {
-        "artwork": String(""), 
-        "date": {
-            "endDate": Number(1712162835367), 
-            "endTime": String("12:47 PM"), 
-            "startDate": Number(1675643656571), 
-            "startTime": String("7:34 PM")
-        }, 
-        "dateCreated": String("1714195219351"), 
-        "description": String(""), 
-        "encPrivKey": String("encPrivKeyPlaceholder"), 
-        "id": String("5597e3a7-d37b-4dc7-bad8-75793aa04133"), 
-        "iv": String("MfFmwJ1qVqdXdvuF"), 
-        "location": String(""), 
-        "name": String("Winter Wonderland Gala"), 
-        "nearCheckout": Bool(true), 
-        "pubKey": String("pubKeyPlaceholder"), 
-        "questions": Array [Object {"question": String("First Name"), "required": Bool(true)}, Object {"question": String("Last Name"), "required": Bool(true)}, Object {"question": String("How did you find out about this event?"), "required": Bool(true)}, Object {"question": String("How many events have you attended in the past year?"), "required": Bool(false)}, Object {"question": String("How many people are in your company?"), "required": Bool(false)}], 
-        "salt": String("Bsw6DPgfURbzQ9YqmzXy1A==")
-    }, 
-    "84099380-fa99-4794-bcd8-81bbc495c282": {
-        "artwork": String(""), 
-        "date":{
-            "endDate": Number(1725092279010), 
-            "endTime": String("4:17 AM"), 
-            "startDate": Number(1721626571961), 
-            "startTime": String("1:36 AM")
-        }, 
-        "dateCreated": String("1714195219353"), 
-        "description": String(""), 
-        "encPrivKey": String("encPrivKeyPlaceholder"), 
-        "id": String("84099380-fa99-4794-bcd8-81bbc495c282"), 
-        "iv": String("zfBaRsEN7M77cnT8"), 
-        "location": String(""), 
-        "name": String("Automotive Expo and Car Show"), 
-        "nearCheckout": Bool(true), 
-        "pubKey": String("pubKeyPlaceholder"), 
-        "questions": Array [Object {"question": String("First Name"), "required": Bool(true)}, Object {"question": String("Last Name"), "required": Bool(true)}, Object {"question": String("How did you find out about this event?"), "required": Bool(true)}, Object {"question": String("How many events have you attended in the past year?"), "required": Bool(false)}, Object {"question": String("How many people are in your company?"), "required": Bool(false)}], 
-        "salt": String("40NOGhtn9tnuG0BimTebJg==")
-    }
-}
-
-NEXT TXN
- "{
-    "5597e3a7-d37b-4dc7-bad8-75793aa04133\":{
-        "artwork\":\"\",
-        "date\":{
-            "endDate\":1712162835367,
-            "endTime\":\"12:47 PM\",
-            "startDate\":1675643656571,
-            "startTime\":\"7:34 PM\"
-        },
-        "dateCreated\":\"1714195219351\",
-        "description\":\"\",
-        "encPrivKey\":\"encPrivKeyPlaceholder\",
-        "id\":\"5597e3a7-d37b-4dc7-bad8-75793aa04133\",
-        "iv\":\"MfFmwJ1qVqdXdvuF\",
-        "location\":\"\",
-        "name\":\"Winter Wonderland Gala\",
-        "nearCheckout\":true,
-        "pubKey\":\"pubKeyPlaceholder\",
-        "questions\":[{\"question\":\"First Name\",\"required\":true},{\"question\":\"Last Name\",\"required\":true},{\"question\":\"How did you find out about this event?\",\"required\":true},{\"question\":\"How many events have you attended in the past year?\",\"required\":false},{\"question\":\"How many people are in your company?\",\"required\":false}],
-        "salt\":\"Bsw6DPgfURbzQ9YqmzXy1A==\"
-    },
-    "84099380-fa99-4794-bcd8-81bbc495c282\":{
-        "artwork\":\"\",
-        "date\":{
-            "endDate\":1725092279010,
-            "endTime\":\"4:17 AM\",
-            "startDate\":1721626571961,
-            "startTime\":\"1:36 AM\"
-        },
-        "dateCreated\":\"1714195219353\",
-        "description\":\"\",
-        "encPrivKey\":\"encPrivKeyPlaceholder\",
-        "id\":\"84099380-fa99-4794-bcd8-81bbc495c282\",
-        "iv\":\"zfBaRsEN7M77cnT8\",
-        "location\":\"\",
-        "name\":\"Automotive Expo and Car Show\",
-        "nearCheckout\":true,
-        "pubKey\":\"pubKeyPlaceholder\",
-        "questions\":[{\"question\":\"First Name\",\"required\":true},{\"question\":\"Last Name\",\"required\":true},{\"question\":\"How did you find out about this event?\",\"required\":true},{\"question\":\"How many events have you attended in the past year?\",\"required\":false},{\"question\":\"How many people are in your company?\",\"required\":false}],
-        "salt\":\"40NOGhtn9tnuG0BimTebJg==\"
-    }
-}
-{
-    "84099380-fa99-4794-bcd8-81bbc495c282\":{
-        "name\":\"Automotive Expo and Car Show\",
-        "dateCreated\":\"1714195219353\",
-        "id\":\"84099380-fa99-4794-bcd8-81bbc495c282\",
-        "description\":\"\",
-        "location\":\"\",
-        "date\":{
-            "startDate\":1721626571961,
-            "startTime\":\"1:36 AM\",
-            "endDate\":1725092279010,
-            "endTime\":\"4:17 AM\"
-        },
-        "artwork\":\"\",
-        "questions\":[{\"question\":\"First Name\",\"required\":true},{\"question\":\"Last Name\",\"required\":true},{\"question\":\"How did you find out about this event?\",\"required\":true},{\"question\":\"How many events have you attended in the past year?\",\"required\":false},{\"question\":\"How many people are in your company?\",\"required\":false}],
-        "nearCheckout\":true,
-        "pubKey\":\"pubKeyPlaceholder\",
-        "encPrivKey\":\"encPrivKeyPlaceholder\",
-        "iv\":\"zfBaRsEN7M77cnT8\",
-        "salt\":\"40NOGhtn9tnuG0BimTebJg==\"
-    }
-}"
-
-Charging user for storage: 15250000000000000000000 (deposit: 14910180000000000000000000)
-Deposit left after changing user metadata: 14894930000000000000000000
-Refunding 13894930000000000000000000 excess deposit
-*/

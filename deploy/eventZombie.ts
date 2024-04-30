@@ -85,8 +85,8 @@ const main = async () => {
 
         event.eventMeta.pubKey = await exportPublicKeyToBase64(publicKey);
         event.eventMeta.encPrivKey = encryptedPrivateKeyBase64;
-        // event.eventMeta.pubKey = "pubKeyPlaceholder";
-        // event.eventMeta.encPrivKey = "encPrivKeyPlaceholder";
+        // event.eventMeta.pubKey = Buffer.from("a").toString("base64");
+        // event.eventMeta.encPrivKey = Buffer.from("b").toString("base64");
         event.eventMeta.iv = ivBase64;
         event.eventMeta.salt = saltBase64;
       }
@@ -190,7 +190,7 @@ const main = async () => {
               ticket_information,
               stripe_status: false,
             }),
-            attached_deposit: utils.format.parseNearAmount("1"),
+            attached_deposit: utils.format.parseNearAmount("1.5"),
           },
         },
         deposit: "15",
@@ -203,36 +203,47 @@ const main = async () => {
     }
   }
 
-  let allKeyData: { [key: string]: string[] } = {};
-  for (const curTicket of allTickets) {
-    try {
-      const { dropId, eventId, ticket, eventQuestions } = curTicket;
-      const keyPairs = await addTickets({
-        signerAccount,
-        funderAccountId: signerAccount.accountId,
-        keypomAccountId: keypomContractId,
-        marketplaceAccount: marketAccount,
-        dropId,
-        ticket,
-        eventId,
-        eventQuestions,
-      });
-
-      allKeyData[dropId] = keyPairs;
-    } catch (e) {
-      console.error("Error adding tickets: ", e);
-    }
+  try{
+    const funderInfo = await signerAccount.viewFunction(
+      keypomContractId,
+      "get_funder_info",
+      { account_id: signerAccount.accountId },
+    );
+    console.log("Funder Info: ", funderInfo);
+  }catch(e){
+    console.error("Error getting funder info: ", e);
   }
 
-  // Loop through key data and print
-  for (const dropId in allKeyData) {
-    console.log(`Drop ID: ${dropId}`);
-    for (const secretKey of allKeyData[dropId]) {
-      console.log(
-        `http://localhost:3000/tickets/ticket/${dropId}#secretKey=${secretKey}`,
-      );
-    }
-  }
+  // let allKeyData: { [key: string]: string[] } = {};
+  // for (const curTicket of allTickets) {
+  //   try {
+  //     const { dropId, eventId, ticket, eventQuestions } = curTicket;
+  //     const keyPairs = await addTickets({
+  //       signerAccount,
+  //       funderAccountId: signerAccount.accountId,
+  //       keypomAccountId: keypomContractId,
+  //       marketplaceAccount: marketAccount,
+  //       dropId,
+  //       ticket,
+  //       eventId,
+  //       eventQuestions,
+  //     });
+
+  //     allKeyData[dropId] = keyPairs;
+  //   } catch (e) {
+  //     console.error("Error adding tickets: ", e);
+  //   }
+  // }
+
+  // // Loop through key data and print
+  // for (const dropId in allKeyData) {
+  //   console.log(`Drop ID: ${dropId}`);
+  //   for (const secretKey of allKeyData[dropId]) {
+  //     console.log(
+  //       `http://localhost:3000/tickets/ticket/${dropId}#secretKey=${secretKey}`,
+  //     );
+  //   }
+  // }
 
   return;
 };
@@ -256,3 +267,4 @@ async function test() {
 
 //test();
 main().catch(console.error);
+
