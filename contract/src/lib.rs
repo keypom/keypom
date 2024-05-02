@@ -51,7 +51,7 @@ pub struct Keypom {
     pub fees_per_user: LookupMap<AccountId, KeypomFees>,
     /// Key used to sign transactions for the contract
     pub signing_pks: LookupSet<PublicKey>,
-    pub singing_admins: LookupSet<AccountId>,
+    pub signing_admins: LookupSet<AccountId>,
 
     // ------------------------ Drops ------------------------ //
     /// Map a drop ID to its internal drop data
@@ -114,7 +114,7 @@ impl Keypom {
                 per_key: 0,
             },
             signing_pks: signing_pks_set,
-            singing_admins: signing_admins_set,
+            signing_admins: signing_admins_set,
         }
     }
 
@@ -131,16 +131,16 @@ impl Keypom {
     #[private]
     pub fn add_signing_admin(&mut self, account_id: AccountId) {
         require!(env::predecessor_account_id() == env::current_account_id(), "Only the contract can add admins");
-        self.singing_admins.insert(&account_id);
+        self.signing_admins.insert(&account_id);
     }
 
     pub fn add_signing_pks(&mut self, public_keys: Vec<PublicKey>) {
-        require!(self.singing_admins.contains(&env::predecessor_account_id()), "Only admins can add signing pks");
+        require!(self.signing_admins.contains(&env::predecessor_account_id()), "Only admins can add signing pks");
         public_keys.iter().for_each(|pk| {self.signing_pks.insert(pk);});
     }
 
     pub fn remove_signing_pks(&mut self, public_keys: Vec<PublicKey>) {
-        require!(self.singing_admins.contains(&env::predecessor_account_id()), "Only admins can remove signing pks");
+        require!(self.signing_admins.contains(&env::predecessor_account_id()), "Only admins can remove signing pks");
         public_keys.iter().for_each(|pk| {self.signing_pks.remove(pk);});
     }
 
