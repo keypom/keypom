@@ -1,5 +1,7 @@
 use crate::*;
 
+use serde_json::Value;
+
 #[near_bindgen]
 impl Keypom {
     /// Allows users to add to their balance. This is to prepay and cover drop costs
@@ -7,7 +9,7 @@ impl Keypom {
     pub fn set_funder_metadata(&mut self, metadata: Option<String>) -> bool {
         self.assert_no_global_freeze();
         let refund_amount =
-            self.internal_modify_user_metadata(metadata, env::attached_deposit().as_yoctonear());
+            self.internal_modify_user_metadata(metadata, env::attached_deposit().as_yoctonear(), None);
 
         if refund_amount > 0 {
             Promise::new(env::predecessor_account_id().clone())
@@ -165,6 +167,7 @@ impl Keypom {
         &mut self,
         new_metadata: Option<String>,
         attached_deposit: Balance,
+        append_to_metadata: Option<bool>,
     ) -> Balance {
         let caller_id = env::predecessor_account_id();
 
@@ -176,8 +179,38 @@ impl Keypom {
                 metadata: None,
                 balance: 0,
             });
-        funder_info.metadata = new_metadata;
+        // Check if new_metadata is valid JSON
+        if let Some(metadata_str) = &new_metadata {
+            let result = serde_json::from_str::<serde_json::Value>(metadata_str);
+            require!(result.is_ok(), format!("New funder metadata is not valid JSON: {:?}", result.as_ref().err().unwrap()).to_string());
+        }
+
+        // Overwrite if specified, otherwise, append (default)
+        if append_to_metadata.unwrap_or(true) {
+            // Append to existing metadata
+            if let Some(existing_metadata) = &funder_info.metadata {
+                let modified_existing_metadata = &existing_metadata[..&existing_metadata.len() - 1];
+                let modified_input_metadata = &new_metadata.unwrap()[1..];
+                let new_metadata = format!("{},{}", modified_existing_metadata, modified_input_metadata);
+
+                // ensure new metadata is still JSON
+                let result = serde_json::from_str::<serde_json::Value>(&new_metadata);
+                require!(result.is_ok(), format!("New funder metadata is not valid JSON: {:?}", result.as_ref().err().unwrap()).to_string());
+
+                funder_info.metadata = Some(new_metadata);
+            } else {
+                // Old metadata was empty
+                funder_info.metadata = new_metadata;
+            }
+        } else {
+            // Overwrite current metadata
+            funder_info.metadata = new_metadata;
+            
+        }
+
+
         self.funder_info_by_id.insert(&caller_id, &funder_info);
+        
         let final_storage = env::storage_usage();
 
         let mut refund_amount = attached_deposit;

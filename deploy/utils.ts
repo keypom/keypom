@@ -118,7 +118,7 @@ export async function createContracts({
   await createAccountDeployContract({
     signerAccount,
     newAccountId: keypomContractId,
-    amount: "200",
+    amount: "20",
     near,
     wasmPath: "./out/keypom.wasm",
     methodName: "new",
@@ -136,7 +136,7 @@ export async function createContracts({
   await createAccountDeployContract({
     signerAccount,
     newAccountId: marketplaceContractId,
-    amount: "200",
+    amount: "20",
     near,
     wasmPath: "./out/marketplace.wasm",
     methodName: "new",
@@ -291,8 +291,11 @@ export function generateEvents(numEvents = 40) {
       id: eventId,
       description: `${eventDescriptions[themeIndex]}`,
       location: `${locations[Math.floor(Math.random() * locations.length)]}`,
+      // description: ``,
+      // location: ``,
       date: generateDateInfo(),
       artwork: artworkUrls[Math.floor(Math.random() * artworkUrls.length)],
+      // artwork: '',
       questions: generateQuestions(),
       nearCheckout: true,
     };
