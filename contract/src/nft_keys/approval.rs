@@ -26,7 +26,10 @@ impl Keypom {
 
         let args_string = json!({
             "account_id": account_id,
-            "msg": msg
+            "msg": json!({
+                "linkdrop_pk": linkdrop_pk,
+                "msg": msg_str
+            }).to_string()
         }).to_string();
     
         require!(

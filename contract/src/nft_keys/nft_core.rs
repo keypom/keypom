@@ -36,11 +36,21 @@ impl Keypom {
         let sender_id = env::predecessor_account_id();
 
         if env::signer_account_pk() == linkdrop_pk {
-            let args_string = json!({
-                "receiver_id": receiver_id,
-                "approval_id": approval_id,
-                "memo": memo
-            }).to_string();
+            // All args, unfilled options will be filtered out
+            let mut args_json = json!({
+                "receiver_id": receiver_id.clone().map(|id| json!(id)),
+                "approval_id": approval_id.map(|id| json!(id)),
+                "memo": json!({
+                    "linkdrop_pk": linkdrop_pk,
+                    "new_public_key": new_pk
+                }).to_string(),
+            });
+            
+            if let Some(obj) = args_json.as_object_mut() {
+                obj.retain(|_, v| !v.is_null());
+            }
+
+            let args_string = args_json.to_string();
         
             require!(
                 self.verify_signature(signature.expect("Missing signature"), linkdrop_pk.clone(), args_string),
