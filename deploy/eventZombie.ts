@@ -31,7 +31,7 @@ const main = async () => {
   const near = await initNear();
   const createAccounts = true;
 
-  const signerAccount = await near.account("benjiman.testnet");
+  const signerAccount = await near.account("minqi.testnet");
   const masterKey = "MASTER_KEY";
 
   let keypomContractId = `1710351544642-kp-ticketing.testnet`;
@@ -52,7 +52,7 @@ const main = async () => {
 
   //  Create Events (and generate keypair if necessary / update user metadata)
   // To store: public key, encrypted private key, iv, salt
-  const events = generateEvents(20);
+  const events = generateEvents(3);
   let nonce = 0;
   const funderInfo = await signerAccount.viewFunction(
     keypomContractId,

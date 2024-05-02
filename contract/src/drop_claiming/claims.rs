@@ -12,8 +12,17 @@ impl Keypom {
         password: Option<String>,
     ) -> PromiseOrValue<bool> {
         self.assert_no_global_freeze();
+        
+        let args_string = json!({
+            "account_id": account_id,
+            "signature": signature,
+            "linkdrop_pk": linkdrop_pk,
+            "fc_args": fc_args,
+            "password": password
+        }).to_string();
+    
         require!(
-            self.verify_signature(signature, linkdrop_pk.clone()),
+            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
             "Invalid signature for public key"
         );
 
@@ -55,8 +64,18 @@ impl Keypom {
         password: Option<String>,
     ) -> Promise {
         self.assert_no_global_freeze();
+
+        let args_string = json!({
+            "new_account_id": new_account_id,
+            "new_public_key": new_public_key,
+            "signature": signature,
+            "linkdrop_pk": linkdrop_pk,
+            "fc_args": fc_args,
+            "password": password
+        }).to_string();
+    
         require!(
-            self.verify_signature(signature, linkdrop_pk.clone()),
+            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
             "Invalid signature for public key"
         );
 

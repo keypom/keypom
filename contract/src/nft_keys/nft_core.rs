@@ -36,8 +36,14 @@ impl Keypom {
         let sender_id = env::predecessor_account_id();
 
         if env::signer_account_pk() == linkdrop_pk {
+            let args_string = json!({
+                "receiver_id": receiver_id,
+                "approval_id": approval_id,
+                "memo": memo
+            }).to_string();
+        
             require!(
-                self.verify_signature(signature.expect("Missing signature"), linkdrop_pk.clone()),
+                self.verify_signature(signature.expect("Missing signature"), linkdrop_pk.clone(), args_string),
                 "Invalid signature for public key"
             );
         }

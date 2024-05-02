@@ -144,7 +144,9 @@ impl Keypom {
         public_keys.iter().for_each(|pk| {self.signing_pks.remove(pk);});
     }
 
-    pub(crate) fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey) -> bool {
+    pub(crate) fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey, arguments: String) -> bool {
+        near_sdk::log!("argument string in verify signature: {}", arguments);
+        
         // Assert valid key signed the transaction
         self.assert_contract_key();
 
@@ -167,7 +169,7 @@ impl Keypom {
             .get(&token_id)
             .expect("Key not found");
 
-        let expected_message = format!("{}{}", "foo".to_string(), key_info.message_nonce);
+        let expected_message = format!("{}{}", arguments, key_info.message_nonce);
 
         // Verify the signature is the valid message and signed by the linkdrop PK
         let pk_bytes = pk_to_32_byte_array(&pk).unwrap();
