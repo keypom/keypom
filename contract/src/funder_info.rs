@@ -188,7 +188,6 @@ impl Keypom {
         // Overwrite if specified, otherwise, append (default)
         if append_to_metadata.unwrap_or(true) {
             // Append to existing metadata
-            near_sdk::log!("Existing Metadata: {:?}", funder_info.metadata);
             if let Some(existing_metadata) = &funder_info.metadata {
                 let modified_existing_metadata = &existing_metadata[..&existing_metadata.len() - 1];
                 let modified_input_metadata = &new_metadata.unwrap()[1..];

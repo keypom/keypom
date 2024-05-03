@@ -240,7 +240,7 @@ export function generateEvents(numEvents = 40) {
   }
 
   function generateDateInfo(): DateAndTimeInfo {
-    const startDate = new Date(2023, 0, 1);
+    const startDate = new Date(2023, 4, 1);
     const endDate = new Date(2024, 11, 31);
     const start = randomDate(startDate, endDate);
 
