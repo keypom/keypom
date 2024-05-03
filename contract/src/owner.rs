@@ -78,9 +78,8 @@ impl Keypom {
 
     /// Ensure that the contract key is the one that signed the message
     pub(crate) fn assert_contract_key(&self) {
-        assert_eq!(
-            env::signer_account_pk(),
-            self.signing_pk,
+        assert!(
+            self.signing_pks.contains(&env::signer_account_pk()),
             "Only Contract Key Can Call This Method"
         );
     }

@@ -97,20 +97,36 @@ export async function createContracts({
   marketplaceContractId: string;
   keypomContractId: string;
 }) {
-  const keyPair = KeyPair.fromRandom("ed25519");
-  const publicKey = keyPair.publicKey.toString();
+  const secretKeys = [
+    "ed25519:3SoKRJxQj29Kczj6TiMNNxq3c6S3WcA4MUb6oBEcHMEDyhLWxzJyWxXn69sKt3RKCs8akb5KHkNvjdq4mJLYCYGA",
+    "ed25519:36s6Po4JAJVhQdZLmXx8gJh4HP6T4AtMYJb5UgWhiYLntxpTX5piAc2pGExdUYrFJujYi18ZevU1z52CRkL6kpLF",
+    "ed25519:3c4EMC5d2DEvXjHxQZN7ef7pj8FDK7B9y4QfuvossLSBwntPorYsqxbyuh4vAqTEr397Dgabxjz1RTe9p4CiKs8C",
+    "ed25519:5bx66kw3oPfa3vNXe2hXKcN6M5jqMJyC5WHAx8hFzDG4j68QXu8E4wdkaY1H1SvUzbdkxGpyio5Gxmfx8SrBjrg3",
+    "ed25519:5JiAyefRbZsy8Yc4gBMJRJpsTFekxYCtvnZgBJUtQzqmRhX6VVB8ZwAnYcy3rdzquN5WPSrw9fUuwhD612L5RqzA",
+    "ed25519:oNpuBdJY4HSGZhi1oSEeUWxErdSTjzLmJdx5erMDrV9hzrGVE8peAjRb2QVY4aP81ctf96YpWe419Fr2wqrc7mG",
+    "ed25519:nzf775uk2hBRoZXk41kXMqLRofKK2E5qGi3jUjfQnKZvq22f7qhkzCyhenxuRqQMac4tFgGcSsogmFCmimNWkq5",
+    "ed25519:2DwsKo8ZwVotcTtTLLRwx6iHamgxG9qFHo6T5G6udMQMyLNxeqo2oy3Z7UFwFJc5ztdqGCc3b4SidJUDcAhkF7V8",
+    "ed25519:3PjnkrRdAmWEfoKBkdSXXfGs6AWB6rTG5Sva9EEJBAnAKnkbNwk5VsXPx43zFmKJJhfHwzgFM76FVGqmZQjh6wWh",
+    "ed25519:2nP3KsnqWb96k6HKNXHiyumtGH6pmoBLvVqUAbNBAQFMBzTjho3Nw7Yo5fwDMZFwgPeaEeYMcGCqkmX1eoL8Abw1"
+  ]
+  const publicKeys: String[] = [];
+  for (const secretKey of secretKeys) {
+    const keyPair = KeyPair.fromString(secretKey);
+    publicKeys.push(keyPair.publicKey.toString());
+  }
+
   await createAccountDeployContract({
     signerAccount,
     newAccountId: keypomContractId,
-    amount: "200",
+    amount: "20",
     near,
     wasmPath: "./out/keypom.wasm",
     methodName: "new",
     args: {
       root_account: "testnet",
       owner_id: keypomContractId,
-      signing_pk: publicKey,
-      signing_sk: keyPair.secretKey,
+      signing_pks: publicKeys,
+      signing_admins: ["minqi.testnet", "benjiman.testnet", "minqianlu.testnet"],
       message: "Keypom is lit!",
     },
     deposit: "0",
@@ -120,7 +136,7 @@ export async function createContracts({
   await createAccountDeployContract({
     signerAccount,
     newAccountId: marketplaceContractId,
-    amount: "200",
+    amount: "20",
     near,
     wasmPath: "./out/marketplace.wasm",
     methodName: "new",
@@ -224,7 +240,7 @@ export function generateEvents(numEvents = 40) {
   }
 
   function generateDateInfo(): DateAndTimeInfo {
-    const startDate = new Date(2023, 0, 1);
+    const startDate = new Date(2023, 4, 1);
     const endDate = new Date(2024, 11, 31);
     const start = randomDate(startDate, endDate);
 
@@ -275,8 +291,11 @@ export function generateEvents(numEvents = 40) {
       id: eventId,
       description: `${eventDescriptions[themeIndex]}`,
       location: `${locations[Math.floor(Math.random() * locations.length)]}`,
+      // description: ``,
+      // location: ``,
       date: generateDateInfo(),
       artwork: artworkUrls[Math.floor(Math.random() * artworkUrls.length)],
+      // artwork: '',
       questions: generateQuestions(),
       nearCheckout: true,
     };

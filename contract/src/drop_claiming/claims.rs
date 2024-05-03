@@ -12,8 +12,22 @@ impl Keypom {
         password: Option<String>,
     ) -> PromiseOrValue<bool> {
         self.assert_no_global_freeze();
+        // All args, unfilled options will be filtered out
+        let mut args_json = json!({
+            "account_id": account_id,
+            "linkdrop_pk": linkdrop_pk,
+            "fc_args": fc_args.clone().map(|id| json!(id)),
+            "password": password.clone().map(|id| json!(id)),
+        });
+        
+        if let Some(obj) = args_json.as_object_mut() {
+            obj.retain(|_, v| !v.is_null());
+        }
+
+        let args_string = args_json.to_string();
+    
         require!(
-            self.verify_signature(signature, linkdrop_pk.clone()),
+            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
             "Invalid signature for public key"
         );
 
@@ -55,8 +69,24 @@ impl Keypom {
         password: Option<String>,
     ) -> Promise {
         self.assert_no_global_freeze();
+
+        // All args, unfilled options will be filtered out
+        let mut args_json = json!({
+            "new_account_id": new_account_id,
+            "new_public_key": new_public_key,
+            "linkdrop_pk": linkdrop_pk,
+            "fc_args": fc_args.clone().map(|id| json!(id)),
+            "password": password.clone().map(|id| json!(id)),
+        });
+        
+        if let Some(obj) = args_json.as_object_mut() {
+            obj.retain(|_, v| !v.is_null());
+        }
+
+        let args_string = args_json.to_string();
+    
         require!(
-            self.verify_signature(signature, linkdrop_pk.clone()),
+            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
             "Invalid signature for public key"
         );
 

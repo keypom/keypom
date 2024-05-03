@@ -39,8 +39,9 @@ impl Keypom {
             near_sdk::log!("Deposit left after drop {}: {}", i, deposit_left);
         }
 
+        // TODO: implement appending metadata to user's metadata. Ensure result is still JSON stringified
         if let Some(metadata) = change_user_metadata {
-            deposit_left = self.internal_modify_user_metadata(Some(metadata), deposit_left);
+            deposit_left = self.internal_modify_user_metadata(Some(metadata), deposit_left, None);
             near_sdk::log!(
                 "Deposit left after changing user metadata: {}",
                 deposit_left

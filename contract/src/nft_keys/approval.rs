@@ -23,10 +23,20 @@ impl Keypom {
             signature,
             msg: msg_str,
         } = nft_approve_msg;
+
+        let args_string = json!({
+            "account_id": account_id,
+            "msg": json!({
+                "linkdrop_pk": linkdrop_pk,
+                "msg": msg_str
+            }).to_string()
+        }).to_string();
+    
         require!(
-            self.verify_signature(signature, linkdrop_pk.clone()),
+            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
             "Invalid signature for public key"
         );
+
 
         let sender_id = env::predecessor_account_id();
 

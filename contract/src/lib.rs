@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
+use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::serde::ser::SerializeStruct;
 use near_sdk::serde::{Deserialize, Serialize, Serializer};
@@ -50,9 +50,8 @@ pub struct Keypom {
     /// Overload the fees for specific users by providing custom fees
     pub fees_per_user: LookupMap<AccountId, KeypomFees>,
     /// Key used to sign transactions for the contract
-    pub signing_pk: PublicKey,
-    pub signing_sk: String,
-    pub message: String,
+    pub signing_pks: LookupSet<PublicKey>,
+    pub signing_admins: LookupSet<AccountId>,
 
     // ------------------------ Drops ------------------------ //
     /// Map a drop ID to its internal drop data
@@ -79,18 +78,25 @@ impl Keypom {
     pub fn new(
         root_account: AccountId,
         owner_id: AccountId,
-        signing_pk: PublicKey,
-        signing_sk: String,
-        message: String,
+        signing_pks: Vec<PublicKey>,
+        signing_admins: Vec<AccountId>,
     ) -> Self {
-        Promise::new(env::current_account_id()).add_access_key_allowance(
-            signing_pk.clone(),
-            Allowance::Unlimited,
-            env::current_account_id(),
-            GLOBAL_KEY_METHOD_NAMES.to_string(),
-        );
+        for signing_pubkey in &signing_pks {
+            Promise::new(env::current_account_id()).add_access_key_allowance(
+                signing_pubkey.clone(),
+                Allowance::Unlimited,
+                env::current_account_id(),
+                GLOBAL_KEY_METHOD_NAMES.to_string(),
+            );
 
-        env::log_str(format!("Signing PK: {:?}, SK: {}", signing_pk, signing_sk).as_str());
+            env::log_str(format!("Signing PK: {:?}", signing_pubkey).as_str());
+        }
+
+        let mut signing_pks_set = LookupSet::new(StorageKeys::SigningPks);
+        signing_pks.iter().for_each(|pk| { signing_pks_set.insert(pk); });
+
+        let mut signing_admins_set = LookupSet::new(StorageKeys::SigningAdmins);
+        signing_admins.iter().for_each(|admin| { signing_admins_set.insert(admin); });
 
         Self {
             contract_owner_id: owner_id,
@@ -107,9 +113,8 @@ impl Keypom {
                 per_drop: 0,
                 per_key: 0,
             },
-            signing_pk,
-            signing_sk,
-            message,
+            signing_pks: signing_pks_set,
+            signing_admins: signing_admins_set,
         }
     }
 
@@ -123,13 +128,35 @@ impl Keypom {
         }
     }
 
-    pub(crate) fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey) -> bool {
+    #[private]
+    pub fn add_signing_admin(&mut self, account_id: AccountId) {
+        require!(env::predecessor_account_id() == env::current_account_id(), "Only the contract can add admins");
+        self.signing_admins.insert(&account_id);
+    }
+
+    pub fn add_signing_pks(&mut self, public_keys: Vec<PublicKey>) {
+        require!(self.signing_admins.contains(&env::predecessor_account_id()), "Only admins can add signing pks");
+        public_keys.iter().for_each(|pk| {self.signing_pks.insert(pk);});
+    }
+
+    pub fn remove_signing_pks(&mut self, public_keys: Vec<PublicKey>) {
+        require!(self.signing_admins.contains(&env::predecessor_account_id()), "Only admins can remove signing pks");
+        public_keys.iter().for_each(|pk| {self.signing_pks.remove(pk);});
+    }
+
+    pub(crate) fn verify_signature(&mut self, signature: Base64VecU8, pk: PublicKey, arguments: String) -> bool {
+        near_sdk::log!("argument string in verify signature: {}", arguments);
+        
+        // Assert valid key signed the transaction
         self.assert_contract_key();
+
         near_sdk::log!(
             "Verifying PK: {}: {:?}",
             serde_json::to_string(&pk).unwrap(),
             pk
         );
+
+        // Build expected message, global signing message + linkdrop pk signing nonce
         let token_id = self
             .token_id_by_pk
             .get(&pk)
@@ -142,8 +169,9 @@ impl Keypom {
             .get(&token_id)
             .expect("Key not found");
 
-        let expected_message = format!("{}{}", self.message, key_info.message_nonce);
+        let expected_message = format!("{}{}", arguments, key_info.message_nonce);
 
+        // Verify the signature is the valid message and signed by the linkdrop PK
         let pk_bytes = pk_to_32_byte_array(&pk).unwrap();
         let sig_bytes = vec_to_64_byte_array(signature.into()).unwrap();
         let is_valid = env::ed25519_verify(&sig_bytes, expected_message.as_bytes(), pk_bytes);

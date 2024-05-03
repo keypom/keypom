@@ -194,4 +194,6 @@ pub enum StorageKeys {
     DropById,
     TokenIdByPk,
     FunderInfoById,
+    SigningPks,
+    SigningAdmins,
 }
