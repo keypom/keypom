@@ -3,74 +3,134 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     #[private]
-    pub fn claim(&mut self, account_id: AccountId, fc_args: UserProvidedFCArgs, password: Option<String>) -> PromiseOrValue<bool> {
+    pub fn claim(
+        &mut self,
+        account_id: AccountId,
+        signature: Base64VecU8,
+        linkdrop_pk: PublicKey,
+        fc_args: Option<UserProvidedFCArgs>,
+        password: Option<String>,
+    ) -> PromiseOrValue<bool> {
         self.assert_no_global_freeze();
+        // All args, unfilled options will be filtered out
+        let mut args_json = json!({
+            "account_id": account_id,
+            "linkdrop_pk": linkdrop_pk,
+            "fc_args": fc_args.clone().map(|id| json!(id)),
+            "password": password.clone().map(|id| json!(id)),
+        });
+        
+        if let Some(obj) = args_json.as_object_mut() {
+            obj.retain(|_, v| !v.is_null());
+        }
+
+        let args_string = args_json.to_string();
+    
+        require!(
+            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
+            "Invalid signature for public key"
+        );
 
         let mut event_logs: Vec<EventLog> = Vec::new();
-        let BeforeClaimData { 
-            token_id, 
-            required_asset_gas, 
-            root_account_id: _, 
+        let BeforeClaimData {
+            token_id,
+            required_asset_gas,
+            root_account_id: _,
             account_creation_keypom_args: _,
             drop_id: _,
             key_id: _,
-            funder_id: _ 
-        } = self.before_claim_logic(
-            &mut event_logs,
-            None,
-            password
-        );
+            funder_id: _,
+        } = self.before_claim_logic(&mut event_logs, None, password, linkdrop_pk.clone());
         let prepaid_gas = env::prepaid_gas();
-        let total_required_gas = BASE_GAS_FOR_CLAIM + required_asset_gas;
+        let total_required_gas = BASE_GAS_FOR_CLAIM.as_gas() + required_asset_gas.as_gas();
         // Use to check prepaid == required. Changed to >= for the sake of simplicity for now
         // Future plan to implement required_gas_for_claim and required_gas_for_create_account_and_claim into key info
         require!(
-            prepaid_gas >= total_required_gas,
-            format!("Not enough gas attached. Required: {}, Prepaid: {}",
-            total_required_gas.0,
-            prepaid_gas.0)
+            prepaid_gas.as_gas() >= total_required_gas,
+            format!(
+                "Not enough gas attached. Required: {}, Prepaid: {}",
+                total_required_gas,
+                prepaid_gas.as_gas()
+            )
         );
 
         log_events(event_logs);
-        self.internal_claim_assets(token_id, account_id, fc_args, None)
+        self.internal_claim_assets(token_id, account_id, linkdrop_pk, fc_args, None)
     }
 
     #[private]
-    pub fn create_account_and_claim(&mut self, new_account_id: AccountId, new_public_key: PublicKey, fc_args: UserProvidedFCArgs, password: Option<String>) -> Promise {
+    pub fn create_account_and_claim(
+        &mut self,
+        new_account_id: AccountId,
+        new_public_key: PublicKey,
+        signature: Base64VecU8,
+        linkdrop_pk: PublicKey,
+        fc_args: Option<UserProvidedFCArgs>,
+        password: Option<String>,
+    ) -> Promise {
         self.assert_no_global_freeze();
 
+        // All args, unfilled options will be filtered out
+        let mut args_json = json!({
+            "new_account_id": new_account_id,
+            "new_public_key": new_public_key,
+            "linkdrop_pk": linkdrop_pk,
+            "fc_args": fc_args.clone().map(|id| json!(id)),
+            "password": password.clone().map(|id| json!(id)),
+        });
+        
+        if let Some(obj) = args_json.as_object_mut() {
+            obj.retain(|_, v| !v.is_null());
+        }
+
+        let args_string = args_json.to_string();
+    
+        require!(
+            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
+            "Invalid signature for public key"
+        );
+
         let mut event_logs = Vec::new();
-        let BeforeClaimData { 
-            token_id, 
-            required_asset_gas, 
-            root_account_id, 
+        let BeforeClaimData {
+            token_id,
+            required_asset_gas,
+            root_account_id,
             account_creation_keypom_args,
             drop_id,
             key_id,
-            funder_id 
+            funder_id,
         } = self.before_claim_logic(
             &mut event_logs,
             Some(&new_public_key),
-            password
+            password,
+            linkdrop_pk.clone(),
         );
 
         let prepaid_gas = env::prepaid_gas();
-        let total_required_gas = BASE_GAS_FOR_CREATE_ACC_AND_CLAIM + required_asset_gas;
+        let total_required_gas =
+            BASE_GAS_FOR_CREATE_ACC_AND_CLAIM.as_gas() + required_asset_gas.as_gas();
         require!(
-            prepaid_gas >= total_required_gas,
-            format!("Not enough gas attached. Required: {}, Prepaid: {}",
-            total_required_gas.0,
-            prepaid_gas.0)
+            prepaid_gas.as_gas() >= total_required_gas,
+            format!(
+                "Not enough gas attached. Required: {}, Prepaid: {}",
+                total_required_gas,
+                prepaid_gas.as_gas()
+            )
         );
-        let gas_for_callback = BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION + required_asset_gas;
-        near_sdk::log!("gas_for_callback: {}", gas_for_callback.0);
+        let gas_for_callback =
+            BASE_GAS_FOR_RESOLVE_ACCOUNT_CREATION.as_gas() + required_asset_gas.as_gas();
+        near_sdk::log!("gas_for_callback: {}", gas_for_callback);
 
         log_events(event_logs);
-        near_sdk::log!("Keypom Args Before create_account: {:?}", account_creation_keypom_args);
+        near_sdk::log!(
+            "Keypom Args Before create_account: {:?}",
+            account_creation_keypom_args
+        );
         let mut create_account_args = json!({
             "new_account_id": new_account_id,
             "new_public_key": new_public_key
-        }).to_string();
+        })
+        .to_string();
 
         add_keypom_args(
             &mut create_account_args,
@@ -78,29 +138,32 @@ impl Keypom {
             &new_account_id,
             &drop_id,
             &key_id.to_string(),
-            &funder_id
-        ).expect("Unable to add keypom args");
-        
+            &funder_id,
+        )
+        .expect("Unable to add keypom args");
+
         // First, create the zero-balance account and then, claim the assets
-        
+
         Promise::new(root_account_id)
             .function_call_weight(
-                "create_account".to_string(), 
-                create_account_args.into(), 
-                0,
+                "create_account".to_string(),
+                create_account_args.into(),
+                NearToken::from_yoctonear(0),
                 GAS_FOR_CREATE_ACCOUNT,
-                GasWeight(0)
-            ).then(
+                GasWeight(0),
+            )
+            .then(
                 // Call resolve refund with the min GAS and no attached_deposit. 1/2 unspent GAS will be added on top
                 Self::ext(env::current_account_id())
-                    .with_static_gas(gas_for_callback)
+                    .with_static_gas(Gas::from_gas(gas_for_callback))
                     .with_unused_gas_weight(1)
                     .on_new_account_created(
                         token_id,
                         new_account_id,
+                        new_public_key,
+                        linkdrop_pk,
                         fc_args,
-                        new_public_key
-                    )
+                    ),
             )
     }
 }

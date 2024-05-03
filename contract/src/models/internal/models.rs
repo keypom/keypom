@@ -2,6 +2,7 @@ use crate::*;
 
 /// Internal drop data that is stored in the contract
 #[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
 pub struct InternalDrop {
     /// Account ID who funded / owns the rights to this specific drop
     pub funder_id: AccountId,
@@ -19,12 +20,15 @@ pub struct InternalDrop {
     pub next_key_id: u64,
 
     /// Keep track of different configuration options for all the uses of a key in a given drop
-    pub config: Option<DropConfig>
+    pub config: Option<DropConfig>,
 }
 
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
 pub struct InternalKeyInfo {
+    /// Everytime a signature is passed in, the nonce should be incremented by 1
+    pub message_nonce: u32,
     /// Current public key that is mapped to this key info
     pub pub_key: PublicKey,
 
@@ -44,12 +48,13 @@ pub struct InternalKeyInfo {
     /// List of approved account IDs that have access to transfer the token. This maps an account ID to an approval ID
     pub approved_account_ids: HashMap<AccountId, u64>,
 
-    /// The next approval ID to give out. 
+    /// The next approval ID to give out.
     pub next_approval_id: u64,
 }
 
 /// Outlines the asset data for a set of uses
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
+#[borsh(crate = "near_sdk::borsh")]
 pub struct InternalAssetDataForUses {
     /// How many uses does this asset data apply to?
     pub uses: UseNumber,
@@ -58,7 +63,7 @@ pub struct InternalAssetDataForUses {
     /// The actual assets themselves (ID + tokens)
     pub assets_metadata: Vec<AssetMetadata>,
     /// The amount of gas required to claim this set of assets
-    pub required_asset_gas: Gas
+    pub required_asset_gas: Gas,
 }
 
 impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
@@ -66,14 +71,14 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
         let mut assets_metadata = vec![];
 
         // Keep track of the total gas across all assets in the current use
-        let mut total_required_asset_gas: Gas = Gas(0);
+        let mut total_required_asset_gas: Gas = Gas::from_gas(0);
 
         let mut fc_idx = 0;
         for ext_asset in &ext_asset_data.assets {
             // Every asset has a gas cost associated. We should add that to the total gas.
             let internal_asset = ext_asset_to_internal(ext_asset.as_ref());
             let gas_for_asset = internal_asset.get_total_required_gas();
-            total_required_asset_gas += gas_for_asset;
+            total_required_asset_gas = total_required_asset_gas.checked_add(gas_for_asset).unwrap();
 
             // If the external asset is of type FCData, the asset ID will be the incrementing number
             // Otherwise, it will be the asset ID specified
@@ -81,12 +86,15 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
                 fc_idx += 1;
                 format!("{}{}", FC_ASSET_PREFIX, fc_idx)
             } else {
-                ext_asset.as_ref().and_then(|a| Some(a.get_asset_id())).unwrap_or(NONE_ASSET_ID.to_string())
+                ext_asset
+                    .as_ref()
+                    .map(|a| a.get_asset_id())
+                    .unwrap_or(NONE_ASSET_ID.to_string())
             };
 
             assets_metadata.push(AssetMetadata {
                 asset_id: asset_id.clone(),
-                tokens_per_use: ext_asset.as_ref().and_then(|a| Some(a.get_tokens_per_use()))
+                tokens_per_use: ext_asset.as_ref().map(|a| a.get_tokens_per_use()),
             });
         }
 
@@ -94,7 +102,7 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
             uses: ext_asset_data.uses,
             config: ext_asset_data.config.clone(),
             assets_metadata,
-            required_asset_gas: total_required_asset_gas
+            required_asset_gas: total_required_asset_gas,
         }
     }
 }
@@ -103,17 +111,19 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
 /// And represents the data that is stored inside the Keypom contract to keep track of assets
 #[allow(non_camel_case_types)]
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub enum InternalAsset {
     ft(InternalFTData),
     nft(InternalNFTData),
     fc(FCData),
     near,
-    none
+    none,
 }
 
 /// Metadata corresponding to a specific asset. This keeps track of the ID and optionally tokens being transferred per use
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
+#[borsh(crate = "near_sdk::borsh")]
 pub struct AssetMetadata {
     /// What asset is mapped to this specific use
     pub asset_id: AssetId,
@@ -122,8 +132,21 @@ pub struct AssetMetadata {
     pub tokens_per_use: Option<U128>,
 }
 
+/// Contains information about the funder such as their user_balance and any metadata they might
+/// have
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, Serialize)]
+#[borsh(crate = "near_sdk::borsh")]
+#[serde(crate = "near_sdk::serde")]
+pub struct FunderInfo {
+    /// The internal balance that the funder has deposited
+    pub balance: Balance,
+    /// Any stringified JSON that the funder has set as metadata
+    pub metadata: Option<String>,
+}
+
 /// Contract metadata structure
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct ContractSourceMetadata {
     /// Commit hash being used for the currently deployed wasm. If the contract is not open-sourced, this could also be a numbering system for internal organization / tracking such as "1.0.0" and "2.1.0".
@@ -134,6 +157,7 @@ pub struct ContractSourceMetadata {
 
 /// Fee Structures for drops and keys
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct KeypomFees {
     /// How much $NEAR users are charged for creating a drop
@@ -158,6 +182,7 @@ pub struct BeforeClaimData {
 }
 
 #[derive(BorshSerialize, BorshStorageKey)]
+#[borsh(crate = "near_sdk::borsh")]
 pub enum StorageKeys {
     KeyInfoByPk { drop_id_hash: CryptoHash },
     AssetById { drop_id_hash: CryptoHash },
@@ -165,9 +190,10 @@ pub enum StorageKeys {
     DropIdsByFunderInner { account_id_hash: CryptoHash },
     DropIdsByFunder,
     FeesPerUser,
-    ContractMetadata,
     TokensPerOwner,
     DropById,
     TokenIdByPk,
-    UserBalances
+    FunderInfoById,
+    SigningPks,
+    SigningAdmins,
 }

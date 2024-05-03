@@ -13,7 +13,26 @@ impl Keypom {
     /// Returns the `ExtDrop` information
     pub fn get_drop_information(&self, drop_id: DropId) -> ExtDrop {
         let drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
-        return drop.to_external_drop(drop_id);
+        drop.to_external_drop(drop_id)
+    }
+
+    /// Allows you to query for the information about a batch of drops all at once with 1 function.
+    ///
+    ///
+    /// Arguments:
+    /// * `id` either the ID for the drop as a string or a public key currently part of the drop.
+    ///
+    /// Returns a vector of optional `ExtDrop` objects representing the information about the drops. If
+    /// Any of the drops do not exist, the corresponding index in the vector will be `None`
+    pub fn get_drop_information_batch(&self, drop_ids: Vec<DropId>) -> Vec<Option<ExtDrop>> {
+        drop_ids
+            .iter()
+            .map(|id| {
+                self.drop_by_id
+                    .get(id)
+                    .map(|internal_drop| internal_drop.to_external_drop(id.clone()))
+            })
+            .collect()
     }
 
     /// Allows you to query for the number of live keys in a drop
@@ -53,13 +72,11 @@ impl Keypom {
         limit: Option<u64>,
     ) -> Result<Vec<ExtKeyInfo>, String> {
         //iterate through each key using an iterator
-        let drop = self.drop_by_id
-            .get(&drop_id)
-            .expect("No drop for given ID");
+        let drop = self.drop_by_id.get(&drop_id).expect("No drop for given ID");
 
         //where to start pagination - if we have a from_index, we'll use that - otherwise start from 0 index
         let start = u128::from(from_index.unwrap_or(U128(0)));
-        
+
         return drop
             .key_info_by_token_id
             .keys()
@@ -70,6 +87,6 @@ impl Keypom {
             //we'll map the public key which are strings into Drops
             .map(|token_id| self.get_key_information(token_id))
             //since we turned the keys into an iterator, we need to turn it back into a vector to return
-            .collect()
+            .collect();
     }
 }

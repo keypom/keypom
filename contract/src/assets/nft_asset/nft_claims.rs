@@ -3,13 +3,14 @@ use crate::*;
 /// Gas needed to execute any logic in the nft claim function
 /// 2 TGas + 1 * CCC gas (since there is 1 CCCs)
 /// 7 TGas
-pub const GAS_FOR_NFT_CLAIM_LOGIC: Gas = Gas(2_000_000_000_000 + MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.0);
+pub const GAS_FOR_NFT_CLAIM_LOGIC: Gas =
+    Gas::from_gas(Gas::from_tgas(2).as_gas() + MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.as_gas());
 /// Minimum Gas required to perform a simple NFT transfer.
 /// 4 TGas
-pub const MIN_GAS_FOR_NFT_TRANSFER: Gas = Gas(4_000_000_000_000);
+pub const MIN_GAS_FOR_NFT_TRANSFER: Gas = Gas::from_tgas(4);
 /// Minimum Gas required to execute any callback logic after the claim is complete
 /// 2 TGas
-pub const MIN_GAS_FOR_NFT_CALLBACK_LOGIC: Gas = Gas(2_000_000_000_000);
+pub const MIN_GAS_FOR_NFT_CALLBACK_LOGIC: Gas = Gas::from_tgas(2);
 
 impl InternalNFTData {
     /// Attempt to transfer FTs to a given address (will cover registration automatically).
@@ -20,7 +21,7 @@ impl InternalNFTData {
             near_sdk::log!("No NFTs available to transfer. Skipping asset claim.");
             return None;
         }
-        
+
         // Pop the last NFT from the available NFTs
         let token_to_transfer = self.token_ids.pop().unwrap();
 
@@ -29,7 +30,7 @@ impl InternalNFTData {
             .function_call_weight(
                 "nft_transfer".to_string(),
                 json!({ "receiver_id": receiver_id, "token_id": token_to_transfer, "memo": "Keypom Linkdrop" }).to_string().into(),
-                1,
+                NearToken::from_yoctonear(1),
                 MIN_GAS_FOR_NFT_TRANSFER,
                 GasWeight(1),
             );
@@ -37,3 +38,4 @@ impl InternalNFTData {
         Some(transfer_promise)
     }
 }
+

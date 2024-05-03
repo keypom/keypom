@@ -8,9 +8,10 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 pub struct Payout {
     pub payout: HashMap<AccountId, U128>,
-} 
+}
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct NFTContractMetadata {
     pub spec: String,              // required, essentially a version like "nft-1.0.0"
@@ -23,6 +24,7 @@ pub struct NFTContractMetadata {
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct TokenMetadata {
     pub title: Option<String>, // ex. "Arch Nemesis: Mail Carrier" or "Parcel #5055"
@@ -41,6 +43,7 @@ pub struct TokenMetadata {
 
 /// Keep track of different configuration options for each key in a drop
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct NFTKeyConfigurations {
     /// Metadata that all the NFTs in this drop will have
@@ -50,8 +53,7 @@ pub struct NFTKeyConfigurations {
     pub royalties: Option<HashMap<AccountId, u32>>,
 }
 
-
-//The Json token is what will be returned from view calls. 
+//The Json token is what will be returned from view calls.
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ExtNFTKey {

@@ -2,6 +2,10 @@ use crate::*;
 
 #[near_bindgen]
 impl Keypom {
+    pub fn get_funder_info(&self, account_id: AccountId) -> Option<FunderInfo> {
+        self.funder_info_by_id.get(&account_id)
+    }
+
     /// Allows you to query for the total number of drops currently owned by a given funder
     ///
     ///
@@ -10,7 +14,10 @@ impl Keypom {
     ///
     /// Returns a `u64` representing the number of drops owned by the funder. If the funder does not have any drops, returns `0`
     pub fn get_drop_supply_for_funder(&self, account_id: AccountId) -> u64 {
-        self.drop_ids_by_funder.get(&account_id).and_then(|d| Some(d.len())).unwrap_or(0)
+        self.drop_ids_by_funder
+            .get(&account_id)
+            .map(|d| d.len())
+            .unwrap_or(0)
     }
 
     /// Allows you to paginate through all the active drops for a given funder
@@ -48,7 +55,7 @@ impl Keypom {
                 // Collect all JsonDrops into a vector and return it
                 .collect()
         } else {
-            return vec![];
+            vec![]
         }
     }
 }

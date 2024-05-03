@@ -1,5 +1,39 @@
 use crate::*;
 
+pub(crate) fn vec_to_64_byte_array(vec: Vec<u8>) -> Option<[u8; 64]> {
+    // Check if the string is exactly 64 bytes
+    if vec.len() != 64 {
+        return None;
+    }
+
+    // Explicitly import TryInto trait
+    use std::convert::TryInto;
+
+    let array: [u8; 64] = vec
+        .try_into() // Try to convert the Vec<u8> into a fixed-size array
+        .expect("Vec with incorrect length"); // This expect will never panic due to the above length check
+
+    Some(array)
+}
+
+pub(crate) fn pk_to_32_byte_array(pk: &PublicKey) -> Option<&[u8; 32]> {
+    let len = pk.as_bytes().len();
+    // Check if the string is exactly 32 or 33 bytes
+    if len != 32 && len != 33 {
+        return None;
+    }
+
+    // Explicitly import TryInto trait
+    use std::convert::TryInto;
+
+    // if the public key has the prefix appended, remove it to ensure it's 32 bytes
+    if len == 33 {
+        return pk.as_bytes()[1..33].try_into().ok();
+    }
+
+    pk.as_bytes()[0..32].try_into().ok()
+}
+
 /// Used to generate a unique prefix in our storage collections (this is to avoid data collisions)
 pub(crate) fn hash_string(string: &String) -> CryptoHash {
     env::sha256_array(string.as_bytes())
@@ -9,9 +43,7 @@ pub(crate) fn hash_string(string: &String) -> CryptoHash {
 pub(crate) fn yocto_to_near(yocto: u128) -> f64 {
     //10^17 yoctoNEAR (1 NEAR would be 10_000_000). This is to give a precision of 7 decimal places.
     let formatted_near = yocto / 100_000_000_000_000_000;
-    let near = formatted_near as f64 / 10_000_000f64;
-
-    near
+    formatted_near as f64 / 10_000_000f64
 }
 
 /// Check whether an asset ID is function call or not
@@ -24,62 +56,36 @@ pub(crate) fn get_key_cur_use(drop: &InternalDrop, key_info: &InternalKeyInfo) -
     drop.max_key_uses - key_info.remaining_uses + 1
 }
 
-/// Used to calculate the base allowance needed given attached GAS
-pub(crate) fn calculate_base_allowance(yocto_per_gas: Balance, attached_gas: Gas, should_log: bool) -> Balance {
-    let prepaid: u64 = attached_gas.0 + GAS_PER_CCC.0;
-
-    // Get the number of CCCs you can make with the attached GAS
-    // 5 TGas GAS_PER_CCC
-    let calls_with_gas = (prepaid / GAS_PER_CCC.0) as f32;
-    // Get the constant used to pessimistically calculate the required allowance
-    let pow_outcome = 1.032_f32.powf(calls_with_gas);
-
-    // Get the required GAS based on the calculated constant
-    // 2.5 TGas receipt cost
-    let required_allowance = ((prepaid + RECEIPT_GAS_COST.0) as f32 * pow_outcome
-        + RECEIPT_GAS_COST.0 as f32) as Balance
-        * yocto_per_gas;
-
-    if should_log {
-        near_sdk::log!(
-            "{} calls with {} attached GAS. Pow outcome: {}. Required Allowance: {}",
-            calls_with_gas,
-            prepaid,
-            pow_outcome,
-            required_allowance
-        );
-    }
-
-    required_allowance
-}
-
 /// Helper function that returns the total cost for a given key as well as its allowance
 /// This key can be partially used or not
 pub(crate) fn get_total_costs_for_key(
     total_cost_for_keys: &mut Balance,
-    total_allowance_for_keys: &mut Balance,
-    remaining_uses: UseNumber, 
+    remaining_uses: UseNumber,
     asset_by_id: &UnorderedMap<AssetId, InternalAsset>,
-    asset_data_for_uses: &Vec<InternalAssetDataForUses>,
+    asset_data_for_uses: &[InternalAssetDataForUses],
 ) {
     // Get the remaining asset data
     let remaining_asset_data = get_remaining_asset_data(asset_data_for_uses, remaining_uses);
 
     // For every remaining asset data, we should query the costs and multiply it by the number of uses left
     for asset_data in remaining_asset_data {
-        let InternalAssetDataForUses { uses, config: use_config, assets_metadata, required_asset_gas } = asset_data;
+        let InternalAssetDataForUses {
+            uses,
+            config: use_config,
+            assets_metadata,
+            required_asset_gas,
+        } = asset_data;
 
         // If the config's permission field is set to Claim, the base should be set accordingly. In all other cases, it should be the base for CAAC
-        let base_gas_for_use = if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
-            match perms {
-                ClaimPermissions::claim => {
-                    BASE_GAS_FOR_CLAIM
+        let base_gas_for_use =
+            if let Some(perms) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
+                match perms {
+                    ClaimPermissions::claim => BASE_GAS_FOR_CLAIM,
+                    _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM,
                 }
-                _ => BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
-            }
-        } else {
-            BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
-        };
+            } else {
+                BASE_GAS_FOR_CREATE_ACC_AND_CLAIM
+            };
 
         // Check and make sure that the time config is valid
         if let Some(time_config) = use_config.as_ref().and_then(|c| c.time.as_ref()) {
@@ -94,51 +100,57 @@ pub(crate) fn get_total_costs_for_key(
                 .expect("Asset not found");
 
             // Get the refund amount for the asset
-            let cost_for_use = internal_asset.get_yocto_refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
+            let cost_for_use =
+                internal_asset.get_yocto_refund_amount(&metadata.tokens_per_use.map(|x| x.into()));
             *total_cost_for_keys += cost_for_use * uses as u128;
         }
 
-        let total_claim_gas = required_asset_gas + base_gas_for_use;
-        require!(total_claim_gas <= MAX_GAS_ATTACHABLE, format!("Total gas {} exceeds the maximum 300 TGas limit", total_claim_gas.0));
-        
-        // Get the total allowance for this use
-        let allowance_for_use = calculate_base_allowance(YOCTO_PER_GAS, total_claim_gas, false);
-        *total_allowance_for_keys += allowance_for_use * uses as u128;
+        let total_claim_gas = required_asset_gas.as_gas() + base_gas_for_use.as_gas();
+        require!(
+            total_claim_gas <= MAX_GAS_ATTACHABLE.as_gas(),
+            format!(
+                "Total gas {} exceeds the maximum 300 TGas limit",
+                total_claim_gas
+            )
+        );
     }
 }
 
 /// Returns a vector of remaining asset datas given the remaining uses for a key.
 /// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=f11c6325055ed73fccd6b5c870dbccc2
-pub(crate) fn get_remaining_asset_data(asset_data: &Vec<InternalAssetDataForUses>, remaining_uses: UseNumber) -> Vec<InternalAssetDataForUses> {
+pub(crate) fn get_remaining_asset_data(
+    asset_data: &[InternalAssetDataForUses],
+    remaining_uses: UseNumber,
+) -> Vec<InternalAssetDataForUses> {
     let mut uses_traversed = 0;
     let mut remaining_data = vec![];
-    
+
     for asset in asset_data.iter().rev() {
         uses_traversed += asset.uses;
-        
+
         if uses_traversed >= remaining_uses {
-            let asset_to_push = InternalAssetDataForUses { 
+            let asset_to_push = InternalAssetDataForUses {
                 uses: asset.uses - (uses_traversed - remaining_uses),
-                config: asset.config.clone(), 
+                config: asset.config.clone(),
                 assets_metadata: asset.assets_metadata.clone(),
-                required_asset_gas: asset.required_asset_gas
+                required_asset_gas: asset.required_asset_gas,
             };
-            
+
             remaining_data.push(asset_to_push);
             break;
         } else {
             remaining_data.push(asset.clone());
         }
     }
-    
+
     remaining_data
 }
 
 /// Helper function to get the internal key behavior for a given use number
 /// Tests: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=e60e0bd12e87b90d375040d3c2fad715
-pub(crate) fn get_asset_data_for_specific_use (
-    asset_data_for_uses: &Vec<InternalAssetDataForUses>,
-    use_number: &UseNumber
+pub(crate) fn get_asset_data_for_specific_use(
+    asset_data_for_uses: &[InternalAssetDataForUses],
+    use_number: &UseNumber,
 ) -> InternalAssetDataForUses {
     let mut cur_use = 0;
 
@@ -154,7 +166,7 @@ pub(crate) fn get_asset_data_for_specific_use (
         uses: 0,
         assets_metadata: vec![],
         config: None,
-        required_asset_gas: Gas(0)
+        required_asset_gas: Gas::from_gas(0),
     }
 }
 
@@ -168,7 +180,7 @@ pub(crate) fn parse_token_id(token_id: &TokenId) -> Result<(DropId, u64), String
         return Err("Invalid key nonce".to_string());
     }
 
-    return Ok((drop_id.to_string(), key_nonce.unwrap()));
+    Ok((drop_id.to_string(), key_nonce.unwrap()))
 }
 
 /// Helper function to convert an external asset to an internal asset
@@ -177,49 +189,43 @@ pub(crate) fn ext_asset_to_internal(ext_asset: Option<&ExtAsset>) -> InternalAss
         return asset.to_internal_asset();
     }
 
-    return InternalAsset::none;
+    InternalAsset::none
 }
 
 /// Add keypom args to output args for a function call
 pub(crate) fn add_keypom_args(
-    output_args: &mut String, 
-    keypom_args: Option<KeypomInjectedArgs>, 
+    output_args: &mut String,
+    keypom_args: Option<KeypomInjectedArgs>,
     account_id: &AccountId,
     drop_id: &DropId,
     key_id: &String,
-    funder_id: &AccountId
+    funder_id: &AccountId,
 ) -> Result<(), String> {
     // Add keypom args and set any user markers
-    let keypom_args = keypom_args.unwrap_or(KeypomInjectedArgs { 
+    let keypom_args = keypom_args.unwrap_or(KeypomInjectedArgs {
         account_id_field: None,
         drop_id_field: None,
         key_id_field: None,
-        funder_id_field: None
+        funder_id_field: None,
     });
-    
+
     insert_keypom_arg(
         output_args,
         &keypom_args.account_id_field,
-        account_id.to_string()
+        account_id.to_string(),
     )?;
-    insert_keypom_arg(
-        output_args,
-        &keypom_args.drop_id_field,
-        drop_id.to_string()
-    )?;
-    insert_keypom_arg(
-        output_args,
-        &keypom_args.key_id_field,
-        key_id.to_string()
-    )?;
+    insert_keypom_arg(output_args, &keypom_args.drop_id_field, drop_id.to_string())?;
+    insert_keypom_arg(output_args, &keypom_args.key_id_field, key_id.to_string())?;
     insert_keypom_arg(
         output_args,
         &keypom_args.funder_id_field,
-        funder_id.to_string()
+        funder_id.to_string(),
     )?;
 
     if output_args.contains("\"keypom_args\"") {
-        return Err("Keypom Args detected in client args. Returning and decrementing keys".to_string());
+        return Err(
+            "Keypom Args detected in client args. Returning and decrementing keys".to_string(),
+        );
     }
 
     output_args.insert_str(
@@ -230,5 +236,5 @@ pub(crate) fn add_keypom_args(
         ),
     );
 
-    return Ok(());
+    Ok(())
 }

@@ -5,9 +5,7 @@
 # edition = "2018"
 
 [workspace]
-members = [
-  "contract"
-]
+members = ["contract", "integration-tests"]
 
 [profile.release]
 codegen-units = 1
@@ -16,4 +14,3 @@ lto = true
 debug = false
 panic = "abort"
 overflow-checks = true
-

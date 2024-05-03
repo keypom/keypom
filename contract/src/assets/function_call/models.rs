@@ -2,6 +2,7 @@ use crate::*;
 
 /// Keep track of info for the method_name to be called
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct MethodData {
     /// Contract that will be called
@@ -18,16 +19,16 @@ pub struct MethodData {
     /// Keypom Args struct to be sent to external contracts
     pub keypom_args: Option<KeypomInjectedArgs>,
     /// If set to true, the claiming account ID will be the receiver ID of the method call.
-    /// Ths receiver must be a valid account and non-malicious (cannot be set to the keypom contract) 
+    /// Ths receiver must be a valid account and non-malicious (cannot be set to the keypom contract)
     pub receiver_to_claimer: Option<bool>,
     /// What permissions does the user have when providing custom arguments to the function call?
     /// By default, the user cannot provide any custom arguments
     pub user_args_rule: Option<UserArgsRule>,
 }
 
-
 /// Keypom Args struct to be sent to external contracts
 #[derive(Serialize, Deserialize, Debug, BorshDeserialize, BorshSerialize, Clone)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct KeypomInjectedArgs {
     /// Specifies what field the claiming account ID should go in when calling the function
@@ -45,6 +46,7 @@ pub struct KeypomInjectedArgs {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Deserialize, Serialize, Clone, Debug)]
+#[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 /// When a user provides arguments for FC drops in `claim` or `create_account_and_claim`, what behaviour is expected?
 /// For `AllUser`, any arguments provided by the user will completely overwrite any previous args provided by the drop creator.
@@ -53,5 +55,6 @@ pub struct KeypomInjectedArgs {
 pub enum UserArgsRule {
     AllUser,
     FunderPreferred,
-    UserPreferred
+    UserPreferred,
 }
+

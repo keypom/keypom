@@ -14,15 +14,8 @@ impl Keypom {
 
     /// Returns the current fees associated with an account
     pub fn get_fees_per_user(&self, account_id: AccountId) -> Option<KeypomFees> {
-        self.fees_per_user
-            .get(&account_id)
+        self.fees_per_user.get(&account_id)
     }
-
-    /// Returns the current contract source metadata
-    pub fn contract_source_metadata(&self) -> ContractSourceMetadata {
-        self.contract_metadata.get().unwrap()
-    }
-
 
     pub(crate) fn parse_key_or_token_id(&self, key_or_token_id: String) -> String {
         let is_token_id = parse_token_id(&key_or_token_id).is_ok();
@@ -31,8 +24,7 @@ impl Keypom {
             return key_or_token_id;
         }
 
-        self
-            .token_id_by_pk
+        self.token_id_by_pk
             .get(&key_or_token_id.parse().unwrap())
             .expect("Token ID not found for Public Key")
     }

@@ -8,23 +8,21 @@ impl ExtAsset {
                 ft_data.ft_contract_id.clone(),
                 ft_data.registration_cost.into(),
             )),
-            ExtAsset::NFTAsset(nft_data) => InternalAsset::nft(InternalNFTData::new(
-                nft_data.nft_contract_id.clone(),
-            )),
-            ExtAsset::FCAsset(method_data) => InternalAsset::fc(FCData::new(
-                method_data.clone()
-            )),
-            ExtAsset::NearAsset(_) => InternalAsset::near
+            ExtAsset::NFTAsset(nft_data) => {
+                InternalAsset::nft(InternalNFTData::new(nft_data.nft_contract_id.clone()))
+            }
+            ExtAsset::FCAsset(method_data) => InternalAsset::fc(FCData::new(method_data.clone())),
+            ExtAsset::NearAsset(_) => InternalAsset::near,
         }
     }
 
     /// Standard function to check how many tokens a given asset transfers per use
     pub fn get_tokens_per_use(&self) -> U128 {
         match self {
-            ExtAsset::FTAsset(ft_data) => ft_data.ft_amount.into(),
+            ExtAsset::FTAsset(ft_data) => ft_data.ft_amount,
             ExtAsset::NFTAsset(_) => U128(0),
-            ExtAsset::NearAsset(near_data) => near_data.yoctonear.into(),
-            ExtAsset::FCAsset(_) => U128(0)
+            ExtAsset::NearAsset(near_data) => near_data.yoctonear,
+            ExtAsset::FCAsset(_) => U128(0),
         }
     }
 

@@ -3,12 +3,6 @@ use near_sdk::promise_result_as_success;
 
 #[near_bindgen]
 impl Keypom {
-    /// Set the contract metadata with a spec and link
-    pub fn set_contract_metadata(&mut self, contract_metadata: ContractSourceMetadata) {
-        self.assert_owner();
-        self.contract_metadata.replace(&contract_metadata);
-    }
-
     /// Set the desired linkdrop contract to interact with
     pub fn set_root_account(&mut self, root_account: AccountId) {
         self.assert_owner();
@@ -27,11 +21,13 @@ impl Keypom {
     /// Set the desired linkdrop contract to interact with
     pub fn set_fees_per_user(&mut self, account_id: AccountId, drop_fee: U128, key_fee: U128) {
         self.assert_owner();
-        self.fees_per_user
-            .insert(&account_id, &KeypomFees {
+        self.fees_per_user.insert(
+            &account_id,
+            &KeypomFees {
                 per_drop: drop_fee.0,
                 per_key: key_fee.0,
-            });
+            },
+        );
     }
 
     /// Set the contract to be frozen thus not allowing any drops to be created or keys added
@@ -39,7 +35,7 @@ impl Keypom {
         self.assert_owner();
         self.global_freeze = true
     }
-    
+
     /// Set the contract to be unfrozen thus resuming the ability for drops and keys to be created
     pub fn unfreeze_contract(&mut self) {
         self.assert_owner();
@@ -53,7 +49,7 @@ impl Keypom {
         self.fees_collected = 0;
 
         Promise::new(withdraw_to)
-            .transfer(amount)
+            .transfer(NearToken::from_yoctonear(amount))
             .then(Self::ext(env::current_account_id()).on_withdraw_fees(amount))
     }
 
@@ -77,6 +73,14 @@ impl Keypom {
             env::predecessor_account_id(),
             self.contract_owner_id,
             "Only the contract owner can call this function"
+        );
+    }
+
+    /// Ensure that the contract key is the one that signed the message
+    pub(crate) fn assert_contract_key(&self) {
+        assert!(
+            self.signing_pks.contains(&env::signer_account_pk()),
+            "Only Contract Key Can Call This Method"
         );
     }
 }
