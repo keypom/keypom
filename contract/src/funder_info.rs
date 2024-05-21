@@ -9,7 +9,7 @@ impl Keypom {
     pub fn set_funder_metadata(&mut self, metadata: Option<String>) -> bool {
         self.assert_no_global_freeze();
         let refund_amount =
-            self.internal_modify_user_metadata(metadata, env::attached_deposit().as_yoctonear(), None);
+            self.internal_modify_user_metadata(metadata, env::attached_deposit().as_yoctonear(), Some(false));
 
         if refund_amount > 0 {
             Promise::new(env::predecessor_account_id().clone())
@@ -205,7 +205,6 @@ impl Keypom {
         } else {
             // Overwrite current metadata
             funder_info.metadata = new_metadata;
-            
         }
 
 

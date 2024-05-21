@@ -30,20 +30,24 @@ const path = require("path");
 const main = async () => {
   const near = await initNear();
   const createAccounts = true;
+  const onlyDeployContract = true;
 
-  const signerAccount = await near.account("minqi.testnet");
+  const signerAccount = await near.account("keypom.testnet");
   const masterKey = "MASTER_KEY";
 
   let keypomContractId = `1710351544642-kp-ticketing.testnet`;
   let marketplaceContractId = `1710351544642-marketplace.testnet`;
   if (createAccounts) {
-    keypomContractId = `${Date.now().toString()}-kp-ticketing.testnet`;
-    marketplaceContractId = `${Date.now().toString()}-marketplace.testnet`;
+    keypomContractId = `dev-ticketing-v1.keypom.testnet`;
+    marketplaceContractId = `dev-marketplace-v1.keypom.testnet`;
+    // keypomContractId = `ticketing-v1.keypom.near`;
+    // marketplaceContractId = `marketplace-v1.keypom.near`;
     await createContracts({
       signerAccount,
       near,
       marketplaceContractId,
       keypomContractId,
+      onlyDeployContract
     });
   }
 
@@ -52,7 +56,7 @@ const main = async () => {
 
   //  Create Events (and generate keypair if necessary / update user metadata)
   // To store: public key, encrypted private key, iv, salt
-  const events = generateEvents(20);
+  const events = generateEvents(9);
   let nonce = 0;
   const funderInfo = await signerAccount.viewFunction(
     keypomContractId,
