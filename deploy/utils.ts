@@ -91,11 +91,13 @@ export async function createContracts({
   near,
   marketplaceContractId,
   keypomContractId,
+  onlyDeployContract
 }: {
   signerAccount: any;
   near: any;
   marketplaceContractId: string;
   keypomContractId: string;
+  onlyDeployContract: boolean;
 }) {
   const secretKeys = [
     "ed25519:3SoKRJxQj29Kczj6TiMNNxq3c6S3WcA4MUb6oBEcHMEDyhLWxzJyWxXn69sKt3RKCs8akb5KHkNvjdq4mJLYCYGA",
@@ -115,39 +117,74 @@ export async function createContracts({
     publicKeys.push(keyPair.publicKey.toString());
   }
 
-  await createAccountDeployContract({
-    signerAccount,
-    newAccountId: keypomContractId,
-    amount: "20",
-    near,
-    wasmPath: "./out/keypom.wasm",
-    methodName: "new",
-    args: {
-      root_account: "testnet",
-      owner_id: keypomContractId,
-      signing_pks: publicKeys,
-      signing_admins: ["minqi.testnet", "benjiman.testnet", "minqianlu.testnet"],
-      message: "Keypom is lit!",
-    },
-    deposit: "0",
-    gas: "300000000000000",
-  });
+  if(!onlyDeployContract) {
+    await createAccountDeployContract({
+      signerAccount,
+      newAccountId: keypomContractId,
+      amount: "20",
+      near,
+      wasmPath: "./out/keypom.wasm",
+      methodName: "new",
+      args: {
+        root_account: "testnet",
+        owner_id: keypomContractId,
+        signing_pks: publicKeys,
+        signing_admins: ["minqi.testnet", "benjiman.testnet", "minqianlu.testnet"],
+      },
+      deposit: "0",
+      gas: "300000000000000",
+    });
 
-  await createAccountDeployContract({
-    signerAccount,
-    newAccountId: marketplaceContractId,
-    amount: "20",
-    near,
-    wasmPath: "./out/marketplace.wasm",
-    methodName: "new",
-    args: {
-      keypom_contract: keypomContractId,
-      owner_id: "minqi.testnet",
-      v2_keypom_contract: "v2.keypom.testnet",
-    },
-    deposit: "0",
-    gas: "300000000000000",
-  });
+    await createAccountDeployContract({
+      signerAccount,
+      newAccountId: marketplaceContractId,
+      amount: "20",
+      near,
+      wasmPath: "./out/marketplace.wasm",
+      methodName: "new",
+      args: {
+        keypom_contract: keypomContractId,
+        owner_id: "minqi.testnet",
+        v2_keypom_contract: "v2.keypom.testnet",
+        stripe_account: "dev-marketplace-stripe-v1.keypom.testnet"
+      },
+      deposit: "0",
+      gas: "300000000000000",
+    });
+  }else{
+    await deployContract({
+      signerAccount,
+      newAccountId: keypomContractId,
+      amount: "20",
+      near,
+      wasmPath: "./out/keypom.wasm",
+      methodName: "new",
+      args: {
+        root_account: "near",
+        owner_id: keypomContractId,
+        signing_pks: publicKeys,
+        signing_admins: ["mintlu.near", "root.benjiman.near", "keypom.near"],
+      },
+      deposit: "0",
+      gas: "300000000000000",
+    });
+
+    await deployContract({
+      signerAccount,
+      newAccountId: marketplaceContractId,
+      amount: "20",
+      near,
+      wasmPath: "./out/marketplace.wasm",
+      methodName: "new",
+      args: {
+        keypom_contract: keypomContractId,
+        owner_id: "keypom.near",
+        v2_keypom_contract: "v2.keypom.near",
+      },
+      deposit: "0",
+      gas: "300000000000000",
+    });
+  }
 }
 
 export async function createAccountDeployContract({
@@ -187,6 +224,41 @@ export async function createAccountDeployContract({
   console.log("Deployed.");
 }
 
+export async function deployContract({
+  signerAccount,
+  newAccountId,
+  amount,
+  near,
+  wasmPath,
+  methodName,
+  args,
+  deposit = "0",
+  gas = "300000000000000",
+}: {
+  signerAccount: any;
+  newAccountId: string;
+  amount: string;
+  near: any;
+  wasmPath: string;
+  methodName: string;
+  args: any;
+  deposit?: string;
+  gas?: string;
+}) {
+  console.log("Deploying contract: ", newAccountId);
+  const accountObj = await near.account(newAccountId);
+  await sendTransaction({
+    signerAccount: accountObj,
+    receiverId: newAccountId,
+    methodName,
+    args,
+    deposit,
+    gas,
+    wasmPath,
+  });
+  console.log("Deployed.");
+}
+
 export async function createAccount({
   signerAccount,
   newAccountId,
@@ -204,7 +276,7 @@ export async function createAccount({
   await keyStore.setKey(config.networkId, newAccountId, keyPair);
 
   return await signerAccount.functionCall({
-    contractId: "testnet",
+    contractId: signerAccount == "keypom.testnet" || signerAccount == "keypom.near" ? signerAccount : "testnet",
     methodName: "create_account",
     args: {
       new_account_id: newAccountId,
