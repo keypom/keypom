@@ -72,12 +72,11 @@ pub struct DropConfig {
     /// And then fires a cross contract call to the Keypom contract to add keys
     pub add_key_allowlist: Option<HashSet<AccountId>>,
 
-    /// Which accounts can keys be transferred to and from. This is for secondary market control.
-    /// For example, you could have a secondary market that has price restrictions on resales (set
-    /// by the funder) so people have to go through that secondary market in order to sell their keys
-    pub transfer_key_allowlist: Option<HashSet<AccountId>>,
-
     /// Should the drop be automatically deleted when all the keys are used? This is defaulted to true and
     /// Must be overwritten
     pub delete_empty_drop: Option<bool>,
+
+    /// How much extra allowance should be given to each key in the drop?
+    /// This allows keys to be used for extra functionalities such as `nft_transfer`, `nft_approve`, etc.
+    pub extra_allowance_per_key: Option<U128>,
 }

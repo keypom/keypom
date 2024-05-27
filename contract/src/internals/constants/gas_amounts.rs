@@ -1,6 +1,8 @@
 use crate::*;
 
 // ------------------------ General ------------------------ //
+/// How much yoctoNEAR is in 1 unit of Gas
+pub const YOCTO_PER_GAS: Balance = 100_000_000;
 /// For every cross contract call, there is a base 5 TGas cost on top of what is sent to the contract
 pub const MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP: Gas = Gas::from_tgas(5); // 5 TGas
 /// Maximum amount of Gas that can be attached to the transaction
@@ -39,6 +41,13 @@ pub const BASE_GAS_FOR_CLAIM: Gas = Gas::from_gas(
 pub const MIN_GAS_FOR_RESOLVE_ASSET_CLAIM: Gas = Gas::from_gas(
     MIN_GAS_FOR_RECEIPT_COMPUTATION.as_gas() + MIN_BASE_GAS_FOR_RECEIPT_SPIN_UP.as_gas(),
 );
+
+// ------------------------ Pessimistic Allowance ------------------------ //
+/// For pessimistic allowance calculations:
+/// Lowest amount of Gas a CCC can use
+pub const GAS_PER_CCC: Gas = Gas::from_tgas(5); // 5 TGas
+/// How much Gas it costs to spin up the receipt
+pub const RECEIPT_GAS_COST: Gas = Gas::from_gas(2_500_000_000_000); // 2.5 TGas
 
 // ------------------------ Assets ------------------------ //
 pub const GAS_FOR_NONE_ASSET: Gas = Gas::from_gas(400_000_000_000); // 0.4 TGas

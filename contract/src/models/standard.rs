@@ -32,8 +32,6 @@ pub struct ExtKeyInfo {
     pub fc_list: Vec<FCData>,
 
     pub uses_remaining: UseNumber,
-
-    pub message_nonce: u32,
 }
 
 /// Data outlining Fungible Tokens that should be sent to the claiming account

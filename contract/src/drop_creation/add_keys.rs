@@ -3,13 +3,7 @@ use crate::*;
 #[near_bindgen]
 impl Keypom {
     #[payable]
-    pub fn add_keys(
-        &mut self,
-        drop_id: DropId,
-        key_data: Vec<ExtKeyData>,
-        // Should any excess attached deposit be deposited to the user's balance?
-        keep_excess_deposit: Option<bool>,
-    ) -> bool {
+    pub fn add_keys(&mut self, drop_id: DropId, key_data: Vec<ExtKeyData>) -> bool {
         self.assert_no_global_freeze();
 
         // Before anything, measure storage usage so we can net the cost and charge the funder
@@ -48,10 +42,18 @@ impl Keypom {
         let max_key_uses = drop.max_key_uses;
 
         let mut total_cost_per_key = 0;
+        let mut total_allowance_per_key = drop
+            .config
+            .as_ref()
+            .and_then(|config| config.extra_allowance_per_key)
+            .unwrap_or(U128(0))
+            .0;
+
         // Get the total cost and allowance required for a key that has all its uses remaining
         // We'll then multiply this by the number of keys we want to add and charge the user
         get_total_costs_for_key(
             &mut total_cost_per_key,
+            &mut total_allowance_per_key,
             max_key_uses,
             &drop.asset_by_id,
             &drop.asset_data_for_uses,
@@ -67,6 +69,7 @@ impl Keypom {
             &drop_id,
             max_key_uses,
             &key_data,
+            total_allowance_per_key,
         );
 
         // Write the updated drop data to storage
@@ -74,26 +77,14 @@ impl Keypom {
 
         // Measure final costs
         let net_storage = env::storage_usage() - initial_storage;
-        let refund_amount = self.determine_costs(
+        self.determine_costs(
             key_data.len(),
             false, // No drop was created
             total_cost_per_key,
+            total_allowance_per_key,
             net_storage,
             env::attached_deposit().as_yoctonear(),
         );
-
-        if refund_amount > 0 {
-            let predecessor = env::predecessor_account_id();
-            // If the user wants to keep the excess deposit, just modify the user balance
-            if keep_excess_deposit.unwrap_or(false) {
-                self.internal_modify_user_balance(&predecessor, refund_amount, false);
-                return true;
-            }
-
-            near_sdk::log!("Refunding {} excess deposit", refund_amount);
-            Promise::new(predecessor).transfer(NearToken::from_yoctonear(refund_amount));
-            return true;
-        }
 
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);

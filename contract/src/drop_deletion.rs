@@ -14,7 +14,7 @@ impl Keypom {
         public_keys: Option<Vec<PublicKey>>,
         limit: Option<u8>,
         keep_empty_drop: Option<bool>,
-    ) -> bool {
+    ) -> PromiseOrValue<bool> {
         self.assert_no_global_freeze();
 
         // Measure initial storage before doing any operations
@@ -47,8 +47,19 @@ impl Keypom {
                 .collect()
         });
 
+        // Create the batch promise for deleting the keys
+        let key_deletion_promise = env::promise_batch_create(&env::current_account_id());
+
         // Keep track of the total cost for the key & the required allowance to be refunded
         let mut total_cost_for_keys: Balance = 0;
+        let mut total_allowance_for_keys: Balance = drop
+            .config
+            .as_ref()
+            .and_then(|config| config.extra_allowance_per_key)
+            .unwrap_or(U128(0))
+            .0
+            * public_keys.len() as u128;
+
         let mut delete_key_logs = Vec::new();
         let mut nft_burn_logs = Vec::new();
 
@@ -70,6 +81,7 @@ impl Keypom {
             // For every remaining use, we need to loop through all assets and refund
             get_total_costs_for_key(
                 &mut total_cost_for_keys,
+                &mut total_allowance_for_keys,
                 key_info.remaining_uses,
                 &drop.asset_by_id,
                 &drop.asset_data_for_uses,
@@ -80,9 +92,12 @@ impl Keypom {
                 &mut delete_key_logs,
                 &key_info.owner_id,
                 &drop_id,
-                pk,
+                &pk,
                 &token_id,
             );
+
+            // Add the delete key action to the batch promise
+            env::promise_batch_action_delete_key(key_deletion_promise, &pk);
         }
 
         // Keep track of all the events starting with the NFT burn and key deletion logs
@@ -114,9 +129,10 @@ impl Keypom {
         let storage_released = initial_storage - env::storage_usage();
         let storage_refund = storage_released as u128 * env::storage_byte_cost().as_yoctonear();
 
-        let total_refund_for_use = total_cost_for_keys + storage_refund;
+        let total_refund_for_use = total_cost_for_keys + total_allowance_for_keys + storage_refund;
         near_sdk::log!(
-            "Cost Refund: {} Storage Refund: {}",
+            "Allowance Refund: {} Cost Refund: {} Storage Refund: {}",
+            total_allowance_for_keys,
             total_cost_for_keys,
             storage_refund
         );
@@ -125,7 +141,9 @@ impl Keypom {
         // Now that everything is done (no more potential for panics), we can log the events
         log_events(event_logs);
 
-        true
+        env::promise_return(key_deletion_promise);
+
+        PromiseOrValue::Value(true)
     }
 }
 

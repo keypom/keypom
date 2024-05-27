@@ -70,22 +70,6 @@ impl Keypom {
         // Get drop in order to get key info (and royalties if applicable)
         let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
 
-        // Check that if the drop config has a resale set, the approval ID is in that set
-        if let Some(resale_allowlist) = drop
-            .config
-            .as_ref()
-            .and_then(|c| c.transfer_key_allowlist.as_ref())
-        {
-            // If the sender is not in the allowlist, make sure that the receiver is
-            if !resale_allowlist.contains(&sender_id) {
-                require!(
-                    resale_allowlist
-                        .contains(&receiver_id.clone().unwrap_or(env::current_account_id())),
-                    "Trying to transfer to an account that is not in the resale allowlist."
-                );
-            }
-        }
-
         // Get key info (will overwrite mapping to new key info after)
         let key_info = drop
             .key_info_by_token_id
@@ -134,7 +118,6 @@ impl Keypom {
 
         // Generate new key info struct
         let new_key_info = InternalKeyInfo {
-            message_nonce: key_info.message_nonce, // TODO: Increment nonce?
             owner_id: receiver_id.clone(),
             pub_key: new_public_key.clone(),
             approved_account_ids: Default::default(),
@@ -192,6 +175,33 @@ impl Keypom {
                 }),
             },
         ];
+
+        // Delete the original key
+        Promise::new(env::current_account_id()).delete_key(old_pub_key);
+
+        // Get the allowance that should be transferred to the new key
+        let mut total_cost_for_key: Balance = 0;
+        let mut total_allowance_for_key: Balance = drop
+            .config
+            .as_ref()
+            .and_then(|config| config.extra_allowance_per_key)
+            .unwrap_or(U128(0))
+            .0;
+        get_total_costs_for_key(
+            &mut total_cost_for_key,
+            &mut total_allowance_for_key,
+            key_info.remaining_uses,
+            &drop.asset_by_id,
+            &drop.asset_data_for_uses,
+        );
+
+        // Add the new key with the corresponding allowance
+        Promise::new(env::current_account_id()).add_access_key(
+            new_public_key.clone(),
+            NearToken::from_yoctonear(total_allowance_for_key),
+            env::current_account_id(),
+            ACCESS_KEY_METHOD_NAMES.to_string(),
+        );
 
         // Log the transfer events
         log_events(event_logs);

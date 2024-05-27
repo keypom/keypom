@@ -1,14 +1,5 @@
 use crate::*;
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
-pub struct NftTransferMemo {
-    pub linkdrop_pk: PublicKey,
-    pub signature: Option<Base64VecU8>,
-    pub new_public_key: PublicKey,
-}
-
 #[near_bindgen]
 impl Keypom {
     /// Transfers an NFT key from one user to another.
@@ -19,51 +10,22 @@ impl Keypom {
     #[payable]
     pub fn nft_transfer(
         &mut self,
+        token_id: Option<TokenId>,
         receiver_id: Option<AccountId>,
         approval_id: Option<u64>,
-        memo: String,
+        memo: PublicKey,
     ) {
         self.assert_no_global_freeze();
-        // Deserialize the msg string into the NftApproveMsg struct
-        let nft_transfer_memo: NftTransferMemo =
-            serde_json::from_str(&memo).expect("Invalid message format");
-        let NftTransferMemo {
-            linkdrop_pk,
-            signature,
-            new_public_key: new_pk,
-        } = nft_transfer_memo;
 
         let sender_id = env::predecessor_account_id();
-
-        if env::signer_account_pk() == linkdrop_pk {
-            // All args, unfilled options will be filtered out
-            let mut args_json = json!({
-                "receiver_id": receiver_id.clone().map(|id| json!(id)),
-                "approval_id": approval_id.map(|id| json!(id)),
-                "memo": json!({
-                    "linkdrop_pk": linkdrop_pk,
-                    "new_public_key": new_pk
-                }).to_string(),
-            });
-            
-            if let Some(obj) = args_json.as_object_mut() {
-                obj.retain(|_, v| !v.is_null());
-            }
-
-            let args_string = args_json.to_string();
-        
-            require!(
-                self.verify_signature(signature.expect("Missing signature"), linkdrop_pk.clone(), args_string),
-                "Invalid signature for public key"
-            );
-        }
+        let sender_pk = env::signer_account_pk();
 
         // Token ID is either from sender PK or passed in
         let token_id = self
             .token_id_by_pk
-            .get(&linkdrop_pk)
-            .expect("Token ID not found for Public Key");
-        self.internal_transfer(sender_id, receiver_id, token_id, approval_id, new_pk);
+            .get(&sender_pk)
+            .unwrap_or_else(|| token_id.expect("Token ID not provided"));
+        self.internal_transfer(sender_id, receiver_id, token_id, approval_id, memo);
     }
 
     /// Get the token object info for a specific token ID
@@ -108,6 +70,6 @@ impl Keypom {
             }
         }
 
-        None
+        return None;
     }
 }

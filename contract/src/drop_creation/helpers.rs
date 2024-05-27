@@ -11,11 +11,17 @@ impl Keypom {
         event_logs: &mut Vec<EventLog>,
         drop_id: &DropId,
         max_uses_per_key: UseNumber,
-        key_data: &[ExtKeyData],
+        key_data: &Vec<ExtKeyData>,
+        allowance: Balance,
     ) {
+        let current_account_id = &env::current_account_id();
+
         // Logs for add key and NFT mint events
         let mut add_key_logs = Vec::new();
         let mut nft_mint_logs = Vec::new();
+
+        // Create a new promise batch to create all the access keys
+        let promise = env::promise_batch_create(current_account_id);
 
         // Loop through the public keys and add them to the contract.
         // None of these promises will fire if there's a panic so it's
@@ -37,7 +43,7 @@ impl Keypom {
             // Iterate through the key_data.password_by_use hash map (if there is one) and decode all the strings to hex
             let pw_by_use: Option<HashMap<UseNumber, Vec<u8>>> =
                 password_by_use.as_ref().map(|p| {
-                    p.iter()
+                    p.into_iter()
                         .map(|(k, v)| {
                             let decoded = hex::decode(v).expect("Invalid hex string");
                             (*k, decoded)
@@ -47,12 +53,11 @@ impl Keypom {
 
             if let Some(owner) = key_owner {
                 // Add the NFT key to the owner's list of tokens
-                self.internal_add_token_to_owner(owner, &token_id);
+                self.internal_add_token_to_owner(&owner, &token_id);
             }
             key_info_by_token_id.insert(
                 &token_id,
                 &InternalKeyInfo {
-                    message_nonce: 0,
                     pub_key: public_key.clone(),
                     remaining_uses: max_uses_per_key,
                     owner_id: key_owner.clone(),
@@ -64,13 +69,23 @@ impl Keypom {
                 },
             );
 
+            // Add this key to the batch
+            env::promise_batch_action_add_key_with_function_call(
+                promise,
+                public_key,
+                0, // Nonce
+                NearToken::from_yoctonear(allowance),
+                current_account_id,
+                ACCESS_KEY_METHOD_NAMES,
+            );
+
             // Construct the nft mint and add key logs to be added as events later
             add_new_key_logs(
                 &mut nft_mint_logs,
                 &mut add_key_logs,
-                key_owner,
-                drop_id,
-                public_key,
+                &key_owner,
+                &drop_id,
+                &public_key,
                 &token_id,
             );
 
@@ -78,20 +93,22 @@ impl Keypom {
         }
 
         // Construct the events themselves
-        if !nft_mint_logs.is_empty() {
+        if nft_mint_logs.len() > 0 {
             event_logs.push(EventLog {
                 standard: NFT_STANDARD_NAME.to_string(),
                 version: NFT_METADATA_SPEC.to_string(),
                 event: EventLogVariant::NftMint(nft_mint_logs),
             });
         }
-        if !add_key_logs.is_empty() {
+        if add_key_logs.len() > 0 {
             event_logs.push(EventLog {
                 standard: KEYPOM_STANDARD_NAME.to_string(),
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::AddKey(add_key_logs),
             });
         }
+
+        env::promise_return(promise);
     }
 
     /// Tally up all the costs for adding keys / creating a drop and refund any excess deposit
@@ -100,6 +117,7 @@ impl Keypom {
         num_keys: usize,
         did_create_drop: bool,
         asset_cost_per_key: Balance,
+        allowance_per_key: Balance,
         net_storage: u64,
         attached_deposit: Balance,
     ) -> Balance {
@@ -107,6 +125,8 @@ impl Keypom {
 
         let storage_cost = net_storage as Balance * env::storage_byte_cost().as_yoctonear();
         let total_asset_cost = asset_cost_per_key * num_keys;
+        let total_allowance_cost = allowance_per_key * num_keys;
+
         let fees_for_user = self
             .fees_per_user
             .get(&env::predecessor_account_id())
@@ -114,13 +134,14 @@ impl Keypom {
         let total_fees =
             num_keys * fees_for_user.per_key + did_create_drop as u128 * fees_for_user.per_drop;
         self.fees_collected += total_fees;
-        let total_cost = total_asset_cost + storage_cost + total_fees;
+        let total_cost = total_asset_cost + storage_cost + total_allowance_cost + total_fees;
 
         near_sdk::log!(
-            "total {} storage {} asset {} keypom fees {}",
+            "total {} storage {} asset {} allowance {} keypom fees {}",
             total_cost,
             storage_cost,
             total_asset_cost,
+            total_allowance_cost,
             total_fees
         );
         self.charge_with_deposit_or_balance(total_cost, attached_deposit)

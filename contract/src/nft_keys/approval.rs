@@ -1,50 +1,25 @@
 use crate::*;
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Debug)]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
-pub struct NftApproveMsg {
-    pub linkdrop_pk: PublicKey,
-    pub signature: Base64VecU8,
-    pub msg: Option<String>,
-}
-
 #[near_bindgen]
 impl Keypom {
     /// Allow a specific account ID to transfer a token on your behalf
     #[payable]
-    pub fn nft_approve(&mut self, account_id: AccountId, msg: String) {
+    pub fn nft_approve(
+        &mut self,
+        token_id: Option<TokenId>,
+        account_id: AccountId,
+        msg: Option<String>,
+    ) {
         self.assert_no_global_freeze();
-        // Deserialize the msg string into the NftApproveMsg struct
-        let nft_approve_msg: NftApproveMsg =
-            serde_json::from_str(&msg).expect("Invalid message format");
-        let NftApproveMsg {
-            linkdrop_pk,
-            signature,
-            msg: msg_str,
-        } = nft_approve_msg;
-
-        let args_string = json!({
-            "account_id": account_id,
-            "msg": json!({
-                "linkdrop_pk": linkdrop_pk,
-                "msg": msg_str
-            }).to_string()
-        }).to_string();
-    
-        require!(
-            self.verify_signature(signature, linkdrop_pk.clone(), args_string),
-            "Invalid signature for public key"
-        );
-
 
         let sender_id = env::predecessor_account_id();
+        let sender_pk = env::signer_account_pk();
 
         // Token ID is either from sender PK or passed in
         let token_id = self
             .token_id_by_pk
-            .get(&linkdrop_pk)
-            .expect("Token ID not found");
+            .get(&sender_pk)
+            .unwrap_or_else(|| token_id.expect("Token ID not provided"));
         let drop_id = parse_token_id(&token_id).unwrap().0;
 
         // Get drop in order to get key info
@@ -54,23 +29,11 @@ impl Keypom {
             .get(&token_id)
             .expect("Key info not found");
 
-        // Check that if the drop config has a resale set, the approval ID is in that set
-        if let Some(resale_allowlist) = drop
-            .config
-            .as_ref()
-            .and_then(|c| c.transfer_key_allowlist.as_ref())
-        {
-            require!(
-                resale_allowlist.contains(&account_id),
-                "Approval ID not in resale allowlist"
-            );
-        }
-
         // Check that the sender is the owner of the token.
         // If the token is owned by keypom, decrement the key's allowance
         check_key_owner(sender_id, &key_info);
 
-        // Get the next approval ID if we need a new approval
+        //get the next approval ID if we need a new approval
         let approval_id: u64 = key_info.next_approval_id;
         key_info
             .approved_account_ids
@@ -83,7 +46,7 @@ impl Keypom {
 
         //if some message was passed into the function, we initiate a cross contract call on the
         //account we're giving access to.
-        if let Some(msg) = msg_str {
+        if let Some(msg) = msg {
             // Defaulting GAS weight to 1, no attached deposit, and no static GAS to attach.
             Promise::new(account_id)
                 .function_call_weight(
@@ -121,14 +84,48 @@ impl Keypom {
             //if a specific approval_id was passed into the function
             if let Some(approval_id) = approval_id {
                 //return if the approval ID passed in matches the actual approval ID for the account
-                approval_id == *approval
+                return approval_id == *approval;
                 //if there was no approval_id passed into the function, we simply return true
             } else {
-                true
+                return true;
             }
             //if there was no approval ID found for the account ID, we simply return false
         } else {
-            false
+            return false;
+        }
+    }
+
+    //revoke a specific account from transferring the token on your behalf
+    #[payable]
+    pub fn nft_revoke(&mut self, token_id: Option<TokenId>, account_id: AccountId) {
+        self.assert_no_global_freeze();
+
+        let sender_id = env::predecessor_account_id();
+        let sender_pk = env::signer_account_pk();
+
+        // Token ID is either from sender PK or passed in
+        let token_id = self
+            .token_id_by_pk
+            .get(&sender_pk)
+            .unwrap_or_else(|| token_id.expect("Token ID not provided"));
+        let drop_id = parse_token_id(&token_id).unwrap().0;
+
+        // Get drop in order to get key info
+        let mut drop = self.drop_by_id.get(&drop_id).expect("Drop not found");
+        let mut key_info = drop
+            .key_info_by_token_id
+            .get(&token_id)
+            .expect("Key info not found");
+
+        // Check that the sender is the owner of the token.
+        // If the token is owned by keypom, decrement the key's allowance
+        check_key_owner(sender_id, &key_info);
+
+        //if the account ID was in the token's approval, we remove it and the if statement logic executes
+        if key_info.approved_account_ids.remove(&account_id).is_some() {
+            // Reinsert key info mapping to NFT and then add token ID mapping to public key
+            drop.key_info_by_token_id.insert(&token_id, &key_info);
+            self.drop_by_id.insert(&drop_id, &drop);
         }
     }
 }

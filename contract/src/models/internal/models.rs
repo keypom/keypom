@@ -27,8 +27,6 @@ pub struct InternalDrop {
 #[derive(BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "near_sdk::borsh")]
 pub struct InternalKeyInfo {
-    /// Everytime a signature is passed in, the nonce should be incremented by 1
-    pub message_nonce: u32,
     /// Current public key that is mapped to this key info
     pub pub_key: PublicKey,
 
@@ -50,6 +48,18 @@ pub struct InternalKeyInfo {
 
     /// The next approval ID to give out.
     pub next_approval_id: u64,
+}
+
+/// Contains information about the funder such as their user_balance and any metadata they might
+/// have
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, Serialize)]
+#[borsh(crate = "near_sdk::borsh")]
+#[serde(crate = "near_sdk::serde")]
+pub struct FunderInfo {
+    /// The internal balance that the funder has deposited
+    pub balance: Balance,
+    /// Any stringified JSON that the funder has set as metadata
+    pub metadata: Option<String>,
 }
 
 /// Outlines the asset data for a set of uses
@@ -88,13 +98,15 @@ impl From<&ExtAssetDataForUses> for InternalAssetDataForUses {
             } else {
                 ext_asset
                     .as_ref()
-                    .map(|a| a.get_asset_id())
+                    .and_then(|a| Some(a.get_asset_id()))
                     .unwrap_or(NONE_ASSET_ID.to_string())
             };
 
             assets_metadata.push(AssetMetadata {
                 asset_id: asset_id.clone(),
-                tokens_per_use: ext_asset.as_ref().map(|a| a.get_tokens_per_use()),
+                tokens_per_use: ext_asset
+                    .as_ref()
+                    .and_then(|a| Some(a.get_tokens_per_use())),
             });
         }
 
@@ -130,18 +142,6 @@ pub struct AssetMetadata {
     /// How many tokens should be transferred in this use?
     /// This is only relevant for FT and $NEAR assets
     pub tokens_per_use: Option<U128>,
-}
-
-/// Contains information about the funder such as their user_balance and any metadata they might
-/// have
-#[derive(BorshDeserialize, BorshSerialize, Clone, Debug, Serialize)]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
-pub struct FunderInfo {
-    /// The internal balance that the funder has deposited
-    pub balance: Balance,
-    /// Any stringified JSON that the funder has set as metadata
-    pub metadata: Option<String>,
 }
 
 /// Contract metadata structure
@@ -194,6 +194,4 @@ pub enum StorageKeys {
     DropById,
     TokenIdByPk,
     FunderInfoById,
-    SigningPks,
-    SigningAdmins,
 }

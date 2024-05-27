@@ -119,7 +119,6 @@ impl Keypom {
             token_id,
             pub_key: key_info.pub_key,
             owner_id: key_info.owner_id.unwrap_or(env::current_account_id()),
-            message_nonce: key_info.message_nonce,
         })
     }
 
