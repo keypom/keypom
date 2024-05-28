@@ -30,16 +30,16 @@ const path = require("path");
 const main = async () => {
   const near = await initNear();
   const createAccounts = true;
-  const onlyDeployContract = true;
+  const onlyDeployContract = false;
 
-  const signerAccount = await near.account("keypom.testnet");
+  const signerAccount = await near.account("benjiman.testnet");
   const masterKey = "MASTER_KEY";
 
   let keypomContractId = `1710351544642-kp-ticketing.testnet`;
   let marketplaceContractId = `1710351544642-marketplace.testnet`;
   if (createAccounts) {
-    keypomContractId = `dev-ticketing-v1.keypom.testnet`;
-    marketplaceContractId = `dev-marketplace-v1.keypom.testnet`;
+    keypomContractId = `${Date.now().toString()}-kp-ticketing.testnet`;
+    marketplaceContractId = `${Date.now().toString()}-marketplace.testnet`;
     // keypomContractId = `ticketing-v1.keypom.near`;
     // marketplaceContractId = `marketplace-v1.keypom.near`;
     await createContracts({
@@ -47,7 +47,7 @@ const main = async () => {
       near,
       marketplaceContractId,
       keypomContractId,
-      onlyDeployContract
+      onlyDeployContract,
     });
   }
 
@@ -64,7 +64,6 @@ const main = async () => {
     { account_id: signerAccount.accountId },
   );
 
-  
   let allTickets: Array<{
     dropId: string;
     ticket: ZombieDropMetadata;
@@ -111,8 +110,8 @@ const main = async () => {
         ticket_information[`${dropId}`] = {
           max_tickets: ticket.maxSupply,
           price: ticket.price,
-          sale_start: Date.now(),
-          sale_end: Date.now() + 1000 * 60 * 60 * 24 * 2,
+          sale_start: ticket.salesValidThrough.startDate,
+          sale_end: ticket.salesValidThrough.endDate,
         };
         base_price += 1;
 
@@ -207,47 +206,47 @@ const main = async () => {
     }
   }
 
-  try{
+  try {
     const funderInfo = await signerAccount.viewFunction(
       keypomContractId,
       "get_funder_info",
       { account_id: signerAccount.accountId },
     );
     console.log("Funder Info: ", funderInfo);
-  }catch(e){
+  } catch (e) {
     console.error("Error getting funder info: ", e);
   }
 
-  // let allKeyData: { [key: string]: string[] } = {};
-  // for (const curTicket of allTickets) {
-  //   try {
-  //     const { dropId, eventId, ticket, eventQuestions } = curTicket;
-  //     const keyPairs = await addTickets({
-  //       signerAccount,
-  //       funderAccountId: signerAccount.accountId,
-  //       keypomAccountId: keypomContractId,
-  //       marketplaceAccount: marketAccount,
-  //       dropId,
-  //       ticket,
-  //       eventId,
-  //       eventQuestions,
-  //     });
+  let allKeyData: { [key: string]: string[] } = {};
+  for (const curTicket of allTickets) {
+    try {
+      const { dropId, eventId, ticket, eventQuestions } = curTicket;
+      const keyPairs = await addTickets({
+        signerAccount,
+        funderAccountId: signerAccount.accountId,
+        keypomAccountId: keypomContractId,
+        marketplaceAccount: marketAccount,
+        dropId,
+        ticket,
+        eventId,
+        eventQuestions,
+      });
 
-  //     allKeyData[dropId] = keyPairs;
-  //   } catch (e) {
-  //     console.error("Error adding tickets: ", e);
-  //   }
-  // }
+      allKeyData[dropId] = keyPairs;
+    } catch (e) {
+      console.error("Error adding tickets: ", e);
+    }
+  }
 
-  // // Loop through key data and print
-  // for (const dropId in allKeyData) {
-  //   console.log(`Drop ID: ${dropId}`);
-  //   for (const secretKey of allKeyData[dropId]) {
-  //     console.log(
-  //       `http://localhost:3000/tickets/ticket/${dropId}#secretKey=${secretKey}`,
-  //     );
-  //   }
-  // }
+  // Loop through key data and print
+  for (const dropId in allKeyData) {
+    console.log(`Drop ID: ${dropId}`);
+    for (const secretKey of allKeyData[dropId]) {
+      console.log(
+        `http://localhost:3000/tickets/ticket/${dropId}#secretKey=${secretKey}`,
+      );
+    }
+  }
 
   return;
 };
@@ -271,4 +270,3 @@ async function test() {
 
 //test();
 main().catch(console.error);
-

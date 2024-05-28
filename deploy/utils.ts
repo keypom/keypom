@@ -91,7 +91,7 @@ export async function createContracts({
   near,
   marketplaceContractId,
   keypomContractId,
-  onlyDeployContract
+  onlyDeployContract,
 }: {
   signerAccount: any;
   near: any;
@@ -109,19 +109,19 @@ export async function createContracts({
     "ed25519:nzf775uk2hBRoZXk41kXMqLRofKK2E5qGi3jUjfQnKZvq22f7qhkzCyhenxuRqQMac4tFgGcSsogmFCmimNWkq5",
     "ed25519:2DwsKo8ZwVotcTtTLLRwx6iHamgxG9qFHo6T5G6udMQMyLNxeqo2oy3Z7UFwFJc5ztdqGCc3b4SidJUDcAhkF7V8",
     "ed25519:3PjnkrRdAmWEfoKBkdSXXfGs6AWB6rTG5Sva9EEJBAnAKnkbNwk5VsXPx43zFmKJJhfHwzgFM76FVGqmZQjh6wWh",
-    "ed25519:2nP3KsnqWb96k6HKNXHiyumtGH6pmoBLvVqUAbNBAQFMBzTjho3Nw7Yo5fwDMZFwgPeaEeYMcGCqkmX1eoL8Abw1"
-  ]
+    "ed25519:2nP3KsnqWb96k6HKNXHiyumtGH6pmoBLvVqUAbNBAQFMBzTjho3Nw7Yo5fwDMZFwgPeaEeYMcGCqkmX1eoL8Abw1",
+  ];
   const publicKeys: String[] = [];
   for (const secretKey of secretKeys) {
     const keyPair = KeyPair.fromString(secretKey);
     publicKeys.push(keyPair.publicKey.toString());
   }
 
-  if(!onlyDeployContract) {
+  if (!onlyDeployContract) {
     await createAccountDeployContract({
       signerAccount,
       newAccountId: keypomContractId,
-      amount: "20",
+      amount: "100",
       near,
       wasmPath: "./out/keypom.wasm",
       methodName: "new",
@@ -129,7 +129,11 @@ export async function createContracts({
         root_account: "testnet",
         owner_id: keypomContractId,
         signing_pks: publicKeys,
-        signing_admins: ["minqi.testnet", "benjiman.testnet", "minqianlu.testnet"],
+        signing_admins: [
+          "minqi.testnet",
+          "benjiman.testnet",
+          "minqianlu.testnet",
+        ],
       },
       deposit: "0",
       gas: "300000000000000",
@@ -138,7 +142,7 @@ export async function createContracts({
     await createAccountDeployContract({
       signerAccount,
       newAccountId: marketplaceContractId,
-      amount: "20",
+      amount: "100",
       near,
       wasmPath: "./out/marketplace.wasm",
       methodName: "new",
@@ -146,16 +150,16 @@ export async function createContracts({
         keypom_contract: keypomContractId,
         owner_id: "minqi.testnet",
         v2_keypom_contract: "v2.keypom.testnet",
-        stripe_account: "dev-marketplace-stripe-v1.keypom.testnet"
+        stripe_account: "dev-marketplace-stripe-v1.keypom.testnet",
       },
       deposit: "0",
       gas: "300000000000000",
     });
-  }else{
+  } else {
     await deployContract({
       signerAccount,
       newAccountId: keypomContractId,
-      amount: "20",
+      amount: "100",
       near,
       wasmPath: "./out/keypom.wasm",
       methodName: "new",
@@ -172,7 +176,7 @@ export async function createContracts({
     await deployContract({
       signerAccount,
       newAccountId: marketplaceContractId,
-      amount: "20",
+      amount: "100",
       near,
       wasmPath: "./out/marketplace.wasm",
       methodName: "new",
@@ -276,7 +280,10 @@ export async function createAccount({
   await keyStore.setKey(config.networkId, newAccountId, keyPair);
 
   return await signerAccount.functionCall({
-    contractId: signerAccount == "keypom.testnet" || signerAccount == "keypom.near" ? signerAccount : "testnet",
+    contractId:
+      signerAccount == "keypom.testnet" || signerAccount == "keypom.near"
+        ? signerAccount
+        : "testnet",
     methodName: "create_account",
     args: {
       new_account_id: newAccountId,
@@ -312,9 +319,8 @@ export function generateEvents(numEvents = 40) {
   }
 
   function generateDateInfo(): DateAndTimeInfo {
-    const startDate = new Date(2023, 4, 1);
-    const endDate = new Date(2024, 11, 31);
-    const start = randomDate(startDate, endDate);
+    const start = new Date();
+    const endDate = new Date(start.getTime() + 60 * 60 * 24 * 1000);
 
     if (Math.random() > 0.5) {
       // Single day event
@@ -618,6 +624,7 @@ export const addTickets = async ({
   const maxSupply = ticket.maxSupply || 100;
   let numTickets = Math.floor(Math.random() * maxSupply) + 1;
   numTickets = Math.min(numTickets, maxSupply);
+  numTickets = 2;
 
   let keyData: {
     public_key: string;
