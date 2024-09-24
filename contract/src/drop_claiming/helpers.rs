@@ -11,8 +11,9 @@ impl Keypom {
         event_logs: &mut Vec<EventLog>,
         new_public_key: Option<&PublicKey>,
         password: Option<String>,
-        linkdrop_pk: PublicKey,
     ) -> BeforeClaimData {
+        let signer_pk = env::signer_account_pk();
+
         // Get the key info and decrement its remaining uses.
         // If there are zero remaining uses, break the connection between
         // The public key and token ID that way the key can't be used anymore.
@@ -21,7 +22,7 @@ impl Keypom {
         // Multi use keys that submit multiple txns in the same block. Only delete if empty.
         let token_id = self
             .token_id_by_pk
-            .get(&linkdrop_pk)
+            .get(&signer_pk)
             .expect("No drop ID found for PK");
 
         let (drop_id, key_id) = parse_token_id(&token_id).unwrap();
@@ -55,7 +56,8 @@ impl Keypom {
                 self.internal_remove_token_from_owner(owner, &token_id);
             }
 
-            self.token_id_by_pk.remove(&linkdrop_pk);
+            self.token_id_by_pk.remove(&signer_pk);
+            Promise::new(env::current_account_id()).delete_key(signer_pk.clone());
 
             event_logs.push(EventLog {
                 standard: NFT_STANDARD_NAME.to_string(),
@@ -76,7 +78,7 @@ impl Keypom {
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::DeleteKey(vec![AddOrDeleteKeyLog {
                     drop_id: drop_id.to_string(),
-                    public_key: (&linkdrop_pk).into(),
+                    public_key: (&signer_pk).into(),
                 }]),
             });
         }
@@ -110,7 +112,6 @@ impl Keypom {
         &mut self,
         token_id: TokenId,
         receiver_id: AccountId,
-        old_public_key: PublicKey,
         fc_args: Option<UserProvidedFCArgs>,
         new_public_key: Option<PublicKey>,
     ) -> PromiseOrValue<bool> {
@@ -189,7 +190,7 @@ impl Keypom {
                 event: EventLogVariant::CreateAccountAndClaim(CreateAccountAndClaimLog {
                     new_account_id: receiver_id.to_string(),
                     new_public_key: pk.into(),
-                    public_key: serde_json::to_string(&old_public_key).unwrap(),
+                    public_key: env::signer_account_id().into(),
                     drop_id,
                     assets: assets_to_log,
                 }),
@@ -200,7 +201,7 @@ impl Keypom {
                 version: KEYPOM_STANDARD_VERSION.to_string(),
                 event: EventLogVariant::Claim(ClaimLog {
                     account_id: receiver_id.to_string(),
-                    public_key: serde_json::to_string(&old_public_key).unwrap(),
+                    public_key: env::signer_account_id().into(),
                     drop_id,
                     assets: assets_to_log,
                 }),
@@ -242,7 +243,7 @@ impl Keypom {
         // Since no other functions need the key information
         if key_info.remaining_uses == 0 {
             drop.key_info_by_token_id
-                .remove(token_id)
+                .remove(&token_id)
                 .expect("Key not found");
 
             let should_delete_on_empty = drop
@@ -259,13 +260,13 @@ impl Keypom {
             {
                 near_sdk::log!("Drop with ID: {} is now empty. Deleting.", drop_id);
                 // Remove the drop from storage and clear the maps inside of it
-                self.drop_by_id.remove(drop_id);
-                self.internal_remove_drop_for_funder(&drop.funder_id, drop_id);
-                internal_clear_drop_storage(drop, &mut event_logs, drop_id);
+                self.drop_by_id.remove(&drop_id);
+                self.internal_remove_drop_for_funder(&drop.funder_id, &drop_id);
+                internal_clear_drop_storage(drop, &mut event_logs, &drop_id);
             } else {
                 near_sdk::log!("Drop with ID: {} is not empty. Re-inserting. Does have assets? {} Config specified to delete: {}", drop_id, !drop_assets_withdrawn, should_delete_on_empty);
                 // Put the modified drop back in storage
-                self.drop_by_id.insert(drop_id, drop);
+                self.drop_by_id.insert(&drop_id, &drop);
             }
         }
 
@@ -307,16 +308,21 @@ pub(crate) fn assert_pre_claim_conditions(
     if let Some(perm) = use_config.as_ref().and_then(|c| c.permissions.as_ref()) {
         match perm {
             ClaimPermissions::claim => {
-                require!(!creating_account, "Cannot call `create_account_and_claim` when key permission is set to only claim")
+                require!(creating_account == false, "Cannot call `create_account_and_claim` when key permission is set to only claim")
             }
             ClaimPermissions::create_account_and_claim => {
-                require!(creating_account, "Cannot call `claim` when key permission is set to only create_account_and_claim")
+                require!(creating_account == true, "Cannot call `claim` when key permission is set to only create_account_and_claim")
             }
         }
     }
 
     // Ensure any timestamps in the configs have been fulfilled
-    assert_claim_timestamps(use_config, key_info, max_uses_per_key);
+    assert_claim_timestamps(
+        use_config,
+        key_info,
+        &String::from(&env::signer_account_pk()),
+        max_uses_per_key,
+    );
 
     // If there is some password for the current key use, assert that it matches the one provided
     if let Some(pw_by_use) = &key_info.pw_by_use {
@@ -348,6 +354,7 @@ pub(crate) fn assert_key_password(user_password: &Option<String>, expected_passw
 pub(crate) fn assert_claim_timestamps(
     use_config: &Option<UseConfig>,
     key_info: &InternalKeyInfo,
+    signer_pk: &String,
     max_uses_per_key: &UseNumber,
 ) {
     let time_config = use_config.as_ref().and_then(|c| c.time.as_ref());
@@ -360,8 +367,8 @@ pub(crate) fn assert_claim_timestamps(
         require!(
             current_timestamp >= desired_start_timestamp,
             format!(
-                "Key isn't claimable until {}. Current timestamp {}",
-                desired_start_timestamp, current_timestamp
+                "Key {} isn't claimable until {}. Current timestamp {}",
+                signer_pk, desired_start_timestamp, current_timestamp
             )
         );
 
@@ -370,8 +377,8 @@ pub(crate) fn assert_claim_timestamps(
         require!(
             current_timestamp <= desired_end_timestamp,
             format!(
-                "Key is no longer claimable. It was claimable up until {}. Current timestamp {}",
-                desired_end_timestamp, current_timestamp
+                "Key {} is no longer claimable. It was claimable up until {}. Current timestamp {}",
+                signer_pk, desired_end_timestamp, current_timestamp
             )
         );
 
@@ -379,7 +386,8 @@ pub(crate) fn assert_claim_timestamps(
         require!(
             (current_timestamp - key_info.last_claimed) >= throttle,
             format!(
-                "Key was used too recently. It must be used every {}. Time since last use {}",
+                "Key {} was used too recently. It must be used every {}. Time since last use {}",
+                signer_pk,
                 throttle,
                 current_timestamp - key_info.last_claimed
             )
@@ -399,7 +407,7 @@ pub(crate) fn assert_claim_timestamps(
             let claims_so_far = max_uses_per_key - key_info.remaining_uses;
             let num_claimable_uses = total_possible_claims - claims_so_far as u64;
 
-            require!(num_claimable_uses > 0, format!("Key has been claimed {} times. Given the interval {} and starting timestamp of {}, there are {} claims available.", claims_so_far, interval, start_timestamp, num_claimable_uses));
+            require!(num_claimable_uses > 0, format!("Key {} has been claimed {} times. Given the interval {} and starting timestamp of {}, there are {} claims available.", signer_pk, claims_so_far, interval, start_timestamp, num_claimable_uses));
         }
     }
 }

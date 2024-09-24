@@ -8,7 +8,6 @@ impl Keypom {
         drop_ids: Vec<DropId>,
         asset_datas: Vec<Vec<ExtAssetDataForUses>>,
         drop_configs: Vec<Option<DropConfig>>,
-        keep_excess_deposit: Option<bool>,
         change_user_metadata: Option<String>,
 
         on_success: Option<OnSuccessCallData>,
@@ -84,11 +83,6 @@ impl Keypom {
 
             // Refund the excess deposit
             let predecessor = env::predecessor_account_id();
-            // If the user wants to keep the excess deposit, just modify the user balance
-            if keep_excess_deposit.unwrap_or(false) {
-                self.internal_modify_user_balance(&predecessor, deposit_left, false);
-                return true;
-            }
             near_sdk::log!("Refunding {} excess deposit", deposit_left);
             Promise::new(predecessor).transfer(NearToken::from_yoctonear(deposit_left));
             return true;
@@ -104,9 +98,6 @@ impl Keypom {
         asset_data: Vec<ExtAssetDataForUses>,
 
         drop_config: Option<DropConfig>,
-
-        // Should any excess attached deposit be deposited to the user's balance?
-        keep_excess_deposit: Option<bool>,
     ) -> bool {
         self.assert_no_global_freeze();
         // Get the amount of $NEAR that should be refunded out of the user's attached deposit
@@ -121,10 +112,6 @@ impl Keypom {
         if refund_amount > 0 {
             let predecessor = env::predecessor_account_id();
             // If the user wants to keep the excess deposit, just modify the user balance
-            if keep_excess_deposit.unwrap_or(false) {
-                self.internal_modify_user_balance(&predecessor, refund_amount, false);
-                return true;
-            }
 
             near_sdk::log!("Refunding {} excess deposit", refund_amount);
             Promise::new(predecessor).transfer(NearToken::from_yoctonear(refund_amount));
@@ -184,10 +171,16 @@ impl Keypom {
         }
 
         let mut total_cost_per_key = 0;
+        let mut total_allowance_per_key = drop_config
+            .as_ref()
+            .and_then(|config| config.extra_allowance_per_key)
+            .unwrap_or(U128(0))
+            .0;
         // Get the total cost and allowance required for a key that has all its uses remaining
         // We'll then multiply this by the number of keys we want to add and charge the user
         get_total_costs_for_key(
             &mut total_cost_per_key,
+            &mut total_allowance_per_key,
             max_key_uses,
             &asset_by_id,
             &asset_data_for_uses,
@@ -205,6 +198,7 @@ impl Keypom {
             &drop_id,
             max_key_uses,
             &key_data,
+            total_allowance_per_key,
         );
 
         // Write the drop data to storage
@@ -231,6 +225,7 @@ impl Keypom {
             key_data.len(),
             true, // We did create a drop here
             total_cost_per_key,
+            total_allowance_per_key,
             net_storage,
             attached_deposit,
         );
